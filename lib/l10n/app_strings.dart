@@ -1,0 +1,304 @@
+/// Custom i18n (cs / en / de) — no generated ARB catalog.
+class AppStrings {
+  AppStrings(this.locale) : _table = _tables[locale] ?? _tables['en']!;
+
+  final String locale;
+  final Map<String, String> _table;
+
+  static const supported = ['cs', 'en', 'de'];
+
+  static const keys = [
+    'appName',
+    'catalogTitle',
+    'catalogEmpty',
+    'catalogEmptyHint',
+    'signIn',
+    'signUp',
+    'email',
+    'password',
+    'signOut',
+    'free',
+    'paid',
+    'unlock',
+    'unlockWithStripe',
+    'openChallenge',
+    'storyChallenge',
+    'waypoints',
+    'locked',
+    'completed',
+    'verify',
+    'takePhoto',
+    'photoRequired',
+    'uploading',
+    'verified',
+    'routePlanner',
+    'hike',
+    'bike',
+    'distance',
+    'elevation',
+    'time',
+    'difficulty',
+    'openInOsm',
+    'diplomaHeadlineDefault',
+    'congratulations',
+    'language',
+    'settings',
+    'easy',
+    'moderate',
+    'hard',
+    'expert',
+    'challengeLockedPaid',
+    'storyLockedHint',
+    'missingConfig',
+    'errorGeneric',
+    'purchasePending',
+    'retry',
+    'cameraDenied',
+    'noAccount',
+    'haveAccount',
+    'displayName',
+    'promoFallbackCta',
+    'needAccess',
+    'liveCameraOnly',
+    'viewDiploma',
+    'priceLabel',
+  ];
+
+  String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
+
+  String get appName => t('appName');
+  String get catalogTitle => t('catalogTitle');
+  String get catalogEmpty => t('catalogEmpty');
+  String get catalogEmptyHint => t('catalogEmptyHint');
+  String get signIn => t('signIn');
+  String get signUp => t('signUp');
+  String get email => t('email');
+  String get password => t('password');
+  String get signOut => t('signOut');
+  String get free => t('free');
+  String get paid => t('paid');
+  String get unlock => t('unlock');
+  String get unlockWithStripe => t('unlockWithStripe');
+  String get openChallenge => t('openChallenge');
+  String get storyChallenge => t('storyChallenge');
+  String get waypoints => t('waypoints');
+  String get locked => t('locked');
+  String get completed => t('completed');
+  String get verify => t('verify');
+  String get takePhoto => t('takePhoto');
+  String get photoRequired => t('photoRequired');
+  String get uploading => t('uploading');
+  String get verified => t('verified');
+  String get routePlanner => t('routePlanner');
+  String get hike => t('hike');
+  String get bike => t('bike');
+  String get distance => t('distance');
+  String get elevation => t('elevation');
+  String get time => t('time');
+  String get difficulty => t('difficulty');
+  String get openInOsm => t('openInOsm');
+  String get diplomaHeadlineDefault => t('diplomaHeadlineDefault');
+  String get congratulations => t('congratulations');
+  String get language => t('language');
+  String get settings => t('settings');
+  String get easy => t('easy');
+  String get moderate => t('moderate');
+  String get hard => t('hard');
+  String get expert => t('expert');
+  String get challengeLockedPaid => t('challengeLockedPaid');
+  String get storyLockedHint => t('storyLockedHint');
+  String get missingConfig => t('missingConfig');
+  String get errorGeneric => t('errorGeneric');
+  String get purchasePending => t('purchasePending');
+  String get retry => t('retry');
+  String get cameraDenied => t('cameraDenied');
+  String get noAccount => t('noAccount');
+  String get haveAccount => t('haveAccount');
+  String get displayName => t('displayName');
+  String get promoFallbackCta => t('promoFallbackCta');
+  String get needAccess => t('needAccess');
+  String get liveCameraOnly => t('liveCameraOnly');
+  String get viewDiploma => t('viewDiploma');
+  String get priceLabel => t('priceLabel');
+
+  String difficultyLabel(String name) => t(name);
+
+  static const _tables = <String, Map<String, String>>{
+    'en': {
+      'appName': 'Viateria',
+      'catalogTitle': 'Challenges',
+      'catalogEmpty': 'No published challenges yet.',
+      'catalogEmptyHint':
+          'Content lives in Supabase CMS. Publish a challenge to see it here.',
+      'signIn': 'Sign in',
+      'signUp': 'Create account',
+      'email': 'Email',
+      'password': 'Password',
+      'signOut': 'Sign out',
+      'free': 'Free',
+      'paid': 'Paid',
+      'unlock': 'Start',
+      'unlockWithStripe': 'Unlock with Stripe',
+      'openChallenge': 'Open',
+      'storyChallenge': 'Story',
+      'waypoints': 'Waypoints',
+      'locked': 'Locked',
+      'completed': 'Completed',
+      'verify': 'Verify waypoint',
+      'takePhoto': 'Take live photo',
+      'photoRequired': 'A live camera photo is required to verify.',
+      'uploading': 'Uploading…',
+      'verified': 'Verified',
+      'routePlanner': 'Route planner',
+      'hike': 'Hike',
+      'bike': 'Bike',
+      'distance': 'Distance',
+      'elevation': 'Elevation',
+      'time': 'Time',
+      'difficulty': 'Difficulty',
+      'openInOsm': 'Open in OpenStreetMap',
+      'diplomaHeadlineDefault': 'Certificate of completion',
+      'congratulations': 'You completed this challenge!',
+      'language': 'Language',
+      'settings': 'Settings',
+      'easy': 'Easy',
+      'moderate': 'Moderate',
+      'hard': 'Hard',
+      'expert': 'Expert',
+      'challengeLockedPaid': 'Purchase this challenge to access waypoints.',
+      'storyLockedHint': 'Complete the previous waypoint to unlock the next.',
+      'missingConfig':
+          'Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY via env.',
+      'errorGeneric': 'Something went wrong. Please try again.',
+      'purchasePending': 'Payment is still pending.',
+      'retry': 'Retry',
+      'cameraDenied': 'Camera permission is required for verification.',
+      'noAccount': 'Need an account? Sign up',
+      'haveAccount': 'Already registered? Sign in',
+      'displayName': 'Display name',
+      'promoFallbackCta': 'Learn more',
+      'needAccess': 'Unlock this challenge to continue.',
+      'liveCameraOnly': 'Gallery photos are not accepted.',
+      'viewDiploma': 'View diploma',
+      'priceLabel': 'Price',
+    },
+    'cs': {
+      'appName': 'Viateria',
+      'catalogTitle': 'Výzvy',
+      'catalogEmpty': 'Zatím žádné zveřejněné výzvy.',
+      'catalogEmptyHint':
+          'Obsah žije v Supabase CMS. Zveřejněte výzvu, aby se zde objevila.',
+      'signIn': 'Přihlásit se',
+      'signUp': 'Vytvořit účet',
+      'email': 'E-mail',
+      'password': 'Heslo',
+      'signOut': 'Odhlásit se',
+      'free': 'Zdarma',
+      'paid': 'Placené',
+      'unlock': 'Začít',
+      'unlockWithStripe': 'Odemknout přes Stripe',
+      'openChallenge': 'Otevřená',
+      'storyChallenge': 'Příběh',
+      'waypoints': 'Zastávky',
+      'locked': 'Zamčeno',
+      'completed': 'Dokončeno',
+      'verify': 'Ověřit zastávku',
+      'takePhoto': 'Pořídit živou fotku',
+      'photoRequired': 'K ověření je nutná živá fotka z fotoaparátu.',
+      'uploading': 'Nahrávám…',
+      'verified': 'Ověřeno',
+      'routePlanner': 'Plánovač trasy',
+      'hike': 'Pěšky',
+      'bike': 'Kolo',
+      'distance': 'Vzdálenost',
+      'elevation': 'Převýšení',
+      'time': 'Čas',
+      'difficulty': 'Obtížnost',
+      'openInOsm': 'Otevřít v OpenStreetMap',
+      'diplomaHeadlineDefault': 'Diplom za dokončení',
+      'congratulations': 'Tuto výzvu jste dokončili!',
+      'language': 'Jazyk',
+      'settings': 'Nastavení',
+      'easy': 'Lehká',
+      'moderate': 'Střední',
+      'hard': 'Těžká',
+      'expert': 'Expert',
+      'challengeLockedPaid': 'Pro přístup k zastávkám výzvu zakupte.',
+      'storyLockedHint': 'Další zastávku odemknete dokončením předchozí.',
+      'missingConfig':
+          'Supabase není nastavené. Doplňte SUPABASE_URL a SUPABASE_ANON_KEY v env.',
+      'errorGeneric': 'Něco se pokazilo. Zkuste to znovu.',
+      'purchasePending': 'Platba ještě není dokončená.',
+      'retry': 'Zkusit znovu',
+      'cameraDenied': 'Pro ověření je potřeba oprávnění k fotoaparátu.',
+      'noAccount': 'Nemáte účet? Registrace',
+      'haveAccount': 'Už máte účet? Přihlášení',
+      'displayName': 'Zobrazované jméno',
+      'promoFallbackCta': 'Zjistit více',
+      'needAccess': 'Pro pokračování výzvu odemkněte.',
+      'liveCameraOnly': 'Fotky z galerie se nepřijímají.',
+      'viewDiploma': 'Zobrazit diplom',
+      'priceLabel': 'Cena',
+    },
+    'de': {
+      'appName': 'Viateria',
+      'catalogTitle': 'Challenges',
+      'catalogEmpty': 'Noch keine veröffentlichten Challenges.',
+      'catalogEmptyHint':
+          'Inhalte liegen im Supabase-CMS. Veröffentlichen Sie eine Challenge.',
+      'signIn': 'Anmelden',
+      'signUp': 'Konto erstellen',
+      'email': 'E-Mail',
+      'password': 'Passwort',
+      'signOut': 'Abmelden',
+      'free': 'Kostenlos',
+      'paid': 'Kostenpflichtig',
+      'unlock': 'Starten',
+      'unlockWithStripe': 'Mit Stripe freischalten',
+      'openChallenge': 'Offen',
+      'storyChallenge': 'Geschichte',
+      'waypoints': 'Wegpunkte',
+      'locked': 'Gesperrt',
+      'completed': 'Abgeschlossen',
+      'verify': 'Wegpunkt prüfen',
+      'takePhoto': 'Live-Foto aufnehmen',
+      'photoRequired': 'Zur Prüfung ist ein Live-Kamerafoto erforderlich.',
+      'uploading': 'Wird hochgeladen…',
+      'verified': 'Geprüft',
+      'routePlanner': 'Routenplaner',
+      'hike': 'Wandern',
+      'bike': 'Rad',
+      'distance': 'Distanz',
+      'elevation': 'Höhenmeter',
+      'time': 'Zeit',
+      'difficulty': 'Schwierigkeit',
+      'openInOsm': 'In OpenStreetMap öffnen',
+      'diplomaHeadlineDefault': 'Abschlussdiplom',
+      'congratulations': 'Sie haben diese Challenge abgeschlossen!',
+      'language': 'Sprache',
+      'settings': 'Einstellungen',
+      'easy': 'Leicht',
+      'moderate': 'Mittel',
+      'hard': 'Schwer',
+      'expert': 'Experte',
+      'challengeLockedPaid':
+          'Kaufen Sie diese Challenge, um Wegpunkte zu sehen.',
+      'storyLockedHint':
+          'Schließen Sie den vorherigen Wegpunkt ab, um den nächsten zu öffnen.',
+      'missingConfig':
+          'Supabase ist nicht konfiguriert. Setzen Sie SUPABASE_URL und SUPABASE_ANON_KEY per Env.',
+      'errorGeneric': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+      'purchasePending': 'Zahlung steht noch aus.',
+      'retry': 'Erneut versuchen',
+      'cameraDenied': 'Für die Prüfung ist die Kameraberechtigung nötig.',
+      'noAccount': 'Noch kein Konto? Registrieren',
+      'haveAccount': 'Bereits registriert? Anmelden',
+      'displayName': 'Anzeigename',
+      'promoFallbackCta': 'Mehr erfahren',
+      'needAccess': 'Schalten Sie diese Challenge frei, um fortzufahren.',
+      'liveCameraOnly': 'Galerie-Fotos werden nicht akzeptiert.',
+      'viewDiploma': 'Diplom ansehen',
+      'priceLabel': 'Preis',
+    },
+  };
+}
