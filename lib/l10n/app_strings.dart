@@ -62,6 +62,14 @@ class AppStrings {
     'liveCameraOnly',
     'viewDiploma',
     'priceLabel',
+    'registerAction',
+    'registerTitle',
+    'backToSignIn',
+    'confirmEmailTitle',
+    'confirmEmailBody',
+    'otpCode',
+    'verifyOtp',
+    'enterAfterConfirm',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -120,6 +128,14 @@ class AppStrings {
   String get liveCameraOnly => t('liveCameraOnly');
   String get viewDiploma => t('viewDiploma');
   String get priceLabel => t('priceLabel');
+  String get registerAction => t('registerAction');
+  String get registerTitle => t('registerTitle');
+  String get backToSignIn => t('backToSignIn');
+  String get confirmEmailTitle => t('confirmEmailTitle');
+  String get confirmEmailBody => t('confirmEmailBody');
+  String get otpCode => t('otpCode');
+  String get verifyOtp => t('verifyOtp');
+  String get enterAfterConfirm => t('enterAfterConfirm');
 
   String difficultyLabel(String name) => t(name);
 
@@ -181,6 +197,15 @@ class AppStrings {
       'liveCameraOnly': 'Gallery photos are not accepted.',
       'viewDiploma': 'View diploma',
       'priceLabel': 'Price',
+      'registerAction': 'Sign up',
+      'registerTitle': 'Create account',
+      'backToSignIn': 'Back to sign in',
+      'confirmEmailTitle': 'Confirm your email',
+      'confirmEmailBody':
+          'Open the email we sent and enter the 6-digit code. After you confirm, you can enter the app.',
+      'otpCode': '6-digit code',
+      'verifyOtp': 'Verify code',
+      'enterAfterConfirm': "I've confirmed — enter the app",
     },
     'cs': {
       'appName': 'Viateria',
@@ -239,6 +264,15 @@ class AppStrings {
       'liveCameraOnly': 'Fotky z galerie se nepřijímají.',
       'viewDiploma': 'Zobrazit diplom',
       'priceLabel': 'Cena',
+      'registerAction': 'Zaregistrovat se',
+      'registerTitle': 'Registrace',
+      'backToSignIn': 'Zpět k přihlášení',
+      'confirmEmailTitle': 'Potvrďte e-mail',
+      'confirmEmailBody':
+          'Otevřete e-mail a zadejte 6místný kód. Až účet potvrdíte, můžete vstoupit do aplikace.',
+      'otpCode': '6místný kód',
+      'verifyOtp': 'Potvrdit kód',
+      'enterAfterConfirm': 'E-mail jsem potvrdil(a) — vstoupit',
     },
     'de': {
       'appName': 'Viateria',
@@ -299,6 +333,15 @@ class AppStrings {
       'liveCameraOnly': 'Galerie-Fotos werden nicht akzeptiert.',
       'viewDiploma': 'Diplom ansehen',
       'priceLabel': 'Preis',
+      'registerAction': 'Registrieren',
+      'registerTitle': 'Konto erstellen',
+      'backToSignIn': 'Zurück zur Anmeldung',
+      'confirmEmailTitle': 'E-Mail bestätigen',
+      'confirmEmailBody':
+          'Öffnen Sie die E-Mail und geben Sie den 6-stelligen Code ein. Nach der Bestätigung können Sie die App nutzen.',
+      'otpCode': '6-stelliger Code',
+      'verifyOtp': 'Code bestätigen',
+      'enterAfterConfirm': 'Bestätigt — App öffnen',
     },
   };
 }

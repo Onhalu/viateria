@@ -22,10 +22,18 @@ class UnconfiguredAuth implements AuthRepository {
   Future<void> signOut() async {}
 
   @override
-  Future<Profile> signUp({
+  Future<SignUpResult> signUp({
     required String email,
     required String password,
     String? displayName,
+  }) {
+    throw StateError('Supabase is not configured');
+  }
+
+  @override
+  Future<Profile> verifyEmailOtp({
+    required String email,
+    required String token,
   }) {
     throw StateError('Supabase is not configured');
   }

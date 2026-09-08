@@ -83,42 +83,92 @@ class SupabaseAuthRepository implements AuthRepository {
     );
   }
 
+  Never _rethrowAuth(Object error, StackTrace stack) {
+    if (error is AuthException && error.message.isNotEmpty) {
+      Error.throwWithStackTrace(AuthFailure(error.message), stack);
+    }
+    Error.throwWithStackTrace(error, stack);
+  }
+
   @override
   Future<Profile> signIn({
     required String email,
     required String password,
   }) async {
-    final result = await _client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
-    final profile = _mapUser(result.user);
-    if (profile == null) {
-      throw StateError('Sign-in succeeded without a user');
+    try {
+      final result = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final profile = _mapUser(result.user);
+      if (profile == null) {
+        throw const AuthFailure('Sign-in succeeded without a session');
+      }
+      return profile;
+    } catch (error, stack) {
+      _rethrowAuth(error, stack);
     }
-    return profile;
   }
 
   @override
-  Future<Profile> signUp({
+  Future<SignUpResult> signUp({
     required String email,
     required String password,
     String? displayName,
   }) async {
-    final result = await _client.auth.signUp(
-      email: email,
-      password: password,
-      data: {
-        if (displayName != null && displayName.isNotEmpty)
-          'display_name': displayName,
-        'locale': 'cs',
-      },
-    );
-    final profile = _mapUser(result.user);
-    if (profile == null) {
-      throw StateError('Sign-up succeeded without a user');
+    try {
+      final result = await _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          if (displayName != null && displayName.isNotEmpty)
+            'display_name': displayName,
+          'locale': 'cs',
+        },
+      );
+      if (result.session != null) {
+        final profile = _mapUser(result.user ?? result.session?.user);
+        if (profile == null) {
+          throw const AuthFailure('Sign-up succeeded without a user');
+        }
+        return SignUpResult(sessionEstablished: true, profile: profile);
+      }
+      // Email confirmation required: user may exist without a session.
+      return SignUpResult(
+        sessionEstablished: false,
+        profile: _mapUser(result.user),
+      );
+    } catch (error, stack) {
+      _rethrowAuth(error, stack);
     }
-    return profile;
+  }
+
+  @override
+  Future<Profile> verifyEmailOtp({
+    required String email,
+    required String token,
+  }) async {
+    AuthException? lastAuth;
+    for (final type in [OtpType.signup, OtpType.email]) {
+      try {
+        final result = await _client.auth.verifyOTP(
+          email: email,
+          token: token,
+          type: type,
+        );
+        final profile = _mapUser(result.user ?? result.session?.user);
+        if (profile == null) {
+          throw const AuthFailure('Code verified without a session');
+        }
+        return profile;
+      } on AuthException catch (error) {
+        lastAuth = error;
+      }
+    }
+    if (lastAuth != null && lastAuth.message.isNotEmpty) {
+      throw AuthFailure(lastAuth.message);
+    }
+    throw const AuthFailure('Could not verify the email code');
   }
 
   @override
