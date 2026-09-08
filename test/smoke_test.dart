@@ -65,19 +65,19 @@ Widget wrap(Widget child, AppServices services, {LocaleController? locale}) {
 }
 
 void main() {
-  testWidgets('catalog smoke: published challenges and promo stripe, no drafts',
-      (tester) async {
-    await tester.pumpWidget(
-      wrap(const CatalogScreen(), buildServices()),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Weekend hike'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Open trail'), 400);
-    expect(find.text('Open trail'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Story trail'), 400);
-    expect(find.text('Story trail'), findsOneWidget);
-    expect(find.text('Hidden draft'), findsNothing);
-  });
+  testWidgets(
+    'catalog smoke: published challenges and promo stripe, no drafts',
+    (tester) async {
+      await tester.pumpWidget(wrap(const CatalogScreen(), buildServices()));
+      await tester.pumpAndSettle();
+      expect(find.text('Weekend hike'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Open trail'), 400);
+      expect(find.text('Open trail'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Story trail'), 400);
+      expect(find.text('Story trail'), findsOneWidget);
+      expect(find.text('Hidden draft'), findsNothing);
+    },
+  );
 
   testWidgets('catalog empty state when CMS has no published rows', (
     tester,
@@ -90,6 +90,31 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text(AppStrings('en').catalogEmpty), findsOneWidget);
+  });
+
+  testWidgets('catalog controls render at the bottom, not in an AppBar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(wrap(const CatalogScreen(), buildServices()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBar), findsNothing);
+    final nav = find.byKey(const Key('catalog-bottom-nav'));
+    expect(nav, findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+
+    final strings = AppStrings('en');
+    expect(find.text(strings.catalogTitle), findsOneWidget);
+    expect(find.text(strings.settings), findsOneWidget);
+
+    final screenSize = tester.getSize(find.byType(Scaffold));
+    final navTop = tester.getTopLeft(nav).dy;
+    expect(navTop, greaterThan(screenSize.height / 2));
+
+    final list = find.byType(ListView);
+    expect(list, findsOneWidget);
+    expect(tester.getBottomLeft(list).dy, lessThanOrEqualTo(navTop + 0.5));
+    expect(find.text('Weekend hike'), findsOneWidget);
   });
 
   testWidgets('missing config screen is shown when secrets are absent', (

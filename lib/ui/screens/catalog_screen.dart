@@ -40,78 +40,87 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(strings.catalogTitle),
-        actions: [
-          IconButton(
-            tooltip: strings.settings,
-            onPressed: () => context.push('/settings'),
-            icon: const Icon(Icons.settings_outlined),
-          ),
-        ],
-      ),
-      body: FutureBuilder<_CatalogData>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(strings.errorGeneric),
-                  TextButton(onPressed: _reload, child: Text(strings.retry)),
-                ],
-              ),
-            );
-          }
-          final data = snapshot.data!;
-          if (data.challenges.isEmpty && data.promos.isEmpty) {
+      body: SafeArea(
+        bottom: false,
+        child: FutureBuilder<_CatalogData>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(strings.errorGeneric),
+                    TextButton(onPressed: _reload, child: Text(strings.retry)),
+                  ],
+                ),
+              );
+            }
+            final data = snapshot.data!;
+            if (data.challenges.isEmpty && data.promos.isEmpty) {
+              return RefreshIndicator(
+                onRefresh: _reload,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    const SizedBox(height: 80),
+                    Text(
+                      strings.catalogEmpty,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(strings.catalogEmptyHint, textAlign: TextAlign.center),
+                  ],
+                ),
+              );
+            }
             return RefreshIndicator(
               onRefresh: _reload,
               child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(16),
                 children: [
-                  const SizedBox(height: 80),
-                  Text(
-                    strings.catalogEmpty,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    strings.catalogEmptyHint,
-                    textAlign: TextAlign.center,
-                  ),
+                  for (final promo in data.promos) ...[
+                    PromoStripeCard(
+                      promo: promo,
+                      onTap: () => _openPromo(promo),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  for (final challenge in data.challenges) ...[
+                    ChallengeCard(
+                      challenge: challenge,
+                      onTap: () => context.push('/challenge/${challenge.id}'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ],
               ),
             );
-          }
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final promo in data.promos) ...[
-                  PromoStripeCard(
-                    promo: promo,
-                    onTap: () => _openPromo(promo),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                for (final challenge in data.challenges) ...[
-                  ChallengeCard(
-                    challenge: challenge,
-                    onTap: () => context.push('/challenge/${challenge.id}'),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ],
-            ),
-          );
+          },
+        ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        key: const Key('catalog-bottom-nav'),
+        selectedIndex: 0,
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.explore_outlined),
+            selectedIcon: const Icon(Icons.explore),
+            label: strings.catalogTitle,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: strings.settings,
+          ),
+        ],
+        onDestinationSelected: (index) {
+          if (index == 1) context.push('/settings');
         },
       ),
     );
