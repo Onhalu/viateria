@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'data/app_services.dart';
 import 'l10n/locale_controller.dart';
+import 'l10n/sdk_fallback_localizations.dart';
 import 'theme/app_theme.dart';
 import 'ui/screens/auth_screen.dart';
 import 'ui/screens/catalog_screen.dart';
@@ -92,11 +92,7 @@ class _ViateriaAppState extends State<ViateriaApp> {
       theme: AppTheme.light(),
       locale: Locale(locale),
       supportedLocales: AppStringsLocales.supported,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: appLocalizationsDelegates,
       routerConfig: _router,
     );
   }
