@@ -10,7 +10,6 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../models/models.dart';
-import '../../theme/app_theme.dart';
 
 typedef PlaceTapCallback = void Function(Place place);
 typedef ViewportCallback = void Function(GeoBounds bounds);
@@ -273,8 +272,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     await controller.addLineLayer(
       MapStyleConfig.bikeSourceId,
       MapStyleConfig.bikeLayerId,
-      LineLayerProperties(
-        lineColor: _hex(AppTheme.gold),
+      const LineLayerProperties(
+        lineColor: MapStyleConfig.forestHex,
         lineWidth: 5,
         lineCap: 'round',
         lineJoin: 'round',
@@ -283,8 +282,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     await controller.addLineLayer(
       MapStyleConfig.hikeSourceId,
       MapStyleConfig.hikeLayerId,
-      LineLayerProperties(
-        lineColor: _hex(AppTheme.moss),
+      const LineLayerProperties(
+        lineColor: MapStyleConfig.barkHex,
         lineWidth: 4,
         lineCap: 'round',
         lineJoin: 'round',
@@ -295,17 +294,9 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.circleLayerId,
       const CircleLayerProperties(
         circleRadius: 16,
-        circleColor: [
-          Expressions.match,
-          [Expressions.get, 'kind'],
-          'selected',
-          '#D4A017',
-          'start',
-          '#1B4332',
-          '#2D6A4F',
-        ],
+        circleColor: MapStyleConfig.forestHex,
         circleStrokeWidth: 2,
-        circleStrokeColor: '#FFFFFF',
+        circleStrokeColor: MapStyleConfig.creamHex,
       ),
     );
     await controller.addSymbolLayer(
@@ -314,13 +305,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       const SymbolLayerProperties(
         textField: [Expressions.get, 'label'],
         textSize: 12,
-        textColor: [
-          Expressions.match,
-          [Expressions.get, 'kind'],
-          'selected',
-          '#3D2914',
-          '#FFFFFF',
-        ],
+        textColor: MapStyleConfig.creamHex,
         textAllowOverlap: true,
         textIgnorePlacement: true,
       ),
@@ -368,20 +353,32 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     if (navigating == TravelMode.bike) {
       await controller.setLayerProperties(
         MapStyleConfig.bikeLayerId,
-        LineLayerProperties(lineWidth: 7, lineColor: _hex(AppTheme.gold)),
+        const LineLayerProperties(
+          lineWidth: 7,
+          lineColor: MapStyleConfig.forestHex,
+        ),
       );
       await controller.setLayerProperties(
         MapStyleConfig.hikeLayerId,
-        LineLayerProperties(lineWidth: 4, lineColor: _hex(AppTheme.moss)),
+        const LineLayerProperties(
+          lineWidth: 4,
+          lineColor: MapStyleConfig.barkHex,
+        ),
       );
     } else if (navigating == TravelMode.hike) {
       await controller.setLayerProperties(
         MapStyleConfig.bikeLayerId,
-        LineLayerProperties(lineWidth: 5, lineColor: _hex(AppTheme.gold)),
+        const LineLayerProperties(
+          lineWidth: 5,
+          lineColor: MapStyleConfig.forestHex,
+        ),
       );
       await controller.setLayerProperties(
         MapStyleConfig.hikeLayerId,
-        LineLayerProperties(lineWidth: 6, lineColor: _hex(AppTheme.moss)),
+        const LineLayerProperties(
+          lineWidth: 6,
+          lineColor: MapStyleConfig.barkHex,
+        ),
       );
     }
   }
@@ -567,11 +564,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
     return const {};
-  }
-
-  String _hex(Color color) {
-    final value = color.toARGB32() & 0xFFFFFF;
-    return '#${value.toRadixString(16).padLeft(6, '0')}';
   }
 }
 

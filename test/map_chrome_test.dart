@@ -18,17 +18,20 @@ void main() {
     expect(MapPalette.bark, const Color(0xFF756653));
     expect(MapPalette.creamFill.toARGB32(), 0xF0F3EFE5);
     expect(MapOverlayColors.fill, MapPalette.creamFill);
-    expect(MapOverlayColors.accent, MapPalette.sage);
+    expect(MapOverlayColors.accent, MapPalette.forest);
     expect(MapOverlayColors.surface, MapPalette.cream);
 
     expect(MapOverlayColors.accent, isNot(AppTheme.gold));
+    expect(MapOverlayColors.accent, isNot(MapPalette.sage));
     expect(MapPalette.forest, isNot(AppTheme.forest));
     expect(MapPalette.bark, isNot(AppTheme.bark));
     expect(MapPalette.forest, isNot(const Color(0xFF1B4332)));
     expect(MapPalette.bark, isNot(const Color(0xFF3D2914)));
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
     expect(MapPalette.forestHex, MapStyleConfig.clusterCountTextColor);
-    expect(MapPalette.sageRgba24, MapStyleConfig.selectedUnderlayColor);
+    expect(MapPalette.forestRgba22, MapStyleConfig.selectedUnderlayColor);
+    expect(MapStyleConfig.forestHex, '#35483C');
+    expect(MapStyleConfig.barkHex, '#756653');
   });
 
   test('full and compact chrome sizes', () {
@@ -65,7 +68,7 @@ void main() {
     expect(cs.t('catOther'), 'Jiné');
   });
 
-  test('GeoJSON marks the selected place for the sage underlay', () {
+  test('GeoJSON marks the selected place for the forest underlay', () {
     final places = samplePlaces();
     final collection = featureCollectionOf(places, selectedId: 'karlstejn');
     final features = collection['features'] as List;

@@ -141,7 +141,7 @@ void main() {
     expect(find.byKey(const Key('map-locate-fab')), findsOneWidget);
   });
 
-  testWidgets('Mapa tab chrome uses Batch A cream/forest/sage sizes', (
+  testWidgets('Mapa tab chrome uses Batch A cream/forest sizes', (
     tester,
   ) async {
     await tester.pumpWidget(_mapApp());

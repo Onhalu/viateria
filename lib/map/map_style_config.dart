@@ -34,8 +34,11 @@ abstract final class MapStyleConfig {
   static const selectedUnderlayRadius = 22.0;
   static const clusterCountTextSize = 12.0;
   static const clusterCountTextColor = '#35483C';
-  static const selectedUnderlayColor = 'rgba(156, 154, 123, 0.24)';
+  static const selectedUnderlayColor = 'rgba(53, 72, 60, 0.22)';
   static const selectedUnderlayLayerId = 'poi-selected-underlay';
+  static const forestHex = '#35483C';
+  static const barkHex = '#756653';
+  static const creamHex = '#F3EFE5';
 
   static const searchDebounce = Duration(milliseconds: 300);
   static const searchLimit = 20;

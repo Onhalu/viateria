@@ -62,11 +62,19 @@ class _FilterBodyState extends State<_FilterBody> {
                     key: Key('map-filter-${category.name}'),
                     label: Text(strings.t(category.l10nKey)),
                     selected: _selected.contains(category),
-                    selectedColor: MapOverlayColors.accent,
-                    checkmarkColor: MapPalette.forest,
-                    labelStyle: const TextStyle(color: MapPalette.forest),
+                    selectedColor: MapPalette.forest,
+                    checkmarkColor: MapPalette.cream,
+                    labelStyle: TextStyle(
+                      color: _selected.contains(category)
+                          ? MapPalette.cream
+                          : MapPalette.forest,
+                    ),
                     backgroundColor: MapPalette.beige,
-                    side: const BorderSide(color: MapPalette.beige),
+                    side: BorderSide(
+                      color: _selected.contains(category)
+                          ? MapPalette.forest
+                          : MapPalette.beige,
+                    ),
                     onSelected: (on) {
                       setState(() {
                         if (on) {

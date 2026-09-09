@@ -195,7 +195,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                                 viewMode == MapViewMode.map
                                     ? Icons.view_list
                                     : Icons.map_outlined,
-                                color: MapPalette.forest,
+                                color: MapPalette.cream,
                                 size: MapChromeSizes.toggleIcon(compact),
                               ),
                               const SizedBox(width: 6),
@@ -204,7 +204,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                                     ? strings.viewList
                                     : strings.viewMap,
                                 style: TextStyle(
-                                  color: MapPalette.forest,
+                                  color: MapPalette.cream,
                                   fontWeight: FontWeight.w600,
                                   fontSize: MapChromeSizes.toggleFont(compact),
                                 ),

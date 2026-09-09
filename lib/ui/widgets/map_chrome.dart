@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 /// Map UI tokens (Batch A). App shell / catalog still use [AppTheme].
 ///
-/// Forbidden on map chrome: `#D4A017` gold, `#2D6A4F` moss, `#1B4332` old
-/// forest, `#3D2914` old bark.
+/// Map primary is forest `#35483C`. Cream surfaces stay `#F3EFE5`.
+/// Sage is not used as a fill. Forbidden: `#D4A017` gold, `#2D6A4F` moss,
+/// `#1B4332` old forest, `#3D2914` old bark.
 abstract final class MapPalette {
   static const forest = Color(0xFF35483C);
   static const sage = Color(0xFF9C9A7B);
@@ -16,12 +17,16 @@ abstract final class MapPalette {
   static const creamFill = Color(0xF0F3EFE5);
 
   static const forestHex = '#35483C';
-  static const sageRgba24 = 'rgba(156, 154, 123, 0.24)';
+  static const barkHex = '#756653';
+  static const creamHex = '#F3EFE5';
+
+  /// Forest at ~22% opacity for the selected-marker underlay.
+  static const forestRgba22 = 'rgba(53, 72, 60, 0.22)';
 }
 
 abstract final class MapOverlayColors {
   static const fill = MapPalette.creamFill;
-  static const accent = MapPalette.sage;
+  static const accent = MapPalette.forest;
   static const surface = MapPalette.cream;
 }
 
