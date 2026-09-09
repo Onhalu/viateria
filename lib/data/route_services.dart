@@ -401,9 +401,7 @@ class DualRoutePlanner {
           : _summary(
               mode: TravelMode.hike,
               path: hikePath,
-              heights: heights == null
-                  ? null
-                  : heights.sublist(0, hikeSamples.length),
+              heights: heights?.sublist(0, hikeSamples.length),
               osmPoints: osmPoints,
             ),
       bike: bikePath == null
@@ -411,9 +409,7 @@ class DualRoutePlanner {
           : _summary(
               mode: TravelMode.bike,
               path: bikePath,
-              heights: heights == null
-                  ? null
-                  : heights.sublist(hikeSamples.length),
+              heights: heights?.sublist(hikeSamples.length),
               osmPoints: osmPoints,
             ),
       hikeLine: hikePath?.points ?? const [],
