@@ -11,6 +11,7 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/last_challenge_screen.dart';
+import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
 import 'package:viateria/ui/widgets/challenges_overview_map.dart';
 
@@ -131,7 +132,55 @@ void main() {
     final navTop = tester.getTopLeft(nav).dy;
     expect(navTop, greaterThan(screenSize.height / 2));
     expect(find.text('Weekend hike'), findsOneWidget);
+
+    final navRect = tester.getRect(nav);
+    expect(navRect.left, greaterThan(0));
+    expect(navRect.right, lessThan(screenSize.width));
+    expect(navRect.bottom, lessThan(screenSize.height));
+
+    final shell = tester.widget<Material>(
+      find.byKey(const Key('app-bottom-nav-shell')),
+    );
+    expect(shell.clipBehavior, Clip.antiAlias);
+    expect(
+      shell.shape,
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppShell.barRadius),
+      ),
+    );
   });
+
+  testWidgets(
+    'bottom nav is inset from the home indicator and rounded on the sides',
+    (tester) async {
+      const homeIndicator = 34.0;
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
+      tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPadding();
+        tester.view.resetViewPadding();
+      });
+
+      await tester.pumpWidget(wrapApp(buildServices()));
+      await tester.pumpAndSettle();
+
+      final navRect = tester.getRect(find.byKey(const Key('app-bottom-nav')));
+      final screenSize = tester.getSize(find.byType(Scaffold).first);
+      expect(navRect.left, AppShell.horizontalInset);
+      expect(navRect.right, screenSize.width - AppShell.horizontalInset);
+      expect(
+        navRect.bottom,
+        lessThanOrEqualTo(
+          screenSize.height - homeIndicator - AppShell.bottomInset + 0.5,
+        ),
+      );
+      expect(navRect.bottom, lessThan(screenSize.height - homeIndicator));
+    },
+  );
 
   testWidgets('last-challenge tab shows empty state when none opened', (
     tester,
