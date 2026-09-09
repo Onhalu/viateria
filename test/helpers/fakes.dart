@@ -7,9 +7,10 @@ import 'package:viateria/domain/unlock_rules.dart';
 import 'package:viateria/models/models.dart';
 
 class MemoryAuth implements AuthRepository {
-  MemoryAuth({this._user});
+  MemoryAuth({this._user, this.sessionOnSignUp = true});
 
   Profile? _user;
+  final bool sessionOnSignUp;
   final _controller = StreamController<Profile?>.broadcast();
 
   @override
@@ -23,18 +24,47 @@ class MemoryAuth implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    _user = Profile(id: 'user-1', email: email, locale: 'cs', displayName: 'Ada');
+    _user = Profile(
+      id: 'user-1',
+      email: email,
+      locale: 'cs',
+      displayName: 'Ada',
+    );
     _controller.add(_user);
     return _user!;
   }
 
   @override
-  Future<Profile> signUp({
+  Future<SignUpResult> signUp({
     required String email,
     required String password,
     String? displayName,
-  }) {
-    return signIn(email: email, password: password);
+  }) async {
+    if (!sessionOnSignUp) {
+      return SignUpResult(
+        sessionEstablished: false,
+        profile: Profile(
+          id: 'pending',
+          email: email,
+          locale: 'cs',
+          displayName: displayName,
+        ),
+      );
+    }
+    final profile = await signIn(email: email, password: password);
+    return SignUpResult(sessionEstablished: true, profile: profile);
+  }
+
+  @override
+  Future<Profile> verifyEmailOtp({
+    required String email,
+    required String token,
+  }) async {
+    final code = token.trim();
+    if (code.length != 6) {
+      throw const AuthFailure('Token has expired or is invalid');
+    }
+    return signIn(email: email, password: 'verified');
   }
 
   @override
