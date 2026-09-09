@@ -1,0 +1,1790 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 1,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.1881,
+          49.9394
+        ]
+      },
+      "properties": {
+        "id": "karlstejn-1",
+        "name": "Karlštejn",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 2,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.8725,
+          50.0378
+        ]
+      },
+      "properties": {
+        "id": "krivoklat-2",
+        "name": "Křivoklát",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 3,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.3175,
+          48.8127
+        ]
+      },
+      "properties": {
+        "id": "cesky-krumlov-3",
+        "name": "Český Krumlov",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 4,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.8897,
+          49.7042
+        ]
+      },
+      "properties": {
+        "id": "bouzov-4",
+        "name": "Bouzov",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 5,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.3183,
+          49.4508
+        ]
+      },
+      "properties": {
+        "id": "pernstejn-5",
+        "name": "Pernštejn",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 6,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.1353,
+          50.4903
+        ]
+      },
+      "properties": {
+        "id": "kost-6",
+        "name": "Kost",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 7,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.7206,
+          50.5392
+        ]
+      },
+      "properties": {
+        "id": "bezdez-7",
+        "name": "Bezděz",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 8,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.6178,
+          49.2808
+        ]
+      },
+      "properties": {
+        "id": "rabi-8",
+        "name": "Rabí",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 9,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.2842,
+          49.4794
+        ]
+      },
+      "properties": {
+        "id": "svihov-9",
+        "name": "Švihov",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 10,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.6289,
+          49.5178
+        ]
+      },
+      "properties": {
+        "id": "helfstyn-10",
+        "name": "Helfštýn",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 11,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.2306,
+          49.0242
+        ]
+      },
+      "properties": {
+        "id": "landstejn-11",
+        "name": "Landštejn",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 12,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.1889,
+          49.4294
+        ]
+      },
+      "properties": {
+        "id": "zvikov-12",
+        "name": "Zvíkov",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 13,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.8131,
+          50.0803
+        ]
+      },
+      "properties": {
+        "id": "kuneticka-hora-13",
+        "name": "Kunětická hora",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 14,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.4617,
+          49.2567
+        ]
+      },
+      "properties": {
+        "id": "veveri-14",
+        "name": "Veveří",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 15,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.5992,
+          49.1944
+        ]
+      },
+      "properties": {
+        "id": "spilberk-15",
+        "name": "Špilberk",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 16,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.2219,
+          49.6236
+        ]
+      },
+      "properties": {
+        "id": "hukvaldy-16",
+        "name": "Hukvaldy",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 17,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.3136,
+          49.1072
+        ]
+      },
+      "properties": {
+        "id": "buchlov-17",
+        "name": "Buchlov",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 18,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.7542,
+          50.1867
+        ]
+      },
+      "properties": {
+        "id": "loket-18",
+        "name": "Loket",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 19,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.3864,
+          50.0811
+        ]
+      },
+      "properties": {
+        "id": "cheb-19",
+        "name": "Cheb",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 20,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.0872,
+          50.9214
+        ]
+      },
+      "properties": {
+        "id": "frydlant-20",
+        "name": "Frýdlant",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 21,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.8631,
+          50.8469
+        ]
+      },
+      "properties": {
+        "id": "grabstejn-21",
+        "name": "Grabštejn",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 22,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.4125,
+          49.6136
+        ]
+      },
+      "properties": {
+        "id": "lipnice-nad-sazavou-22",
+        "name": "Lipnice nad Sázavou",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 23,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.5781,
+          50.4403
+        ]
+      },
+      "properties": {
+        "id": "kokorin-23",
+        "name": "Kokořín",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 24,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.8386,
+          50.0836
+        ]
+      },
+      "properties": {
+        "id": "becov-nad-teplou-24",
+        "name": "Bečov nad Teplou",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 25,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.3889,
+          49.2639
+        ]
+      },
+      "properties": {
+        "id": "velhartice-25",
+        "name": "Velhartice",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 26,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.5611,
+          49.1656
+        ]
+      },
+      "properties": {
+        "id": "kasperk-26",
+        "name": "Kašperk",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 27,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.3667,
+          48.655
+        ]
+      },
+      "properties": {
+        "id": "rozmberk-27",
+        "name": "Rožmberk",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 28,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.8864,
+          49.8911
+        ]
+      },
+      "properties": {
+        "id": "tocnik-28",
+        "name": "Točník",
+        "category": "castle",
+        "icon": "castle"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 29,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4422,
+          49.0511
+        ]
+      },
+      "properties": {
+        "id": "hluboka-nad-vltavou-29",
+        "name": "Hluboká nad Vltavou",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 30,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.8056,
+          48.7997
+        ]
+      },
+      "properties": {
+        "id": "lednice-30",
+        "name": "Lednice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 31,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.7556,
+          48.7394
+        ]
+      },
+      "properties": {
+        "id": "valtice-31",
+        "name": "Valtice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 32,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.3933,
+          49.3003
+        ]
+      },
+      "properties": {
+        "id": "kromeriz-32",
+        "name": "Kroměříž",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 33,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.3128,
+          49.8736
+        ]
+      },
+      "properties": {
+        "id": "litomysl-33",
+        "name": "Litomyšl",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 34,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.8847,
+          49.2469
+        ]
+      },
+      "properties": {
+        "id": "cervena-lhota-34",
+        "name": "Červená Lhota",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 35,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.6567,
+          49.7794
+        ]
+      },
+      "properties": {
+        "id": "konopiste-35",
+        "name": "Konopiště",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 36,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.5603,
+          50.0019
+        ]
+      },
+      "properties": {
+        "id": "pruhonice-36",
+        "name": "Průhonice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 37,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4133,
+          50.1264
+        ]
+      },
+      "properties": {
+        "id": "troja-37",
+        "name": "Troja",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 38,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.4528,
+          49.1842
+        ]
+      },
+      "properties": {
+        "id": "telc-38",
+        "name": "Telč",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 39,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.8933,
+          49.0942
+        ]
+      },
+      "properties": {
+        "id": "jaromerice-nad-rokytnou-39",
+        "name": "Jaroměřice nad Rokytnou",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 40,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.8764,
+          49.1533
+        ]
+      },
+      "properties": {
+        "id": "slavkov-u-brna-40",
+        "name": "Slavkov u Brna",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 41,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.5372,
+          49.4517
+        ]
+      },
+      "properties": {
+        "id": "lysice-41",
+        "name": "Lysice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 42,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.1431,
+          48.9556
+        ]
+      },
+      "properties": {
+        "id": "milotice-42",
+        "name": "Milotice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 43,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.1586,
+          49.2075
+        ]
+      },
+      "properties": {
+        "id": "namest-nad-oslavou-43",
+        "name": "Náměšť nad Oslavou",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 44,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.0406,
+          50.0319
+        ]
+      },
+      "properties": {
+        "id": "velke-losiny-44",
+        "name": "Velké Losiny",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 45,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.1147,
+          50.2675
+        ]
+      },
+      "properties": {
+        "id": "opocno-45",
+        "name": "Opočno",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 46,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.1514,
+          50.3447
+        ]
+      },
+      "properties": {
+        "id": "nove-mesto-nad-metuji-46",
+        "name": "Nové Město nad Metují",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 47,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.9742,
+          50.5217
+        ]
+      },
+      "properties": {
+        "id": "mnichovo-hradiste-47",
+        "name": "Mnichovo Hradiště",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 48,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.0031,
+          49.1442
+        ]
+      },
+      "properties": {
+        "id": "jindrichuv-hradec-48",
+        "name": "Jindřichův Hradec",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 49,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.7706,
+          49.0039
+        ]
+      },
+      "properties": {
+        "id": "trebon-49",
+        "name": "Třeboň",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 50,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.17,
+          49.5122
+        ]
+      },
+      "properties": {
+        "id": "orlik-50",
+        "name": "Orlík",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 51,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.7725,
+          49.86
+        ]
+      },
+      "properties": {
+        "id": "zbiroh-51",
+        "name": "Zbiroh",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 52,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.2081,
+          50.7786
+        ]
+      },
+      "properties": {
+        "id": "decin-52",
+        "name": "Děčín",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 53,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.0872,
+          50.6264
+        ]
+      },
+      "properties": {
+        "id": "sychrov-53",
+        "name": "Sychrov",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 54,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.6711,
+          50.2222
+        ]
+      },
+      "properties": {
+        "id": "hradek-u-nechanic-54",
+        "name": "Hrádek u Nechanic",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 55,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.0511,
+          50.4156
+        ]
+      },
+      "properties": {
+        "id": "ratiborice-55",
+        "name": "Ratibořice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 56,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.1814,
+          50.1292
+        ]
+      },
+      "properties": {
+        "id": "castolovice-56",
+        "name": "Častolovice",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 57,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.3089,
+          50.2617
+        ]
+      },
+      "properties": {
+        "id": "nelahozeves-57",
+        "name": "Nelahozeves",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 58,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.9394,
+          49.5833
+        ]
+      },
+      "properties": {
+        "id": "zdar-nad-sazavou-58",
+        "name": "Žďár nad Sázavou",
+        "category": "chateau",
+        "icon": "chateau"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 59,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.2306,
+          50.5164
+        ]
+      },
+      "properties": {
+        "id": "trosky-59",
+        "name": "Trosky",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 60,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.0142,
+          50.4339
+        ]
+      },
+      "properties": {
+        "id": "hazmburk-60",
+        "name": "Hazmburk",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 61,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.2581,
+          50.2
+        ]
+      },
+      "properties": {
+        "id": "okor-61",
+        "name": "Okoř",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 62,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.6381,
+          50.0236
+        ]
+      },
+      "properties": {
+        "id": "krakovec-62",
+        "name": "Krakovec",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 63,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.7236,
+          48.9364
+        ]
+      },
+      "properties": {
+        "id": "cornstejn-63",
+        "name": "Cornštejn",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 64,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.2167,
+          49.1056
+        ]
+      },
+      "properties": {
+        "id": "cimburk-64",
+        "name": "Cimburk",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 65,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.2486,
+          49.09
+        ]
+      },
+      "properties": {
+        "id": "templstejn-65",
+        "name": "Templštejn",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 66,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.3569,
+          48.8894
+        ]
+      },
+      "properties": {
+        "id": "divci-kamen-66",
+        "name": "Dívčí kámen",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 67,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.7661,
+          50.6744
+        ]
+      },
+      "properties": {
+        "id": "ralsko-67",
+        "name": "Ralsko",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 68,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4319,
+          50.8583
+        ]
+      },
+      "properties": {
+        "id": "tolstejn-68",
+        "name": "Tolštejn",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 69,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.985,
+          50.52
+        ]
+      },
+      "properties": {
+        "id": "kostalov-69",
+        "name": "Košťálov",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 70,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.4264,
+          50.0375
+        ]
+      },
+      "properties": {
+        "id": "zampach-70",
+        "name": "Žampach",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 71,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.3092,
+          50.0764
+        ]
+      },
+      "properties": {
+        "id": "potstejn-71",
+        "name": "Potštejn",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 72,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.0139,
+          49.8711
+        ]
+      },
+      "properties": {
+        "id": "gutstejn-72",
+        "name": "Gutštejn",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 73,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.67,
+          49.645
+        ]
+      },
+      "properties": {
+        "id": "primda-73",
+        "name": "Přimda",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 74,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.4644,
+          49.6811
+        ]
+      },
+      "properties": {
+        "id": "radyne-74",
+        "name": "Radyně",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 75,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.5861,
+          49.8789
+        ]
+      },
+      "properties": {
+        "id": "lichnice-75",
+        "name": "Lichnice",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 76,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.0494,
+          50.6419
+        ]
+      },
+      "properties": {
+        "id": "strekov-76",
+        "name": "Střekov",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 77,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.8972,
+          49.8756
+        ]
+      },
+      "properties": {
+        "id": "zebrak-77",
+        "name": "Žebrák",
+        "category": "ruin",
+        "icon": "ruin"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 78,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4005,
+          50.0909
+        ]
+      },
+      "properties": {
+        "id": "katedrala-sv-vita-78",
+        "name": "Katedrála sv. Víta",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 79,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.2636,
+          49.945
+        ]
+      },
+      "properties": {
+        "id": "chram-sv-barbory-79",
+        "name": "Chrám sv. Barbory",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 80,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.9422,
+          49.5803
+        ]
+      },
+      "properties": {
+        "id": "zelena-hora-80",
+        "name": "Zelená hora",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 81,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.8733,
+          49.2169
+        ]
+      },
+      "properties": {
+        "id": "bazilika-sv-prokopa-81",
+        "name": "Bazilika sv. Prokopa",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 82,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.3406,
+          49.6286
+        ]
+      },
+      "properties": {
+        "id": "svaty-kopecek-82",
+        "name": "Svatý Kopeček",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 83,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.0178,
+          49.6864
+        ]
+      },
+      "properties": {
+        "id": "svata-hora-83",
+        "name": "Svatá Hora",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 84,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4031,
+          50.0878
+        ]
+      },
+      "properties": {
+        "id": "kostel-sv-mikulase-84",
+        "name": "Kostel sv. Mikuláše",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 85,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.2625,
+          49.5978
+        ]
+      },
+      "properties": {
+        "id": "katedrala-sv-vaclava-85",
+        "name": "Katedrála sv. Václava",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 86,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.5944,
+          49.1908
+        ]
+      },
+      "properties": {
+        "id": "petrov-86",
+        "name": "Petrov",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 87,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.6486,
+          50.5183
+        ]
+      },
+      "properties": {
+        "id": "kostel-nanebevzeti-panny-marie-v-moste-87",
+        "name": "Kostel Nanebevzetí Panny Marie v Mostě",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 88,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          17.7,
+          49.3806
+        ]
+      },
+      "properties": {
+        "id": "svaty-hostyn-88",
+        "name": "Svatý Hostýn",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 89,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.3906,
+          49.9344
+        ]
+      },
+      "properties": {
+        "id": "klaster-plasy-89",
+        "name": "Klášter Plasy",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 90,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.9956,
+          49.7131
+        ]
+      },
+      "properties": {
+        "id": "klaster-kladruby-90",
+        "name": "Klášter Kladruby",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 91,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.3319,
+          50.5858
+        ]
+      },
+      "properties": {
+        "id": "broumovsky-klaster-91",
+        "name": "Broumovský klášter",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 92,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.4003,
+          49.3525
+        ]
+      },
+      "properties": {
+        "id": "porta-coeli-92",
+        "name": "Porta coeli",
+        "category": "church",
+        "icon": "church"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 93,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4114,
+          50.0865
+        ]
+      },
+      "properties": {
+        "id": "karluv-most-93",
+        "name": "Karlův most",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 94,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.1508,
+          50.5111
+        ]
+      },
+      "properties": {
+        "id": "terezin-94",
+        "name": "Terezín",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 95,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.2886,
+          49.96
+        ]
+      },
+      "properties": {
+        "id": "kostnice-sedlec-95",
+        "name": "Kostnice Sedlec",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 96,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          18.2786,
+          49.8206
+        ]
+      },
+      "properties": {
+        "id": "dolni-vitkovice-96",
+        "name": "Dolní Vítkovice",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 97,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.2814,
+          50.8839
+        ]
+      },
+      "properties": {
+        "id": "pravcicka-brana-97",
+        "name": "Pravčická brána",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 98,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.73,
+          49.3725
+        ]
+      },
+      "properties": {
+        "id": "macocha-98",
+        "name": "Macocha",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 99,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.2725,
+          48.9697
+        ]
+      },
+      "properties": {
+        "id": "holasovice-99",
+        "name": "Holašovice",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 100,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.6161,
+          49.2072
+        ]
+      },
+      "properties": {
+        "id": "villa-tugendhat-100",
+        "name": "Villa Tugendhat",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 101,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.93,
+          50.34
+        ]
+      },
+      "properties": {
+        "id": "pevnost-josefov-101",
+        "name": "Pevnost Josefov",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 102,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4161,
+          50.0867
+        ]
+      },
+      "properties": {
+        "id": "klementinum-102",
+        "name": "Klementinum",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 103,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.4208,
+          50.087
+        ]
+      },
+      "properties": {
+        "id": "staromestske-namesti-103",
+        "name": "Staroměstské náměstí",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 104,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.1936,
+          50.5544
+        ]
+      },
+      "properties": {
+        "id": "hruba-skala-104",
+        "name": "Hrubá Skála",
+        "category": "other",
+        "icon": "other"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 105,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.2917,
+          50.4683
+        ]
+      },
+      "properties": {
+        "id": "prachovske-skaly-105",
+        "name": "Prachovské skály",
+        "category": "other",
+        "icon": "other"
+      }
+    }
+  ]
+}

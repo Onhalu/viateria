@@ -79,6 +79,31 @@ class AppStrings {
     'lastChallengeBrowse',
     'mapEmpty',
     'mapEmptyHint',
+    'searchHint',
+    'filtersTitle',
+    'catCastle',
+    'catChateau',
+    'catRuin',
+    'catChurch',
+    'catOther',
+    'viewList',
+    'viewMap',
+    'detailCta',
+    'closeCta',
+    'detailPlaceholder',
+    'locateDenied',
+    'locateDisabled',
+    'mapLoadError',
+    'catalogLoadError',
+    'osmAttribution',
+    'osmAttributionLong',
+    'applyFilters',
+    'selectAll',
+    'locateTooltip',
+    'monumentOne',
+    'monumentFew',
+    'monumentMany',
+    'distanceKmFormat',
     'routeStart',
     'routeStartHint',
     'routeSearch',
@@ -176,6 +201,25 @@ class AppStrings {
   String get lastChallengeBrowse => t('lastChallengeBrowse');
   String get mapEmpty => t('mapEmpty');
   String get mapEmptyHint => t('mapEmptyHint');
+  String get searchHint => t('searchHint');
+  String get filtersTitle => t('filtersTitle');
+  String get viewList => t('viewList');
+  String get viewMap => t('viewMap');
+  String get detailCta => t('detailCta');
+  String get closeCta => t('closeCta');
+  String get detailPlaceholder => t('detailPlaceholder');
+  String get locateDenied => t('locateDenied');
+  String get locateDisabled => t('locateDisabled');
+  String get mapLoadError => t('mapLoadError');
+  String get catalogLoadError => t('catalogLoadError');
+  String get osmAttribution => t('osmAttribution');
+  String get osmAttributionLong => t('osmAttributionLong');
+  String get applyFilters => t('applyFilters');
+  String get selectAll => t('selectAll');
+  String get locateTooltip => t('locateTooltip');
+  String get monumentOne => t('monumentOne');
+  String get monumentFew => t('monumentFew');
+  String get monumentMany => t('monumentMany');
   String get routeStart => t('routeStart');
   String get routeStartHint => t('routeStartHint');
   String get routeSearch => t('routeSearch');
@@ -200,6 +244,27 @@ class AppStrings {
   String get routeNavigatingBike => t('routeNavigatingBike');
 
   String difficultyLabel(String name) => t(name);
+
+  String monumentNoun(int n) {
+    if (locale == 'cs') {
+      if (n == 1) return monumentOne;
+      if (n >= 2 && n <= 4) return monumentFew;
+      return monumentMany;
+    }
+    return n == 1 ? monumentOne : monumentMany;
+  }
+
+  String monumentCount(int n) => '$n ${monumentNoun(n)}';
+
+  String formatDistanceKm(double km) {
+    final useComma = locale == 'cs' || locale == 'de';
+    final n = km < 10
+        ? (useComma
+              ? km.toStringAsFixed(1).replaceAll('.', ',')
+              : km.toStringAsFixed(1))
+        : km.round().toString();
+    return t('distanceKmFormat').replaceFirst('{n}', n);
+  }
 
   static const _tables = <String, Map<String, String>>{
     'en': {
@@ -276,6 +341,33 @@ class AppStrings {
       'mapEmpty': 'No published challenges to show on the map.',
       'mapEmptyHint':
           'When challenges have waypoint coordinates, they will appear here.',
+      'searchHint': 'Search castle, chateau…',
+      'filtersTitle': 'Filters',
+      'catCastle': 'Castles',
+      'catChateau': 'Chateaus',
+      'catRuin': 'Ruins',
+      'catChurch': 'Churches',
+      'catOther': 'Other',
+      'viewList': 'In list',
+      'viewMap': 'On map',
+      'detailCta': 'Details',
+      'closeCta': 'Close',
+      'detailPlaceholder': 'Place details are coming soon.',
+      'locateDenied':
+          'Location is unavailable. Allow location access in Settings.',
+      'locateDisabled':
+          'Location services are off. Turn them on in device settings.',
+      'mapLoadError': 'The map could not be loaded.',
+      'catalogLoadError': 'Monuments could not be loaded.',
+      'osmAttribution': '© OpenStreetMap',
+      'osmAttributionLong': '© OpenStreetMap contributors',
+      'applyFilters': 'Apply',
+      'selectAll': 'Select all',
+      'locateTooltip': 'My location',
+      'monumentOne': 'monument',
+      'monumentFew': 'monuments',
+      'monumentMany': 'monuments',
+      'distanceKmFormat': '{n} km',
       'routeStart': 'Start',
       'routeStartHint': 'Address, place, or lat, lng',
       'routeSearch': 'Search',
@@ -374,6 +466,33 @@ class AppStrings {
       'lastChallengeBrowse': 'Procházet výzvy',
       'mapEmpty': 'Žádné zveřejněné výzvy k zobrazení na mapě.',
       'mapEmptyHint': 'Až budou u výzev souřadnice zastávek, objeví se tady.',
+      'searchHint': 'Hledat hrad, zámek…',
+      'filtersTitle': 'Filtry',
+      'catCastle': 'Hrady',
+      'catChateau': 'Zámky',
+      'catRuin': 'Zříceniny',
+      'catChurch': 'Kostely',
+      'catOther': 'Ostatní',
+      'viewList': 'V seznamu',
+      'viewMap': 'Na mapě',
+      'detailCta': 'Detail',
+      'closeCta': 'Zavřít',
+      'detailPlaceholder': 'Detail památky připravujeme.',
+      'locateDenied':
+          'Polohu nelze použít. Povolte přístup k poloze v nastavení.',
+      'locateDisabled':
+          'Polohové služby jsou vypnuté. Zapněte je v nastavení zařízení.',
+      'mapLoadError': 'Mapu se nepodařilo načíst.',
+      'catalogLoadError': 'Památky se nepodařilo načíst.',
+      'osmAttribution': '© OpenStreetMap',
+      'osmAttributionLong': '© přispěvatelé OpenStreetMap',
+      'applyFilters': 'Použít',
+      'selectAll': 'Vybrat vše',
+      'locateTooltip': 'Moje poloha',
+      'monumentOne': 'památka',
+      'monumentFew': 'památky',
+      'monumentMany': 'památek',
+      'distanceKmFormat': '{n} km',
       'routeStart': 'Start',
       'routeStartHint': 'Adresa, místo nebo souřadnice',
       'routeSearch': 'Hledat',
@@ -473,6 +592,31 @@ class AppStrings {
       'mapEmpty': 'Keine veröffentlichten Challenges auf der Karte.',
       'mapEmptyHint':
           'Sobald Wegpunkte Koordinaten haben, erscheinen sie hier.',
+      'searchHint': 'Burg, Schloss suchen…',
+      'filtersTitle': 'Filter',
+      'catCastle': 'Burgen',
+      'catChateau': 'Schlösser',
+      'catRuin': 'Ruinen',
+      'catChurch': 'Kirchen',
+      'catOther': 'Sonstiges',
+      'viewList': 'Als Liste',
+      'viewMap': 'Auf Karte',
+      'detailCta': 'Details',
+      'closeCta': 'Schließen',
+      'detailPlaceholder': 'Objektdetails folgen.',
+      'locateDenied': 'Standort nicht nutzbar. Erlauben Sie den Zugriff in den Einstellungen.',
+      'locateDisabled': 'Ortungsdienste sind aus. Schalten Sie sie in den Geräteeinstellungen ein.',
+      'mapLoadError': 'Die Karte konnte nicht geladen werden.',
+      'catalogLoadError': 'Denkmäler konnten nicht geladen werden.',
+      'osmAttribution': '© OpenStreetMap',
+      'osmAttributionLong': '© OpenStreetMap-Mitwirkende',
+      'applyFilters': 'Übernehmen',
+      'selectAll': 'Alle wählen',
+      'locateTooltip': 'Mein Standort',
+      'monumentOne': 'Denkmal',
+      'monumentFew': 'Denkmäler',
+      'monumentMany': 'Denkmäler',
+      'distanceKmFormat': '{n} km',
       'routeStart': 'Start',
       'routeStartHint': 'Adresse, Ort oder Koordinaten',
       'routeSearch': 'Suchen',

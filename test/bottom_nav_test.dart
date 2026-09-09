@@ -13,7 +13,6 @@ import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/last_challenge_screen.dart';
 import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
-import 'package:viateria/ui/widgets/challenges_overview_map.dart';
 
 import 'helpers/fakes.dart';
 
@@ -232,28 +231,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
-  testWidgets('map tab empty state when no coordinates', (tester) async {
-    final strings = AppStrings('en');
-    await tester.pumpWidget(
-      wrapApp(
-        buildServices(
-          challenges: const [],
-          promos: const [],
-          details: const [],
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text(strings.navMap));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('map-empty')), findsOneWidget);
-    expect(find.text(strings.mapEmpty), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
-  });
-
-  testWidgets('map tab shows published challenges with waypoint coordinates', (
+  testWidgets('map tab shows places search, filters and list toggle', (
     tester,
   ) async {
     final strings = AppStrings('en');
@@ -265,7 +243,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byKey(const Key('map-empty')), findsNothing);
-    expect(find.byType(ChallengesOverviewMap), findsOneWidget);
+    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
+    expect(find.byKey(const Key('map-filter-button')), findsOneWidget);
+    expect(find.byKey(const Key('map-view-toggle')), findsOneWidget);
+    expect(find.byKey(const Key('map-poi-count')), findsOneWidget);
+    expect(find.byKey(const Key('map-locate-fab')), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
@@ -337,7 +319,7 @@ void main() {
     expect(find.text(strings.retry), findsOneWidget);
   });
 
-  testWidgets('map tab shows retry when published details fail to load', (
+  testWidgets('map tab still loads when challenge details fail', (
     tester,
   ) async {
     final strings = AppStrings('en');
@@ -355,10 +337,8 @@ void main() {
     await tester.tap(find.text(strings.navMap));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('map-empty')), findsNothing);
-    expect(find.byKey(const Key('map-load-error')), findsOneWidget);
-    expect(find.text(strings.errorGeneric), findsOneWidget);
-    expect(find.text(strings.retry), findsOneWidget);
+    expect(find.byKey(const Key('map-load-error')), findsNothing);
+    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 }
