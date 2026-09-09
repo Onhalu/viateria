@@ -222,6 +222,19 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                   summary: widget.bike!,
                   strings: strings,
                 ),
+              if ((widget.hike?.elevationGainM == null &&
+                      widget.hike != null) ||
+                  (widget.bike?.elevationGainM == null &&
+                      widget.bike != null)) ...[
+                const SizedBox(height: 8),
+                if (widget.onRetry != null)
+                  Center(
+                    child: TextButton(
+                      onPressed: widget.onRetry,
+                      child: Text(strings.retry),
+                    ),
+                  ),
+              ],
             ] else
               _RouteEmpty(
                 message: widget.errorMessage ?? strings.routeNeedTwoPoints,
@@ -300,8 +313,13 @@ class _RouteStatsCard extends StatelessWidget {
             ),
             _Stat(label: strings.time, value: summary.timeLabel),
             _Stat(
+              key: summary.elevationGainM == null
+                  ? Key('route-elevation-missing-${summary.mode.name}')
+                  : null,
               label: strings.elevation,
-              value: '${summary.elevationGainM.round()} m',
+              value: summary.elevationGainM == null
+                  ? strings.routeElevationFailed
+                  : '${summary.elevationGainM!.round()} m',
             ),
             TextButton.icon(
               onPressed: () => launchUrl(
@@ -319,7 +337,7 @@ class _RouteStatsCard extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value});
+  const _Stat({super.key, required this.label, required this.value});
 
   final String label;
   final String value;

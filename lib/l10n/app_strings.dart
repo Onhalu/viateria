@@ -96,6 +96,7 @@ class AppStrings {
     'routeWalking',
     'routeCycling',
     'routeSamePoint',
+    'routeElevationFailed',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -188,6 +189,7 @@ class AppStrings {
   String get routeWalking => t('routeWalking');
   String get routeCycling => t('routeCycling');
   String get routeSamePoint => t('routeSamePoint');
+  String get routeElevationFailed => t('routeElevationFailed');
 
   String difficultyLabel(String name) => t(name);
 
@@ -284,6 +286,7 @@ class AppStrings {
       'routeWalking': 'Walking route',
       'routeCycling': 'Cycling route',
       'routeSamePoint': 'Start and destination must be different.',
+      'routeElevationFailed': 'Could not load elevation gain.',
     },
     'cs': {
       'appName': 'Viateria',
@@ -377,6 +380,7 @@ class AppStrings {
       'routeWalking': 'Pěší trasa',
       'routeCycling': 'Cyklistická trasa',
       'routeSamePoint': 'Start a cíl musí být různé.',
+      'routeElevationFailed': 'Převýšení se nepodařilo načíst.',
     },
     'de': {
       'appName': 'Viateria',
@@ -471,6 +475,7 @@ class AppStrings {
       'routeWalking': 'Fußweg',
       'routeCycling': 'Radweg',
       'routeSamePoint': 'Start und Ziel müssen unterschiedlich sein.',
+      'routeElevationFailed': 'Höhenmeter konnten nicht geladen werden.',
     },
   };
 }

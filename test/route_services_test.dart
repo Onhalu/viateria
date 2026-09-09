@@ -104,6 +104,134 @@ void main() {
     expect(plan.bikeLine, isNotEmpty);
   });
 
+  test(
+    'DualRoutePlanner does not fall back to endpoint 0 on lookup failure',
+    () async {
+      final plan =
+          await DualRoutePlanner(
+            routing: MemoryRoutingClient(),
+            elevation: MemoryElevationLookup(fail: true),
+          ).plan(
+            start: const RouteEndpoint(
+              lat: 50.08,
+              lng: 14.42,
+              label: 'A',
+              elevationM: 100,
+            ),
+            end: const RouteEndpoint(
+              lat: 50.09,
+              lng: 14.43,
+              label: 'B',
+              elevationM: 400,
+            ),
+          );
+      expect(plan.hike, isNotNull);
+      expect(plan.hike!.distanceKm, 1.6);
+      expect(plan.hike!.elevationGainM, isNull);
+      expect(plan.bike!.elevationGainM, isNull);
+    },
+  );
+
+  test(
+    'elevationGainFromHeights follows the sampled series, not endpoints',
+    () {
+      const planner = RoutePlanner();
+      expect(elevationGainFromHeights([100, 120, 115, 160, 150], planner), 65);
+      expect(elevationGainFromHeights(null, planner), isNull);
+      expect(elevationGainFromHeights([200, 400], planner), isNull);
+      expect(
+        elevationGainFromHeights([100, null, null, null], planner),
+        isNull,
+      );
+    },
+  );
+
+  test('sampleAlongRoute keeps ends and follows the polyline', () {
+    final line = [
+      const LatLng(50.0, 14.0),
+      const LatLng(50.0, 14.1),
+      const LatLng(50.1, 14.1),
+    ];
+    final sampled = sampleAlongRoute(line, count: 5);
+    expect(sampled, hasLength(5));
+    expect(sampled.first.latitude, closeTo(50.0, 0.0001));
+    expect(sampled.first.longitude, closeTo(14.0, 0.0001));
+    expect(sampled.last.latitude, closeTo(50.1, 0.0001));
+    expect(sampled.last.longitude, closeTo(14.1, 0.0001));
+  });
+
+  test('elevationGainFromHeights rejects a sparse two-known series', () {
+    const planner = RoutePlanner();
+    expect(
+      elevationGainFromHeights([100, null, null, null, null, 400], planner),
+      isNull,
+    );
+  });
+
+  test('OpenTopoElevationLookup posts ASTER locations', () async {
+    final client = OpenTopoElevationLookup(
+      client: MockClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.host, 'api.opentopodata.org');
+        expect(request.url.path, '/v1/aster30m');
+        expect(request.body, contains('50.080000,14.420000'));
+        return http.Response(
+          '{"status":"OK","results":['
+          '{"elevation":200},{"elevation":230},{"elevation":210}]}',
+          200,
+        );
+      }),
+    );
+    final heights = await client.lookup(const [
+      LatLng(50.08, 14.42),
+      LatLng(50.085, 14.425),
+      LatLng(50.09, 14.43),
+    ]);
+    expect(heights, [200, 230, 210]);
+  });
+
+  test(
+    'PublicElevationLookup falls back to OpenTopo when Open-Meteo fails',
+    () async {
+      var calls = 0;
+      final client = PublicElevationLookup(
+        client: MockClient((request) async {
+          calls++;
+          if (request.url.host == 'api.open-meteo.com') {
+            return http.Response('{"error":true,"reason":"down"}', 200);
+          }
+          expect(request.url.host, 'api.opentopodata.org');
+          return http.Response(
+            '{"status":"OK","results":[{"elevation":12},{"elevation":40}]}',
+            200,
+          );
+        }),
+      );
+      final heights = await client.lookup(const [
+        LatLng(50.08, 14.42),
+        LatLng(50.09, 14.43),
+      ]);
+      expect(calls, 2);
+      expect(heights, [12, 40]);
+    },
+  );
+
+  test('OpenMeteoElevationLookup parses index-aligned heights', () async {
+    final client = OpenMeteoElevationLookup(
+      client: MockClient((request) async {
+        expect(request.url.host, 'api.open-meteo.com');
+        expect(request.url.path, '/v1/elevation');
+        return http.Response('{"elevation":[200, 230, 210]}', 200);
+      }),
+    );
+    final heights = await client.lookup(const [
+      LatLng(50.08, 14.42),
+      LatLng(50.085, 14.425),
+      LatLng(50.09, 14.43),
+    ]);
+    expect(heights, [200, 230, 210]);
+  });
+
   test('DualRoutePlanner throws when both profiles fail', () async {
     expect(
       () =>

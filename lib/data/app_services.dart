@@ -19,7 +19,7 @@ class AppServices {
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
-       elevation = elevation ?? OpenTopoElevationLookup();
+       elevation = elevation ?? PublicElevationLookup();
 
   final AppConfig config;
   final AuthRepository auth;

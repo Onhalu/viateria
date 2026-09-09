@@ -221,25 +221,30 @@ class GeolocatorDeviceLocation implements DeviceLocation {
   }
 }
 
-/// Public OpenTopoData EU-DEM — no API key, suitable for Czech terrain.
-class OpenTopoElevationLookup implements ElevationLookup {
-  OpenTopoElevationLookup({http.Client? client})
+/// Open-Meteo elevation — free, no key, index-aligned heights.
+class OpenMeteoElevationLookup implements ElevationLookup {
+  OpenMeteoElevationLookup({http.Client? client})
     : _client = client ?? http.Client();
+
+  static const _chunk = 99;
 
   final http.Client _client;
 
   @override
   Future<List<double?>> lookup(List<LatLng> points) async {
     if (points.isEmpty) return const [];
-    final limited = points.length > 100 ? points.sublist(0, 100) : points;
-    final locations = limited
-        .map(
-          (p) =>
-              '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}',
-        )
-        .join('|');
-    final uri = Uri.https('api.opentopodata.org', '/v1/eudem25m', {
-      'locations': locations,
+    final out = <double?>[];
+    for (var i = 0; i < points.length; i += _chunk) {
+      final end = math.min(i + _chunk, points.length);
+      out.addAll(await _lookupChunk(points.sublist(i, end)));
+    }
+    return out;
+  }
+
+  Future<List<double?>> _lookupChunk(List<LatLng> points) async {
+    final uri = Uri.https('api.open-meteo.com', '/v1/elevation', {
+      'latitude': points.map((p) => p.latitude.toStringAsFixed(6)).join(','),
+      'longitude': points.map((p) => p.longitude.toStringAsFixed(6)).join(','),
     });
     final response = await _client.get(
       uri,
@@ -252,11 +257,68 @@ class OpenTopoElevationLookup implements ElevationLookup {
       throw RoutingFailure('elevation HTTP ${response.statusCode}');
     }
     final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const RoutingFailure('elevation failed');
+    }
+    if (decoded['error'] == true) {
+      throw RoutingFailure('${decoded['reason'] ?? 'elevation failed'}');
+    }
+    final elevations = decoded['elevation'];
+    if (elevations is! List || elevations.length != points.length) {
+      throw const RoutingFailure('elevation failed');
+    }
+    return [
+      for (final value in elevations) value is num ? value.toDouble() : null,
+    ];
+  }
+}
+
+/// Public OpenTopoData — POST, global ASTER, used if Open-Meteo fails.
+class OpenTopoElevationLookup implements ElevationLookup {
+  OpenTopoElevationLookup({http.Client? client})
+    : _client = client ?? http.Client();
+
+  static const _chunk = 100;
+
+  final http.Client _client;
+
+  @override
+  Future<List<double?>> lookup(List<LatLng> points) async {
+    if (points.isEmpty) return const [];
+    final out = <double?>[];
+    for (var i = 0; i < points.length; i += _chunk) {
+      final end = math.min(i + _chunk, points.length);
+      out.addAll(await _lookupChunk(points.sublist(i, end)));
+    }
+    return out;
+  }
+
+  Future<List<double?>> _lookupChunk(List<LatLng> points) async {
+    final locations = points
+        .map(
+          (p) =>
+              '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}',
+        )
+        .join('|');
+    final uri = Uri.https('api.opentopodata.org', '/v1/aster30m');
+    final response = await _client.post(
+      uri,
+      headers: const {
+        'User-Agent': osmClientUserAgent,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'locations': locations}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw RoutingFailure('elevation HTTP ${response.statusCode}');
+    }
+    final decoded = jsonDecode(response.body);
     if (decoded is! Map || decoded['status'] != 'OK') {
       throw const RoutingFailure('elevation failed');
     }
     final results = decoded['results'];
-    if (results is! List) {
+    if (results is! List || results.length != points.length) {
       throw const RoutingFailure('elevation failed');
     }
     return [
@@ -265,6 +327,25 @@ class OpenTopoElevationLookup implements ElevationLookup {
             ? (row['elevation'] as num).toDouble()
             : null,
     ];
+  }
+}
+
+/// Tries Open-Meteo first, then OpenTopoData. Throws if both fail.
+class PublicElevationLookup implements ElevationLookup {
+  PublicElevationLookup({http.Client? client})
+    : _primary = OpenMeteoElevationLookup(client: client),
+      _fallback = OpenTopoElevationLookup(client: client);
+
+  final ElevationLookup _primary;
+  final ElevationLookup _fallback;
+
+  @override
+  Future<List<double?>> lookup(List<LatLng> points) async {
+    try {
+      return await _primary.lookup(points);
+    } catch (_) {
+      return _fallback.lookup(points);
+    }
   }
 }
 
@@ -295,23 +376,23 @@ class DualRoutePlanner {
     if (hikePath == null && bikePath == null) {
       throw const RoutingFailure();
     }
-    final hikeSamples = samplePoints(hikePath?.points ?? const []);
-    final bikeSamples = samplePoints(bikePath?.points ?? const []);
+    final hikeSamples = hikePath == null
+        ? const <LatLng>[]
+        : sampleAlongRoute(hikePath.points);
+    final bikeSamples = bikePath == null
+        ? const <LatLng>[]
+        : sampleAlongRoute(bikePath.points);
     final combined = [...hikeSamples, ...bikeSamples];
-    List<double?> heights = const [];
+    List<double?>? heights;
     try {
       if (combined.isNotEmpty) {
-        heights = await elevation.lookup(combined);
+        final lookedUp = await elevation.lookup(combined);
+        if (lookedUp.length == combined.length) {
+          heights = lookedUp;
+        }
       }
     } catch (_) {
-      heights = const [];
-    }
-    final byKey = <String, double>{};
-    for (var i = 0; i < combined.length && i < heights.length; i++) {
-      final value = heights[i];
-      if (value != null) {
-        byKey[_pointKey(combined[i])] = value;
-      }
+      heights = null;
     }
     final osmPoints = [start.toWaypoint(), end.toWaypoint(sortOrder: 1)];
     return DualRoutePlan(
@@ -320,10 +401,9 @@ class DualRoutePlanner {
           : _summary(
               mode: TravelMode.hike,
               path: hikePath,
-              samples: hikeSamples,
-              elevations: byKey,
-              start: start,
-              end: end,
+              heights: heights == null
+                  ? null
+                  : heights.sublist(0, hikeSamples.length),
               osmPoints: osmPoints,
             ),
       bike: bikePath == null
@@ -331,10 +411,9 @@ class DualRoutePlanner {
           : _summary(
               mode: TravelMode.bike,
               path: bikePath,
-              samples: bikeSamples,
-              elevations: byKey,
-              start: start,
-              end: end,
+              heights: heights == null
+                  ? null
+                  : heights.sublist(hikeSamples.length),
               osmPoints: osmPoints,
             ),
       hikeLine: hikePath?.points ?? const [],
@@ -357,29 +436,13 @@ class DualRoutePlanner {
   RouteSummary _summary({
     required TravelMode mode,
     required RoutedPath path,
-    required List<LatLng> samples,
-    required Map<String, double> elevations,
-    required RouteEndpoint start,
-    required RouteEndpoint end,
+    required List<double?>? heights,
     required List<Waypoint> osmPoints,
   }) {
-    final sampled = [
-      for (final point in samples)
-        if (elevations.containsKey(_pointKey(point)))
-          elevations[_pointKey(point)]!,
-    ];
-    var gain = planner.elevationGainAlong(sampled);
-    if (sampled.length < 2) {
-      final startM = start.elevationM;
-      final endM = end.elevationM;
-      if (startM != null && endM != null) {
-        gain = math.max(0, endM - startM);
-      }
-    }
     return planner.summarize(
       mode: mode,
       distanceKm: path.distanceKm,
-      elevationGainM: gain,
+      elevationGainM: elevationGainFromHeights(heights, planner),
       osmPoints: osmPoints,
     );
   }
@@ -406,10 +469,88 @@ List<LatLng> samplePoints(List<LatLng> line, {int maxPoints = 20}) {
   return result;
 }
 
+/// Evenly sample the actual polyline by distance, interpolating vertices.
+List<LatLng> sampleAlongRoute(List<LatLng> line, {int count = 40}) {
+  if (line.length < 2) return List<LatLng>.from(line);
+  const haversine = Distance();
+  final cumulative = <double>[0];
+  for (var i = 1; i < line.length; i++) {
+    cumulative.add(
+      cumulative.last + haversine.as(LengthUnit.Meter, line[i - 1], line[i]),
+    );
+  }
+  final total = cumulative.last;
+  if (total <= 0) return [line.first, line.last];
+  final n = math.max(2, math.min(count, 100));
+  final out = <LatLng>[];
+  var edge = 0;
+  for (var i = 0; i < n; i++) {
+    final target = total * i / (n - 1);
+    while (edge < cumulative.length - 2 && cumulative[edge + 1] < target) {
+      edge++;
+    }
+    final span = cumulative[edge + 1] - cumulative[edge];
+    final t = span <= 0
+        ? 0.0
+        : ((target - cumulative[edge]) / span).clamp(0.0, 1.0).toDouble();
+    final a = line[edge];
+    final b = line[edge + 1];
+    out.add(
+      LatLng(
+        a.latitude + (b.latitude - a.latitude) * t,
+        a.longitude + (b.longitude - a.longitude) * t,
+      ),
+    );
+  }
+  return out;
+}
+
+/// Gain along sampled heights. Null if the series is unusable — never 0 from
+/// missing data or two endpoints alone.
+double? elevationGainFromHeights(List<double?>? raw, RoutePlanner planner) {
+  // Two heights are endpoints only — gain must follow the walking/cycling line.
+  if (raw == null || raw.length < 3) return null;
+  final knownCount = raw.whereType<double>().length;
+  if (knownCount < 2 || knownCount * 2 < raw.length) return null;
+  final filled = fillHeightGaps(raw);
+  if (filled == null || filled.length < 3) return null;
+  return planner.elevationGainAlong(filled);
+}
+
+List<double>? fillHeightGaps(List<double?> raw) {
+  final first = raw.indexWhere((h) => h != null);
+  final last = raw.lastIndexWhere((h) => h != null);
+  if (first < 0 || last < 0 || last == first) return null;
+  final out = List<double?>.from(raw);
+  for (var i = 0; i < first; i++) {
+    out[i] = out[first];
+  }
+  for (var i = last + 1; i < out.length; i++) {
+    out[i] = out[last];
+  }
+  var i = first;
+  while (i <= last) {
+    if (out[i] != null) {
+      i++;
+      continue;
+    }
+    final start = i - 1;
+    var end = i;
+    while (end <= last && out[end] == null) {
+      end++;
+    }
+    final a = out[start]!;
+    final b = out[end]!;
+    final span = end - start;
+    for (var k = 1; k < span; k++) {
+      out[start + k] = a + (b - a) * (k / span);
+    }
+    i = end;
+  }
+  return [for (final h in out) h!];
+}
+
 bool _nearlySame(LatLng a, LatLng b) {
   return (a.latitude - b.latitude).abs() < 0.00001 &&
       (a.longitude - b.longitude).abs() < 0.00001;
 }
-
-String _pointKey(LatLng point) =>
-    '${point.latitude.toStringAsFixed(5)},${point.longitude.toStringAsFixed(5)}';

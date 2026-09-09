@@ -58,7 +58,7 @@ class RouteSummary {
 
   final TravelMode mode;
   final double distanceKm;
-  final double elevationGainM;
+  final double? elevationGainM;
   final Duration estimatedTime;
   final Difficulty difficulty;
   final String osmUrl;
@@ -107,7 +107,7 @@ class RoutePlanner {
   RouteSummary summarize({
     required TravelMode mode,
     required double distanceKm,
-    required double elevationGainM,
+    required double? elevationGainM,
     required List<Waypoint> osmPoints,
   }) {
     return RouteSummary(
@@ -117,11 +117,11 @@ class RoutePlanner {
       estimatedTime: estimateTime(
         mode: mode,
         distanceKm: distanceKm,
-        elevationGainM: elevationGainM,
+        elevationGainM: elevationGainM ?? 0,
       ),
       difficulty: classifyDifficulty(
         distanceKm: distanceKm,
-        elevationGainM: elevationGainM,
+        elevationGainM: elevationGainM ?? 0,
       ),
       osmUrl: osmDirectionsUrl(mode: mode, waypoints: osmPoints),
     );

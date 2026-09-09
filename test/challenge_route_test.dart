@@ -164,7 +164,43 @@ void main() {
     expect(find.textContaining('1.6 km'), findsOneWidget);
     expect(find.textContaining('1.2 km'), findsOneWidget);
     expect(find.textContaining(' m'), findsWidgets);
+    expect(find.text('0 m'), findsNothing);
+    expect(find.text(strings.routeElevationFailed), findsNothing);
     expect(find.text('Ridge'), findsWidgets);
+  });
+
+  testWidgets('elevation lookup failure shows a clear state, not 0 m', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      wrapScreen(buildServices(elevation: MemoryElevationLookup(fail: true))),
+    );
+    await tester.pumpAndSettle();
+
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-place-ow-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
+    expect(find.byKey(const Key('route-bike-stats')), findsOneWidget);
+    expect(find.textContaining('1.6 km'), findsOneWidget);
+    expect(find.textContaining('1.2 km'), findsOneWidget);
+    expect(find.text('0 m'), findsNothing);
+    expect(find.text(strings.routeElevationFailed), findsWidgets);
+    expect(
+      find.byKey(const Key('route-elevation-missing-hike')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('route-elevation-missing-bike')),
+      findsOneWidget,
+    );
+    expect(find.text(strings.retry), findsOneWidget);
   });
 
   testWidgets('custom place and GPS can set a start from the Start list', (
