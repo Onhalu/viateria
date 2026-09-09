@@ -21,17 +21,59 @@ GPS verify, offline cache, Story Unlock Modal media, Open-Meteo, SOS, GPX export
 
 ## Stack
 
-Flutter, Leaflet/`flutter_map` + OSM tiles, Supabase (Auth, Postgres, Storage), Stripe, custom i18n.
+Flutter, MapLibre (POI map MVP) + Leaflet/`flutter_map` (challenge maps), Supabase (Auth, Postgres, Storage), Stripe, custom i18n.
 
 ## Setup
 
 ```bash
 flutter pub get
-cp .env.example .env   # fill SUPABASE_URL, SUPABASE_ANON_KEY, STRIPE_PUBLISHABLE_KEY
+cp .env.example .env   # fill SUPABASE_URL, SUPABASE_ANON_KEY, STRIPE_PUBLISHABLE_KEY, MAP_STYLE_URL
 flutter run --dart-define-from-file=.env
 ```
 
-Without env vars the app shows a configuration screen instead of inventing catalog content.
+Without Supabase env vars the app shows a configuration screen instead of inventing catalog content.
+
+## Map Screen MVP
+
+Signed-in home is the **Mapa** tab: full-bleed OSM via MapLibre, custom circular POI icons, clustering, search, filters, map/list toggle, place sheet, and locate.
+
+### `MAP_STYLE_URL`
+
+Pass a MapLibre **style JSON** URL at compile time (not a raster `{z}/{x}/{y}` template):
+
+```bash
+flutter run --dart-define=MAP_STYLE_URL=https://api.maptiler.com/maps/streets-v2/style.json?key=YOUR_KEY
+# or together with other secrets:
+flutter run --dart-define-from-file=.env
+```
+
+| Value | What happens |
+| --- | --- |
+| Set to MapTiler / Stadia / self-hosted OpenMapTiles style | Production basemap |
+| Empty / omitted | Non-prod fallback: [OpenFreeMap Liberty](https://tiles.openfreemap.org/styles/liberty) |
+
+**TODO before release:** set `MAP_STYLE_URL` to a production vector-tile provider. Do **not** use `https://tile.openstreetmap.org` as a raster CDN (OSM tile usage policy).
+
+Code: `lib/core/map/map_style_config.dart` (`String.fromEnvironment('MAP_STYLE_URL')`).
+
+### Icons and mock catalog
+
+- Icons: `assets/map/icons/{castle,chateau,ruin,church,other,cluster}@2x.png` — white circle, colored stroke, pictogram; registered with MapLibre `addImage`.
+- Catalog: `assets/map/pois.geojson` — 105 Czech monuments as a GeoJSON FeatureCollection (`castle` / `chateau` / `ruin` / `church` / `other`). MVP mock; swap the repository later for a live API.
+- Clustering: radius 45, `clusterMaxZoom` 13; tap a cluster to expand.
+- Search is **only** over this catalog (no Nominatim autocomplete). Location from the locate FAB stays on-device and is never sent to a backend.
+
+### Module layout
+
+```
+lib/features/map/presentation/   MapScreen + overlays
+lib/features/map/application/    Riverpod providers
+lib/features/map/domain/         POI, filters, search, viewport count
+lib/features/map/data/           GeoJSON repo, camera store, location
+lib/core/map/                    style URL, camera, runtime flags
+lib/core/theme/                  terracotta / glass tokens
+lib/core/l10n/                   Czech map copy
+```
 
 ### Supabase
 
@@ -75,10 +117,12 @@ Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enf
 ## Project layout
 
 ```
+lib/features/map/    MapLibre POI map MVP (this shell's Mapa tab)
 lib/domain/          unlock rules, route planner, photo policy
 lib/data/            Supabase repositories
 lib/l10n/            custom cs/en/de strings
 lib/ui/              catalog, challenge, verify, diploma, settings
+lib/core/            map style, map theme, map copy
 supabase/migrations  Postgres + RLS + Storage
 supabase/functions   Stripe checkout + webhook
 ```

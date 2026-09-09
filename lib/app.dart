@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'core/l10n/map_strings.dart';
 import 'data/app_services.dart';
+import 'features/map/presentation/map_screen.dart';
+import 'features/map/presentation/placeholder_page.dart';
 import 'l10n/locale_controller.dart';
 import 'l10n/sdk_fallback_localizations.dart';
 import 'theme/app_theme.dart';
@@ -33,7 +36,7 @@ class _ViateriaAppState extends State<ViateriaApp> {
     final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
     return GoRouter(
       navigatorKey: rootKey,
-      initialLocation: '/',
+      initialLocation: '/map',
       refreshListenable: _AuthRefresh(context.read<AppServices>()),
       redirect: (context, state) {
         final services = context.read<AppServices>();
@@ -44,7 +47,7 @@ class _ViateriaAppState extends State<ViateriaApp> {
         final onAuth = state.matchedLocation == '/auth';
         if (!signedIn && !onAuth) return '/auth';
         if (signedIn && (onAuth || state.matchedLocation == '/setup')) {
-          return '/';
+          return '/map';
         }
         return null;
       },
@@ -70,16 +73,36 @@ class _ViateriaAppState extends State<ViateriaApp> {
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/last',
-                  builder: (context, state) => const LastChallengeScreen(),
+                  path: '/map',
+                  builder: (context, state) => const MapScreen(),
                 ),
               ],
             ),
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/map',
-                  builder: (context, state) => const ChallengesMapScreen(),
+                  path: '/list',
+                  builder: (context, state) =>
+                      const _LocalizedPlaceholder(kind: _PlaceholderKind.list),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/planner',
+                  builder: (context, state) => const _LocalizedPlaceholder(
+                    kind: _PlaceholderKind.planner,
+                  ),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/saved',
+                  builder: (context, state) =>
+                      const _LocalizedPlaceholder(kind: _PlaceholderKind.saved),
                 ),
               ],
             ),
@@ -94,6 +117,16 @@ class _ViateriaAppState extends State<ViateriaApp> {
           ],
         ),
         GoRoute(path: '/settings', redirect: (context, state) => '/profile'),
+        GoRoute(
+          parentNavigatorKey: rootKey,
+          path: '/last',
+          builder: (context, state) => const LastChallengeScreen(),
+        ),
+        GoRoute(
+          parentNavigatorKey: rootKey,
+          path: '/challenges-map',
+          builder: (context, state) => const ChallengesMapScreen(),
+        ),
         GoRoute(
           parentNavigatorKey: rootKey,
           path: '/challenge/:id',
@@ -140,5 +173,32 @@ class AppStringsLocales {
 class _AuthRefresh extends ChangeNotifier {
   _AuthRefresh(AppServices services) {
     services.auth.authState().listen((_) => notifyListeners());
+  }
+}
+
+enum _PlaceholderKind { list, planner, saved }
+
+class _LocalizedPlaceholder extends StatelessWidget {
+  const _LocalizedPlaceholder({required this.kind});
+
+  final _PlaceholderKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = MapStrings(context.watch<LocaleController>().locale);
+    return switch (kind) {
+      _PlaceholderKind.list => PlaceholderPage(
+        title: strings.navList,
+        icon: Icons.format_list_bulleted,
+      ),
+      _PlaceholderKind.planner => PlaceholderPage(
+        title: strings.navPlanner,
+        icon: Icons.calendar_today_outlined,
+      ),
+      _PlaceholderKind.saved => PlaceholderPage(
+        title: strings.navSaved,
+        icon: Icons.bookmark_outline,
+      ),
+    };
   }
 }

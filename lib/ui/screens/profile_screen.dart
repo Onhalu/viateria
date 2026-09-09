@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
@@ -76,6 +77,17 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: Text(strings.navLastChallenge),
+            onTap: () => context.push('/last'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.explore_outlined),
+            title: Text(strings.catalogTitle),
+            onTap: () => context.go('/'),
+          ),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton(

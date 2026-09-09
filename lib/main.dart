@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    hide ChangeNotifierProvider, Provider;
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -48,13 +50,15 @@ Future<void> main() async {
   }
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: localeController),
-        ChangeNotifierProvider.value(value: lastOpened),
-        Provider.value(value: services),
-      ],
-      child: const ViateriaApp(),
+    ProviderScope(
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: localeController),
+          ChangeNotifierProvider.value(value: lastOpened),
+          Provider.value(value: services),
+        ],
+        child: const ViateriaApp(),
+      ),
     ),
   );
 }

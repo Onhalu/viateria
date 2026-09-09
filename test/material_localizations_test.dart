@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    hide ChangeNotifierProvider, Provider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,9 +16,11 @@ import 'package:viateria/l10n/sdk_fallback_localizations.dart';
 import 'package:viateria/ui/screens/auth_screen.dart';
 
 import 'helpers/fakes.dart';
+import 'helpers/map_harness.dart';
 
 Widget _appForLocale(String code) {
-  return MultiProvider(
+  return ProviderScope(
+    child: MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: code)),
       ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
@@ -37,6 +41,7 @@ Widget _appForLocale(String code) {
       ),
     ],
     child: const ViateriaApp(),
+    ),
   );
 }
 
@@ -45,6 +50,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    configureMapWidgetTests();
   });
 
   for (final code in ['cs', 'en', 'de']) {

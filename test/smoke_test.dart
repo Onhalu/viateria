@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/app.dart';
 import 'package:viateria/config/app_config.dart';
+import 'package:viateria/core/l10n/map_strings.dart';
 import 'package:viateria/data/app_services.dart';
-import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
@@ -14,6 +13,7 @@ import 'package:viateria/ui/screens/missing_config_screen.dart';
 import 'package:viateria/ui/widgets/diploma_view.dart';
 
 import 'helpers/fakes.dart';
+import 'helpers/map_harness.dart';
 
 AppServices buildServices({
   List<Challenge>? challenges,
@@ -56,29 +56,11 @@ AppServices buildServices({
 }
 
 Widget wrap(Widget child, AppServices services, {LocaleController? locale}) {
-  return MultiProvider(
-    providers: [
-      ChangeNotifierProvider(
-        create: (_) => locale ?? LocaleController(initial: 'en'),
-      ),
-      ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
-      Provider.value(value: services),
-    ],
-    child: MaterialApp(home: child),
-  );
+  return wrapWithProviders(MaterialApp(home: child), services, locale: locale);
 }
 
 Widget wrapApp(AppServices services, {LocaleController? locale}) {
-  return MultiProvider(
-    providers: [
-      ChangeNotifierProvider(
-        create: (_) => locale ?? LocaleController(initial: 'en'),
-      ),
-      ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
-      Provider.value(value: services),
-    ],
-    child: const ViateriaApp(),
-  );
+  return wrapWithProviders(const ViateriaApp(), services, locale: locale);
 }
 
 void main() {
@@ -86,6 +68,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    configureMapWidgetTests();
   });
   testWidgets(
     'catalog smoke: published challenges and promo stripe, no drafts',
@@ -114,7 +97,7 @@ void main() {
     expect(find.text(AppStrings('en').catalogEmpty), findsOneWidget);
   });
 
-  testWidgets('catalog controls render at the bottom, not in an AppBar', (
+  testWidgets('signed-in shell opens on the map with six nav destinations', (
     tester,
   ) async {
     await tester.pumpWidget(wrapApp(buildServices()));
@@ -123,25 +106,21 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
     final nav = find.byKey(const Key('app-bottom-nav'));
     expect(nav, findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
 
-    final strings = AppStrings('en');
-    expect(find.text(strings.catalogTitle), findsOneWidget);
-    expect(find.text(strings.navLastChallenge), findsOneWidget);
-    expect(find.text(strings.navMap), findsOneWidget);
-    expect(find.text(strings.navProfile), findsOneWidget);
+    final map = MapStrings('en');
+    expect(find.bySemanticsLabel(map.navHome), findsOneWidget);
+    expect(find.bySemanticsLabel(map.navMap), findsOneWidget);
+    expect(find.bySemanticsLabel(map.navList), findsOneWidget);
+    expect(find.bySemanticsLabel(map.navPlanner), findsOneWidget);
+    expect(find.bySemanticsLabel(map.navSaved), findsOneWidget);
+    expect(find.bySemanticsLabel(map.navProfile), findsOneWidget);
+
+    expect(find.text(map.searchHint), findsOneWidget);
+    expect(find.text(map.viewList), findsOneWidget);
 
     final screenSize = tester.getSize(find.byType(Scaffold).first);
     final navTop = tester.getTopLeft(nav).dy;
     expect(navTop, greaterThan(screenSize.height / 2));
-
-    final list = find.byType(ListView);
-    expect(list, findsWidgets);
-    expect(
-      tester.getBottomLeft(list.first).dy,
-      lessThanOrEqualTo(navTop + 0.5),
-    );
-    expect(find.text('Weekend hike'), findsOneWidget);
   });
 
   testWidgets('missing config screen is shown when secrets are absent', (

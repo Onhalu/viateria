@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Viateria needs the camera to verify waypoints with a live photo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Viateria uses your location only to show where you are on the map. Location is never sent to a server.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>
