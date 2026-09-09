@@ -70,6 +70,15 @@ class AppStrings {
     'otpCode',
     'verifyOtp',
     'enterAfterConfirm',
+    'navLastChallenge',
+    'navMap',
+    'navProfile',
+    'lastChallengeEmpty',
+    'lastChallengeEmptyHint',
+    'lastChallengeMissing',
+    'lastChallengeBrowse',
+    'mapEmpty',
+    'mapEmptyHint',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -136,6 +145,15 @@ class AppStrings {
   String get otpCode => t('otpCode');
   String get verifyOtp => t('verifyOtp');
   String get enterAfterConfirm => t('enterAfterConfirm');
+  String get navLastChallenge => t('navLastChallenge');
+  String get navMap => t('navMap');
+  String get navProfile => t('navProfile');
+  String get lastChallengeEmpty => t('lastChallengeEmpty');
+  String get lastChallengeEmptyHint => t('lastChallengeEmptyHint');
+  String get lastChallengeMissing => t('lastChallengeMissing');
+  String get lastChallengeBrowse => t('lastChallengeBrowse');
+  String get mapEmpty => t('mapEmpty');
+  String get mapEmptyHint => t('mapEmptyHint');
 
   String difficultyLabel(String name) => t(name);
 
@@ -183,8 +201,7 @@ class AppStrings {
       'expert': 'Expert',
       'challengeLockedPaid': 'Purchase this challenge to access waypoints.',
       'storyLockedHint': 'Complete the previous waypoint to unlock the next.',
-      'missingConfig':
-          'Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY via env.',
+      'missingConfig': 'Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY via env.',
       'errorGeneric': 'Something went wrong. Please try again.',
       'purchasePending': 'Payment is still pending.',
       'retry': 'Retry',
@@ -201,11 +218,20 @@ class AppStrings {
       'registerTitle': 'Create account',
       'backToSignIn': 'Back to sign in',
       'confirmEmailTitle': 'Confirm your email',
-      'confirmEmailBody':
-          'Open the email we sent and enter the 6-digit code. After you confirm, you can enter the app.',
+      'confirmEmailBody': 'Open the email we sent and enter the 6-digit code. After you confirm, you can enter the app.',
       'otpCode': '6-digit code',
       'verifyOtp': 'Verify code',
       'enterAfterConfirm': "I've confirmed — enter the app",
+      'navLastChallenge': 'Last challenge',
+      'navMap': 'Map',
+      'navProfile': 'Profile',
+      'lastChallengeEmpty': 'You have not opened a challenge yet.',
+      'lastChallengeEmptyHint': 'Open a challenge from the catalog or the map and it will show up here.',
+      'lastChallengeMissing': 'That challenge is no longer available.',
+      'lastChallengeBrowse': 'Browse challenges',
+      'mapEmpty': 'No published challenges to show on the map.',
+      'mapEmptyHint':
+          'When challenges have waypoint coordinates, they will appear here.',
     },
     'cs': {
       'appName': 'Viateria',
@@ -250,8 +276,7 @@ class AppStrings {
       'expert': 'Expert',
       'challengeLockedPaid': 'Pro přístup k zastávkám výzvu zakupte.',
       'storyLockedHint': 'Další zastávku odemknete dokončením předchozí.',
-      'missingConfig':
-          'Supabase není nastavené. Doplňte SUPABASE_URL a SUPABASE_ANON_KEY v env.',
+      'missingConfig': 'Supabase není nastavené. Doplňte SUPABASE_URL a SUPABASE_ANON_KEY v env.',
       'errorGeneric': 'Něco se pokazilo. Zkuste to znovu.',
       'purchasePending': 'Platba ještě není dokončená.',
       'retry': 'Zkusit znovu',
@@ -268,11 +293,20 @@ class AppStrings {
       'registerTitle': 'Registrace',
       'backToSignIn': 'Zpět k přihlášení',
       'confirmEmailTitle': 'Potvrďte e-mail',
-      'confirmEmailBody':
-          'Otevřete e-mail a zadejte 6místný kód. Až účet potvrdíte, můžete vstoupit do aplikace.',
+      'confirmEmailBody': 'Otevřete e-mail a zadejte 6místný kód. Až účet potvrdíte, můžete vstoupit do aplikace.',
       'otpCode': '6místný kód',
       'verifyOtp': 'Potvrdit kód',
       'enterAfterConfirm': 'E-mail jsem potvrdil(a) — vstoupit',
+      'navLastChallenge': 'Poslední výzva',
+      'navMap': 'Mapa',
+      'navProfile': 'Profil',
+      'lastChallengeEmpty': 'Zatím jste neotevřeli žádnou výzvu.',
+      'lastChallengeEmptyHint':
+          'Otevřete výzvu v katalogu nebo na mapě a objeví se tady.',
+      'lastChallengeMissing': 'Poslední výzva už není dostupná.',
+      'lastChallengeBrowse': 'Procházet výzvy',
+      'mapEmpty': 'Žádné zveřejněné výzvy k zobrazení na mapě.',
+      'mapEmptyHint': 'Až budou u výzev souřadnice zastávek, objeví se tady.',
     },
     'de': {
       'appName': 'Viateria',
@@ -317,10 +351,8 @@ class AppStrings {
       'expert': 'Experte',
       'challengeLockedPaid':
           'Kaufen Sie diese Challenge, um Wegpunkte zu sehen.',
-      'storyLockedHint':
-          'Schließen Sie den vorherigen Wegpunkt ab, um den nächsten zu öffnen.',
-      'missingConfig':
-          'Supabase ist nicht konfiguriert. Setzen Sie SUPABASE_URL und SUPABASE_ANON_KEY per Env.',
+      'storyLockedHint': 'Schließen Sie den vorherigen Wegpunkt ab, um den nächsten zu öffnen.',
+      'missingConfig': 'Supabase ist nicht konfiguriert. Setzen Sie SUPABASE_URL und SUPABASE_ANON_KEY per Env.',
       'errorGeneric': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
       'purchasePending': 'Zahlung steht noch aus.',
       'retry': 'Erneut versuchen',
@@ -337,11 +369,20 @@ class AppStrings {
       'registerTitle': 'Konto erstellen',
       'backToSignIn': 'Zurück zur Anmeldung',
       'confirmEmailTitle': 'E-Mail bestätigen',
-      'confirmEmailBody':
-          'Öffnen Sie die E-Mail und geben Sie den 6-stelligen Code ein. Nach der Bestätigung können Sie die App nutzen.',
+      'confirmEmailBody': 'Öffnen Sie die E-Mail und geben Sie den 6-stelligen Code ein. Nach der Bestätigung können Sie die App nutzen.',
       'otpCode': '6-stelliger Code',
       'verifyOtp': 'Code bestätigen',
       'enterAfterConfirm': 'Bestätigt — App öffnen',
+      'navLastChallenge': 'Letzte Challenge',
+      'navMap': 'Karte',
+      'navProfile': 'Profil',
+      'lastChallengeEmpty': 'Sie haben noch keine Challenge geöffnet.',
+      'lastChallengeEmptyHint': 'Öffnen Sie eine Challenge im Katalog oder auf der Karte, dann finden Sie sie hier.',
+      'lastChallengeMissing': 'Die letzte Challenge ist nicht mehr verfügbar.',
+      'lastChallengeBrowse': 'Challenges ansehen',
+      'mapEmpty': 'Keine veröffentlichten Challenges auf der Karte.',
+      'mapEmptyHint':
+          'Sobald Wegpunkte Koordinaten haben, erscheinen sie hier.',
     },
   };
 }

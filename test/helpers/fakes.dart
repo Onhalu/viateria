@@ -104,9 +104,16 @@ class MemoryCatalog implements CatalogRepository {
   Future<List<Challenge>> fetchPublishedChallenges() async =>
       challenges.where((c) => isPubliclyVisible(c.status)).toList();
 
+  Object? fetchChallengeError;
+
   @override
   Future<ChallengeDetail> fetchChallenge(String id) async {
-    return details.firstWhere((d) => d.challenge.id == id);
+    final forced = fetchChallengeError;
+    if (forced != null) throw forced;
+    for (final detail in details) {
+      if (detail.challenge.id == id) return detail;
+    }
+    throw ChallengeMissing(id);
   }
 
   @override
@@ -122,10 +129,13 @@ class MemoryProgress implements ProgressRepository {
   final List<ChallengeDetail> details;
   final Map<String, Set<String>> completed = {};
   final Map<String, ChallengeRunStatus> statuses = {};
+  Object? fetchProgressError;
   static const _rules = UnlockRules();
 
   @override
   Future<ChallengeProgress?> fetchProgress(String challengeId) async {
+    final forced = fetchProgressError;
+    if (forced != null) throw forced;
     final ids = completed[challengeId];
     if (ids == null) return null;
     return ChallengeProgress(

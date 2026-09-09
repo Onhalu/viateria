@@ -17,10 +17,7 @@ class AuthFailure implements Exception {
 /// When email confirmation is on, Supabase returns a user but no session.
 /// That is success, not an error — the UI must show a confirmation step.
 class SignUpResult {
-  const SignUpResult({
-    required this.sessionEstablished,
-    this.profile,
-  });
+  const SignUpResult({required this.sessionEstablished, this.profile});
 
   /// True when a session exists and the existing router redirect can send
   /// the user into the app.
@@ -47,6 +44,16 @@ abstract class AuthRepository {
 
   Future<void> signOut();
   Future<void> updateLocale(String locale);
+}
+
+/// Challenge id is unknown or no longer published.
+class ChallengeMissing implements Exception {
+  const ChallengeMissing(this.id);
+
+  final String id;
+
+  @override
+  String toString() => 'Challenge $id is not available';
 }
 
 abstract class CatalogRepository {

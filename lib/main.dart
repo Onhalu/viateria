@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'config/app_config.dart';
 import 'data/app_services.dart';
+import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
 import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
@@ -15,6 +16,8 @@ Future<void> main() async {
   final config = AppConfig.fromEnvironment();
   final localeController = LocaleController();
   await localeController.load();
+  final lastOpened = LastOpenedChallengeStore();
+  await lastOpened.load();
 
   AppServices services;
   if (config.isSupabaseConfigured) {
@@ -48,6 +51,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: localeController),
+        ChangeNotifierProvider.value(value: lastOpened),
         Provider.value(value: services),
       ],
       child: const ViateriaApp(),
