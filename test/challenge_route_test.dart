@@ -70,6 +70,14 @@ Widget wrapScreen(AppServices services, {String locale = 'cs'}) {
   );
 }
 
+Future<void> openStartList(WidgetTester tester) async {
+  final picker = find.byKey(const Key('route-start-picker'));
+  await tester.ensureVisible(picker);
+  await tester.tap(picker);
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('route-start-sheet')), findsOneWidget);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -77,7 +85,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('challenge map shows selected point and start controls', (
+  testWidgets('challenge map shows a single Start picker, not split start UI', (
     tester,
   ) async {
     final strings = AppStrings('cs');
@@ -90,13 +98,48 @@ void main() {
 
     expect(find.text('Otevřená stezka'), findsOneWidget);
     expect(find.text(strings.routePlanner), findsOneWidget);
-    expect(find.byKey(const Key('route-start-field')), findsOneWidget);
-    expect(find.byKey(const Key('route-use-gps')), findsOneWidget);
-    expect(find.byKey(const Key('route-start-place')), findsOneWidget);
+    expect(find.byKey(const Key('route-start-picker')), findsOneWidget);
+    expect(find.byKey(const Key('route-start-field')), findsNothing);
+    expect(find.byKey(const Key('route-use-gps')), findsNothing);
+    expect(find.byKey(const Key('route-start-place')), findsNothing);
     expect(find.byKey(const Key('route-destination-place')), findsOneWidget);
     expect(find.byKey(const Key('route-empty')), findsOneWidget);
     expect(find.text(strings.routeNeedTwoPoints), findsOneWidget);
     expect(find.byKey(const Key('route-hike-stats')), findsNothing);
+  });
+
+  testWidgets('tapping Start opens custom, GPS, then challenge places', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(wrapScreen(buildServices()));
+    await tester.pumpAndSettle();
+
+    await openStartList(tester);
+
+    expect(find.text(strings.routeCustomPlace), findsOneWidget);
+    expect(find.text(strings.routeUseGps), findsOneWidget);
+    expect(find.text(strings.routePlacesInChallenge), findsOneWidget);
+    expect(find.byKey(const Key('route-start-place-ow-1')), findsOneWidget);
+    expect(find.byKey(const Key('route-start-place-ow-2')), findsOneWidget);
+
+    final customY = tester
+        .getTopLeft(find.byKey(const Key('route-start-custom')))
+        .dy;
+    final gpsY = tester.getTopLeft(find.byKey(const Key('route-use-gps'))).dy;
+    final firstPlaceY = tester
+        .getTopLeft(find.byKey(const Key('route-start-place-ow-1')))
+        .dy;
+    final secondPlaceY = tester
+        .getTopLeft(find.byKey(const Key('route-start-place-ow-2')))
+        .dy;
+    expect(customY, lessThan(gpsY));
+    expect(gpsY, lessThan(firstPlaceY));
+    expect(firstPlaceY, lessThan(secondPlaceY));
   });
 
   testWidgets('picking a challenge place as start shows walking and cycling', (
@@ -110,9 +153,8 @@ void main() {
     await tester.pumpWidget(wrapScreen(buildServices()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('route-start-place')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Ridge').last);
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-place-ow-2')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
@@ -122,9 +164,12 @@ void main() {
     expect(find.textContaining('1.6 km'), findsOneWidget);
     expect(find.textContaining('1.2 km'), findsOneWidget);
     expect(find.textContaining(' m'), findsWidgets);
+    expect(find.text('Ridge'), findsWidgets);
   });
 
-  testWidgets('typed coordinates and GPS can set a start', (tester) async {
+  testWidgets('custom place and GPS can set a start from the Start list', (
+    tester,
+  ) async {
     final strings = AppStrings('cs');
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -133,6 +178,11 @@ void main() {
     await tester.pumpWidget(wrapScreen(buildServices()));
     await tester.pumpAndSettle();
 
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-custom')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('route-start-field')), findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('route-start-field')),
       '50.07, 14.41',
@@ -143,10 +193,14 @@ void main() {
     expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
     expect(find.byKey(const Key('route-bike-stats')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('route-use-gps')));
+    await openStartList(tester);
+    final gps = find.byKey(const Key('route-use-gps'));
+    await tester.ensureVisible(gps);
+    await tester.tap(gps);
     await tester.pumpAndSettle();
     expect(find.text(strings.routeUseGps), findsWidgets);
     expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
+    expect(find.byKey(const Key('route-start-field')), findsNothing);
   });
 
   testWidgets('routing failure shows an empty error state', (tester) async {
@@ -160,9 +214,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('route-start-place')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Ridge').last);
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-place-ow-2')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('route-empty')), findsOneWidget);
@@ -171,12 +224,18 @@ void main() {
     expect(find.text(strings.retry), findsOneWidget);
   });
 
-  testWidgets('typed place name uses geocoder', (tester) async {
+  testWidgets('typed place name uses geocoder after custom start', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(wrapScreen(buildServices()));
+    await tester.pumpAndSettle();
+
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-custom')));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('route-start-field')), 'Praha');

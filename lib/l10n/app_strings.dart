@@ -83,6 +83,8 @@ class AppStrings {
     'routeStartHint',
     'routeSearch',
     'routeUseGps',
+    'routeCustomPlace',
+    'routePlacesInChallenge',
     'routeFromPlace',
     'routeDestination',
     'routeChoosePlace',
@@ -173,6 +175,8 @@ class AppStrings {
   String get routeStartHint => t('routeStartHint');
   String get routeSearch => t('routeSearch');
   String get routeUseGps => t('routeUseGps');
+  String get routeCustomPlace => t('routeCustomPlace');
+  String get routePlacesInChallenge => t('routePlacesInChallenge');
   String get routeFromPlace => t('routeFromPlace');
   String get routeDestination => t('routeDestination');
   String get routeChoosePlace => t('routeChoosePlace');
@@ -266,6 +270,8 @@ class AppStrings {
       'routeStartHint': 'Address, place, or lat, lng',
       'routeSearch': 'Search',
       'routeUseGps': 'Use my location',
+      'routeCustomPlace': 'Enter a custom place',
+      'routePlacesInChallenge': 'Places in this challenge',
       'routeFromPlace': 'Place from this challenge',
       'routeDestination': 'Destination',
       'routeChoosePlace': 'Choose a place',
@@ -357,6 +363,8 @@ class AppStrings {
       'routeStartHint': 'Adresa, místo nebo souřadnice',
       'routeSearch': 'Hledat',
       'routeUseGps': 'Použít moji polohu',
+      'routeCustomPlace': 'Zadat vlastní místo',
+      'routePlacesInChallenge': 'Místa ve výzvě',
       'routeFromPlace': 'Místo z této výzvy',
       'routeDestination': 'Cíl',
       'routeChoosePlace': 'Vyberte místo',
@@ -449,6 +457,8 @@ class AppStrings {
       'routeStartHint': 'Adresse, Ort oder Koordinaten',
       'routeSearch': 'Suchen',
       'routeUseGps': 'Meinen Standort verwenden',
+      'routeCustomPlace': 'Eigenen Ort eingeben',
+      'routePlacesInChallenge': 'Orte in dieser Challenge',
       'routeFromPlace': 'Ort aus dieser Challenge',
       'routeDestination': 'Ziel',
       'routeChoosePlace': 'Ort wählen',

@@ -41,6 +41,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   RouteEndpoint? _start;
   DualRoutePlan? _routes;
   var _routing = false;
+  var _enteringCustomStart = false;
   String? _routeError;
   int _routeToken = 0;
 
@@ -173,6 +174,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       setState(() {
         _start = found;
         _startController.text = found.label;
+        _enteringCustomStart = true;
       });
       await _refreshRoutes();
     } catch (_) {
@@ -197,6 +199,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           label: strings.routeUseGps,
         );
         _startController.text = strings.routeUseGps;
+        _enteringCustomStart = false;
       });
       await _refreshRoutes();
     } on LocationFailure catch (error) {
@@ -212,21 +215,15 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     }
   }
 
-  void _pickStartPlace(Waypoint? waypoint, String locale) {
-    if (waypoint == null) {
-      final keepTyped = _start?.waypointId == null;
-      setState(() {
-        if (!keepTyped) {
-          _start = null;
-          _routes = null;
-          _routeError = null;
-        }
-      });
-      return;
-    }
+  void _chooseCustomStart() {
+    setState(() => _enteringCustomStart = true);
+  }
+
+  void _pickStartPlace(Waypoint waypoint, String locale) {
     setState(() {
       _start = RouteEndpoint.fromWaypoint(waypoint, locale);
       _startController.text = _start!.label;
+      _enteringCustomStart = false;
     });
     _refreshRoutes();
   }
@@ -312,9 +309,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               onStartSubmitted: _submitStartText,
               onUseGps: _useGps,
               onStartPlacePicked: (place) => _pickStartPlace(place, locale),
+              onCustomPlaceChosen: _chooseCustomStart,
+              showCustomStartField: _enteringCustomStart,
               destination: destination,
               onDestinationChanged: _setDestination,
-              startPlaceId: _start?.waypointId,
               loading: _routing,
               startLabel: _start?.label,
               errorMessage: _routeError,
