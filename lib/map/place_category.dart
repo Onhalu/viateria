@@ -1,24 +1,31 @@
 enum PlaceCategory {
-  castle,
-  chateau,
-  ruin,
-  church,
-  other;
+  city,
+  nature,
+  technical,
+  historical;
 
   String get l10nKey => switch (this) {
-    PlaceCategory.castle => 'catCastle',
-    PlaceCategory.chateau => 'catChateau',
-    PlaceCategory.ruin => 'catRuin',
-    PlaceCategory.church => 'catChurch',
-    PlaceCategory.other => 'catOther',
+    PlaceCategory.city => 'catCity',
+    PlaceCategory.nature => 'catNature',
+    PlaceCategory.technical => 'catTechnical',
+    PlaceCategory.historical => 'catHistorical',
   };
 
   String get iconName => name;
 
   static PlaceCategory fromWire(String value) {
-    return PlaceCategory.values.firstWhere(
-      (c) => c.name == value,
-      orElse: () => PlaceCategory.other,
-    );
+    return switch (value) {
+      'city' => PlaceCategory.city,
+      'nature' => PlaceCategory.nature,
+      'technical' => PlaceCategory.technical,
+      'historical' => PlaceCategory.historical,
+      // Pre-Batch-B keys all collapse to historical.
+      'castle' ||
+      'chateau' ||
+      'ruin' ||
+      'church' ||
+      'other' => PlaceCategory.historical,
+      _ => PlaceCategory.historical,
+    };
   }
 }

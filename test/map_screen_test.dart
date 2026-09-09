@@ -69,7 +69,7 @@ void main() {
     await tester.tap(find.byKey(const Key('map-filter-button')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('map-filter-castle')));
+    await tester.tap(find.byKey(const Key('map-filter-historical')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('map-filter-apply')));
     await tester.pumpAndSettle();
@@ -93,7 +93,7 @@ void main() {
     expect(find.byKey(const Key('map-poi-sheet')), findsOneWidget);
     expect(find.byKey(const Key('map-poi-sheet-name')), findsOneWidget);
     expect(find.text('Karlštejn'), findsWidgets);
-    expect(find.text(strings.t('catCastle')), findsWidgets);
+    expect(find.text(strings.t('catHistorical')), findsWidgets);
     expect(find.text(strings.detailCta), findsOneWidget);
     expect(find.text(strings.closeCta), findsOneWidget);
 
@@ -109,10 +109,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('map-filter-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('map-filter-castle')));
-    await tester.tap(find.byKey(const Key('map-filter-ruin')));
-    await tester.tap(find.byKey(const Key('map-filter-church')));
-    await tester.tap(find.byKey(const Key('map-filter-other')));
+    await tester.tap(find.byKey(const Key('map-filter-city')));
+    await tester.tap(find.byKey(const Key('map-filter-nature')));
+    await tester.tap(find.byKey(const Key('map-filter-technical')));
     await tester.tap(find.byKey(const Key('map-filter-apply')));
     await tester.pumpAndSettle();
 
@@ -120,8 +119,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('map-view-toggle')));
     await tester.pumpAndSettle();
-    expect(find.text('Lednice'), findsOneWidget);
-    expect(find.text('Karlštejn'), findsNothing);
+    expect(find.text('Karlštejn'), findsOneWidget);
+    expect(find.text('Staroměstské náměstí'), findsNothing);
   });
 
   testWidgets('Czech search copy and empty catalog error banner', (

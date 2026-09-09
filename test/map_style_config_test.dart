@@ -19,14 +19,10 @@ void main() {
     },
   );
 
-  test('Batch A cluster and marker sizes', () {
-    expect(MapStyleConfig.clusterRadius, 40);
-    expect(MapStyleConfig.clusterMaxZoom, 13);
+  test('Batch A marker sizes without clustering', () {
     expect(MapStyleConfig.markerIconSize, 0.75);
     expect(MapStyleConfig.selectedMarkerIconSize, 0.9);
     expect(MapStyleConfig.selectedUnderlayRadius, 22);
-    expect(MapStyleConfig.clusterCountTextSize, inInclusiveRange(11, 12));
-    expect(MapStyleConfig.clusterCountTextColor, '#35483C');
     expect(MapStyleConfig.selectedUnderlayColor, 'rgba(53, 72, 60, 0.22)');
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.barkHex, '#756653');

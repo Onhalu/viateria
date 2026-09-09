@@ -83,7 +83,7 @@ class Place {
       id: id,
       name: name,
       category: PlaceCategory.fromWire(
-        props['category']?.toString() ?? 'other',
+        props['category']?.toString() ?? 'historical',
       ),
       location: GeoPoint(
         (coords[1] as num).toDouble(),

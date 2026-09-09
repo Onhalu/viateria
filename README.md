@@ -14,7 +14,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 - Diploma **9:16** with confetti and medals on complete
 - Custom i18n: **cs / en / de**
 - Secrets via environment — never committed
-- **Mapa tab**: MapLibre OSM basemap, clustered památky, search/filters/list/locate
+- **Mapa tab**: MapLibre OSM basemap, památky by type, search/filters/list/locate
 
 ## Out of scope
 

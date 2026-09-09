@@ -35,9 +35,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/map/pois.geojson
-    - assets/map/icons/castle@2x.png
-    - assets/map/icons/chateau@2x.png
-    - assets/map/icons/ruin@2x.png
-    - assets/map/icons/church@2x.png
-    - assets/map/icons/other@2x.png
-    - assets/map/icons/cluster@2x.png
+    - assets/map/icons/city@2x.png
+    - assets/map/icons/nature@2x.png
+    - assets/map/icons/technical@2x.png
+    - assets/map/icons/historical@2x.png

@@ -68,24 +68,23 @@ List<Place> searchPlaces(List<Place> places, String query, {int limit = 20}) {
 bool _categoryMatches(PlaceCategory category, String foldedQuery) {
   if (foldedQuery.length < 3) return false;
   const tokens = <PlaceCategory, List<String>>{
-    PlaceCategory.castle: ['castle', 'hrad', 'hrady', 'burg', 'burgen'],
-    PlaceCategory.chateau: [
-      'chateau',
+    PlaceCategory.city: ['city', 'mesto', 'stadt', 'namesti'],
+    PlaceCategory.nature: ['nature', 'prirodni', 'natur', 'skaly', 'skala'],
+    PlaceCategory.technical: [
+      'technical',
+      'technicka',
+      'technisch',
+      'industrie',
+    ],
+    PlaceCategory.historical: [
+      'historical',
+      'historicka',
+      'historisch',
+      'hrad',
       'zamek',
-      'zamky',
-      'schloss',
-      'schloesser',
+      'castle',
+      'chateau',
     ],
-    PlaceCategory.ruin: [
-      'ruin',
-      'ruins',
-      'zricenina',
-      'zriceniny',
-      'ruine',
-      'ruinen',
-    ],
-    PlaceCategory.church: ['church', 'kostel', 'kostely', 'kirche', 'kirchen'],
-    PlaceCategory.other: ['other', 'ostatni', 'sonstiges'],
   };
   for (final token in tokens[category] ?? const <String>[]) {
     final folded = foldCzech(token);

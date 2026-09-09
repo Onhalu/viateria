@@ -44,7 +44,7 @@ class ChallengeMapGeometry {
   }
 }
 
-/// Native MapLibre host: OSM style, clustered památky, optional challenge overlay.
+/// Native MapLibre host: OSM style, památky by type, optional challenge overlay.
 class PlacesMapHost extends StatefulWidget {
   const PlacesMapHost({
     super.key,
@@ -169,7 +169,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   }
 
   Future<void> _registerIcons(MapLibreMapController controller) async {
-    const names = ['castle', 'chateau', 'ruin', 'church', 'other', 'cluster'];
+    const names = ['city', 'nature', 'technical', 'historical'];
     for (final name in names) {
       final data = await rootBundle.load('assets/map/icons/$name@2x.png');
       await controller.addImage(name, data.buffer.asUint8List());
@@ -181,36 +181,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.poiSourceId,
       GeojsonSourceProperties(
         data: featureCollectionOf(const []),
-        cluster: true,
-        clusterRadius: MapStyleConfig.clusterRadius.toDouble(),
-        clusterMaxZoom: MapStyleConfig.clusterMaxZoom.toDouble(),
         promoteId: 'id',
       ),
-    );
-
-    await controller.addSymbolLayer(
-      MapStyleConfig.poiSourceId,
-      MapStyleConfig.clusterLayerId,
-      const SymbolLayerProperties(
-        iconImage: 'cluster',
-        iconSize: 1.0,
-        iconAllowOverlap: true,
-        iconIgnorePlacement: true,
-      ),
-      filter: ['has', 'point_count'],
-    );
-
-    await controller.addSymbolLayer(
-      MapStyleConfig.poiSourceId,
-      MapStyleConfig.clusterCountLayerId,
-      const SymbolLayerProperties(
-        textField: [Expressions.get, 'point_count'],
-        textSize: MapStyleConfig.clusterCountTextSize,
-        textColor: MapStyleConfig.clusterCountTextColor,
-        textAllowOverlap: true,
-        textIgnorePlacement: true,
-      ),
-      filter: ['has', 'point_count'],
     );
 
     await controller.addCircleLayer(
@@ -242,10 +214,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
-      filter: [
-        '!',
-        ['has', 'point_count'],
-      ],
     );
   }
 
@@ -399,14 +367,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     final controller = _controller;
     if (controller == null) return;
 
-    final clusterHits = await controller.queryRenderedFeatures(point, [
-      MapStyleConfig.clusterLayerId,
-    ], null);
-    if (clusterHits.isNotEmpty) {
-      await _expandCluster(controller, clusterHits.first);
-      return;
-    }
-
     if (widget.geometry != null && widget.onWaypointTap != null) {
       final waypointHits = await controller.queryRenderedFeatures(point, [
         MapStyleConfig.circleLayerId,
@@ -447,27 +407,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       }
     }
     if (match != null) widget.onPlaceTap?.call(match);
-  }
-
-  Future<void> _expandCluster(
-    MapLibreMapController controller,
-    Object raw,
-  ) async {
-    final feature = _asMap(raw);
-    final props = _asMap(feature['properties']);
-    final clusterId = (props['cluster_id'] as num?)?.toInt();
-    if (clusterId == null) return;
-    final zoom = await controller.getClusterExpansionZoom(
-      MapStyleConfig.poiSourceId,
-      clusterId,
-    );
-    final coords = _asMap(feature['geometry'])['coordinates'];
-    if (coords is! List || coords.length < 2) return;
-    final lng = (coords[0] as num).toDouble();
-    final lat = (coords[1] as num).toDouble();
-    await controller.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(lat, lng), zoom.toDouble() + 0.4),
-    );
   }
 
   void _onCameraIdle() {
@@ -580,14 +519,7 @@ class MapFallbackCanvas extends StatelessWidget {
 }
 
 const _selectedUnderlayFilter = [
-  'all',
-  [
-    '!',
-    ['has', 'point_count'],
-  ],
-  [
-    '==',
-    ['get', 'selected'],
-    1,
-  ],
+  '==',
+  ['get', 'selected'],
+  1,
 ];

@@ -27,13 +27,9 @@ abstract final class MapStyleConfig {
   static const prague = LatLng(50.0755, 14.4378);
   static const defaultZoom = 7.0;
 
-  static const clusterRadius = 40;
-  static const clusterMaxZoom = 13;
   static const markerIconSize = 0.75;
   static const selectedMarkerIconSize = 0.9;
   static const selectedUnderlayRadius = 22.0;
-  static const clusterCountTextSize = 12.0;
-  static const clusterCountTextColor = '#35483C';
   static const selectedUnderlayColor = 'rgba(53, 72, 60, 0.22)';
   static const selectedUnderlayLayerId = 'poi-selected-underlay';
   static const forestHex = '#35483C';
@@ -45,8 +41,6 @@ abstract final class MapStyleConfig {
   static const moveEndThrottle = Duration(milliseconds: 300);
 
   static const poiSourceId = 'pois';
-  static const clusterLayerId = 'poi-clusters';
-  static const clusterCountLayerId = 'poi-cluster-count';
   static const symbolLayerId = 'poi-symbols';
 
   static const hikeSourceId = 'challenge-hike';

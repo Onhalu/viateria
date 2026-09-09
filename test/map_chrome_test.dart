@@ -28,7 +28,7 @@ void main() {
     expect(MapPalette.forest, isNot(const Color(0xFF1B4332)));
     expect(MapPalette.bark, isNot(const Color(0xFF3D2914)));
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
-    expect(MapPalette.forestHex, MapStyleConfig.clusterCountTextColor);
+    expect(MapPalette.forestHex, '#35483C');
     expect(MapPalette.forestRgba22, MapStyleConfig.selectedUnderlayColor);
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.barkHex, '#756653');
@@ -59,13 +59,12 @@ void main() {
     expect(MapChromeSizes.toggleIcon(true), 14);
   });
 
-  test('Czech category labels are singular Batch A names', () {
+  test('Czech category labels are Batch B names', () {
     final cs = AppStrings('cs');
-    expect(cs.t('catCastle'), 'Hrad');
-    expect(cs.t('catChateau'), 'Zámek');
-    expect(cs.t('catRuin'), 'Zřícenina');
-    expect(cs.t('catChurch'), 'Kostel');
-    expect(cs.t('catOther'), 'Jiné');
+    expect(cs.t('catCity'), 'Město');
+    expect(cs.t('catNature'), 'Přírodní památka');
+    expect(cs.t('catTechnical'), 'Technická památka');
+    expect(cs.t('catHistorical'), 'Historická památka');
   });
 
   test('GeoJSON marks the selected place for the forest underlay', () {
@@ -77,7 +76,7 @@ void main() {
     );
     expect((selected['properties'] as Map)['selected'], 1);
     final other = features.cast<Map<String, dynamic>>().firstWhere(
-      (feature) => feature['id'] == 'lednice',
+      (feature) => feature['id'] == 'staromestske',
     );
     expect((other['properties'] as Map)['selected'], 0);
   });

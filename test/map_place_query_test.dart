@@ -13,16 +13,15 @@ void main() {
     const bounds = GeoBounds.czechRepublic;
     expect(countInViewport(places, bounds), 3);
 
-    final withoutCastles = applyCategoryFilter(places, {
-      PlaceCategory.chateau,
-      PlaceCategory.ruin,
-      PlaceCategory.church,
-      PlaceCategory.other,
+    final withoutHistorical = applyCategoryFilter(places, {
+      PlaceCategory.city,
+      PlaceCategory.nature,
+      PlaceCategory.technical,
     });
-    expect(withoutCastles.map((p) => p.id), ['lednice', 'trosky']);
-    expect(countInViewport(withoutCastles, bounds), 2);
+    expect(withoutHistorical.map((p) => p.id), ['staromestske', 'pravcicka']);
+    expect(countInViewport(withoutHistorical, bounds), 2);
 
-    final empty = applyCategoryFilter(places, {PlaceCategory.church});
+    final empty = applyCategoryFilter(places, {PlaceCategory.technical});
     expect(countInViewport(empty, bounds), 0);
   });
 
@@ -47,11 +46,20 @@ void main() {
         Place(
           id: 'p$i',
           name: 'Hrad $i',
-          category: PlaceCategory.castle,
+          category: PlaceCategory.historical,
           location: const GeoPoint(50, 14),
         ),
     ];
     expect(searchPlaces(many, 'hrad', limit: 20), hasLength(20));
+  });
+
+  test('legacy wire categories map to historical', () {
+    expect(PlaceCategory.fromWire('castle'), PlaceCategory.historical);
+    expect(PlaceCategory.fromWire('chateau'), PlaceCategory.historical);
+    expect(PlaceCategory.fromWire('ruin'), PlaceCategory.historical);
+    expect(PlaceCategory.fromWire('church'), PlaceCategory.historical);
+    expect(PlaceCategory.fromWire('other'), PlaceCategory.historical);
+    expect(PlaceCategory.fromWire('city'), PlaceCategory.city);
   });
 
   test('Czech památka pluralization', () {
@@ -67,9 +75,9 @@ void main() {
   test('list sorts by distance when GPS is known, otherwise alpha', () {
     const prague = GeoPoint(50.08, 14.42);
     final byDistance = sortForList(places, prague);
-    expect(byDistance.first.id, 'karlstejn');
+    expect(byDistance.first.id, 'staromestske');
 
     final alpha = sortForList(places, null).map((p) => p.id).toList();
-    expect(alpha, ['karlstejn', 'lednice', 'trosky']);
+    expect(alpha, ['karlstejn', 'pravcicka', 'staromestske']);
   });
 }

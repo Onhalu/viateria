@@ -5,19 +5,19 @@ List<Place> samplePlaces() => const [
   Place(
     id: 'karlstejn',
     name: 'Karlštejn',
-    category: PlaceCategory.castle,
+    category: PlaceCategory.historical,
     location: GeoPoint(49.9394, 14.1880),
   ),
   Place(
-    id: 'lednice',
-    name: 'Lednice',
-    category: PlaceCategory.chateau,
-    location: GeoPoint(48.8020, 16.8056),
+    id: 'staromestske',
+    name: 'Staroměstské náměstí',
+    category: PlaceCategory.city,
+    location: GeoPoint(50.0875, 14.4211),
   ),
   Place(
-    id: 'trosky',
-    name: 'Trosky',
-    category: PlaceCategory.ruin,
-    location: GeoPoint(50.5233, 15.2317),
+    id: 'pravcicka',
+    name: 'Pravčická brána',
+    category: PlaceCategory.nature,
+    location: GeoPoint(50.8836, 14.2814),
   ),
 ];
