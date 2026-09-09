@@ -179,7 +179,10 @@ class SupabaseAuthRepository implements AuthRepository {
     await _client.auth.updateUser(UserAttributes(data: {'locale': locale}));
     await _client
         .from('profiles')
-        .update({'locale': locale, 'updated_at': DateTime.now().toIso8601String()})
+        .update({
+          'locale': locale,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
         .eq('id', _client.auth.currentUser!.id);
   }
 }
@@ -205,13 +208,21 @@ class SupabaseCatalogRepository implements CatalogRepository {
 
   @override
   Future<ChallengeDetail> fetchChallenge(String id) async {
-    final row = await _client
-        .from('challenges')
-        .select('*, challenge_i18n(*), waypoints(*, waypoint_i18n(*))')
-        .eq('id', id)
-        .eq('status', 'published')
-        .single();
-    final map = Map<String, dynamic>.from(row as Map);
+    late final Map<String, dynamic> map;
+    try {
+      final row = await _client
+          .from('challenges')
+          .select('*, challenge_i18n(*), waypoints(*, waypoint_i18n(*))')
+          .eq('id', id)
+          .eq('status', 'published')
+          .single();
+      map = Map<String, dynamic>.from(row as Map);
+    } on PostgrestException catch (error, stack) {
+      if (error.code == 'PGRST116') {
+        Error.throwWithStackTrace(ChallengeMissing(id), stack);
+      }
+      rethrow;
+    }
     final challenge = _challengeFromRow(map);
     final waypointRows = (map['waypoints'] as List?) ?? const [];
     final waypoints = waypointRows
@@ -274,7 +285,8 @@ class SupabaseProgressRepository implements ProgressRepository {
         .eq('user_id', userId)
         .eq('waypoints.challenge_id', challengeId);
     final completed = <String>{};
-    for (final row in (waypointRows as List).whereType<Map<String, dynamic>>()) {
+    for (final row
+        in (waypointRows as List).whereType<Map<String, dynamic>>()) {
       completed.add(row['waypoint_id'] as String);
     }
     if (runRows == null && completed.isEmpty) return null;
@@ -298,10 +310,7 @@ class SupabaseProgressRepository implements ProgressRepository {
   }) async {
     await _client.rpc(
       'verify_waypoint',
-      params: {
-        'p_waypoint_id': waypointId,
-        'p_photo_path': photoPath,
-      },
+      params: {'p_waypoint_id': waypointId, 'p_photo_path': photoPath},
     );
     return (await fetchProgress(challengeId))!;
   }

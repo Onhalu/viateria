@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:viateria/app.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
@@ -58,13 +61,32 @@ Widget wrap(Widget child, AppServices services, {LocaleController? locale}) {
       ChangeNotifierProvider(
         create: (_) => locale ?? LocaleController(initial: 'en'),
       ),
+      ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
       Provider.value(value: services),
     ],
     child: MaterialApp(home: child),
   );
 }
 
+Widget wrapApp(AppServices services, {LocaleController? locale}) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider(
+        create: (_) => locale ?? LocaleController(initial: 'en'),
+      ),
+      ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
+      Provider.value(value: services),
+    ],
+    child: const ViateriaApp(),
+  );
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
   testWidgets(
     'catalog smoke: published challenges and promo stripe, no drafts',
     (tester) async {
@@ -95,25 +117,30 @@ void main() {
   testWidgets('catalog controls render at the bottom, not in an AppBar', (
     tester,
   ) async {
-    await tester.pumpWidget(wrap(const CatalogScreen(), buildServices()));
+    await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
     expect(find.byType(AppBar), findsNothing);
-    final nav = find.byKey(const Key('catalog-bottom-nav'));
+    final nav = find.byKey(const Key('app-bottom-nav'));
     expect(nav, findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
 
     final strings = AppStrings('en');
     expect(find.text(strings.catalogTitle), findsOneWidget);
-    expect(find.text(strings.settings), findsOneWidget);
+    expect(find.text(strings.navLastChallenge), findsOneWidget);
+    expect(find.text(strings.navMap), findsOneWidget);
+    expect(find.text(strings.navProfile), findsOneWidget);
 
-    final screenSize = tester.getSize(find.byType(Scaffold));
+    final screenSize = tester.getSize(find.byType(Scaffold).first);
     final navTop = tester.getTopLeft(nav).dy;
     expect(navTop, greaterThan(screenSize.height / 2));
 
     final list = find.byType(ListView);
-    expect(list, findsOneWidget);
-    expect(tester.getBottomLeft(list).dy, lessThanOrEqualTo(navTop + 0.5));
+    expect(list, findsWidgets);
+    expect(
+      tester.getBottomLeft(list.first).dy,
+      lessThanOrEqualTo(navTop + 0.5),
+    );
     expect(find.text('Weekend hike'), findsOneWidget);
   });
 

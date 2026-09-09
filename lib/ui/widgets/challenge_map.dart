@@ -5,17 +5,16 @@ import 'package:latlong2/latlong.dart';
 import '../../models/models.dart';
 
 class ChallengeMap extends StatelessWidget {
-  const ChallengeMap({
-    super.key,
-    required this.waypoints,
-    this.height = 220,
-  });
+  const ChallengeMap({super.key, required this.waypoints, this.height = 220});
 
   final List<Waypoint> waypoints;
   final double height;
 
   @override
   Widget build(BuildContext context) {
+    if (!TickerMode.valuesOf(context).enabled) {
+      return SizedBox(height: height);
+    }
     final ordered = [...waypoints]
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final center = ordered.isEmpty

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
+import '../navigation.dart';
 import '../widgets/catalog_cards.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -94,7 +94,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   for (final challenge in data.challenges) ...[
                     ChallengeCard(
                       challenge: challenge,
-                      onTap: () => context.push('/challenge/${challenge.id}'),
+                      onTap: () => openChallenge(context, challenge.id),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -104,31 +104,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
           },
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        key: const Key('catalog-bottom-nav'),
-        selectedIndex: 0,
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.explore_outlined),
-            selectedIcon: const Icon(Icons.explore),
-            label: strings.catalogTitle,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings),
-            label: strings.settings,
-          ),
-        ],
-        onDestinationSelected: (index) {
-          if (index == 1) context.push('/settings');
-        },
-      ),
     );
   }
 
   Future<void> _openPromo(PromoStripe promo) async {
-    if (promo.challengeId != null) {
-      if (mounted) context.push('/challenge/${promo.challengeId}');
+    final challengeId = promo.challengeId;
+    if (challengeId != null) {
+      if (mounted) await openChallenge(context, challengeId);
       return;
     }
     final url = promo.linkUrl;

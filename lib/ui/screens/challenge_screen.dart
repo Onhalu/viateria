@@ -4,18 +4,26 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
+import '../../data/last_opened_challenge.dart';
+import '../../data/repositories.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../widgets/challenge_map.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/route_planner_panel.dart';
 
 class ChallengeScreen extends StatefulWidget {
-  const ChallengeScreen({super.key, required this.challengeId});
+  const ChallengeScreen({
+    super.key,
+    required this.challengeId,
+    this.embedded = false,
+  });
 
   final String challengeId;
+  final bool embedded;
 
   @override
   State<ChallengeScreen> createState() => _ChallengeScreenState();
@@ -32,6 +40,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
+    context.read<LastOpenedChallengeStore>().remember(widget.challengeId);
   }
 
   Future<_ChallengePageData> _load() async {
@@ -65,110 +74,123 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleController>().locale;
     final strings = context.watch<LocaleController>().strings;
-    return Scaffold(
-      appBar: AppBar(title: Text(strings.appName)),
-      body: FutureBuilder<_ChallengePageData>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || snapshot.data == null) {
-            return Center(
-              child: TextButton(
-                onPressed: _reload,
-                child: Text(strings.retry),
-              ),
+    final body = FutureBuilder<_ChallengePageData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          if (widget.embedded && snapshot.error is ChallengeMissing) {
+            return EmptyState(
+              key: const Key('last-challenge-missing'),
+              title: strings.lastChallengeMissing,
+              hint: strings.lastChallengeEmptyHint,
+              actionLabel: strings.lastChallengeBrowse,
+              onAction: () => context.go('/'),
             );
           }
-          final data = snapshot.data!;
-          final challenge = data.detail.challenge;
-          final copy = challenge.copyFor(locale);
-          final waypoints = data.detail.orderedWaypoints;
-          final completed = data.progress?.completedWaypointIds ?? {};
-          final hasAccess = _rules.hasAccess(
-            pricing: challenge.pricingType,
-            purchased: data.purchase?.isPaid ?? false,
-          );
-          final summary = _planner.plan(mode: _mode, waypoints: waypoints);
-          final isComplete = _rules.isChallengeComplete(
-            waypoints: waypoints,
-            completedWaypointIds: completed,
-          );
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                copy.title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  strings.errorGeneric,
+                  key: const Key('challenge-load-error'),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(copy.description),
-              const SizedBox(height: 12),
-              ChallengeMap(waypoints: waypoints),
-              const SizedBox(height: 12),
-              RoutePlannerPanel(
-                summary: summary,
-                mode: _mode,
-                onModeChanged: (mode) => setState(() => _mode = mode),
-                strings: strings,
-              ),
-              const SizedBox(height: 16),
-              if (!hasAccess) ...[
-                Text(strings.challengeLockedPaid),
-                const SizedBox(height: 8),
-                FilledButton(
-                  onPressed: _unlockPaid,
-                  child: Text(strings.unlockWithStripe),
-                ),
-                if (data.purchase?.status == PurchaseStatus.pending)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(strings.purchasePending),
-                  ),
+                TextButton(onPressed: _reload, child: Text(strings.retry)),
               ],
-              if (isComplete)
+            ),
+          );
+        }
+        final data = snapshot.data!;
+        final challenge = data.detail.challenge;
+        final copy = challenge.copyFor(locale);
+        final waypoints = data.detail.orderedWaypoints;
+        final completed = data.progress?.completedWaypointIds ?? {};
+        final hasAccess = _rules.hasAccess(
+          pricing: challenge.pricingType,
+          purchased: data.purchase?.isPaid ?? false,
+        );
+        final summary = _planner.plan(mode: _mode, waypoints: waypoints);
+        final isComplete = _rules.isChallengeComplete(
+          waypoints: waypoints,
+          completedWaypointIds: completed,
+        );
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              copy.title,
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(copy.description),
+            const SizedBox(height: 12),
+            ChallengeMap(waypoints: waypoints),
+            const SizedBox(height: 12),
+            RoutePlannerPanel(
+              summary: summary,
+              mode: _mode,
+              onModeChanged: (mode) => setState(() => _mode = mode),
+              strings: strings,
+            ),
+            const SizedBox(height: 16),
+            if (!hasAccess) ...[
+              Text(strings.challengeLockedPaid),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _unlockPaid,
+                child: Text(strings.unlockWithStripe),
+              ),
+              if (data.purchase?.status == PurchaseStatus.pending)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: FilledButton.tonal(
-                    onPressed: () => context.push(
-                      '/diploma/${challenge.id}',
-                      extra: data,
-                    ),
-                    child: Text(strings.viewDiploma),
-                  ),
-                ),
-              const SizedBox(height: 16),
-              Text(
-                strings.waypoints,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              for (var i = 0; i < waypoints.length; i++)
-                _WaypointTile(
-                  waypoint: waypoints[i],
-                  locale: locale,
-                  unlocked: _rules.isWaypointUnlocked(
-                    mode: challenge.accessMode,
-                    hasAccess: hasAccess,
-                    waypointIndex: i,
-                    completedIndexes: {
-                      for (var j = 0; j < waypoints.length; j++)
-                        if (completed.contains(waypoints[j].id)) j,
-                    },
-                  ),
-                  completed: completed.contains(waypoints[i].id),
-                  strings: strings,
-                  onVerify: () => context.push(
-                    '/verify/${challenge.id}/${waypoints[i].id}',
-                  ),
+                  child: Text(strings.purchasePending),
                 ),
             ],
-          );
-        },
-      ),
+            if (isComplete)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: FilledButton.tonal(
+                  onPressed: () =>
+                      context.push('/diploma/${challenge.id}', extra: data),
+                  child: Text(strings.viewDiploma),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              strings.waypoints,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < waypoints.length; i++)
+              _WaypointTile(
+                waypoint: waypoints[i],
+                locale: locale,
+                unlocked: _rules.isWaypointUnlocked(
+                  mode: challenge.accessMode,
+                  hasAccess: hasAccess,
+                  waypointIndex: i,
+                  completedIndexes: {
+                    for (var j = 0; j < waypoints.length; j++)
+                      if (completed.contains(waypoints[j].id)) j,
+                  },
+                ),
+                completed: completed.contains(waypoints[i].id),
+                strings: strings,
+                onVerify: () =>
+                    context.push('/verify/${challenge.id}/${waypoints[i].id}'),
+              ),
+          ],
+        );
+      },
+    );
+    return Scaffold(
+      appBar: widget.embedded ? null : AppBar(title: Text(strings.appName)),
+      body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
     );
   }
 }
@@ -195,9 +217,7 @@ class _WaypointTile extends StatelessWidget {
     final copy = waypoint.copyFor(locale);
     return Card(
       child: ListTile(
-        leading: CircleAvatar(
-          child: Text('${waypoint.sortOrder + 1}'),
-        ),
+        leading: CircleAvatar(child: Text('${waypoint.sortOrder + 1}')),
         title: Text(copy.title),
         subtitle: Text(
           completed
@@ -209,10 +229,7 @@ class _WaypointTile extends StatelessWidget {
         trailing: completed
             ? const Icon(Icons.check_circle, color: Color(0xFF2D6A4F))
             : unlocked
-            ? FilledButton(
-                onPressed: onVerify,
-                child: Text(strings.verify),
-              )
+            ? FilledButton(onPressed: onVerify, child: Text(strings.verify))
             : const Icon(Icons.lock_outline),
       ),
     );
