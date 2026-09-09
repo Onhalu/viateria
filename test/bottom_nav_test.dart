@@ -20,6 +20,8 @@ AppServices buildServices({
   List<Challenge>? challenges,
   List<PromoStripe>? promos,
   List<ChallengeDetail>? details,
+  MemoryCatalog? catalog,
+  MemoryProgress? progress,
   bool configured = true,
 }) {
   final open = sampleOpenChallenge();
@@ -36,6 +38,7 @@ AppServices buildServices({
       LocalizedText(locale: 'en', title: 'Hidden draft', description: ''),
     ],
   );
+  final resolvedDetails = details ?? [open, story];
   return AppServices(
     config: AppConfig(
       supabaseUrl: configured ? 'https://example.supabase.co' : '',
@@ -50,12 +53,14 @@ AppServices buildServices({
         email: 'ada@example.com',
       ),
     ),
-    catalog: MemoryCatalog(
-      challenges: challenges ?? [open.challenge, story.challenge, draft],
-      details: details ?? [open, story],
-      promos: promos ?? [samplePromo()],
-    ),
-    progress: MemoryProgress(details: details ?? [open, story]),
+    catalog:
+        catalog ??
+        MemoryCatalog(
+          challenges: challenges ?? [open.challenge, story.challenge, draft],
+          details: resolvedDetails,
+          promos: promos ?? [samplePromo()],
+        ),
+    progress: progress ?? MemoryProgress(details: resolvedDetails),
     purchases: MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
@@ -259,5 +264,52 @@ void main() {
     expect(find.byKey(const Key('last-challenge-missing')), findsOneWidget);
     expect(find.text(strings.lastChallengeMissing), findsOneWidget);
     expect(find.text(strings.errorGeneric), findsNothing);
+  });
+
+  testWidgets('last challenge keeps retry when a transient load fails', (
+    tester,
+  ) async {
+    final strings = AppStrings('en');
+    final open = sampleOpenChallenge();
+    await tester.pumpWidget(
+      wrapScreen(
+        const LastChallengeScreen(),
+        buildServices(
+          progress: MemoryProgress(details: [open])
+            ..fetchProgressError = Exception('timeout'),
+        ),
+        lastOpened: LastOpenedChallengeStore(initialId: open.challenge.id),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('last-challenge-missing')), findsNothing);
+    expect(find.byKey(const Key('challenge-load-error')), findsOneWidget);
+    expect(find.text(strings.errorGeneric), findsOneWidget);
+    expect(find.text(strings.retry), findsOneWidget);
+  });
+
+  testWidgets('map tab shows retry when published details fail to load', (
+    tester,
+  ) async {
+    final strings = AppStrings('en');
+    final open = sampleOpenChallenge();
+    await tester.pumpWidget(
+      wrapApp(
+        buildServices(
+          catalog: MemoryCatalog(challenges: [open.challenge], details: [open])
+            ..fetchChallengeError = Exception('timeout'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(strings.navMap));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('map-empty')), findsNothing);
+    expect(find.byKey(const Key('map-load-error')), findsOneWidget);
+    expect(find.text(strings.errorGeneric), findsOneWidget);
+    expect(find.text(strings.retry), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
   });
 }

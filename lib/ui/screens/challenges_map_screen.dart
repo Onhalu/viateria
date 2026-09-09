@@ -27,16 +27,9 @@ class _ChallengesMapScreenState extends State<ChallengesMapScreen> {
   Future<List<ChallengeDetail>> _load() async {
     final catalog = context.read<AppServices>().catalog;
     final published = await catalog.fetchPublishedChallenges();
-    final details = await Future.wait(
-      published.map((challenge) async {
-        try {
-          return await catalog.fetchChallenge(challenge.id);
-        } catch (_) {
-          return null;
-        }
-      }),
+    return Future.wait(
+      published.map((challenge) => catalog.fetchChallenge(challenge.id)),
     );
-    return details.whereType<ChallengeDetail>().toList();
   }
 
   Future<void> _reload() async {
@@ -60,7 +53,11 @@ class _ChallengesMapScreenState extends State<ChallengesMapScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(strings.errorGeneric),
+                  Text(
+                    strings.errorGeneric,
+                    key: const Key('map-load-error'),
+                    textAlign: TextAlign.center,
+                  ),
                   TextButton(onPressed: _reload, child: Text(strings.retry)),
                 ],
               ),

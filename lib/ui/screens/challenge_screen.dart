@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
+import '../../data/repositories.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
@@ -80,7 +81,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || snapshot.data == null) {
-          if (widget.embedded) {
+          if (widget.embedded && snapshot.error is ChallengeMissing) {
             return EmptyState(
               key: const Key('last-challenge-missing'),
               title: strings.lastChallengeMissing,
@@ -90,7 +91,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             );
           }
           return Center(
-            child: TextButton(onPressed: _reload, child: Text(strings.retry)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  strings.errorGeneric,
+                  key: const Key('challenge-load-error'),
+                  textAlign: TextAlign.center,
+                ),
+                TextButton(onPressed: _reload, child: Text(strings.retry)),
+              ],
+            ),
           );
         }
         final data = snapshot.data!;
