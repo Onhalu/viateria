@@ -4,15 +4,48 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
+import '../../models/models.dart';
+import '../../theme/app_theme.dart';
 
 typedef PlaceTapCallback = void Function(Place place);
 typedef ViewportCallback = void Function(GeoBounds bounds);
 
-/// Native MapLibre host for the places map: OSM style, clustered GeoJSON.
+/// Challenge waypoints + PR7 route lines drawn on the shared MapLibre host.
+class ChallengeMapGeometry {
+  const ChallengeMapGeometry({
+    required this.waypoints,
+    this.selectedWaypointId,
+    this.start,
+    this.hikeLine = const [],
+    this.bikeLine = const [],
+    this.navigating,
+  });
+
+  final List<Waypoint> waypoints;
+  final String? selectedWaypointId;
+  final ll.LatLng? start;
+  final List<ll.LatLng> hikeLine;
+  final List<ll.LatLng> bikeLine;
+  final TravelMode? navigating;
+
+  bool sameAs(ChallengeMapGeometry? other) {
+    if (identical(this, other)) return true;
+    if (other == null) return false;
+    return waypoints == other.waypoints &&
+        selectedWaypointId == other.selectedWaypointId &&
+        start == other.start &&
+        hikeLine == other.hikeLine &&
+        bikeLine == other.bikeLine &&
+        navigating == other.navigating;
+  }
+}
+
+/// Native MapLibre host: OSM style, clustered památky, optional challenge overlay.
 class PlacesMapHost extends StatefulWidget {
   const PlacesMapHost({
     super.key,
@@ -22,8 +55,11 @@ class PlacesMapHost extends StatefulWidget {
     this.onBackgroundTap,
     this.onViewportChanged,
     this.onReady,
+    this.onLayersReady,
     this.onMapFailed,
     this.myLocationEnabled = false,
+    this.geometry,
+    this.onWaypointTap,
   });
 
   final List<Place> places;
@@ -32,8 +68,11 @@ class PlacesMapHost extends StatefulWidget {
   final VoidCallback? onBackgroundTap;
   final ViewportCallback? onViewportChanged;
   final void Function(MapLibreMapController controller)? onReady;
+  final void Function(MapLibreMapController controller)? onLayersReady;
   final VoidCallback? onMapFailed;
   final bool myLocationEnabled;
+  final ChallengeMapGeometry? geometry;
+  final ValueChanged<Waypoint>? onWaypointTap;
 
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
@@ -42,6 +81,7 @@ class PlacesMapHost extends StatefulWidget {
 class _PlacesMapHostState extends State<PlacesMapHost> {
   MapLibreMapController? _controller;
   var _layersReady = false;
+  var _challengeLayersReady = false;
   Timer? _moveEnd;
   Timer? _styleTimeout;
 
@@ -50,6 +90,16 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.places != widget.places) {
       unawaited(_pushPlaces(widget.places));
+    }
+    if (widget.geometry != null &&
+        !widget.geometry!.sameAs(oldWidget.geometry)) {
+      unawaited(_syncChallengeSources());
+    }
+    if (!_challengeLayersReady &&
+        widget.geometry != null &&
+        _layersReady &&
+        _controller != null) {
+      unawaited(_ensureChallengeLayers(_controller!));
     }
   }
 
@@ -101,9 +151,16 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     try {
       await _registerIcons(controller);
       await _installLayers(controller);
+      if (widget.geometry != null) {
+        await _ensureChallengeLayers(controller);
+      }
       _layersReady = true;
       await _pushPlaces(widget.places);
+      if (widget.geometry != null) {
+        await _syncChallengeSources();
+      }
       await _syncViewport(controller);
+      widget.onLayersReady?.call(controller);
     } catch (_) {
       widget.onMapFailed?.call();
     }
@@ -170,17 +227,151 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     );
   }
 
+  Future<void> _ensureChallengeLayers(MapLibreMapController controller) async {
+    if (_challengeLayersReady) return;
+    await _installChallengeLayers(controller);
+    _challengeLayersReady = true;
+    await _syncChallengeSources();
+  }
+
+  Future<void> _installChallengeLayers(MapLibreMapController controller) async {
+    await controller.addSource(
+      MapStyleConfig.hikeSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addSource(
+      MapStyleConfig.bikeSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addSource(
+      MapStyleConfig.pointsSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addLineLayer(
+      MapStyleConfig.bikeSourceId,
+      MapStyleConfig.bikeLayerId,
+      LineLayerProperties(
+        lineColor: _hex(AppTheme.gold),
+        lineWidth: 5,
+        lineCap: 'round',
+        lineJoin: 'round',
+      ),
+    );
+    await controller.addLineLayer(
+      MapStyleConfig.hikeSourceId,
+      MapStyleConfig.hikeLayerId,
+      LineLayerProperties(
+        lineColor: _hex(AppTheme.moss),
+        lineWidth: 4,
+        lineCap: 'round',
+        lineJoin: 'round',
+      ),
+    );
+    await controller.addCircleLayer(
+      MapStyleConfig.pointsSourceId,
+      MapStyleConfig.circleLayerId,
+      const CircleLayerProperties(
+        circleRadius: 16,
+        circleColor: [
+          Expressions.match,
+          [Expressions.get, 'kind'],
+          'selected',
+          '#D4A017',
+          'start',
+          '#1B4332',
+          '#2D6A4F',
+        ],
+        circleStrokeWidth: 2,
+        circleStrokeColor: '#FFFFFF',
+      ),
+    );
+    await controller.addSymbolLayer(
+      MapStyleConfig.pointsSourceId,
+      MapStyleConfig.labelLayerId,
+      const SymbolLayerProperties(
+        textField: [Expressions.get, 'label'],
+        textSize: 12,
+        textColor: [
+          Expressions.match,
+          [Expressions.get, 'kind'],
+          'selected',
+          '#3D2914',
+          '#FFFFFF',
+        ],
+        textAllowOverlap: true,
+        textIgnorePlacement: true,
+      ),
+    );
+  }
+
   Future<void> _pushPlaces(List<Place> places) async {
     final controller = _controller;
     if (controller == null || !_layersReady) return;
-    final geojson = featureCollectionOf(places);
-    try {
-      await controller.setGeoJsonSource(MapStyleConfig.poiSourceId, geojson);
-    } catch (_) {
-      await controller.editGeoJsonSource(
-        MapStyleConfig.poiSourceId,
-        jsonEncode(geojson),
+    await _setSource(
+      controller,
+      MapStyleConfig.poiSourceId,
+      featureCollectionOf(places),
+    );
+  }
+
+  Future<void> _syncChallengeSources() async {
+    final controller = _controller;
+    final geometry = widget.geometry;
+    if (controller == null || !_challengeLayersReady || geometry == null) {
+      return;
+    }
+    final navigating = geometry.navigating;
+    final showBike =
+        geometry.bikeLine.length > 1 &&
+        (navigating == null || navigating == TravelMode.bike);
+    final showHike =
+        geometry.hikeLine.length > 1 &&
+        (navigating == null || navigating == TravelMode.hike);
+    await _setSource(
+      controller,
+      MapStyleConfig.bikeSourceId,
+      showBike ? _lineCollection(geometry.bikeLine) : _emptyCollection(),
+    );
+    await _setSource(
+      controller,
+      MapStyleConfig.hikeSourceId,
+      showHike ? _lineCollection(geometry.hikeLine) : _emptyCollection(),
+    );
+    await _setSource(
+      controller,
+      MapStyleConfig.pointsSourceId,
+      _pointsCollection(geometry),
+    );
+    if (navigating == TravelMode.bike) {
+      await controller.setLayerProperties(
+        MapStyleConfig.bikeLayerId,
+        LineLayerProperties(lineWidth: 7, lineColor: _hex(AppTheme.gold)),
       );
+      await controller.setLayerProperties(
+        MapStyleConfig.hikeLayerId,
+        LineLayerProperties(lineWidth: 4, lineColor: _hex(AppTheme.moss)),
+      );
+    } else if (navigating == TravelMode.hike) {
+      await controller.setLayerProperties(
+        MapStyleConfig.bikeLayerId,
+        LineLayerProperties(lineWidth: 5, lineColor: _hex(AppTheme.gold)),
+      );
+      await controller.setLayerProperties(
+        MapStyleConfig.hikeLayerId,
+        LineLayerProperties(lineWidth: 6, lineColor: _hex(AppTheme.moss)),
+      );
+    }
+  }
+
+  Future<void> _setSource(
+    MapLibreMapController controller,
+    String id,
+    Map<String, dynamic> geojson,
+  ) async {
+    try {
+      await controller.setGeoJsonSource(id, geojson);
+    } catch (_) {
+      await controller.editGeoJsonSource(id, jsonEncode(geojson));
     }
   }
 
@@ -194,6 +385,26 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     if (clusterHits.isNotEmpty) {
       await _expandCluster(controller, clusterHits.first);
       return;
+    }
+
+    if (widget.geometry != null && widget.onWaypointTap != null) {
+      final waypointHits = await controller.queryRenderedFeatures(point, [
+        MapStyleConfig.circleLayerId,
+        MapStyleConfig.labelLayerId,
+      ], null);
+      if (waypointHits.isNotEmpty) {
+        final feature = _asMap(waypointHits.first);
+        final props = _asMap(feature['properties']);
+        final id = props['id']?.toString();
+        if (id != null) {
+          for (final waypoint in widget.geometry!.waypoints) {
+            if (waypoint.id == id) {
+              widget.onWaypointTap!(waypoint);
+              return;
+            }
+          }
+        }
+      }
     }
 
     final poiHits = await controller.queryRenderedFeatures(point, [
@@ -259,10 +470,84 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     );
   }
 
+  Map<String, dynamic> _pointsCollection(ChallengeMapGeometry geometry) {
+    final features = <Map<String, dynamic>>[];
+    if (geometry.start != null) {
+      features.add(
+        _pointFeature(
+          id: 'start',
+          point: geometry.start!,
+          label: 'S',
+          kind: 'start',
+        ),
+      );
+    }
+    final ordered = [...geometry.waypoints]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    for (final waypoint in ordered) {
+      features.add(
+        _pointFeature(
+          id: waypoint.id,
+          point: waypoint.latLng,
+          label: '${waypoint.sortOrder + 1}',
+          kind: waypoint.id == geometry.selectedWaypointId
+              ? 'selected'
+              : 'stop',
+        ),
+      );
+    }
+    return {'type': 'FeatureCollection', 'features': features};
+  }
+
+  Map<String, dynamic> _pointFeature({
+    required String id,
+    required ll.LatLng point,
+    required String label,
+    required String kind,
+  }) {
+    return {
+      'type': 'Feature',
+      'id': id,
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [point.longitude, point.latitude],
+      },
+      'properties': {'id': id, 'label': label, 'kind': kind},
+    };
+  }
+
+  Map<String, dynamic> _lineCollection(List<ll.LatLng> points) {
+    return {
+      'type': 'FeatureCollection',
+      'features': [
+        {
+          'type': 'Feature',
+          'geometry': {
+            'type': 'LineString',
+            'coordinates': [
+              for (final p in points) [p.longitude, p.latitude],
+            ],
+          },
+          'properties': const {},
+        },
+      ],
+    };
+  }
+
+  Map<String, dynamic> _emptyCollection() => {
+    'type': 'FeatureCollection',
+    'features': const [],
+  };
+
   Map<String, dynamic> _asMap(Object? value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
     return const {};
+  }
+
+  String _hex(Color color) {
+    final value = color.toARGB32() & 0xFFFFFF;
+    return '#${value.toRadixString(16).padLeft(6, '0')}';
   }
 }
 

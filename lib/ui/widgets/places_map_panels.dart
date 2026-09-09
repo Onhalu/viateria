@@ -119,6 +119,7 @@ class PlaceDetailSheet extends StatelessWidget {
     required this.userLocation,
     required this.onClose,
     required this.onDetail,
+    this.compact = false,
   });
 
   final Place place;
@@ -126,18 +127,24 @@ class PlaceDetailSheet extends StatelessWidget {
   final GeoPoint? userLocation;
   final VoidCallback onClose;
   final VoidCallback onDetail;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final km = userLocation == null
         ? null
         : distanceKm(userLocation!, place.location);
+    final pad = compact
+        ? const EdgeInsets.fromLTRB(12, 8, 12, 12)
+        : const EdgeInsets.fromLTRB(20, 10, 20, 16);
+    final titleSize = compact ? 16.0 : 22.0;
+    final buttonHeight = compact ? 40.0 : 48.0;
     return Material(
       key: const Key('map-poi-sheet'),
       color: MapOverlayColors.surface,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+        padding: pad,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,29 +159,29 @@ class PlaceDetailSheet extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: compact ? 8 : 16),
             Text(
               place.name,
               key: const Key('map-poi-sheet-name'),
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 22,
+                fontSize: titleSize,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               strings.t(place.category.l10nKey),
-              style: const TextStyle(color: Colors.white70, fontSize: 15),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             if (km != null) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 strings.formatDistanceKm(km),
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
             ],
-            const SizedBox(height: 20),
+            SizedBox(height: compact ? 12 : 20),
             Row(
               children: [
                 Expanded(
@@ -184,7 +191,7 @@ class PlaceDetailSheet extends StatelessWidget {
                     style: FilledButton.styleFrom(
                       backgroundColor: MapOverlayColors.accent,
                       foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
+                      minimumSize: Size.fromHeight(buttonHeight),
                     ),
                     child: Text(strings.detailCta),
                   ),
@@ -197,7 +204,7 @@ class PlaceDetailSheet extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white54),
-                      minimumSize: const Size.fromHeight(48),
+                      minimumSize: Size.fromHeight(buttonHeight),
                     ),
                     child: Text(strings.closeCta),
                   ),
@@ -218,12 +225,14 @@ class PlaceListPanel extends StatelessWidget {
     required this.strings,
     required this.userLocation,
     required this.onSelect,
+    this.compact = false,
   });
 
   final List<Place> places;
   final AppStrings strings;
   final GeoPoint? userLocation;
   final ValueChanged<Place> onSelect;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +247,7 @@ class PlaceListPanel extends StatelessWidget {
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: EdgeInsets.only(bottom: compact ? 8 : 24),
               itemCount: places.length,
               itemBuilder: (context, index) {
                 final place = places[index];
@@ -247,7 +256,8 @@ class PlaceListPanel extends StatelessWidget {
                     : distanceKm(userLocation!, place.location);
                 return ListTile(
                   key: Key('map-poi-list-${place.id}'),
-                  minVerticalPadding: 14,
+                  dense: compact,
+                  minVerticalPadding: compact ? 8 : 14,
                   title: Text(
                     place.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),

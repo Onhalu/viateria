@@ -11,6 +11,7 @@ import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
+import 'package:viateria/ui/widgets/challenge_map.dart';
 
 import 'helpers/fakes.dart';
 
@@ -340,6 +341,83 @@ void main() {
       expect(find.byKey(const Key('route-map-navigate-bike')), findsOneWidget);
       expect(find.byKey(const Key('route-navigate-hike')), findsOneWidget);
       expect(find.byKey(const Key('route-navigate-bike')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'challenge preview map reuses places chrome without growing the panel',
+    (tester) async {
+      final strings = AppStrings('cs');
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapScreen(buildServices()));
+      await tester.pumpAndSettle();
+
+      final map = find.byType(ChallengeMap);
+      expect(map, findsOneWidget);
+      expect(tester.getSize(map).height, 280);
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-search-field')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-filter-button')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-view-toggle')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-poi-count')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-locate-fab')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-osm-attribution')),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(strings.searchHint), findsOneWidget);
+      expect(find.text(strings.viewList), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-view-toggle')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-poi-list')),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.getSize(map).height, 280);
     },
   );
 }

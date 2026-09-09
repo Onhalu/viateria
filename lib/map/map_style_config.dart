@@ -39,6 +39,14 @@ abstract final class MapStyleConfig {
   static const clusterCountLayerId = 'poi-cluster-count';
   static const symbolLayerId = 'poi-symbols';
 
+  static const hikeSourceId = 'challenge-hike';
+  static const bikeSourceId = 'challenge-bike';
+  static const pointsSourceId = 'challenge-points';
+  static const hikeLayerId = 'challenge-hike-line';
+  static const bikeLayerId = 'challenge-bike-line';
+  static const circleLayerId = 'challenge-circles';
+  static const labelLayerId = 'challenge-labels';
+
   static const CameraPosition defaultCamera = CameraPosition(
     target: czechCenter,
     zoom: defaultZoom,
