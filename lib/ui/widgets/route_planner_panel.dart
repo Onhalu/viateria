@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/route_planner.dart';
 import '../../l10n/app_strings.dart';
@@ -25,7 +24,9 @@ class RoutePlannerPanel extends StatefulWidget {
     this.hike,
     this.bike,
     this.onRetry,
-    this.onOpenUrl,
+    this.navigating,
+    this.onStartNavigation,
+    this.onEndNavigation,
   });
 
   final AppStrings strings;
@@ -45,7 +46,9 @@ class RoutePlannerPanel extends StatefulWidget {
   final RouteSummary? hike;
   final RouteSummary? bike;
   final VoidCallback? onRetry;
-  final Future<void> Function(Uri url)? onOpenUrl;
+  final TravelMode? navigating;
+  final ValueChanged<TravelMode>? onStartNavigation;
+  final VoidCallback? onEndNavigation;
 
   @override
   State<RoutePlannerPanel> createState() => _RoutePlannerPanelState();
@@ -213,7 +216,9 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                   icon: Icons.hiking,
                   summary: widget.hike!,
                   strings: strings,
-                  onOpenUrl: widget.onOpenUrl,
+                  navigating: widget.navigating,
+                  onStartNavigation: widget.onStartNavigation,
+                  onEndNavigation: widget.onEndNavigation,
                 ),
               if (widget.hike != null && widget.bike != null)
                 const SizedBox(height: 8),
@@ -224,7 +229,9 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                   icon: Icons.directions_bike,
                   summary: widget.bike!,
                   strings: strings,
-                  onOpenUrl: widget.onOpenUrl,
+                  navigating: widget.navigating,
+                  onStartNavigation: widget.onStartNavigation,
+                  onEndNavigation: widget.onEndNavigation,
                 ),
               if ((widget.hike?.elevationGainM == null &&
                       widget.hike != null) ||
@@ -281,14 +288,18 @@ class _RouteStatsCard extends StatelessWidget {
     required this.icon,
     required this.summary,
     required this.strings,
-    this.onOpenUrl,
+    this.navigating,
+    this.onStartNavigation,
+    this.onEndNavigation,
   });
 
   final String title;
   final IconData icon;
   final RouteSummary summary;
   final AppStrings strings;
-  final Future<void> Function(Uri url)? onOpenUrl;
+  final TravelMode? navigating;
+  final ValueChanged<TravelMode>? onStartNavigation;
+  final VoidCallback? onEndNavigation;
 
   @override
   Widget build(BuildContext context) {
@@ -330,24 +341,21 @@ class _RouteStatsCard extends StatelessWidget {
             const SizedBox(height: 4),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.tonalIcon(
-                key: Key('route-open-osm-${summary.mode.name}'),
-                onPressed: () async {
-                  final uri = Uri.parse(summary.osmUrl);
-                  final open = onOpenUrl;
-                  if (open != null) {
-                    await open(uri);
-                    return;
-                  }
-                  await launchUrl(
-                    uri,
-                    mode: LaunchMode.externalApplication,
-                    webOnlyWindowName: '_blank',
-                  );
-                },
-                icon: const Icon(Icons.directions_outlined),
-                label: Text(strings.openInOsm),
-              ),
+              child: navigating == summary.mode
+                  ? FilledButton.tonalIcon(
+                      key: Key('route-end-navigation-${summary.mode.name}'),
+                      onPressed: onEndNavigation,
+                      icon: const Icon(Icons.close),
+                      label: Text(strings.routeEndNavigation),
+                    )
+                  : FilledButton.tonalIcon(
+                      key: Key('route-navigate-${summary.mode.name}'),
+                      onPressed: onStartNavigation == null
+                          ? null
+                          : () => onStartNavigation!(summary.mode),
+                      icon: const Icon(Icons.directions_outlined),
+                      label: Text(strings.routeNavigate),
+                    ),
             ),
           ],
         ),

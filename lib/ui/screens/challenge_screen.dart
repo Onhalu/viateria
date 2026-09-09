@@ -44,6 +44,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   var _enteringCustomStart = false;
   String? _routeError;
   int _routeToken = 0;
+  TravelMode? _navigating;
 
   @override
   void didChangeDependencies() {
@@ -110,6 +111,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         _routes = null;
         _routing = false;
         _routeError = null;
+        _navigating = null;
       });
       return;
     }
@@ -119,6 +121,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         _routes = null;
         _routing = false;
         _routeError = strings.routeSamePoint;
+        _navigating = null;
       });
       return;
     }
@@ -141,6 +144,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         _routing = false;
         _routes = plan;
         _routeError = plan.isEmpty ? strings.routeLoadFailed : null;
+        if (plan.hike == null && _navigating == TravelMode.hike) {
+          _navigating = null;
+        }
+        if (plan.bike == null && _navigating == TravelMode.bike) {
+          _navigating = null;
+        }
+        if (plan.isEmpty) _navigating = null;
       });
     } catch (_) {
       if (!mounted || token != _routeToken) return;
@@ -148,6 +158,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         _routing = false;
         _routes = null;
         _routeError = strings.routeLoadFailed;
+        _navigating = null;
       });
     }
   }
@@ -168,6 +179,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           _start = null;
           _routes = null;
           _routeError = strings.routePlaceNotFound;
+          _navigating = null;
         });
         return;
       }
@@ -182,6 +194,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       setState(() {
         _routeError = strings.routePlaceNotFound;
         _routes = null;
+        _navigating = null;
       });
     }
   }
@@ -233,8 +246,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     _refreshRoutes();
   }
 
-  Future<void> _openOsm(String url) {
-    return context.read<AppServices>().openUrl(Uri.parse(url));
+  void _startNavigation(TravelMode mode) {
+    setState(() => _navigating = mode);
+  }
+
+  void _endNavigation() {
+    if (_navigating == null) return;
+    setState(() => _navigating = null);
   }
 
   @override
@@ -303,22 +321,32 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               hikeLine: _routes?.hikeLine ?? const <LatLng>[],
               bikeLine: _routes?.bikeLine ?? const <LatLng>[],
               onWaypointTap: _setDestination,
+              navigating: _navigating,
+              navigationBanner: _navigating == null
+                  ? null
+                  : _NavigationBanner(
+                      title: _navigating == TravelMode.bike
+                          ? strings.routeNavigatingBike
+                          : strings.routeNavigatingWalk,
+                      endLabel: strings.routeEndNavigation,
+                      onEnd: _endNavigation,
+                    ),
               actions: [
-                if (_routes?.hike != null)
+                if (_navigating == null && _routes?.hike != null)
                   _MapOsmAction(
-                    key: const Key('route-map-osm-hike'),
+                    key: const Key('route-map-navigate-hike'),
                     icon: Icons.hiking,
-                    label: strings.openInOsm,
+                    label: strings.routeNavigate,
                     tooltip: strings.routeWalking,
-                    onPressed: () => _openOsm(_routes!.hike!.osmUrl),
+                    onPressed: () => _startNavigation(TravelMode.hike),
                   ),
-                if (_routes?.bike != null)
+                if (_navigating == null && _routes?.bike != null)
                   _MapOsmAction(
-                    key: const Key('route-map-osm-bike'),
+                    key: const Key('route-map-navigate-bike'),
                     icon: Icons.directions_bike,
-                    label: strings.openInOsm,
+                    label: strings.routeNavigate,
                     tooltip: strings.routeCycling,
-                    onPressed: () => _openOsm(_routes!.bike!.osmUrl),
+                    onPressed: () => _startNavigation(TravelMode.bike),
                   ),
               ],
             ),
@@ -341,7 +369,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               hike: _routes?.hike,
               bike: _routes?.bike,
               onRetry: _refreshRoutes,
-              onOpenUrl: context.read<AppServices>().openUrl,
+              navigating: _navigating,
+              onStartNavigation: _startNavigation,
+              onEndNavigation: _endNavigation,
             ),
             const SizedBox(height: 16),
             if (!hasAccess) ...[
@@ -463,6 +493,49 @@ class ChallengePageData {
 }
 
 typedef _ChallengePageData = ChallengePageData;
+
+class _NavigationBanner extends StatelessWidget {
+  const _NavigationBanner({
+    required this.title,
+    required this.endLabel,
+    required this.onEnd,
+  });
+
+  final String title;
+  final String endLabel;
+  final VoidCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      key: const Key('route-navigation-active'),
+      elevation: 2,
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        child: Row(
+          children: [
+            Icon(Icons.navigation, color: scheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            TextButton(
+              key: const Key('route-end-navigation'),
+              onPressed: onEnd,
+              child: Text(endLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _MapOsmAction extends StatelessWidget {
   const _MapOsmAction({

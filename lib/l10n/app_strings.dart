@@ -97,6 +97,10 @@ class AppStrings {
     'routeCycling',
     'routeSamePoint',
     'routeElevationFailed',
+    'routeNavigate',
+    'routeEndNavigation',
+    'routeNavigatingWalk',
+    'routeNavigatingBike',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -190,6 +194,10 @@ class AppStrings {
   String get routeCycling => t('routeCycling');
   String get routeSamePoint => t('routeSamePoint');
   String get routeElevationFailed => t('routeElevationFailed');
+  String get routeNavigate => t('routeNavigate');
+  String get routeEndNavigation => t('routeEndNavigation');
+  String get routeNavigatingWalk => t('routeNavigatingWalk');
+  String get routeNavigatingBike => t('routeNavigatingBike');
 
   String difficultyLabel(String name) => t(name);
 
@@ -287,6 +295,10 @@ class AppStrings {
       'routeCycling': 'Cycling route',
       'routeSamePoint': 'Start and destination must be different.',
       'routeElevationFailed': 'Could not load elevation gain.',
+      'routeNavigate': 'Navigate',
+      'routeEndNavigation': 'End navigation',
+      'routeNavigatingWalk': 'Walking navigation',
+      'routeNavigatingBike': 'Cycling navigation',
     },
     'cs': {
       'appName': 'Viateria',
@@ -381,6 +393,10 @@ class AppStrings {
       'routeCycling': 'Cyklistická trasa',
       'routeSamePoint': 'Start a cíl musí být různé.',
       'routeElevationFailed': 'Převýšení se nepodařilo načíst.',
+      'routeNavigate': 'Navigovat',
+      'routeEndNavigation': 'Ukončit navigaci',
+      'routeNavigatingWalk': 'Navigace pěšky',
+      'routeNavigatingBike': 'Navigace na kole',
     },
     'de': {
       'appName': 'Viateria',
@@ -476,6 +492,10 @@ class AppStrings {
       'routeCycling': 'Radweg',
       'routeSamePoint': 'Start und Ziel müssen unterschiedlich sein.',
       'routeElevationFailed': 'Höhenmeter konnten nicht geladen werden.',
+      'routeNavigate': 'Navigieren',
+      'routeEndNavigation': 'Navigation beenden',
+      'routeNavigatingWalk': 'Fußnavigation',
+      'routeNavigatingBike': 'Radnavigation',
     },
   };
 }

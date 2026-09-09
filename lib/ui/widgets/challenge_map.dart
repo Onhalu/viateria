@@ -16,6 +16,8 @@ class ChallengeMap extends StatefulWidget {
     this.bikeLine = const [],
     this.onWaypointTap,
     this.actions = const [],
+    this.navigating,
+    this.navigationBanner,
   });
 
   final List<Waypoint> waypoints;
@@ -26,6 +28,8 @@ class ChallengeMap extends StatefulWidget {
   final List<LatLng> bikeLine;
   final ValueChanged<Waypoint>? onWaypointTap;
   final List<Widget> actions;
+  final TravelMode? navigating;
+  final Widget? navigationBanner;
 
   @override
   State<ChallengeMap> createState() => _ChallengeMapState();
@@ -34,15 +38,33 @@ class ChallengeMap extends StatefulWidget {
 class _ChallengeMapState extends State<ChallengeMap> {
   final _controller = MapController();
   var _ready = false;
+  LatLng? _savedCenter;
+  double? _savedZoom;
 
   @override
   void didUpdateWidget(covariant ChallengeMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.hikeLine != widget.hikeLine ||
+    final navChanged = oldWidget.navigating != widget.navigating;
+    final geometryChanged =
+        oldWidget.hikeLine != widget.hikeLine ||
         oldWidget.bikeLine != widget.bikeLine ||
         oldWidget.start != widget.start ||
-        oldWidget.selectedWaypointId != widget.selectedWaypointId) {
-      _fit();
+        oldWidget.selectedWaypointId != widget.selectedWaypointId;
+    if (navChanged) {
+      if (oldWidget.navigating == null && widget.navigating != null) {
+        _saveCamera();
+        _fitActive();
+      } else if (widget.navigating == null) {
+        _restoreCamera();
+      } else {
+        _fitActive();
+      }
+    } else if (geometryChanged) {
+      if (widget.navigating != null) {
+        _fitActive();
+      } else {
+        _fitOverview();
+      }
     }
   }
 
@@ -52,15 +74,60 @@ class _ChallengeMapState extends State<ChallengeMap> {
     super.dispose();
   }
 
-  void _fit() {
+  List<LatLng> get _activeLine {
+    switch (widget.navigating) {
+      case TravelMode.hike:
+        return widget.hikeLine;
+      case TravelMode.bike:
+        return widget.bikeLine;
+      case null:
+        return const [];
+    }
+  }
+
+  void _saveCamera() {
     if (!_ready) return;
-    final points = <LatLng>[
+    try {
+      final camera = _controller.camera;
+      _savedCenter = camera.center;
+      _savedZoom = camera.zoom;
+    } catch (_) {
+      // Map may not have a size yet.
+    }
+  }
+
+  void _restoreCamera() {
+    final center = _savedCenter;
+    final zoom = _savedZoom;
+    _savedCenter = null;
+    _savedZoom = null;
+    if (!_ready) return;
+    if (center != null && zoom != null) {
+      try {
+        _controller.move(center, zoom);
+        return;
+      } catch (_) {
+        // Fall through to overview fit.
+      }
+    }
+    _fitOverview();
+  }
+
+  void _fitOverview() {
+    _fitPoints([
       for (final waypoint in widget.waypoints) waypoint.latLng,
       if (widget.start != null) widget.start!,
       ...widget.hikeLine,
       ...widget.bikeLine,
-    ];
-    if (points.length < 2) return;
+    ]);
+  }
+
+  void _fitActive() {
+    _fitPoints([..._activeLine, if (widget.start != null) widget.start!]);
+  }
+
+  void _fitPoints(List<LatLng> points) {
+    if (!_ready || points.length < 2) return;
     try {
       _controller.fitCamera(
         CameraFit.coordinates(
@@ -83,13 +150,20 @@ class _ChallengeMapState extends State<ChallengeMap> {
       child: Stack(
         children: [
           mapBody,
+          if (widget.navigationBanner != null)
+            Positioned(
+              left: 8,
+              right: 8,
+              top: 8,
+              child: widget.navigationBanner!,
+            ),
           if (widget.actions.isNotEmpty)
             Positioned(
               left: 8,
               right: 8,
               bottom: 8,
               child: Wrap(
-                key: const Key('route-map-osm-actions'),
+                key: const Key('route-map-nav-actions'),
                 alignment: WrapAlignment.end,
                 spacing: 8,
                 runSpacing: 8,
@@ -108,6 +182,13 @@ class _ChallengeMapState extends State<ChallengeMap> {
         ? const LatLng(50.0755, 14.4378)
         : ordered.first.latLng;
     final scheme = Theme.of(context).colorScheme;
+    final navigating = widget.navigating;
+    final showBike =
+        widget.bikeLine.length > 1 &&
+        (navigating == null || navigating == TravelMode.bike);
+    final showHike =
+        widget.hikeLine.length > 1 &&
+        (navigating == null || navigating == TravelMode.hike);
     return FlutterMap(
       mapController: _controller,
       options: MapOptions(
@@ -118,7 +199,11 @@ class _ChallengeMapState extends State<ChallengeMap> {
         ),
         onMapReady: () {
           _ready = true;
-          _fit();
+          if (widget.navigating != null) {
+            _fitActive();
+          } else {
+            _fitOverview();
+          }
         },
       ),
       children: [
@@ -126,23 +211,25 @@ class _ChallengeMapState extends State<ChallengeMap> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.viateria.viateria',
         ),
-        if (widget.bikeLine.length > 1)
+        if (showBike)
           PolylineLayer(
             polylines: [
               Polyline(
                 points: widget.bikeLine,
-                color: AppTheme.gold.withValues(alpha: 0.9),
-                strokeWidth: 5,
+                color: AppTheme.gold.withValues(
+                  alpha: navigating == TravelMode.bike ? 1 : 0.9,
+                ),
+                strokeWidth: navigating == TravelMode.bike ? 7 : 5,
               ),
             ],
           ),
-        if (widget.hikeLine.length > 1)
+        if (showHike)
           PolylineLayer(
             polylines: [
               Polyline(
                 points: widget.hikeLine,
                 color: scheme.primary,
-                strokeWidth: 4,
+                strokeWidth: navigating == TravelMode.hike ? 6 : 4,
               ),
             ],
           ),
