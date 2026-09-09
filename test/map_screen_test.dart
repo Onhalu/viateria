@@ -10,6 +10,7 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/places_map_screen.dart';
+import 'package:viateria/ui/widgets/map_chrome.dart';
 
 import 'helpers/fakes.dart';
 import 'helpers/map_harness.dart';
@@ -138,5 +139,38 @@ void main() {
     expect(find.text(strings.retry), findsOneWidget);
     expect(find.byKey(const Key('map-osm-attribution')), findsOneWidget);
     expect(find.byKey(const Key('map-locate-fab')), findsOneWidget);
+  });
+
+  testWidgets('Mapa tab chrome uses Batch A cream/forest/sage sizes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_mapApp());
+    await tester.pumpAndSettle();
+
+    final search = tester.widget<TextField>(
+      find.byKey(const Key('map-search-field')),
+    );
+    expect(search.style?.color, MapPalette.forest);
+    expect(search.style?.fontSize, 15);
+    expect(search.decoration?.prefixIcon, isA<Icon>());
+    expect((search.decoration!.prefixIcon! as Icon).size, 20);
+    expect((search.decoration!.prefixIcon! as Icon).color, MapPalette.forest);
+
+    final locate = tester.widget<MapIconButton>(
+      find.byKey(const Key('map-locate-fab')),
+    );
+    expect(locate.size, 44);
+    expect(locate.iconSize, 20);
+    expect(locate.foreground, MapPalette.forest);
+
+    final filter = tester.widget<MapIconButton>(
+      find.byKey(const Key('map-filter-button')),
+    );
+    expect(filter.size, 44);
+    expect(filter.iconSize, 20);
+
+    final count = tester.widget<Text>(find.byKey(const Key('map-poi-count')));
+    expect(count.style?.color, MapPalette.bark);
+    expect(count.style?.fontSize, 13);
   });
 }

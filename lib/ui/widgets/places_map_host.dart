@@ -60,6 +60,7 @@ class PlacesMapHost extends StatefulWidget {
     this.myLocationEnabled = false,
     this.geometry,
     this.onWaypointTap,
+    this.selectedPlaceId,
   });
 
   final List<Place> places;
@@ -73,6 +74,7 @@ class PlacesMapHost extends StatefulWidget {
   final bool myLocationEnabled;
   final ChallengeMapGeometry? geometry;
   final ValueChanged<Waypoint>? onWaypointTap;
+  final String? selectedPlaceId;
 
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
@@ -88,7 +90,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   @override
   void didUpdateWidget(covariant PlacesMapHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.places != widget.places) {
+    if (oldWidget.places != widget.places ||
+        oldWidget.selectedPlaceId != widget.selectedPlaceId) {
       unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
@@ -203,12 +206,23 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.clusterCountLayerId,
       const SymbolLayerProperties(
         textField: [Expressions.get, 'point_count'],
-        textSize: 12,
-        textColor: '#3D2914',
+        textSize: MapStyleConfig.clusterCountTextSize,
+        textColor: MapStyleConfig.clusterCountTextColor,
         textAllowOverlap: true,
         textIgnorePlacement: true,
       ),
       filter: ['has', 'point_count'],
+    );
+
+    await controller.addCircleLayer(
+      MapStyleConfig.poiSourceId,
+      MapStyleConfig.selectedUnderlayLayerId,
+      const CircleLayerProperties(
+        circleRadius: MapStyleConfig.selectedUnderlayRadius,
+        circleColor: MapStyleConfig.selectedUnderlayColor,
+        circleOpacity: 1,
+      ),
+      filter: _selectedUnderlayFilter,
     );
 
     await controller.addSymbolLayer(
@@ -216,7 +230,16 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.symbolLayerId,
       const SymbolLayerProperties(
         iconImage: [Expressions.get, 'icon'],
-        iconSize: 1.0,
+        iconSize: [
+          Expressions.caseExpression,
+          [
+            Expressions.equal,
+            [Expressions.get, 'selected'],
+            1,
+          ],
+          MapStyleConfig.selectedMarkerIconSize,
+          MapStyleConfig.markerIconSize,
+        ],
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
@@ -310,7 +333,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     await _setSource(
       controller,
       MapStyleConfig.poiSourceId,
-      featureCollectionOf(places),
+      featureCollectionOf(places, selectedId: widget.selectedPlaceId),
     );
   }
 
@@ -409,6 +432,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
 
     final poiHits = await controller.queryRenderedFeatures(point, [
       MapStyleConfig.symbolLayerId,
+      MapStyleConfig.selectedUnderlayLayerId,
     ], null);
     if (poiHits.isEmpty) {
       widget.onBackgroundTap?.call();
@@ -558,7 +582,20 @@ class MapFallbackCanvas extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ColoredBox(
       key: Key('map-canvas-fallback'),
-      color: Color(0xFFD7D2C8),
+      color: Color(0xFFD8CDB8),
     );
   }
 }
+
+const _selectedUnderlayFilter = [
+  'all',
+  [
+    '!',
+    ['has', 'point_count'],
+  ],
+  [
+    '==',
+    ['get', 'selected'],
+    1,
+  ],
+];

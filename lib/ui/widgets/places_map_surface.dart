@@ -91,9 +91,11 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     final viewMode = _controller.viewMode;
     final sheetOpen = selected != null && viewMode == MapViewMode.map;
     final embed = MapRuntime.shouldEmbed(context) && !_mapFailed;
-    final inset = widget.compact ? 8.0 : 16.0;
-    final locateSize = widget.compact ? 40.0 : 48.0;
-    final bottomLift = sheetOpen ? (widget.compact ? 148.0 : 200.0) : inset;
+    final compact = widget.compact;
+    final inset = MapChromeSizes.inset(compact);
+    final locateSize = MapChromeSizes.circleButton(compact);
+    final locateIcon = MapChromeSizes.circleIcon(compact);
+    final bottomLift = sheetOpen ? (compact ? 148.0 : 200.0) : inset;
 
     final body = Stack(
       fit: StackFit.expand,
@@ -104,6 +106,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                 initialCamera:
                     widget.initialCamera ?? MapStyleConfig.defaultCamera,
                 geometry: widget.geometry,
+                selectedPlaceId: selected?.id,
                 onWaypointTap: widget.onWaypointTap,
                 onReady: (controller) {
                   _map = controller;
@@ -134,7 +137,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                 children: [
                   if (widget.overlayTop != null) ...[
                     widget.overlayTop!,
-                    SizedBox(height: widget.compact ? 6 : 10),
+                    SizedBox(height: compact ? 6 : 10),
                   ],
                   Row(
                     children: [
@@ -145,6 +148,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                         icon: Icons.tune,
                         tooltip: strings.filtersTitle,
                         size: locateSize,
+                        iconSize: locateIcon,
                         onPressed: () => unawaited(_openFilters(strings)),
                       ),
                     ],
@@ -152,22 +156,22 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                   if (_controller.query.trim().isNotEmpty &&
                       _controller.searchHits.isNotEmpty)
                     _searchResults(_controller.searchHits),
-                  SizedBox(height: widget.compact ? 6 : 10),
+                  SizedBox(height: compact ? 6 : 10),
                   Row(
                     children: [
                       MapGlass(
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: widget.compact ? 10 : 12,
-                            vertical: widget.compact ? 6 : 8,
+                            horizontal: compact ? 8 : 10,
+                            vertical: compact ? 5 : 6,
                           ),
                           child: Text(
                             strings.monumentCount(_controller.visibleCount),
                             key: const Key('map-poi-count'),
                             style: TextStyle(
-                              color: Colors.white,
+                              color: MapPalette.bark,
                               fontWeight: FontWeight.w600,
-                              fontSize: widget.compact ? 12 : 14,
+                              fontSize: MapChromeSizes.countFont(compact),
                             ),
                           ),
                         ),
@@ -175,12 +179,14 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                       const Spacer(),
                       MapGlass(
                         color: MapOverlayColors.accent,
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(
+                          MapChromeSizes.toggleRadius,
+                        ),
                         onTap: _controller.toggleView,
                         child: Padding(
                           padding: EdgeInsets.symmetric(
-                            horizontal: widget.compact ? 10 : 14,
-                            vertical: widget.compact ? 6 : 8,
+                            horizontal: compact ? 10 : 12,
+                            vertical: compact ? 6 : 8,
                           ),
                           child: Row(
                             key: const Key('map-view-toggle'),
@@ -189,8 +195,8 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                                 viewMode == MapViewMode.map
                                     ? Icons.view_list
                                     : Icons.map_outlined,
-                                color: Colors.white,
-                                size: widget.compact ? 16 : 18,
+                                color: MapPalette.forest,
+                                size: MapChromeSizes.toggleIcon(compact),
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -198,9 +204,9 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                                     ? strings.viewList
                                     : strings.viewMap,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: MapPalette.forest,
                                   fontWeight: FontWeight.w600,
-                                  fontSize: widget.compact ? 12 : 14,
+                                  fontSize: MapChromeSizes.toggleFont(compact),
                                 ),
                               ),
                             ],
@@ -258,6 +264,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
               icon: Icons.my_location,
               tooltip: strings.locateTooltip,
               size: locateSize,
+              iconSize: locateIcon,
               onPressed: () => unawaited(_locate()),
             ),
           ),
@@ -297,28 +304,30 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   }
 
   Widget _searchBar(AppStrings strings) {
+    final compact = widget.compact;
     return MapGlass(
+      borderRadius: BorderRadius.circular(MapChromeSizes.searchRadius),
       child: SizedBox(
-        height: widget.compact ? 40 : 48,
+        height: MapChromeSizes.searchHeight(compact),
         child: TextField(
           key: const Key('map-search-field'),
           controller: _search,
           focusNode: _searchFocus,
           style: TextStyle(
-            color: Colors.white,
-            fontSize: widget.compact ? 13 : 16,
+            color: MapPalette.forest,
+            fontSize: MapChromeSizes.searchFont(compact),
           ),
-          cursorColor: Colors.white,
+          cursorColor: MapPalette.forest,
           decoration: InputDecoration(
             hintText: strings.searchHint,
-            hintStyle: const TextStyle(color: Colors.white70),
+            hintStyle: const TextStyle(color: MapPalette.bark),
             prefixIcon: Icon(
               Icons.search,
-              color: Colors.white,
-              size: widget.compact ? 20 : 24,
+              color: MapPalette.forest,
+              size: MapChromeSizes.searchIcon(compact),
             ),
             border: InputBorder.none,
-            isDense: widget.compact,
+            isDense: compact,
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
           onChanged: (value) {
@@ -348,7 +357,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                   dense: true,
                   title: Text(
                     place.name,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: MapPalette.forest),
                   ),
                   onTap: () {
                     _search.clear();
@@ -442,14 +451,14 @@ class _Banner extends StatelessWidget {
               Expanded(
                 child: Text(
                   message,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: MapPalette.forest),
                 ),
               ),
               TextButton(
                 onPressed: onAction,
                 child: Text(
                   action,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: MapPalette.forest),
                 ),
               ),
             ],

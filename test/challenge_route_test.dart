@@ -12,6 +12,7 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
+import 'package:viateria/ui/widgets/map_chrome.dart';
 
 import 'helpers/fakes.dart';
 
@@ -402,6 +403,24 @@ void main() {
       );
       expect(find.text(strings.searchHint), findsOneWidget);
       expect(find.text(strings.viewList), findsOneWidget);
+
+      final search = tester.widget<TextField>(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-search-field')),
+        ),
+      );
+      expect(search.style?.fontSize, 13);
+      expect(search.style?.color, MapPalette.forest);
+
+      final locate = tester.widget<MapIconButton>(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-locate-fab')),
+        ),
+      );
+      expect(locate.size, 36);
+      expect(locate.iconSize, 18);
 
       await tester.tap(
         find.descendant(

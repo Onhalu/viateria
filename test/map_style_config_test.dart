@@ -18,4 +18,15 @@ void main() {
       );
     },
   );
+
+  test('Batch A cluster and marker sizes', () {
+    expect(MapStyleConfig.clusterRadius, 40);
+    expect(MapStyleConfig.clusterMaxZoom, 13);
+    expect(MapStyleConfig.markerIconSize, 0.75);
+    expect(MapStyleConfig.selectedMarkerIconSize, 0.9);
+    expect(MapStyleConfig.selectedUnderlayRadius, 22);
+    expect(MapStyleConfig.clusterCountTextSize, inInclusiveRange(11, 12));
+    expect(MapStyleConfig.clusterCountTextColor, '#35483C');
+    expect(MapStyleConfig.selectedUnderlayColor, 'rgba(156, 154, 123, 0.24)');
+  });
 }

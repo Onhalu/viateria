@@ -27,8 +27,15 @@ abstract final class MapStyleConfig {
   static const prague = LatLng(50.0755, 14.4378);
   static const defaultZoom = 7.0;
 
-  static const clusterRadius = 45;
+  static const clusterRadius = 40;
   static const clusterMaxZoom = 13;
+  static const markerIconSize = 0.75;
+  static const selectedMarkerIconSize = 0.9;
+  static const selectedUnderlayRadius = 22.0;
+  static const clusterCountTextSize = 12.0;
+  static const clusterCountTextColor = '#35483C';
+  static const selectedUnderlayColor = 'rgba(156, 154, 123, 0.24)';
+  static const selectedUnderlayLayerId = 'poi-selected-underlay';
 
   static const searchDebounce = Duration(milliseconds: 300);
   static const searchLimit = 20;

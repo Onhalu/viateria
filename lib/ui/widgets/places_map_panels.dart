@@ -47,7 +47,7 @@ class _FilterBodyState extends State<_FilterBody> {
             Text(
               strings.filtersTitle,
               style: const TextStyle(
-                color: Colors.white,
+                color: MapPalette.forest,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -63,9 +63,10 @@ class _FilterBodyState extends State<_FilterBody> {
                     label: Text(strings.t(category.l10nKey)),
                     selected: _selected.contains(category),
                     selectedColor: MapOverlayColors.accent,
-                    checkmarkColor: Colors.white,
-                    labelStyle: const TextStyle(color: Colors.white),
-                    backgroundColor: Colors.white12,
+                    checkmarkColor: MapPalette.forest,
+                    labelStyle: const TextStyle(color: MapPalette.forest),
+                    backgroundColor: MapPalette.beige,
+                    side: const BorderSide(color: MapPalette.beige),
                     onSelected: (on) {
                       setState(() {
                         if (on) {
@@ -89,14 +90,17 @@ class _FilterBodyState extends State<_FilterBody> {
                       ),
                     );
                   },
+                  style: TextButton.styleFrom(
+                    foregroundColor: MapPalette.forest,
+                  ),
                   child: Text(strings.selectAll),
                 ),
                 const Spacer(),
                 FilledButton(
                   key: const Key('map-filter-apply'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: MapOverlayColors.accent,
-                    foregroundColor: Colors.white,
+                    backgroundColor: MapPalette.forest,
+                    foregroundColor: MapPalette.cream,
                     minimumSize: const Size(120, 48),
                   ),
                   onPressed: () => Navigator.pop(context, _selected),
@@ -154,7 +158,7 @@ class PlaceDetailSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: MapPalette.beige,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -164,7 +168,7 @@ class PlaceDetailSheet extends StatelessWidget {
               place.name,
               key: const Key('map-poi-sheet-name'),
               style: TextStyle(
-                color: Colors.white,
+                color: MapPalette.forest,
                 fontSize: titleSize,
                 fontWeight: FontWeight.w700,
               ),
@@ -172,13 +176,13 @@ class PlaceDetailSheet extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               strings.t(place.category.l10nKey),
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: const TextStyle(color: MapPalette.bark, fontSize: 14),
             ),
             if (km != null) ...[
               const SizedBox(height: 2),
               Text(
                 strings.formatDistanceKm(km),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: const TextStyle(color: MapPalette.bark, fontSize: 13),
               ),
             ],
             SizedBox(height: compact ? 12 : 20),
@@ -189,8 +193,8 @@ class PlaceDetailSheet extends StatelessWidget {
                     key: const Key('map-poi-detail'),
                     onPressed: onDetail,
                     style: FilledButton.styleFrom(
-                      backgroundColor: MapOverlayColors.accent,
-                      foregroundColor: Colors.white,
+                      backgroundColor: MapPalette.forest,
+                      foregroundColor: MapPalette.cream,
                       minimumSize: Size.fromHeight(buttonHeight),
                     ),
                     child: Text(strings.detailCta),
@@ -202,8 +206,8 @@ class PlaceDetailSheet extends StatelessWidget {
                     key: const Key('map-poi-close'),
                     onPressed: onClose,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white54),
+                      foregroundColor: MapPalette.forest,
+                      side: const BorderSide(color: MapPalette.beige),
                       minimumSize: Size.fromHeight(buttonHeight),
                     ),
                     child: Text(strings.closeCta),
@@ -238,12 +242,12 @@ class PlaceListPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       key: const Key('map-poi-list'),
-      color: const Color(0xF2F7F3E9),
+      color: MapPalette.creamFill,
       child: places.isEmpty
           ? Center(
               child: Text(
                 strings.monumentCount(0),
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16, color: MapPalette.bark),
               ),
             )
           : ListView.builder(
@@ -260,15 +264,22 @@ class PlaceListPanel extends StatelessWidget {
                   minVerticalPadding: compact ? 8 : 14,
                   title: Text(
                     place.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: MapPalette.forest,
+                    ),
                   ),
                   subtitle: Text(
                     [
                       strings.t(place.category.l10nKey),
                       if (km != null) strings.formatDistanceKm(km),
                     ].join(' · '),
+                    style: const TextStyle(color: MapPalette.bark),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: MapPalette.bark,
+                  ),
                   onTap: () => onSelect(place),
                 );
               },

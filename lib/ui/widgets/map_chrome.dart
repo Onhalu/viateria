@@ -1,13 +1,44 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+/// Map UI tokens (Batch A). App shell / catalog still use [AppTheme].
+///
+/// Forbidden on map chrome: `#D4A017` gold, `#2D6A4F` moss, `#1B4332` old
+/// forest, `#3D2914` old bark.
+abstract final class MapPalette {
+  static const forest = Color(0xFF35483C);
+  static const sage = Color(0xFF9C9A7B);
+  static const cream = Color(0xFFF3EFE5);
+  static const neutral = Color(0xFFFAF8F2);
+  static const beige = Color(0xFFD8CDB8);
+  static const bark = Color(0xFF756653);
 
-/// Overlay chrome for map surfaces. Dark pills match the map reference
-/// screenshot; gold accent comes from the existing app theme.
+  /// Cream at ~94% opacity for overlay chrome.
+  static const creamFill = Color(0xF0F3EFE5);
+
+  static const forestHex = '#35483C';
+  static const sageRgba24 = 'rgba(156, 154, 123, 0.24)';
+}
+
 abstract final class MapOverlayColors {
-  static const fill = Color(0xE61A1A1A);
-  static const accent = AppTheme.gold;
-  static const surface = Color(0xF21A1A1A);
+  static const fill = MapPalette.creamFill;
+  static const accent = MapPalette.sage;
+  static const surface = MapPalette.cream;
+}
+
+abstract final class MapChromeSizes {
+  static const searchRadius = 24.0;
+  static const toggleRadius = 20.0;
+  static const attributionIcon = 16.0;
+
+  static double inset(bool compact) => compact ? 8 : 12;
+  static double searchHeight(bool compact) => compact ? 40 : 48;
+  static double searchFont(bool compact) => compact ? 13 : 15;
+  static double searchIcon(bool compact) => compact ? 18 : 20;
+  static double circleButton(bool compact) => compact ? 36 : 44;
+  static double circleIcon(bool compact) => compact ? 18 : 20;
+  static double countFont(bool compact) => compact ? 11 : 13;
+  static double toggleFont(bool compact) => compact ? 12 : 13;
+  static double toggleIcon(bool compact) => compact ? 14 : 16;
 }
 
 class MapGlass extends StatelessWidget {
@@ -51,8 +82,9 @@ class MapIconButton extends StatelessWidget {
     required this.onPressed,
     this.tooltip,
     this.background,
-    this.foreground = Colors.white,
-    this.size = 48,
+    this.foreground = MapPalette.forest,
+    this.size = 44,
+    this.iconSize = 20,
   });
 
   final IconData icon;
@@ -61,6 +93,7 @@ class MapIconButton extends StatelessWidget {
   final Color? background;
   final Color foreground;
   final double size;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +109,7 @@ class MapIconButton extends StatelessWidget {
           child: SizedBox(
             width: size,
             height: size,
-            child: Icon(icon, color: foreground, size: 22),
+            child: Icon(icon, color: foreground, size: iconSize),
           ),
         ),
       ),
@@ -119,7 +152,11 @@ class OsmAttributionChip extends StatelessWidget {
         },
         child: const Padding(
           padding: EdgeInsets.all(8),
-          child: Icon(Icons.info_outline, color: Colors.white, size: 18),
+          child: Icon(
+            Icons.info_outline,
+            color: MapPalette.bark,
+            size: MapChromeSizes.attributionIcon,
+          ),
         ),
       ),
     );
