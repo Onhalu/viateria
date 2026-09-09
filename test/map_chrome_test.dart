@@ -38,6 +38,7 @@ void main() {
     expect(MapChromeSizes.searchRadius, 24);
     expect(MapChromeSizes.toggleRadius, 20);
     expect(MapChromeSizes.attributionIcon, 16);
+    expect(MapChromeSizes.listRowIcon, 22);
 
     expect(MapChromeSizes.inset(false), 12);
     expect(MapChromeSizes.inset(true), 8);
@@ -45,12 +46,12 @@ void main() {
     expect(MapChromeSizes.searchHeight(true), 40);
     expect(MapChromeSizes.searchFont(false), 15);
     expect(MapChromeSizes.searchFont(true), 13);
-    expect(MapChromeSizes.searchIcon(false), 20);
-    expect(MapChromeSizes.searchIcon(true), 18);
+    expect(MapChromeSizes.searchIcon(false), 18);
+    expect(MapChromeSizes.searchIcon(true), 16);
     expect(MapChromeSizes.circleButton(false), 44);
     expect(MapChromeSizes.circleButton(true), 36);
-    expect(MapChromeSizes.circleIcon(false), 20);
-    expect(MapChromeSizes.circleIcon(true), 18);
+    expect(MapChromeSizes.circleIcon(false), 18);
+    expect(MapChromeSizes.circleIcon(true), 16);
     expect(MapChromeSizes.countFont(false), 13);
     expect(MapChromeSizes.countFont(true), 11);
     expect(MapChromeSizes.toggleFont(false), 13);

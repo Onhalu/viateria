@@ -27,9 +27,9 @@ abstract final class MapStyleConfig {
   static const prague = LatLng(50.0755, 14.4378);
   static const defaultZoom = 7.0;
 
-  static const markerIconSize = 0.75;
-  static const selectedMarkerIconSize = 0.9;
-  static const selectedUnderlayRadius = 22.0;
+  static const markerIconSize = 0.45;
+  static const selectedMarkerIconSize = 0.55;
+  static const selectedUnderlayRadius = 15.0;
   static const selectedUnderlayColor = 'rgba(53, 72, 60, 0.22)';
   static const selectedUnderlayLayerId = 'poi-selected-underlay';
   static const forestHex = '#35483C';

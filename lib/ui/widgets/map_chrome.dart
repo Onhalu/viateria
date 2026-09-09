@@ -34,13 +34,14 @@ abstract final class MapChromeSizes {
   static const searchRadius = 24.0;
   static const toggleRadius = 20.0;
   static const attributionIcon = 16.0;
+  static const listRowIcon = 22.0;
 
   static double inset(bool compact) => compact ? 8 : 12;
   static double searchHeight(bool compact) => compact ? 40 : 48;
   static double searchFont(bool compact) => compact ? 13 : 15;
-  static double searchIcon(bool compact) => compact ? 18 : 20;
+  static double searchIcon(bool compact) => compact ? 16 : 18;
   static double circleButton(bool compact) => compact ? 36 : 44;
-  static double circleIcon(bool compact) => compact ? 18 : 20;
+  static double circleIcon(bool compact) => compact ? 16 : 18;
   static double countFont(bool compact) => compact ? 11 : 13;
   static double toggleFont(bool compact) => compact ? 12 : 13;
   static double toggleIcon(bool compact) => compact ? 14 : 16;
@@ -89,7 +90,7 @@ class MapIconButton extends StatelessWidget {
     this.background,
     this.foreground = MapPalette.forest,
     this.size = 44,
-    this.iconSize = 20,
+    this.iconSize = 18,
   });
 
   final IconData icon;

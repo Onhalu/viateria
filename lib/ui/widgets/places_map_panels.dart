@@ -270,6 +270,12 @@ class PlaceListPanel extends StatelessWidget {
                   key: Key('map-poi-list-${place.id}'),
                   dense: compact,
                   minVerticalPadding: compact ? 8 : 14,
+                  leading: Image.asset(
+                    'assets/map/icons/${place.category.iconName}@2x.png',
+                    width: MapChromeSizes.listRowIcon,
+                    height: MapChromeSizes.listRowIcon,
+                    filterQuality: FilterQuality.medium,
+                  ),
                   title: Text(
                     place.name,
                     style: const TextStyle(
@@ -287,6 +293,7 @@ class PlaceListPanel extends StatelessWidget {
                   trailing: const Icon(
                     Icons.chevron_right,
                     color: MapPalette.bark,
+                    size: MapChromeSizes.listRowIcon,
                   ),
                   onTap: () => onSelect(place),
                 );

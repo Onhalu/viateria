@@ -152,21 +152,21 @@ void main() {
     expect(search.style?.color, MapPalette.forest);
     expect(search.style?.fontSize, 15);
     expect(search.decoration?.prefixIcon, isA<Icon>());
-    expect((search.decoration!.prefixIcon! as Icon).size, 20);
+    expect((search.decoration!.prefixIcon! as Icon).size, 18);
     expect((search.decoration!.prefixIcon! as Icon).color, MapPalette.forest);
 
     final locate = tester.widget<MapIconButton>(
       find.byKey(const Key('map-locate-fab')),
     );
     expect(locate.size, 44);
-    expect(locate.iconSize, 20);
+    expect(locate.iconSize, 18);
     expect(locate.foreground, MapPalette.forest);
 
     final filter = tester.widget<MapIconButton>(
       find.byKey(const Key('map-filter-button')),
     );
     expect(filter.size, 44);
-    expect(filter.iconSize, 20);
+    expect(filter.iconSize, 18);
 
     final count = tester.widget<Text>(find.byKey(const Key('map-poi-count')));
     expect(count.style?.color, MapPalette.bark);

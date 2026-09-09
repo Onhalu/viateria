@@ -420,7 +420,7 @@ void main() {
         ),
       );
       expect(locate.size, 36);
-      expect(locate.iconSize, 18);
+      expect(locate.iconSize, 16);
 
       await tester.tap(
         find.descendant(
