@@ -24,7 +24,9 @@ void main() {
     expect(MapStyleConfig.selectedMarkerIconSize, 0.55);
     expect(MapStyleConfig.selectedUnderlayRadius, 15);
     expect(MapStyleConfig.selectedUnderlayColor, 'rgba(53, 72, 60, 0.22)');
+    expect(MapStyleConfig.sageUnderlayColor, 'rgba(156, 154, 123, 0.22)');
     expect(MapStyleConfig.forestHex, '#35483C');
+    expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
     expect(MapStyleConfig.creamHex, '#F3EFE5');
   });

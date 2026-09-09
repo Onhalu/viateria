@@ -30,9 +30,16 @@ abstract final class MapStyleConfig {
   static const markerIconSize = 0.45;
   static const selectedMarkerIconSize = 0.55;
   static const selectedUnderlayRadius = 15.0;
+
+  /// Forest underlay for a selected place that is in the current challenge.
   static const selectedUnderlayColor = 'rgba(53, 72, 60, 0.22)';
+
+  /// Sage underlay for a selected place that is not in the current challenge.
+  /// Also the Mapa-tab default (no active challenge → every place is sage).
+  static const sageUnderlayColor = 'rgba(156, 154, 123, 0.22)';
   static const selectedUnderlayLayerId = 'poi-selected-underlay';
   static const forestHex = '#35483C';
+  static const sageHex = '#9C9A7B';
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 

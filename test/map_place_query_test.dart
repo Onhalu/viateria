@@ -80,4 +80,29 @@ void main() {
     final alpha = sortForList(places, null).map((p) => p.id).toList();
     expect(alpha, ['karlstejn', 'pravcicka', 'staromestske']);
   });
+
+  test('challenge membership matches waypoint id or nearby coordinates', () {
+    expect(placeIdsInChallenge(places), isEmpty);
+
+    expect(
+      placeIdsInChallenge(places, waypointIds: const ['karlstejn']),
+      {'karlstejn'},
+    );
+
+    expect(
+      placeIdsInChallenge(
+        places,
+        waypointLocations: const [GeoPoint(50.0875, 14.4211)],
+      ),
+      {'staromestske'},
+    );
+
+    expect(
+      placeIdsInChallenge(
+        places,
+        waypointLocations: const [GeoPoint(50.0, 14.0)],
+      ),
+      isEmpty,
+    );
+  });
 }

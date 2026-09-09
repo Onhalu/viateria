@@ -95,6 +95,33 @@ bool _categoryMatches(PlaceCategory category, String foldedQuery) {
   return false;
 }
 
+/// Places that belong to the current challenge: matching waypoint id, or
+/// within [radiusKm] of a waypoint. Empty inputs → no matches (sage tint).
+Set<String> placeIdsInChallenge(
+  Iterable<Place> places, {
+  Iterable<String> waypointIds = const [],
+  Iterable<GeoPoint> waypointLocations = const [],
+  double radiusKm = 0.2,
+}) {
+  final ids = waypointIds.toSet();
+  final points = waypointLocations.toList(growable: false);
+  if (ids.isEmpty && points.isEmpty) return const {};
+  final matched = <String>{};
+  for (final place in places) {
+    if (ids.contains(place.id)) {
+      matched.add(place.id);
+      continue;
+    }
+    for (final point in points) {
+      if (distanceKm(place.location, point) <= radiusKm) {
+        matched.add(place.id);
+        break;
+      }
+    }
+  }
+  return matched;
+}
+
 double distanceKm(GeoPoint a, GeoPoint b) {
   const earth = 6371.0;
   final dLat = _rad(b.latitude - a.latitude);

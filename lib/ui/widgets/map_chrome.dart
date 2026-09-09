@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Map UI tokens (Batch A). App shell / catalog still use [AppTheme].
+/// Map UI tokens (Batch A/B). App shell / catalog still use [AppTheme].
 ///
 /// Map primary is forest `#35483C`. Cream surfaces stay `#F3EFE5`.
-/// Sage is not used as a fill. Forbidden: `#D4A017` gold, `#2D6A4F` moss,
-/// `#1B4332` old forest, `#3D2914` old bark.
+/// Sage `#9C9A7B` tints places that are not in the current challenge
+/// (and every place on the standalone Mapa tab). Forbidden: `#D4A017`
+/// gold, `#2D6A4F` moss, `#1B4332` old forest, `#3D2914` old bark.
 abstract final class MapPalette {
   static const forest = Color(0xFF35483C);
   static const sage = Color(0xFF9C9A7B);
@@ -17,11 +18,15 @@ abstract final class MapPalette {
   static const creamFill = Color(0xF0F3EFE5);
 
   static const forestHex = '#35483C';
+  static const sageHex = '#9C9A7B';
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 
-  /// Forest at ~22% opacity for the selected-marker underlay.
+  /// Forest at ~22% opacity for the selected-marker underlay (in-challenge).
   static const forestRgba22 = 'rgba(53, 72, 60, 0.22)';
+
+  /// Sage at ~22% opacity for the selected-marker underlay (out-of-challenge).
+  static const sageRgba22 = 'rgba(156, 154, 123, 0.22)';
 }
 
 abstract final class MapOverlayColors {

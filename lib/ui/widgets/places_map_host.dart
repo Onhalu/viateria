@@ -7,8 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import '../../map/map_icons.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
+import '../../map/place_query.dart';
 import '../../models/models.dart';
 
 typedef PlaceTapCallback = void Function(Place place);
@@ -90,7 +92,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   void didUpdateWidget(covariant PlacesMapHost oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.places != widget.places ||
-        oldWidget.selectedPlaceId != widget.selectedPlaceId) {
+        oldWidget.selectedPlaceId != widget.selectedPlaceId ||
+        !_sameChallengeMembership(oldWidget.geometry, widget.geometry)) {
       unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
@@ -172,7 +175,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     const names = ['city', 'nature', 'technical', 'historical'];
     for (final name in names) {
       final data = await rootBundle.load('assets/map/icons/$name@2x.png');
-      await controller.addImage(name, data.buffer.asUint8List());
+      final sdf = await sdfSilhouettePng(data.buffer.asUint8List());
+      await controller.addImage(name, sdf, true);
     }
   }
 
@@ -190,7 +194,16 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.selectedUnderlayLayerId,
       const CircleLayerProperties(
         circleRadius: MapStyleConfig.selectedUnderlayRadius,
-        circleColor: MapStyleConfig.selectedUnderlayColor,
+        circleColor: [
+          Expressions.caseExpression,
+          [
+            Expressions.equal,
+            [Expressions.get, 'inChallenge'],
+            1,
+          ],
+          MapStyleConfig.selectedUnderlayColor,
+          MapStyleConfig.sageUnderlayColor,
+        ],
         circleOpacity: 1,
       ),
       filter: _selectedUnderlayFilter,
@@ -210,6 +223,16 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
           ],
           MapStyleConfig.selectedMarkerIconSize,
           MapStyleConfig.markerIconSize,
+        ],
+        iconColor: [
+          Expressions.caseExpression,
+          [
+            Expressions.equal,
+            [Expressions.get, 'inChallenge'],
+            1,
+          ],
+          MapStyleConfig.forestHex,
+          MapStyleConfig.sageHex,
         ],
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
@@ -286,8 +309,33 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     await _setSource(
       controller,
       MapStyleConfig.poiSourceId,
-      featureCollectionOf(places, selectedId: widget.selectedPlaceId),
+      featureCollectionOf(
+        places,
+        selectedId: widget.selectedPlaceId,
+        challengePlaceIds: _challengePlaceIds(places),
+      ),
     );
+  }
+
+  Set<String> _challengePlaceIds(List<Place> places) {
+    final geometry = widget.geometry;
+    if (geometry == null) return const {};
+    return placeIdsInChallenge(
+      places,
+      waypointIds: geometry.waypoints.map((waypoint) => waypoint.id),
+      waypointLocations: geometry.waypoints.map(
+        (waypoint) => GeoPoint(waypoint.lat, waypoint.lng),
+      ),
+    );
+  }
+
+  bool _sameChallengeMembership(
+    ChallengeMapGeometry? a,
+    ChallengeMapGeometry? b,
+  ) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return a == b;
+    return a.waypoints == b.waypoints;
   }
 
   Future<void> _syncChallengeSources() async {

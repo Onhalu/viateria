@@ -29,8 +29,11 @@ void main() {
     expect(MapPalette.bark, isNot(const Color(0xFF3D2914)));
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
     expect(MapPalette.forestHex, '#35483C');
+    expect(MapPalette.sageHex, '#9C9A7B');
     expect(MapPalette.forestRgba22, MapStyleConfig.selectedUnderlayColor);
+    expect(MapPalette.sageRgba22, MapStyleConfig.sageUnderlayColor);
     expect(MapStyleConfig.forestHex, '#35483C');
+    expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
   });
 
@@ -68,17 +71,30 @@ void main() {
     expect(cs.t('catHistorical'), 'Historická památka');
   });
 
-  test('GeoJSON marks the selected place for the forest underlay', () {
+  test('GeoJSON marks selected and in-challenge places', () {
     final places = samplePlaces();
-    final collection = featureCollectionOf(places, selectedId: 'karlstejn');
+    final collection = featureCollectionOf(
+      places,
+      selectedId: 'karlstejn',
+      challengePlaceIds: const {'karlstejn'},
+    );
     final features = collection['features'] as List;
     final selected = features.cast<Map<String, dynamic>>().firstWhere(
       (feature) => feature['id'] == 'karlstejn',
     );
     expect((selected['properties'] as Map)['selected'], 1);
+    expect((selected['properties'] as Map)['inChallenge'], 1);
     final other = features.cast<Map<String, dynamic>>().firstWhere(
       (feature) => feature['id'] == 'staromestske',
     );
     expect((other['properties'] as Map)['selected'], 0);
+    expect((other['properties'] as Map)['inChallenge'], 0);
+  });
+
+  test('Mapa tab default is sage: no challenge ids means inChallenge 0', () {
+    final collection = featureCollectionOf(samplePlaces());
+    for (final raw in collection['features'] as List) {
+      expect((raw as Map)['properties']['inChallenge'], 0);
+    }
   });
 }

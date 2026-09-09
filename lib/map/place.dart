@@ -51,7 +51,10 @@ class Place {
 
   String get iconName => category.iconName;
 
-  Map<String, dynamic> toFeature({bool selected = false}) {
+  Map<String, dynamic> toFeature({
+    bool selected = false,
+    bool inChallenge = false,
+  }) {
     return {
       'type': 'Feature',
       'id': id,
@@ -65,6 +68,7 @@ class Place {
         'category': category.name,
         'icon': iconName,
         'selected': selected ? 1 : 0,
+        'inChallenge': inChallenge ? 1 : 0,
       },
     };
   }
@@ -108,12 +112,16 @@ class Place {
 Map<String, dynamic> featureCollectionOf(
   Iterable<Place> places, {
   String? selectedId,
+  Set<String> challengePlaceIds = const {},
 }) {
   return {
     'type': 'FeatureCollection',
     'features': [
       for (final place in places)
-        place.toFeature(selected: place.id == selectedId),
+        place.toFeature(
+          selected: place.id == selectedId,
+          inChallenge: challengePlaceIds.contains(place.id),
+        ),
     ],
   };
 }
