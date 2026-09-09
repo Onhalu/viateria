@@ -50,12 +50,30 @@ List<Poi> searchPois(List<Poi> pois, String query, {int limit = 20}) {
   if (q.isEmpty) return const [];
   final hits = <Poi>[];
   for (final poi in pois) {
-    if (foldCzech(poi.name).contains(q)) {
+    if (foldCzech(poi.name).contains(q) || _categoryMatches(poi.category, q)) {
       hits.add(poi);
       if (hits.length >= limit) break;
     }
   }
   return hits;
+}
+
+bool _categoryMatches(PoiCategory category, String foldedQuery) {
+  if (foldedQuery.length < 3) return false;
+  const tokens = <PoiCategory, List<String>>{
+    PoiCategory.castle: ['castle', 'hrad', 'hrady'],
+    PoiCategory.chateau: ['chateau', 'zamek', 'zamky'],
+    PoiCategory.ruin: ['ruin', 'ruins', 'zricenina', 'zriceniny'],
+    PoiCategory.church: ['church', 'kostel', 'kostely'],
+    PoiCategory.other: ['other', 'ostatni'],
+  };
+  for (final token in tokens[category] ?? const <String>[]) {
+    final folded = foldCzech(token);
+    if (folded.contains(foldedQuery) || foldedQuery.contains(folded)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 double distanceKm(GeoPoint a, GeoPoint b) {
