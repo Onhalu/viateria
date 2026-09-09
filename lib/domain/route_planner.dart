@@ -1,6 +1,50 @@
 import 'dart:math' as math;
 
+import 'package:latlong2/latlong.dart';
+
 import '../models/models.dart';
+
+class RouteEndpoint {
+  const RouteEndpoint({
+    required this.lat,
+    required this.lng,
+    required this.label,
+    this.elevationM,
+    this.waypointId,
+  });
+
+  factory RouteEndpoint.fromWaypoint(Waypoint waypoint, String locale) {
+    return RouteEndpoint(
+      lat: waypoint.lat,
+      lng: waypoint.lng,
+      label: waypoint.copyFor(locale).title,
+      elevationM: waypoint.elevationM,
+      waypointId: waypoint.id,
+    );
+  }
+
+  final double lat;
+  final double lng;
+  final String label;
+  final double? elevationM;
+  final String? waypointId;
+
+  LatLng get latLng => LatLng(lat, lng);
+
+  bool get isWaypoint => waypointId != null;
+
+  Waypoint toWaypoint({int sortOrder = 0}) {
+    return Waypoint(
+      id: waypointId ?? 'route-point-$sortOrder',
+      challengeId: '',
+      sortOrder: sortOrder,
+      lat: lat,
+      lng: lng,
+      elevationM: elevationM ?? 0,
+      translations: [LocalizedText(locale: 'und', title: label)],
+    );
+  }
+}
 
 class RouteSummary {
   const RouteSummary({
@@ -14,10 +58,16 @@ class RouteSummary {
 
   final TravelMode mode;
   final double distanceKm;
-  final double elevationGainM;
+  final double? elevationGainM;
   final Duration estimatedTime;
   final Difficulty difficulty;
   final String osmUrl;
+
+  String get timeLabel {
+    final hours = estimatedTime.inHours;
+    final minutes = estimatedTime.inMinutes.remainder(60);
+    return hours > 0 ? '${hours}h ${minutes}m' : '${minutes}m';
+  }
 }
 
 /// Hiking/biking summary from ordered waypoints: distance, elevation, time,
@@ -46,23 +96,44 @@ class RoutePlanner {
       if (delta > 0) elevationGainM += delta;
     }
 
-    final estimatedTime = _estimateTime(
+    return summarize(
       mode: mode,
       distanceKm: distanceKm,
       elevationGainM: elevationGainM,
+      osmPoints: ordered,
     );
-    final difficulty = classifyDifficulty(
-      distanceKm: distanceKm,
-      elevationGainM: elevationGainM,
-    );
+  }
+
+  RouteSummary summarize({
+    required TravelMode mode,
+    required double distanceKm,
+    required double? elevationGainM,
+    required List<Waypoint> osmPoints,
+  }) {
     return RouteSummary(
       mode: mode,
       distanceKm: distanceKm,
       elevationGainM: elevationGainM,
-      estimatedTime: estimatedTime,
-      difficulty: difficulty,
-      osmUrl: osmDirectionsUrl(mode: mode, waypoints: ordered),
+      estimatedTime: estimateTime(
+        mode: mode,
+        distanceKm: distanceKm,
+        elevationGainM: elevationGainM ?? 0,
+      ),
+      difficulty: classifyDifficulty(
+        distanceKm: distanceKm,
+        elevationGainM: elevationGainM ?? 0,
+      ),
+      osmUrl: osmDirectionsUrl(mode: mode, waypoints: osmPoints),
     );
+  }
+
+  double elevationGainAlong(List<double> elevations) {
+    var gain = 0.0;
+    for (var i = 1; i < elevations.length; i++) {
+      final delta = elevations[i] - elevations[i - 1];
+      if (delta > 0) gain += delta;
+    }
+    return gain;
   }
 
   Difficulty classifyDifficulty({
@@ -92,7 +163,7 @@ class RoutePlanner {
     return 'https://www.openstreetmap.org/directions?engine=$engine&route=$route';
   }
 
-  Duration _estimateTime({
+  Duration estimateTime({
     required TravelMode mode,
     required double distanceKm,
     required double elevationGainM,
@@ -108,12 +179,7 @@ class RoutePlanner {
     return Duration(minutes: math.max(totalMinutes, 0));
   }
 
-  double _haversineKm(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
     final dLat = _rad(lat2 - lat1);
     final dLon = _rad(lon2 - lon1);
     final a =

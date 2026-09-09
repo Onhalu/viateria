@@ -39,6 +39,30 @@ void main() {
     final bike = planner.plan(mode: TravelMode.bike, waypoints: waypoints);
     expect(bike.estimatedTime < hike.estimatedTime, isTrue);
     expect(bike.osmUrl, contains('fossgis_osrm_bike'));
+    expect(hike.timeLabel, isNotEmpty);
+  });
+
+  test('summarize reuses time, difficulty and OSM link', () {
+    final summary = planner.summarize(
+      mode: TravelMode.hike,
+      distanceKm: 4,
+      elevationGainM: 100,
+      osmPoints: waypoints,
+    );
+    expect(
+      summary.estimatedTime,
+      planner.estimateTime(
+        mode: TravelMode.hike,
+        distanceKm: 4,
+        elevationGainM: 100,
+      ),
+    );
+    expect(summary.difficulty, Difficulty.easy);
+    expect(summary.osmUrl, contains('fossgis_osrm_foot'));
+  });
+
+  test('elevationGainAlong sums only positive climbs', () {
+    expect(planner.elevationGainAlong([100, 80, 150, 140]), 70);
   });
 
   test('classifies difficulty from distance and climb', () {

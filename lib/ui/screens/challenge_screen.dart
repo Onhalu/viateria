@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
 import '../../data/repositories.dart';
+import '../../data/route_services.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
@@ -31,16 +33,30 @@ class ChallengeScreen extends StatefulWidget {
 
 class _ChallengeScreenState extends State<ChallengeScreen> {
   static const _rules = UnlockRules();
-  static const _planner = RoutePlanner();
 
-  TravelMode _mode = TravelMode.hike;
   Future<_ChallengePageData>? _future;
+  final _startController = TextEditingController();
+
+  String? _destinationId;
+  RouteEndpoint? _start;
+  DualRoutePlan? _routes;
+  var _routing = false;
+  var _enteringCustomStart = false;
+  String? _routeError;
+  int _routeToken = 0;
+  TravelMode? _navigating;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
     context.read<LastOpenedChallengeStore>().remember(widget.challengeId);
+  }
+
+  @override
+  void dispose() {
+    _startController.dispose();
+    super.dispose();
   }
 
   Future<_ChallengePageData> _load() async {
@@ -68,6 +84,175 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       mode: LaunchMode.externalApplication,
     );
     if (mounted) await _reload();
+  }
+
+  Waypoint? _destinationOf(List<Waypoint> waypoints) {
+    if (waypoints.isEmpty) return null;
+    for (final waypoint in waypoints) {
+      if (waypoint.id == _destinationId) return waypoint;
+    }
+    return waypoints.first;
+  }
+
+  Future<void> _refreshRoutes([List<Waypoint>? waypoints]) async {
+    final services = context.read<AppServices>();
+    final localeController = context.read<LocaleController>();
+    final strings = localeController.strings;
+    final locale = localeController.locale;
+    final places =
+        waypoints ??
+        (await _future)?.detail.orderedWaypoints ??
+        const <Waypoint>[];
+    if (!mounted) return;
+    final start = _start;
+    final destination = _destinationOf(places);
+    if (start == null || destination == null) {
+      setState(() {
+        _routes = null;
+        _routing = false;
+        _routeError = null;
+        _navigating = null;
+      });
+      return;
+    }
+    if ((start.lat - destination.lat).abs() < 0.00001 &&
+        (start.lng - destination.lng).abs() < 0.00001) {
+      setState(() {
+        _routes = null;
+        _routing = false;
+        _routeError = strings.routeSamePoint;
+        _navigating = null;
+      });
+      return;
+    }
+    final token = ++_routeToken;
+    setState(() {
+      _routing = true;
+      _routeError = null;
+    });
+    try {
+      final plan =
+          await DualRoutePlanner(
+            routing: services.routing,
+            elevation: services.elevation,
+          ).plan(
+            start: start,
+            end: RouteEndpoint.fromWaypoint(destination, locale),
+          );
+      if (!mounted || token != _routeToken) return;
+      setState(() {
+        _routing = false;
+        _routes = plan;
+        _routeError = plan.isEmpty ? strings.routeLoadFailed : null;
+        if (plan.hike == null && _navigating == TravelMode.hike) {
+          _navigating = null;
+        }
+        if (plan.bike == null && _navigating == TravelMode.bike) {
+          _navigating = null;
+        }
+        if (plan.isEmpty) _navigating = null;
+      });
+    } catch (_) {
+      if (!mounted || token != _routeToken) return;
+      setState(() {
+        _routing = false;
+        _routes = null;
+        _routeError = strings.routeLoadFailed;
+        _navigating = null;
+      });
+    }
+  }
+
+  Future<void> _submitStartText(String raw) async {
+    final strings = context.read<LocaleController>().strings;
+    final services = context.read<AppServices>();
+    final query = raw.trim();
+    if (query.isEmpty) return;
+    try {
+      final data = await _future;
+      final near = _destinationOf(data?.detail.orderedWaypoints ?? const [])
+          ?.latLng;
+      final found = await services.geocoder.findPlace(query, near: near);
+      if (!mounted) return;
+      if (found == null) {
+        setState(() {
+          _start = null;
+          _routes = null;
+          _routeError = strings.routePlaceNotFound;
+          _navigating = null;
+        });
+        return;
+      }
+      setState(() {
+        _start = found;
+        _startController.text = found.label;
+        _enteringCustomStart = true;
+      });
+      await _refreshRoutes();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _routeError = strings.routePlaceNotFound;
+        _routes = null;
+        _navigating = null;
+      });
+    }
+  }
+
+  Future<void> _useGps() async {
+    final strings = context.read<LocaleController>().strings;
+    final services = context.read<AppServices>();
+    try {
+      final here = await services.deviceLocation.current();
+      if (!mounted) return;
+      setState(() {
+        _start = RouteEndpoint(
+          lat: here.lat,
+          lng: here.lng,
+          label: strings.routeUseGps,
+        );
+        _startController.text = strings.routeUseGps;
+        _enteringCustomStart = false;
+      });
+      await _refreshRoutes();
+    } on LocationFailure catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _routeError = error.message == 'denied'
+            ? strings.routeGpsDenied
+            : strings.routeGpsFailed;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _routeError = strings.routeGpsFailed);
+    }
+  }
+
+  void _chooseCustomStart() {
+    setState(() => _enteringCustomStart = true);
+  }
+
+  void _pickStartPlace(Waypoint waypoint, String locale) {
+    setState(() {
+      _start = RouteEndpoint.fromWaypoint(waypoint, locale);
+      _startController.text = _start!.label;
+      _enteringCustomStart = false;
+    });
+    _refreshRoutes();
+  }
+
+  void _setDestination(Waypoint waypoint) {
+    setState(() => _destinationId = waypoint.id);
+    _refreshRoutes();
+  }
+
+  void _startNavigation(TravelMode mode) {
+    setState(() => _navigating = mode);
+  }
+
+  void _endNavigation() {
+    if (_navigating == null) return;
+    setState(() => _navigating = null);
   }
 
   @override
@@ -108,12 +293,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         final challenge = data.detail.challenge;
         final copy = challenge.copyFor(locale);
         final waypoints = data.detail.orderedWaypoints;
+        final destination = _destinationOf(waypoints);
         final completed = data.progress?.completedWaypointIds ?? {};
         final hasAccess = _rules.hasAccess(
           pricing: challenge.pricingType,
           purchased: data.purchase?.isPaid ?? false,
         );
-        final summary = _planner.plan(mode: _mode, waypoints: waypoints);
         final isComplete = _rules.isChallengeComplete(
           waypoints: waypoints,
           completedWaypointIds: completed,
@@ -129,13 +314,64 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             const SizedBox(height: 8),
             Text(copy.description),
             const SizedBox(height: 12),
-            ChallengeMap(waypoints: waypoints),
+            ChallengeMap(
+              waypoints: waypoints,
+              selectedWaypointId: destination?.id,
+              start: _start?.latLng,
+              hikeLine: _routes?.hikeLine ?? const <LatLng>[],
+              bikeLine: _routes?.bikeLine ?? const <LatLng>[],
+              onWaypointTap: _setDestination,
+              navigating: _navigating,
+              navigationBanner: _navigating == null
+                  ? null
+                  : _NavigationBanner(
+                      title: _navigating == TravelMode.bike
+                          ? strings.routeNavigatingBike
+                          : strings.routeNavigatingWalk,
+                      endLabel: strings.routeEndNavigation,
+                      onEnd: _endNavigation,
+                    ),
+              actions: [
+                if (_navigating == null && _routes?.hike != null)
+                  _MapOsmAction(
+                    key: const Key('route-map-navigate-hike'),
+                    icon: Icons.hiking,
+                    label: strings.routeNavigate,
+                    tooltip: strings.routeWalking,
+                    onPressed: () => _startNavigation(TravelMode.hike),
+                  ),
+                if (_navigating == null && _routes?.bike != null)
+                  _MapOsmAction(
+                    key: const Key('route-map-navigate-bike'),
+                    icon: Icons.directions_bike,
+                    label: strings.routeNavigate,
+                    tooltip: strings.routeCycling,
+                    onPressed: () => _startNavigation(TravelMode.bike),
+                  ),
+              ],
+            ),
             const SizedBox(height: 12),
             RoutePlannerPanel(
-              summary: summary,
-              mode: _mode,
-              onModeChanged: (mode) => setState(() => _mode = mode),
               strings: strings,
+              locale: locale,
+              waypoints: waypoints,
+              startController: _startController,
+              onStartSubmitted: _submitStartText,
+              onUseGps: _useGps,
+              onStartPlacePicked: (place) => _pickStartPlace(place, locale),
+              onCustomPlaceChosen: _chooseCustomStart,
+              showCustomStartField: _enteringCustomStart,
+              destination: destination,
+              onDestinationChanged: _setDestination,
+              loading: _routing,
+              startLabel: _start?.label,
+              errorMessage: _routeError,
+              hike: _routes?.hike,
+              bike: _routes?.bike,
+              onRetry: _refreshRoutes,
+              navigating: _navigating,
+              onStartNavigation: _startNavigation,
+              onEndNavigation: _endNavigation,
             ),
             const SizedBox(height: 16),
             if (!hasAccess) ...[
@@ -170,6 +406,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               _WaypointTile(
                 waypoint: waypoints[i],
                 locale: locale,
+                selected: waypoints[i].id == destination?.id,
                 unlocked: _rules.isWaypointUnlocked(
                   mode: challenge.accessMode,
                   hasAccess: hasAccess,
@@ -181,6 +418,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 ),
                 completed: completed.contains(waypoints[i].id),
                 strings: strings,
+                onSelect: () => _setDestination(waypoints[i]),
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
@@ -199,24 +437,30 @@ class _WaypointTile extends StatelessWidget {
   const _WaypointTile({
     required this.waypoint,
     required this.locale,
+    required this.selected,
     required this.unlocked,
     required this.completed,
     required this.strings,
+    required this.onSelect,
     required this.onVerify,
   });
 
   final Waypoint waypoint;
   final String locale;
+  final bool selected;
   final bool unlocked;
   final bool completed;
   final AppStrings strings;
+  final VoidCallback onSelect;
   final VoidCallback onVerify;
 
   @override
   Widget build(BuildContext context) {
     final copy = waypoint.copyFor(locale);
     return Card(
+      color: selected ? Theme.of(context).colorScheme.secondaryContainer : null,
       child: ListTile(
+        onTap: onSelect,
         leading: CircleAvatar(child: Text('${waypoint.sortOrder + 1}')),
         title: Text(copy.title),
         subtitle: Text(
@@ -249,3 +493,73 @@ class ChallengePageData {
 }
 
 typedef _ChallengePageData = ChallengePageData;
+
+class _NavigationBanner extends StatelessWidget {
+  const _NavigationBanner({
+    required this.title,
+    required this.endLabel,
+    required this.onEnd,
+  });
+
+  final String title;
+  final String endLabel;
+  final VoidCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      key: const Key('route-navigation-active'),
+      elevation: 2,
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        child: Row(
+          children: [
+            Icon(Icons.navigation, color: scheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            TextButton(
+              key: const Key('route-end-navigation'),
+              onPressed: onEnd,
+              child: Text(endLabel),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapOsmAction extends StatelessWidget {
+  const _MapOsmAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: FilledButton.tonalIcon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+      ),
+    );
+  }
+}

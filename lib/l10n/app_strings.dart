@@ -79,6 +79,28 @@ class AppStrings {
     'lastChallengeBrowse',
     'mapEmpty',
     'mapEmptyHint',
+    'routeStart',
+    'routeStartHint',
+    'routeSearch',
+    'routeUseGps',
+    'routeCustomPlace',
+    'routePlacesInChallenge',
+    'routeFromPlace',
+    'routeDestination',
+    'routeChoosePlace',
+    'routeNeedTwoPoints',
+    'routeLoadFailed',
+    'routeGpsFailed',
+    'routeGpsDenied',
+    'routePlaceNotFound',
+    'routeWalking',
+    'routeCycling',
+    'routeSamePoint',
+    'routeElevationFailed',
+    'routeNavigate',
+    'routeEndNavigation',
+    'routeNavigatingWalk',
+    'routeNavigatingBike',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -154,6 +176,28 @@ class AppStrings {
   String get lastChallengeBrowse => t('lastChallengeBrowse');
   String get mapEmpty => t('mapEmpty');
   String get mapEmptyHint => t('mapEmptyHint');
+  String get routeStart => t('routeStart');
+  String get routeStartHint => t('routeStartHint');
+  String get routeSearch => t('routeSearch');
+  String get routeUseGps => t('routeUseGps');
+  String get routeCustomPlace => t('routeCustomPlace');
+  String get routePlacesInChallenge => t('routePlacesInChallenge');
+  String get routeFromPlace => t('routeFromPlace');
+  String get routeDestination => t('routeDestination');
+  String get routeChoosePlace => t('routeChoosePlace');
+  String get routeNeedTwoPoints => t('routeNeedTwoPoints');
+  String get routeLoadFailed => t('routeLoadFailed');
+  String get routeGpsFailed => t('routeGpsFailed');
+  String get routeGpsDenied => t('routeGpsDenied');
+  String get routePlaceNotFound => t('routePlaceNotFound');
+  String get routeWalking => t('routeWalking');
+  String get routeCycling => t('routeCycling');
+  String get routeSamePoint => t('routeSamePoint');
+  String get routeElevationFailed => t('routeElevationFailed');
+  String get routeNavigate => t('routeNavigate');
+  String get routeEndNavigation => t('routeEndNavigation');
+  String get routeNavigatingWalk => t('routeNavigatingWalk');
+  String get routeNavigatingBike => t('routeNavigatingBike');
 
   String difficultyLabel(String name) => t(name);
 
@@ -232,6 +276,29 @@ class AppStrings {
       'mapEmpty': 'No published challenges to show on the map.',
       'mapEmptyHint':
           'When challenges have waypoint coordinates, they will appear here.',
+      'routeStart': 'Start',
+      'routeStartHint': 'Address, place, or lat, lng',
+      'routeSearch': 'Search',
+      'routeUseGps': 'Use my location',
+      'routeCustomPlace': 'Enter a custom place',
+      'routePlacesInChallenge': 'Places in this challenge',
+      'routeFromPlace': 'Place from this challenge',
+      'routeDestination': 'Destination',
+      'routeChoosePlace': 'Choose a place',
+      'routeNeedTwoPoints':
+          'Choose a start and a destination to see walking and cycling routes.',
+      'routeLoadFailed': 'Could not load the route.',
+      'routeGpsFailed': 'Could not read your location.',
+      'routeGpsDenied': 'Location permission was denied.',
+      'routePlaceNotFound': 'That place was not found.',
+      'routeWalking': 'Walking route',
+      'routeCycling': 'Cycling route',
+      'routeSamePoint': 'Start and destination must be different.',
+      'routeElevationFailed': 'Could not load elevation gain.',
+      'routeNavigate': 'Navigate',
+      'routeEndNavigation': 'End navigation',
+      'routeNavigatingWalk': 'Walking navigation',
+      'routeNavigatingBike': 'Cycling navigation',
     },
     'cs': {
       'appName': 'Viateria',
@@ -307,6 +374,29 @@ class AppStrings {
       'lastChallengeBrowse': 'Procházet výzvy',
       'mapEmpty': 'Žádné zveřejněné výzvy k zobrazení na mapě.',
       'mapEmptyHint': 'Až budou u výzev souřadnice zastávek, objeví se tady.',
+      'routeStart': 'Start',
+      'routeStartHint': 'Adresa, místo nebo souřadnice',
+      'routeSearch': 'Hledat',
+      'routeUseGps': 'Použít moji polohu',
+      'routeCustomPlace': 'Zadat vlastní místo',
+      'routePlacesInChallenge': 'Místa ve výzvě',
+      'routeFromPlace': 'Místo z této výzvy',
+      'routeDestination': 'Cíl',
+      'routeChoosePlace': 'Vyberte místo',
+      'routeNeedTwoPoints':
+          'Zvolte start a cíl, abyste viděli pěší a cyklistickou trasu.',
+      'routeLoadFailed': 'Trasu se nepodařilo načíst.',
+      'routeGpsFailed': 'Polohu se nepodařilo zjistit.',
+      'routeGpsDenied': 'Přístup k poloze byl odepřen.',
+      'routePlaceNotFound': 'Místo se nenašlo.',
+      'routeWalking': 'Pěší trasa',
+      'routeCycling': 'Cyklistická trasa',
+      'routeSamePoint': 'Start a cíl musí být různé.',
+      'routeElevationFailed': 'Převýšení se nepodařilo načíst.',
+      'routeNavigate': 'Navigovat',
+      'routeEndNavigation': 'Ukončit navigaci',
+      'routeNavigatingWalk': 'Navigace pěšky',
+      'routeNavigatingBike': 'Navigace na kole',
     },
     'de': {
       'appName': 'Viateria',
@@ -383,6 +473,29 @@ class AppStrings {
       'mapEmpty': 'Keine veröffentlichten Challenges auf der Karte.',
       'mapEmptyHint':
           'Sobald Wegpunkte Koordinaten haben, erscheinen sie hier.',
+      'routeStart': 'Start',
+      'routeStartHint': 'Adresse, Ort oder Koordinaten',
+      'routeSearch': 'Suchen',
+      'routeUseGps': 'Meinen Standort verwenden',
+      'routeCustomPlace': 'Eigenen Ort eingeben',
+      'routePlacesInChallenge': 'Orte in dieser Challenge',
+      'routeFromPlace': 'Ort aus dieser Challenge',
+      'routeDestination': 'Ziel',
+      'routeChoosePlace': 'Ort wählen',
+      'routeNeedTwoPoints':
+          'Wählen Sie Start und Ziel, um Fuß- und Radrouten zu sehen.',
+      'routeLoadFailed': 'Die Route konnte nicht geladen werden.',
+      'routeGpsFailed': 'Standort konnte nicht ermittelt werden.',
+      'routeGpsDenied': 'Standortberechtigung wurde verweigert.',
+      'routePlaceNotFound': 'Ort wurde nicht gefunden.',
+      'routeWalking': 'Fußweg',
+      'routeCycling': 'Radweg',
+      'routeSamePoint': 'Start und Ziel müssen unterschiedlich sein.',
+      'routeElevationFailed': 'Höhenmeter konnten nicht geladen werden.',
+      'routeNavigate': 'Navigieren',
+      'routeEndNavigation': 'Navigation beenden',
+      'routeNavigatingWalk': 'Fußnavigation',
+      'routeNavigatingBike': 'Radnavigation',
     },
   };
 }
