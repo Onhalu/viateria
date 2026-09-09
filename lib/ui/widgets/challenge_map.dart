@@ -15,6 +15,7 @@ class ChallengeMap extends StatefulWidget {
     this.hikeLine = const [],
     this.bikeLine = const [],
     this.onWaypointTap,
+    this.actions = const [],
   });
 
   final List<Waypoint> waypoints;
@@ -24,6 +25,7 @@ class ChallengeMap extends StatefulWidget {
   final List<LatLng> hikeLine;
   final List<LatLng> bikeLine;
   final ValueChanged<Waypoint>? onWaypointTap;
+  final List<Widget> actions;
 
   @override
   State<ChallengeMap> createState() => _ChallengeMapState();
@@ -73,97 +75,114 @@ class _ChallengeMapState extends State<ChallengeMap> {
 
   @override
   Widget build(BuildContext context) {
-    if (!TickerMode.valuesOf(context).enabled) {
-      return SizedBox(height: widget.height);
-    }
+    final mapBody = !TickerMode.valuesOf(context).enabled
+        ? const SizedBox.expand()
+        : _map(context);
+    return SizedBox(
+      height: widget.height,
+      child: Stack(
+        children: [
+          mapBody,
+          if (widget.actions.isNotEmpty)
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 8,
+              child: Wrap(
+                key: const Key('route-map-osm-actions'),
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: widget.actions,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _map(BuildContext context) {
     final ordered = [...widget.waypoints]
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final center = ordered.isEmpty
         ? const LatLng(50.0755, 14.4378)
         : ordered.first.latLng;
     final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: widget.height,
-      child: FlutterMap(
-        mapController: _controller,
-        options: MapOptions(
-          initialCenter: center,
-          initialZoom: ordered.length > 1 ? 12 : 13,
-          interactionOptions: const InteractionOptions(
-            flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-          ),
-          onMapReady: () {
-            _ready = true;
-            _fit();
-          },
+    return FlutterMap(
+      mapController: _controller,
+      options: MapOptions(
+        initialCenter: center,
+        initialZoom: ordered.length > 1 ? 12 : 13,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
         ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.viateria.viateria',
+        onMapReady: () {
+          _ready = true;
+          _fit();
+        },
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.viateria.viateria',
+        ),
+        if (widget.bikeLine.length > 1)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.bikeLine,
+                color: AppTheme.gold.withValues(alpha: 0.9),
+                strokeWidth: 5,
+              ),
+            ],
           ),
-          if (widget.bikeLine.length > 1)
-            PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: widget.bikeLine,
-                  color: AppTheme.gold.withValues(alpha: 0.9),
-                  strokeWidth: 5,
-                ),
-              ],
-            ),
-          if (widget.hikeLine.length > 1)
-            PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: widget.hikeLine,
-                  color: scheme.primary,
-                  strokeWidth: 4,
-                ),
-              ],
-            ),
-          MarkerLayer(
-            markers: [
-              if (widget.start != null)
-                Marker(
-                  point: widget.start!,
-                  width: 40,
-                  height: 40,
-                  child: const Icon(
-                    Icons.flag,
-                    color: AppTheme.forest,
-                    size: 32,
-                  ),
-                ),
-              for (final waypoint in ordered)
-                Marker(
-                  point: waypoint.latLng,
-                  width: 36,
-                  height: 36,
-                  child: GestureDetector(
-                    onTap: widget.onWaypointTap == null
-                        ? null
-                        : () => widget.onWaypointTap!(waypoint),
-                    child: CircleAvatar(
-                      backgroundColor: waypoint.id == widget.selectedWaypointId
-                          ? AppTheme.gold
-                          : scheme.primary,
-                      child: Text(
-                        '${waypoint.sortOrder + 1}',
-                        style: TextStyle(
-                          color: waypoint.id == widget.selectedWaypointId
-                              ? AppTheme.bark
-                              : Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+        if (widget.hikeLine.length > 1)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: widget.hikeLine,
+                color: scheme.primary,
+                strokeWidth: 4,
+              ),
+            ],
+          ),
+        MarkerLayer(
+          markers: [
+            if (widget.start != null)
+              Marker(
+                point: widget.start!,
+                width: 40,
+                height: 40,
+                child: const Icon(Icons.flag, color: AppTheme.forest, size: 32),
+              ),
+            for (final waypoint in ordered)
+              Marker(
+                point: waypoint.latLng,
+                width: 36,
+                height: 36,
+                child: GestureDetector(
+                  onTap: widget.onWaypointTap == null
+                      ? null
+                      : () => widget.onWaypointTap!(waypoint),
+                  child: CircleAvatar(
+                    backgroundColor: waypoint.id == widget.selectedWaypointId
+                        ? AppTheme.gold
+                        : scheme.primary,
+                    child: Text(
+                      '${waypoint.sortOrder + 1}',
+                      style: TextStyle(
+                        color: waypoint.id == widget.selectedWaypointId
+                            ? AppTheme.bark
+                            : Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
-            ],
-          ),
-        ],
-      ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

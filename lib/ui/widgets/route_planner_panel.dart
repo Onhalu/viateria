@@ -25,6 +25,7 @@ class RoutePlannerPanel extends StatefulWidget {
     this.hike,
     this.bike,
     this.onRetry,
+    this.onOpenUrl,
   });
 
   final AppStrings strings;
@@ -44,6 +45,7 @@ class RoutePlannerPanel extends StatefulWidget {
   final RouteSummary? hike;
   final RouteSummary? bike;
   final VoidCallback? onRetry;
+  final Future<void> Function(Uri url)? onOpenUrl;
 
   @override
   State<RoutePlannerPanel> createState() => _RoutePlannerPanelState();
@@ -211,6 +213,7 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                   icon: Icons.hiking,
                   summary: widget.hike!,
                   strings: strings,
+                  onOpenUrl: widget.onOpenUrl,
                 ),
               if (widget.hike != null && widget.bike != null)
                 const SizedBox(height: 8),
@@ -221,6 +224,7 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                   icon: Icons.directions_bike,
                   summary: widget.bike!,
                   strings: strings,
+                  onOpenUrl: widget.onOpenUrl,
                 ),
               if ((widget.hike?.elevationGainM == null &&
                       widget.hike != null) ||
@@ -277,12 +281,14 @@ class _RouteStatsCard extends StatelessWidget {
     required this.icon,
     required this.summary,
     required this.strings,
+    this.onOpenUrl,
   });
 
   final String title;
   final IconData icon;
   final RouteSummary summary;
   final AppStrings strings;
+  final Future<void> Function(Uri url)? onOpenUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -321,13 +327,27 @@ class _RouteStatsCard extends StatelessWidget {
                   ? strings.routeElevationFailed
                   : '${summary.elevationGainM!.round()} m',
             ),
-            TextButton.icon(
-              onPressed: () => launchUrl(
-                Uri.parse(summary.osmUrl),
-                mode: LaunchMode.externalApplication,
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                key: Key('route-open-osm-${summary.mode.name}'),
+                onPressed: () async {
+                  final uri = Uri.parse(summary.osmUrl);
+                  final open = onOpenUrl;
+                  if (open != null) {
+                    await open(uri);
+                    return;
+                  }
+                  await launchUrl(
+                    uri,
+                    mode: LaunchMode.externalApplication,
+                    webOnlyWindowName: '_blank',
+                  );
+                },
+                icon: const Icon(Icons.directions_outlined),
+                label: Text(strings.openInOsm),
               ),
-              icon: const Icon(Icons.map_outlined),
-              label: Text(strings.openInOsm),
             ),
           ],
         ),

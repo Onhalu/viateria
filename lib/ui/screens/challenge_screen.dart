@@ -233,6 +233,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     _refreshRoutes();
   }
 
+  Future<void> _openOsm(String url) {
+    return context.read<AppServices>().openUrl(Uri.parse(url));
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleController>().locale;
@@ -299,6 +303,24 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               hikeLine: _routes?.hikeLine ?? const <LatLng>[],
               bikeLine: _routes?.bikeLine ?? const <LatLng>[],
               onWaypointTap: _setDestination,
+              actions: [
+                if (_routes?.hike != null)
+                  _MapOsmAction(
+                    key: const Key('route-map-osm-hike'),
+                    icon: Icons.hiking,
+                    label: strings.openInOsm,
+                    tooltip: strings.routeWalking,
+                    onPressed: () => _openOsm(_routes!.hike!.osmUrl),
+                  ),
+                if (_routes?.bike != null)
+                  _MapOsmAction(
+                    key: const Key('route-map-osm-bike'),
+                    icon: Icons.directions_bike,
+                    label: strings.openInOsm,
+                    tooltip: strings.routeCycling,
+                    onPressed: () => _openOsm(_routes!.bike!.osmUrl),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             RoutePlannerPanel(
@@ -319,6 +341,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               hike: _routes?.hike,
               bike: _routes?.bike,
               onRetry: _refreshRoutes,
+              onOpenUrl: context.read<AppServices>().openUrl,
             ),
             const SizedBox(height: 16),
             if (!hasAccess) ...[
@@ -440,3 +463,30 @@ class ChallengePageData {
 }
 
 typedef _ChallengePageData = ChallengePageData;
+
+class _MapOsmAction extends StatelessWidget {
+  const _MapOsmAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: FilledButton.tonalIcon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+      ),
+    );
+  }
+}

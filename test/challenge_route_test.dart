@@ -19,6 +19,7 @@ AppServices buildServices({
   PlaceGeocoder? geocoder,
   DeviceLocation? deviceLocation,
   ElevationLookup? elevation,
+  ExternalUrlOpener? openUrl,
 }) {
   final open = sampleOpenChallenge();
   return AppServices(
@@ -49,6 +50,7 @@ AppServices buildServices({
         ),
     deviceLocation: deviceLocation ?? MemoryDeviceLocation(),
     elevation: elevation ?? MemoryElevationLookup(),
+    openUrl: openUrl,
   );
 }
 
@@ -280,5 +282,55 @@ void main() {
 
     expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
     expect(find.text('Praha'), findsWidgets);
+  });
+
+  testWidgets('shown walking and cycling routes open matching OSM navigation', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final opened = <Uri>[];
+    await tester.pumpWidget(
+      wrapScreen(
+        buildServices(
+          openUrl: (uri) async {
+            opened.add(uri);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-place-ow-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('route-map-osm-actions')), findsOneWidget);
+    expect(find.byKey(const Key('route-map-osm-hike')), findsOneWidget);
+    expect(find.byKey(const Key('route-map-osm-bike')), findsOneWidget);
+    expect(find.byKey(const Key('route-open-osm-hike')), findsOneWidget);
+    expect(find.byKey(const Key('route-open-osm-bike')), findsOneWidget);
+    expect(find.text(strings.openInOsm), findsNWidgets(4));
+
+    const route = '50.090000,14.430000;50.080000,14.420000';
+
+    await tester.ensureVisible(find.byKey(const Key('route-map-osm-hike')));
+    await tester.tap(find.byKey(const Key('route-map-osm-hike')));
+    await tester.pumpAndSettle();
+    expect(opened, hasLength(1));
+    expect(opened.single.toString(), contains('openstreetmap.org/directions'));
+    expect(opened.single.toString(), contains('fossgis_osrm_foot'));
+    expect(opened.single.toString(), contains(route));
+
+    await tester.ensureVisible(find.byKey(const Key('route-open-osm-bike')));
+    await tester.tap(find.byKey(const Key('route-open-osm-bike')));
+    await tester.pumpAndSettle();
+    expect(opened, hasLength(2));
+    expect(opened.last.toString(), contains('fossgis_osrm_bike'));
+    expect(opened.last.toString(), contains(route));
+    expect(opened.last.toString(), isNot(contains('fossgis_osrm_foot')));
   });
 }

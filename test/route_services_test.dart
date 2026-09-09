@@ -102,6 +102,17 @@ void main() {
     expect(plan.bike!.estimatedTime < plan.hike!.estimatedTime, isTrue);
     expect(plan.hikeLine, isNotEmpty);
     expect(plan.bikeLine, isNotEmpty);
+    expect(plan.hike!.osmUrl, contains('openstreetmap.org/directions'));
+    expect(plan.hike!.osmUrl, contains('fossgis_osrm_foot'));
+    expect(plan.bike!.osmUrl, contains('fossgis_osrm_bike'));
+    expect(
+      plan.hike!.osmUrl,
+      contains('50.080000,14.420000;50.090000,14.430000'),
+    );
+    expect(
+      plan.bike!.osmUrl,
+      contains('50.080000,14.420000;50.090000,14.430000'),
+    );
   });
 
   test(

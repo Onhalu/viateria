@@ -1,7 +1,19 @@
+import 'package:url_launcher/url_launcher.dart';
+
 import '../config/app_config.dart';
 import '../domain/photo_verify.dart';
 import 'repositories.dart';
 import 'route_services.dart';
+
+typedef ExternalUrlOpener = Future<void> Function(Uri url);
+
+Future<void> launchExternalUrl(Uri url) async {
+  await launchUrl(
+    url,
+    mode: LaunchMode.externalApplication,
+    webOnlyWindowName: '_blank',
+  );
+}
 
 class AppServices {
   AppServices({
@@ -16,10 +28,12 @@ class AppServices {
     PlaceGeocoder? geocoder,
     DeviceLocation? deviceLocation,
     ElevationLookup? elevation,
+    ExternalUrlOpener? openUrl,
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
-       elevation = elevation ?? PublicElevationLookup();
+       elevation = elevation ?? PublicElevationLookup(),
+       openUrl = openUrl ?? launchExternalUrl;
 
   final AppConfig config;
   final AuthRepository auth;
@@ -32,4 +46,5 @@ class AppServices {
   final PlaceGeocoder geocoder;
   final DeviceLocation deviceLocation;
   final ElevationLookup elevation;
+  final ExternalUrlOpener openUrl;
 }
