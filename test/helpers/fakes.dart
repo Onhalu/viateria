@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:latlong2/latlong.dart';
 import 'package:viateria/data/repositories.dart';
+import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/photo_verify.dart';
+import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/domain/unlock_rules.dart';
 import 'package:viateria/models/models.dart';
 
@@ -331,4 +334,65 @@ PromoStripe samplePromo() {
       ),
     ],
   );
+}
+
+class MemoryRoutingClient implements RoutingClient {
+  MemoryRoutingClient({this.fail = false});
+
+  var fail = false;
+
+  @override
+  Future<RoutedPath> route({
+    required TravelMode mode,
+    required LatLng start,
+    required LatLng end,
+  }) async {
+    if (fail) throw const RoutingFailure('memory fail');
+    return RoutedPath(
+      points: [start, LatLng(start.latitude + 0.001, start.longitude), end],
+      distanceMeters: mode == TravelMode.bike ? 1200 : 1600,
+      duration: Duration(minutes: mode == TravelMode.bike ? 4 : 18),
+    );
+  }
+}
+
+class MemoryGeocoder implements PlaceGeocoder {
+  MemoryGeocoder({this.places = const {}});
+
+  final Map<String, RouteEndpoint> places;
+
+  @override
+  Future<RouteEndpoint?> findPlace(String query, {LatLng? near}) async {
+    final parsed = parseCoordinateQuery(query);
+    if (parsed != null) return parsed;
+    final key = query.trim().toLowerCase();
+    return places[key];
+  }
+}
+
+class MemoryDeviceLocation implements DeviceLocation {
+  MemoryDeviceLocation({this.point, this.error});
+
+  RouteEndpoint? point;
+  Object? error;
+
+  @override
+  Future<RouteEndpoint> current() async {
+    final thrown = error;
+    if (thrown != null) throw thrown;
+    return point ?? const RouteEndpoint(lat: 50.07, lng: 14.41, label: 'GPS');
+  }
+}
+
+class MemoryElevationLookup implements ElevationLookup {
+  MemoryElevationLookup({this.fail = false, this.gainStep = 15});
+
+  var fail = false;
+  double gainStep;
+
+  @override
+  Future<List<double?>> lookup(List<LatLng> points) async {
+    if (fail) throw const RoutingFailure('elevation fail');
+    return [for (var i = 0; i < points.length; i++) 200 + i * gainStep];
+  }
 }

@@ -1,9 +1,10 @@
 import '../config/app_config.dart';
 import '../domain/photo_verify.dart';
 import 'repositories.dart';
+import 'route_services.dart';
 
 class AppServices {
-  const AppServices({
+  AppServices({
     required this.config,
     required this.auth,
     required this.catalog,
@@ -11,7 +12,14 @@ class AppServices {
     required this.purchases,
     required this.photos,
     required this.photoCapture,
-  });
+    RoutingClient? routing,
+    PlaceGeocoder? geocoder,
+    DeviceLocation? deviceLocation,
+    ElevationLookup? elevation,
+  }) : routing = routing ?? OsrmRoutingClient(),
+       geocoder = geocoder ?? NominatimGeocoder(),
+       deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
+       elevation = elevation ?? OpenTopoElevationLookup();
 
   final AppConfig config;
   final AuthRepository auth;
@@ -20,4 +28,8 @@ class AppServices {
   final PurchaseRepository purchases;
   final PhotoStorage photos;
   final PhotoCapture photoCapture;
+  final RoutingClient routing;
+  final PlaceGeocoder geocoder;
+  final DeviceLocation deviceLocation;
+  final ElevationLookup elevation;
 }
