@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
+import 'package:viateria/data/verified_places.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/map/place_catalog.dart';
@@ -18,7 +19,7 @@ import 'package:viateria/ui/widgets/places_map_surface.dart';
 import 'helpers/fakes.dart';
 import 'helpers/map_harness.dart';
 
-AppServices _services() {
+AppServices _services({VerifiedPlacesStore? verifiedPlaces}) {
   final open = sampleOpenChallenge();
   return AppServices(
     config: const AppConfig(
@@ -34,10 +35,14 @@ AppServices _services() {
     purchases: MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
+    verifiedPlaces: verifiedPlaces,
   );
 }
 
-Widget _mapApp({MemoryPlaceCatalog? catalog}) {
+Widget _mapApp({
+  MemoryPlaceCatalog? catalog,
+  VerifiedPlacesStore? verifiedPlaces,
+}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -69,7 +74,7 @@ Widget _mapApp({MemoryPlaceCatalog? catalog}) {
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
       ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
-      Provider.value(value: _services()),
+      Provider.value(value: _services(verifiedPlaces: verifiedPlaces)),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -373,5 +378,30 @@ void main() {
     await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byKey(const Key('map-search-karlstejn')), findsOneWidget);
+  });
+
+  testWidgets('challenge-only keeps verified places and hides outside', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    await tester.pumpWidget(
+      _mapApp(verifiedPlaces: VerifiedPlacesStore(initial: {'staromestske'})),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(3)), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('map-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('map-filter-challenge-only')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('map-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(1)), findsOneWidget);
+    expect(
+      find.byKey(const Key('map-filter-challenge-only-empty')),
+      findsNothing,
+    );
   });
 }

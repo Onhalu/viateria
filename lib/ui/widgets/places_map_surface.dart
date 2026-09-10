@@ -8,6 +8,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
+import '../../data/verified_places.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../map/map_runtime.dart';
@@ -54,6 +55,7 @@ class PlacesMapSurface extends StatefulWidget {
 
 class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   late final PlacesMapController _controller;
+  late final VerifiedPlacesStore _verifiedPlaces;
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   Timer? _debounce;
@@ -69,6 +71,9 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
       deviceLocation: services.deviceLocation,
     );
     _controller.addListener(_onController);
+    _verifiedPlaces = services.verifiedPlaces;
+    _verifiedPlaces.addListener(_syncVerifiedIds);
+    _syncVerifiedIds();
     unawaited(_controller.load());
   }
 
@@ -88,6 +93,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _verifiedPlaces.removeListener(_syncVerifiedIds);
     _controller.removeListener(_onController);
     _controller.dispose();
     _search.dispose();
@@ -465,6 +471,10 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
         ),
       ),
     );
+  }
+
+  void _syncVerifiedIds() {
+    _controller.setVerifiedPlaceIds(_verifiedPlaces.ids);
   }
 
   bool _sameChallengeGeometry(

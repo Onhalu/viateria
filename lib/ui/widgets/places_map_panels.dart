@@ -79,23 +79,10 @@ class _FilterBodyState extends State<_FilterBody> {
               runSpacing: 8,
               children: [
                 for (final category in PlaceCategory.values)
-                  FilterChip(
+                  _filterChip(
                     key: Key('map-filter-${category.name}'),
-                    label: Text(strings.t(category.l10nKey)),
+                    label: strings.t(category.l10nKey),
                     selected: _selected.contains(category),
-                    selectedColor: MapPalette.forest,
-                    checkmarkColor: MapPalette.cream,
-                    labelStyle: TextStyle(
-                      color: _selected.contains(category)
-                          ? MapPalette.cream
-                          : MapPalette.forest,
-                    ),
-                    backgroundColor: MapPalette.beige,
-                    side: BorderSide(
-                      color: _selected.contains(category)
-                          ? MapPalette.forest
-                          : MapPalette.beige,
-                    ),
                     onSelected: (on) {
                       setState(() {
                         if (on) {
@@ -106,23 +93,10 @@ class _FilterBodyState extends State<_FilterBody> {
                       });
                     },
                   ),
-                FilterChip(
+                _filterChip(
                   key: const Key('map-filter-challenge-only'),
-                  label: Text(strings.filterChallengeOnly),
+                  label: strings.filterChallengeOnly,
                   selected: _challengeOnly,
-                  selectedColor: MapPalette.forest,
-                  checkmarkColor: MapPalette.cream,
-                  labelStyle: TextStyle(
-                    color: _challengeOnly
-                        ? MapPalette.cream
-                        : MapPalette.forest,
-                  ),
-                  backgroundColor: MapPalette.beige,
-                  side: BorderSide(
-                    color: _challengeOnly
-                        ? MapPalette.forest
-                        : MapPalette.beige,
-                  ),
                   onSelected: (on) => setState(() => _challengeOnly = on),
                 ),
               ],
@@ -165,6 +139,27 @@ class _FilterBodyState extends State<_FilterBody> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _filterChip({
+    required Key key,
+    required String label,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+  }) {
+    return FilterChip(
+      key: key,
+      label: Text(label),
+      selected: selected,
+      selectedColor: MapPalette.forest,
+      checkmarkColor: MapPalette.cream,
+      labelStyle: TextStyle(
+        color: selected ? MapPalette.cream : MapPalette.forest,
+      ),
+      backgroundColor: MapPalette.beige,
+      side: BorderSide(color: selected ? MapPalette.forest : MapPalette.beige),
+      onSelected: onSelected,
     );
   }
 }

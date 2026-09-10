@@ -83,6 +83,8 @@ void main() {
     expect(cs.verify, 'Ověřit zastávku');
     expect(cs.verifyInChallengeHint, 'Ověření je ve výzvě.');
     expect(cs.filterChallengeOnly, 'Jen ve výzvě');
+    expect(AppStrings('en').filterChallengeOnly, 'Challenge only');
+    expect(AppStrings('de').filterChallengeOnly, 'Nur in der Challenge');
     expect(cs.filterChallengeOnlyEmpty, 'Na mapě nejsou místa z výzvy.');
   });
 

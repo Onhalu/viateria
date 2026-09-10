@@ -43,32 +43,39 @@ List<Place> applyCategoryFilter(
   return places.where((p) => selected.contains(p.category)).toList();
 }
 
-/// When [enabled], keep only places in [challengePlaceIds] (`placeIdsInChallenge`).
-/// Empty membership (standalone Mapa) yields an empty list — never throws.
+/// When [enabled], hide `outside` markers. Keeps `inChallenge` and `verified`
+/// (verified challenge stops stay visible because verified wins placeState).
 List<Place> applyChallengeOnlyFilter(
-  List<Place> places,
-  Set<String> challengePlaceIds, {
+  List<Place> places, {
   required bool enabled,
+  Set<String> challengePlaceIds = const {},
+  Set<String> verifiedPlaceIds = const {},
 }) {
   if (!enabled) return List<Place>.from(places);
-  if (challengePlaceIds.isEmpty) return const [];
   return [
     for (final place in places)
-      if (challengePlaceIds.contains(place.id)) place,
+      if (placeStateOf(
+            inChallenge: challengePlaceIds.contains(place.id),
+            verified: verifiedPlaceIds.contains(place.id),
+          ) !=
+          'outside')
+        place,
   ];
 }
 
-/// Category filter first, then optional challenge-only membership.
+/// Category filter first, then optional challenge-only (hide outside).
 List<Place> applyPlaceFilters(
   List<Place> places, {
   required Set<PlaceCategory> categories,
   bool challengeOnly = false,
   Set<String> challengePlaceIds = const {},
+  Set<String> verifiedPlaceIds = const {},
 }) {
   return applyChallengeOnlyFilter(
     applyCategoryFilter(places, categories),
-    challengePlaceIds,
     enabled: challengeOnly,
+    challengePlaceIds: challengePlaceIds,
+    verifiedPlaceIds: verifiedPlaceIds,
   );
 }
 

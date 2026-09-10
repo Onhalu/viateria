@@ -19,6 +19,7 @@ class PlacesMapController extends ChangeNotifier {
   Set<PlaceCategory> _categories = {...PlaceCategory.values};
   var _challengeOnly = false;
   Set<String> _challengePlaceIds = const {};
+  Set<String> _verifiedPlaceIds = const {};
   String _query = '';
   GeoBounds _viewport = GeoBounds.czechRepublic;
   Place? _selected;
@@ -32,6 +33,7 @@ class PlacesMapController extends ChangeNotifier {
   Set<PlaceCategory> get categories => _categories;
   bool get challengeOnly => _challengeOnly;
   Set<String> get challengePlaceIds => _challengePlaceIds;
+  Set<String> get verifiedPlaceIds => _verifiedPlaceIds;
   String get query => _query;
   GeoBounds get viewport => _viewport;
   Place? get selected => _selected;
@@ -47,6 +49,7 @@ class PlacesMapController extends ChangeNotifier {
     categories: _categories,
     challengeOnly: _challengeOnly,
     challengePlaceIds: _challengePlaceIds,
+    verifiedPlaceIds: _verifiedPlaceIds,
   );
 
   int get visibleCount => countInViewport(filtered, _viewport);
@@ -106,6 +109,13 @@ class PlacesMapController extends ChangeNotifier {
   void setChallengePlaceIds(Set<String> ids) {
     if (setEquals(_challengePlaceIds, ids)) return;
     _challengePlaceIds = Set<String>.from(ids);
+    _dropSelectedIfFilteredOut();
+    notifyListeners();
+  }
+
+  void setVerifiedPlaceIds(Set<String> ids) {
+    if (setEquals(_verifiedPlaceIds, ids)) return;
+    _verifiedPlaceIds = Set<String>.from(ids);
     _dropSelectedIfFilteredOut();
     notifyListeners();
   }

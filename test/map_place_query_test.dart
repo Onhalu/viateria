@@ -161,42 +161,61 @@ void main() {
     );
   });
 
-  test('challenge-only filter keeps membership after categories', () {
-    expect(
-      applyChallengeOnlyFilter(places, {
-        'karlstejn',
-      }, enabled: false).map((p) => p.id),
-      ['karlstejn', 'staromestske', 'pravcicka'],
-    );
-    expect(
-      applyChallengeOnlyFilter(places, {
-        'karlstejn',
-      }, enabled: true).map((p) => p.id),
-      ['karlstejn'],
-    );
-    expect(applyChallengeOnlyFilter(places, {}, enabled: true), isEmpty);
+  test(
+    'challenge-only filter keeps inChallenge and verified; hides outside',
+    () {
+      expect(
+        applyChallengeOnlyFilter(
+          places,
+          enabled: false,
+          challengePlaceIds: {'karlstejn'},
+        ).map((p) => p.id),
+        ['karlstejn', 'staromestske', 'pravcicka'],
+      );
+      expect(
+        applyChallengeOnlyFilter(
+          places,
+          enabled: true,
+          challengePlaceIds: {'karlstejn'},
+        ).map((p) => p.id),
+        ['karlstejn'],
+      );
+      expect(applyChallengeOnlyFilter(places, enabled: true), isEmpty);
 
-    final cityOnly = applyPlaceFilters(
-      places,
-      categories: {PlaceCategory.city},
-      challengeOnly: true,
-      challengePlaceIds: {'karlstejn'},
-    );
-    expect(cityOnly, isEmpty);
+      expect(
+        applyChallengeOnlyFilter(
+          places,
+          enabled: true,
+          challengePlaceIds: {'karlstejn'},
+          verifiedPlaceIds: {'pravcicka'},
+        ).map((p) => p.id),
+        ['karlstejn', 'pravcicka'],
+      );
 
-    final historicalChallenge = applyPlaceFilters(
-      places,
-      categories: {PlaceCategory.historical},
-      challengeOnly: true,
-      challengePlaceIds: {'karlstejn'},
-    );
-    expect(historicalChallenge.map((p) => p.id), ['karlstejn']);
-  });
+      final cityOnly = applyPlaceFilters(
+        places,
+        categories: {PlaceCategory.city},
+        challengeOnly: true,
+        challengePlaceIds: {'karlstejn'},
+      );
+      expect(cityOnly, isEmpty);
+
+      final historicalChallenge = applyPlaceFilters(
+        places,
+        categories: {PlaceCategory.historical},
+        challengeOnly: true,
+        challengePlaceIds: {'karlstejn'},
+      );
+      expect(historicalChallenge.map((p) => p.id), ['karlstejn']);
+    },
+  );
 
   test('search hits honor challenge-only filter', () {
-    final filtered = applyChallengeOnlyFilter(places, {
-      'karlstejn',
-    }, enabled: true);
+    final filtered = applyChallengeOnlyFilter(
+      places,
+      enabled: true,
+      challengePlaceIds: {'karlstejn'},
+    );
     expect(searchPlaces(filtered, 'Karl').single.id, 'karlstejn');
     expect(searchPlaces(filtered, 'Starom'), isEmpty);
   });
