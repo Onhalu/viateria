@@ -206,13 +206,17 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
 
     await controller.addCircleLayer(
       MapStyleConfig.poiSourceId,
-      MapStyleConfig.selectedUnderlayLayerId,
+      MapStyleConfig.diskLayerId,
       const CircleLayerProperties(
-        circleRadius: MapStyleConfig.selectedUnderlayRadius,
-        circleColor: MapStyleConfig.underlayColorExpression,
+        circleRadius: MapStyleConfig.diskRadiusExpression,
+        circleColor: MapStyleConfig.diskFillColor,
         circleOpacity: 1,
+        circleStrokeWidth: MapStyleConfig.diskStrokeWidth,
+        circleStrokeColor: MapStyleConfig.markerColorExpression,
+        circleStrokeOpacity: 1,
+        circlePitchAlignment: 'viewport',
+        circlePitchScale: 'viewport',
       ),
-      filter: _selectedUnderlayFilter,
     );
 
     await controller.addSymbolLayer(
@@ -220,16 +224,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.symbolLayerId,
       const SymbolLayerProperties(
         iconImage: [Expressions.get, 'icon'],
-        iconSize: [
-          Expressions.caseExpression,
-          [
-            Expressions.equal,
-            [Expressions.get, 'selected'],
-            1,
-          ],
-          MapStyleConfig.selectedMarkerIconSize,
-          MapStyleConfig.markerIconSize,
-        ],
+        iconSize: MapStyleConfig.markerSizeExpression,
         iconColor: MapStyleConfig.markerColorExpression,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
@@ -385,7 +380,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
 
     final poiHits = await controller.queryRenderedFeatures(point, [
       MapStyleConfig.symbolLayerId,
-      MapStyleConfig.selectedUnderlayLayerId,
+      MapStyleConfig.diskLayerId,
     ], null);
     if (poiHits.isEmpty) {
       widget.onBackgroundTap?.call();
@@ -470,9 +465,3 @@ class MapFallbackCanvas extends StatelessWidget {
     );
   }
 }
-
-const _selectedUnderlayFilter = [
-  '==',
-  ['get', 'selected'],
-  1,
-];

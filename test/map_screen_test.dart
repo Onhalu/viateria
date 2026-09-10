@@ -102,7 +102,7 @@ void main() {
     expect(find.text(strings.monumentCount(3)), findsNothing);
   });
 
-  testWidgets('selecting a list place opens the place sheet', (tester) async {
+  testWidgets('standalone list is empty without a challenge', (tester) async {
     final strings = AppStrings('cs');
     await tester.pumpWidget(_mapApp());
     await tester.pumpAndSettle();
@@ -111,34 +111,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('map-poi-list')), findsOneWidget);
-    await tester.tap(find.text('Karlštejn'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('map-poi-sheet')), findsOneWidget);
-    expect(find.byKey(const Key('map-poi-sheet-name')), findsOneWidget);
-    expect(find.text('Karlštejn'), findsWidgets);
-    expect(find.text(strings.t('catHistorical')), findsWidgets);
-    expect(find.text(strings.detailPlaceholder), findsOneWidget);
-    expect(find.text(strings.verify), findsOneWidget);
-    expect(find.text(strings.detailCta), findsNothing);
-    expect(find.byKey(const Key('map-poi-verify')), findsOneWidget);
-    expect(find.text(strings.closeCta), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('map-poi-close')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
-
-    await tester.tap(find.byKey(const Key('map-view-toggle')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Karlštejn'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('map-poi-verify')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('verify-place-route')), findsOneWidget);
-    expect(find.text('verify-place-karlstejn'), findsOneWidget);
+    expect(find.text(strings.listNoChallenge), findsOneWidget);
+    expect(find.text('Karlštejn'), findsNothing);
   });
 
-  testWidgets('map and list share the same filtered catalog', (tester) async {
+  testWidgets('map count chip still filters the full catalog', (tester) async {
     final strings = AppStrings('cs');
     await tester.pumpWidget(_mapApp());
     await tester.pumpAndSettle();
@@ -152,11 +129,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(strings.monumentCount(1)), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('map-view-toggle')));
-    await tester.pumpAndSettle();
-    expect(find.text('Karlštejn'), findsOneWidget);
-    expect(find.text('Staroměstské náměstí'), findsNothing);
   });
 
   testWidgets('Czech search copy and empty catalog error banner', (
@@ -174,6 +146,8 @@ void main() {
     expect(find.text(strings.retry), findsOneWidget);
     expect(find.byKey(const Key('map-osm-attribution')), findsOneWidget);
     expect(find.byKey(const Key('map-locate-fab')), findsOneWidget);
+    expect(find.byKey(const Key('map-zoom-in')), findsOneWidget);
+    expect(find.byKey(const Key('map-zoom-out')), findsOneWidget);
   });
 
   testWidgets('Mapa tab chrome uses Batch A cream/forest sizes', (
@@ -197,6 +171,22 @@ void main() {
     expect(locate.size, 44);
     expect(locate.iconSize, 18);
     expect(locate.foreground, MapPalette.forest);
+    expect(locate.background ?? MapOverlayColors.fill, MapPalette.creamFill);
+
+    final zoomIn = tester.widget<MapIconButton>(
+      find.byKey(const Key('map-zoom-in')),
+    );
+    expect(zoomIn.size, 44);
+    expect(zoomIn.iconSize, 18);
+    expect(zoomIn.foreground, MapPalette.forest);
+    expect(zoomIn.background ?? MapOverlayColors.fill, MapPalette.creamFill);
+
+    final zoomOut = tester.widget<MapIconButton>(
+      find.byKey(const Key('map-zoom-out')),
+    );
+    expect(zoomOut.size, 44);
+    expect(zoomOut.iconSize, 18);
+    expect(zoomOut.foreground, MapPalette.forest);
 
     final filter = tester.widget<MapIconButton>(
       find.byKey(const Key('map-filter-button')),
@@ -257,8 +247,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('map-view-toggle')));
     await tester.pumpAndSettle();
+    expect(find.text('Karlštejn'), findsOneWidget);
+    expect(find.text('Staroměstské náměstí'), findsNothing);
     await tester.tap(find.text('Karlštejn'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsOneWidget);
     await tester.tap(find.byKey(const Key('map-poi-verify')));
     await tester.pumpAndSettle();
 

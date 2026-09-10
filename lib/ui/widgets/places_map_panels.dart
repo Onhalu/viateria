@@ -243,6 +243,7 @@ class PlaceListPanel extends StatelessWidget {
     required this.userLocation,
     required this.onSelect,
     this.compact = false,
+    this.emptyLabel,
   });
 
   final List<Place> places;
@@ -250,6 +251,7 @@ class PlaceListPanel extends StatelessWidget {
   final GeoPoint? userLocation;
   final ValueChanged<Place> onSelect;
   final bool compact;
+  final String? emptyLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -259,7 +261,8 @@ class PlaceListPanel extends StatelessWidget {
       child: places.isEmpty
           ? Center(
               child: Text(
-                strings.monumentCount(0),
+                emptyLabel ?? strings.monumentCount(0),
+                textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16, color: MapPalette.bark),
               ),
             )

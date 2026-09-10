@@ -422,6 +422,25 @@ void main() {
       expect(locate.size, 36);
       expect(locate.iconSize, 16);
 
+      final zoomIn = tester.widget<MapIconButton>(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-zoom-in')),
+        ),
+      );
+      expect(zoomIn.size, 36);
+      expect(zoomIn.iconSize, 16);
+      expect(zoomIn.foreground, MapPalette.forest);
+
+      final zoomOut = tester.widget<MapIconButton>(
+        find.descendant(
+          of: map,
+          matching: find.byKey(const Key('map-zoom-out')),
+        ),
+      );
+      expect(zoomOut.size, 36);
+      expect(zoomOut.iconSize, 16);
+
       await tester.tap(
         find.descendant(
           of: map,

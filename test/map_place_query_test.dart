@@ -84,10 +84,9 @@ void main() {
   test('challenge membership matches waypoint id or nearby coordinates', () {
     expect(placeIdsInChallenge(places), isEmpty);
 
-    expect(
-      placeIdsInChallenge(places, waypointIds: const ['karlstejn']),
-      {'karlstejn'},
-    );
+    expect(placeIdsInChallenge(places, waypointIds: const ['karlstejn']), {
+      'karlstejn',
+    });
 
     expect(
       placeIdsInChallenge(
@@ -103,6 +102,62 @@ void main() {
         waypointLocations: const [GeoPoint(50.0, 14.0)],
       ),
       isEmpty,
+    );
+  });
+
+  test('dedupe keeps one place; challenge membership wins', () {
+    const nearby = Place(
+      id: 'karlstejn-dup',
+      name: 'Near Karlštejn',
+      category: PlaceCategory.historical,
+      location: GeoPoint(49.9395, 14.1880),
+    );
+    final sameId = [
+      ...places,
+      const Place(
+        id: 'karlstejn',
+        name: 'Karlštejn copy',
+        category: PlaceCategory.historical,
+        location: GeoPoint(49.9394, 14.1880),
+      ),
+    ];
+    expect(
+      dedupePlaces(sameId).where((p) => p.id == 'karlstejn'),
+      hasLength(1),
+    );
+
+    final overlapped = [...places, nearby];
+    final kept = dedupePlaces(
+      overlapped,
+      challengePlaceIds: const {'karlstejn'},
+    );
+    expect(kept.map((p) => p.id), contains('karlstejn'));
+    expect(kept.map((p) => p.id), isNot(contains('karlstejn-dup')));
+    expect(kept, hasLength(3));
+
+    final challengeWins = dedupePlaces(
+      overlapped,
+      challengePlaceIds: const {'karlstejn-dup'},
+    );
+    expect(challengeWins.map((p) => p.id), contains('karlstejn-dup'));
+    expect(challengeWins.map((p) => p.id), isNot(contains('karlstejn')));
+  });
+
+  test('placesOfChallenge returns only matching catalog stops', () {
+    expect(
+      placesOfChallenge(
+        places,
+        waypointIds: const ['missing'],
+        waypointLocations: const [GeoPoint(0, 0)],
+      ),
+      isEmpty,
+    );
+    expect(
+      placesOfChallenge(
+        places,
+        waypointIds: const ['karlstejn'],
+      ).map((p) => p.id),
+      ['karlstejn'],
     );
   });
 }

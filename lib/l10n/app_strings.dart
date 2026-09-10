@@ -104,6 +104,9 @@ class AppStrings {
     'applyFilters',
     'selectAll',
     'locateTooltip',
+    'zoomIn',
+    'zoomOut',
+    'listNoChallenge',
     'monumentOne',
     'monumentFew',
     'monumentMany',
@@ -226,6 +229,9 @@ class AppStrings {
   String get applyFilters => t('applyFilters');
   String get selectAll => t('selectAll');
   String get locateTooltip => t('locateTooltip');
+  String get zoomIn => t('zoomIn');
+  String get zoomOut => t('zoomOut');
+  String get listNoChallenge => t('listNoChallenge');
   String get monumentOne => t('monumentOne');
   String get monumentFew => t('monumentFew');
   String get monumentMany => t('monumentMany');
@@ -380,6 +386,9 @@ class AppStrings {
       'applyFilters': 'Apply',
       'selectAll': 'Select all',
       'locateTooltip': 'My location',
+      'zoomIn': 'Zoom in',
+      'zoomOut': 'Zoom out',
+      'listNoChallenge': 'Open a challenge to see its places.',
       'monumentOne': 'monument',
       'monumentFew': 'monuments',
       'monumentMany': 'monuments',
@@ -511,6 +520,9 @@ class AppStrings {
       'applyFilters': 'Použít',
       'selectAll': 'Vybrat vše',
       'locateTooltip': 'Moje poloha',
+      'zoomIn': 'Přiblížit',
+      'zoomOut': 'Oddálit',
+      'listNoChallenge': 'Otevřete výzvu, abyste viděli její místa.',
       'monumentOne': 'památka',
       'monumentFew': 'památky',
       'monumentMany': 'památek',
@@ -642,6 +654,9 @@ class AppStrings {
       'applyFilters': 'Übernehmen',
       'selectAll': 'Alle wählen',
       'locateTooltip': 'Mein Standort',
+      'zoomIn': 'Vergrößern',
+      'zoomOut': 'Verkleinern',
+      'listNoChallenge': 'Öffnen Sie eine Challenge, um ihre Orte zu sehen.',
       'monumentOne': 'Denkmal',
       'monumentFew': 'Denkmäler',
       'monumentMany': 'Denkmäler',

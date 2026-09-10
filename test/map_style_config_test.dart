@@ -24,17 +24,19 @@ void main() {
   test('Batch B marker sizes without clustering', () {
     expect(MapStyleConfig.markerIconSize, 0.45);
     expect(MapStyleConfig.selectedMarkerIconSize, 0.55);
-    expect(MapStyleConfig.selectedUnderlayRadius, 15);
-    expect(MapStyleConfig.selectedUnderlayColor, 'rgba(53, 72, 60, 0.22)');
-    expect(MapStyleConfig.sageUnderlayColor, 'rgba(156, 154, 123, 0.22)');
+    expect(MapStyleConfig.diskDiameter, 28);
+    expect(MapStyleConfig.selectedDiskDiameter, 32);
+    expect(MapStyleConfig.diskRadius, 14);
+    expect(MapStyleConfig.selectedDiskRadius, 16);
+    expect(MapStyleConfig.diskStrokeWidth, 1.5);
+    expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
+    expect(MapStyleConfig.diskLayerId, 'poi-disks');
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
     expect(MapStyleConfig.creamHex, '#F3EFE5');
     expect(MapStyleConfig.verifiedHex, MapStyleConfig.barkHex);
     expect(MapStyleConfig.verifiedHex, '#756653');
-    expect(MapStyleConfig.verifiedUnderlayColor, MapStyleConfig.barkUnderlayColor);
-    expect(MapStyleConfig.barkUnderlayColor, 'rgba(117, 102, 83, 0.22)');
     expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(
       MapStyleConfig.markerColorExpression,
@@ -74,6 +76,11 @@ void main() {
       expect(File(config).readAsStringSync().contains('labelLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('circleLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('labelLayerId'), isFalse);
+      expect(File(host).readAsStringSync().contains('diskLayerId'), isTrue);
+      expect(
+        File(host).readAsStringSync().contains('selectedUnderlayLayerId'),
+        isFalse,
+      );
       expect(File(config).readAsStringSync().contains('#B8860B'), isFalse);
     },
   );

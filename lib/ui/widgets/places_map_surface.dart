@@ -14,6 +14,7 @@ import '../../map/map_runtime.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
+import '../../map/place_query.dart';
 import '../../map/places_controller.dart';
 import '../../models/models.dart';
 import 'map_chrome.dart';
@@ -245,10 +246,11 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                 child: Padding(
                   padding: EdgeInsets.only(top: widget.compact ? 6 : 10),
                   child: PlaceListPanel(
-                    places: _controller.listPlaces,
+                    places: _listPlaces,
                     strings: strings,
                     userLocation: _controller.userLocation,
                     compact: widget.compact,
+                    emptyLabel: _listEmptyLabel(strings),
                     onSelect: _selectFromList,
                   ),
                 ),
@@ -269,13 +271,37 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
           Positioned(
             right: inset,
             bottom: bottomLift,
-            child: MapIconButton(
-              key: const Key('map-locate-fab'),
-              icon: Icons.my_location,
-              tooltip: strings.locateTooltip,
-              size: locateSize,
-              iconSize: locateIcon,
-              onPressed: () => unawaited(_locate()),
+            child: Column(
+              key: const Key('map-zoom-column'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                MapIconButton(
+                  key: const Key('map-zoom-in'),
+                  icon: Icons.add,
+                  tooltip: strings.zoomIn,
+                  size: locateSize,
+                  iconSize: locateIcon,
+                  onPressed: () => unawaited(_zoom(1)),
+                ),
+                SizedBox(height: compact ? 6 : 8),
+                MapIconButton(
+                  key: const Key('map-zoom-out'),
+                  icon: Icons.remove,
+                  tooltip: strings.zoomOut,
+                  size: locateSize,
+                  iconSize: locateIcon,
+                  onPressed: () => unawaited(_zoom(-1)),
+                ),
+                SizedBox(height: compact ? 6 : 8),
+                MapIconButton(
+                  key: const Key('map-locate-fab'),
+                  icon: Icons.my_location,
+                  tooltip: strings.locateTooltip,
+                  size: locateSize,
+                  iconSize: locateIcon,
+                  onPressed: () => unawaited(_locate()),
+                ),
+              ],
             ),
           ),
           if (widget.overlayActions.isNotEmpty)
@@ -403,6 +429,35 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
         ),
       ),
     );
+  }
+
+  List<Place> get _listPlaces {
+    final geometry = widget.geometry;
+    if (geometry == null || geometry.waypoints.isEmpty) return const [];
+    return sortForList(
+      placesOfChallenge(
+        _controller.filtered,
+        waypointIds: geometry.waypoints.map((waypoint) => waypoint.id),
+        waypointLocations: geometry.waypoints.map(
+          (waypoint) => GeoPoint(waypoint.lat, waypoint.lng),
+        ),
+        verifiedPlaceIds: context.read<AppServices>().verifiedPlaces.ids,
+      ),
+      _controller.userLocation,
+    );
+  }
+
+  String _listEmptyLabel(AppStrings strings) {
+    final geometry = widget.geometry;
+    if (geometry == null || geometry.waypoints.isEmpty) {
+      return strings.listNoChallenge;
+    }
+    return strings.monumentCount(0);
+  }
+
+  Future<void> _zoom(double delta) async {
+    final update = delta > 0 ? CameraUpdate.zoomIn() : CameraUpdate.zoomOut();
+    await _map?.animateCamera(update);
   }
 
   Future<void> _locate() async {

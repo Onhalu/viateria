@@ -29,15 +29,18 @@ abstract final class MapStyleConfig {
 
   static const markerIconSize = 0.45;
   static const selectedMarkerIconSize = 0.55;
-  static const selectedUnderlayRadius = 15.0;
 
-  /// Forest underlay for a selected place that is in the current challenge.
-  static const selectedUnderlayColor = 'rgba(53, 72, 60, 0.22)';
+  /// Cream disk under every POI (diameter in dp; MapLibre radius is half).
+  static const diskDiameter = 28.0;
+  static const selectedDiskDiameter = 32.0;
+  static const diskRadius = diskDiameter / 2;
+  static const selectedDiskRadius = selectedDiskDiameter / 2;
+  static const diskStrokeWidth = 1.5;
 
-  /// Sage underlay for a selected place that is not in the current challenge.
-  /// Also the Mapa-tab default (no active challenge → every place is sage).
-  static const sageUnderlayColor = 'rgba(156, 154, 123, 0.22)';
-  static const selectedUnderlayLayerId = 'poi-selected-underlay';
+  /// Cream `#F3EFE5` at 94% — same fill as map chrome.
+  static const diskFillColor = 'rgba(243, 239, 229, 0.94)';
+
+  static const diskLayerId = 'poi-disks';
   static const forestHex = '#35483C';
   static const sageHex = '#9C9A7B';
   static const barkHex = '#756653';
@@ -50,8 +53,6 @@ abstract final class MapStyleConfig {
 
   /// Verified fill is bark (UX-approved). Alias so call sites can say verified.
   static const verifiedHex = barkHex;
-  static const barkUnderlayColor = 'rgba(117, 102, 83, 0.22)';
-  static const verifiedUnderlayColor = barkUnderlayColor;
 
   static const searchDebounce = Duration(milliseconds: 300);
   static const searchLimit = 20;
@@ -81,13 +82,25 @@ abstract final class MapStyleConfig {
     sageHex,
   ];
 
-  static const underlayColorExpression = [
-    Expressions.match,
-    [Expressions.get, 'placeState'],
-    placeStateVerified,
-    barkUnderlayColor,
-    placeStateInChallenge,
-    selectedUnderlayColor,
-    sageUnderlayColor,
+  static const diskRadiusExpression = [
+    Expressions.caseExpression,
+    [
+      Expressions.equal,
+      [Expressions.get, 'selected'],
+      1,
+    ],
+    selectedDiskRadius,
+    diskRadius,
+  ];
+
+  static const markerSizeExpression = [
+    Expressions.caseExpression,
+    [
+      Expressions.equal,
+      [Expressions.get, 'selected'],
+      1,
+    ],
+    selectedMarkerIconSize,
+    markerIconSize,
   ];
 }

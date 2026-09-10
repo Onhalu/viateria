@@ -122,6 +122,78 @@ Set<String> placeIdsInChallenge(
   return matched;
 }
 
+/// One place = one marker. Same id or within [radiusKm] collapses to a
+/// single row. Challenge membership (inChallenge / verified) wins.
+List<Place> dedupePlaces(
+  Iterable<Place> places, {
+  Set<String> challengePlaceIds = const {},
+  Set<String> verifiedPlaceIds = const {},
+  double radiusKm = 0.2,
+}) {
+  int rank(Place place) {
+    var value = 0;
+    if (verifiedPlaceIds.contains(place.id)) value += 2;
+    if (challengePlaceIds.contains(place.id)) value += 1;
+    return value;
+  }
+
+  final byId = <String, Place>{};
+  for (final place in places) {
+    final existing = byId[place.id];
+    if (existing == null || rank(place) > rank(existing)) {
+      byId[place.id] = place;
+    }
+  }
+  final unique = byId.values.toList();
+  final kept = <Place>[];
+  final used = <int>{};
+  for (var i = 0; i < unique.length; i++) {
+    if (used.contains(i)) continue;
+    var best = unique[i];
+    var bestRank = rank(best);
+    for (var j = i + 1; j < unique.length; j++) {
+      if (used.contains(j)) continue;
+      if (distanceKm(unique[i].location, unique[j].location) > radiusKm) {
+        continue;
+      }
+      used.add(j);
+      final nextRank = rank(unique[j]);
+      if (nextRank > bestRank) {
+        best = unique[j];
+        bestRank = nextRank;
+      }
+    }
+    kept.add(best);
+  }
+  return kept;
+}
+
+/// Catalog places that belong to a challenge, already de-duplicated.
+List<Place> placesOfChallenge(
+  Iterable<Place> places, {
+  Iterable<String> waypointIds = const [],
+  Iterable<GeoPoint> waypointLocations = const [],
+  Set<String> verifiedPlaceIds = const {},
+  double radiusKm = 0.2,
+}) {
+  final challengeIds = placeIdsInChallenge(
+    places,
+    waypointIds: waypointIds,
+    waypointLocations: waypointLocations,
+    radiusKm: radiusKm,
+  );
+  if (challengeIds.isEmpty) return const [];
+  return dedupePlaces(
+    [
+      for (final place in places)
+        if (challengeIds.contains(place.id)) place,
+    ],
+    challengePlaceIds: challengeIds,
+    verifiedPlaceIds: verifiedPlaceIds,
+    radiusKm: radiusKm,
+  );
+}
+
 double distanceKm(GeoPoint a, GeoPoint b) {
   const earth = 6371.0;
   final dLat = _rad(b.latitude - a.latitude);
@@ -150,4 +222,44 @@ List<Place> sortForList(List<Place> places, GeoPoint? userLocation) {
     return foldCzech(a.name).compareTo(foldCzech(b.name));
   });
   return copy;
+}
+
+Map<String, dynamic> featureCollectionOf(
+  Iterable<Place> places, {
+  String? selectedId,
+  Set<String> challengePlaceIds = const {},
+  Set<String> verifiedPlaceIds = const {},
+}) {
+  final input = places.toList();
+  Place? selected;
+  if (selectedId != null) {
+    for (final place in input) {
+      if (place.id == selectedId) {
+        selected = place;
+        break;
+      }
+    }
+  }
+  final unique = dedupePlaces(
+    input,
+    challengePlaceIds: challengePlaceIds,
+    verifiedPlaceIds: verifiedPlaceIds,
+  );
+  bool isSelected(Place place) {
+    if (selected == null) return false;
+    if (place.id == selected.id) return true;
+    return distanceKm(place.location, selected.location) <= 0.2;
+  }
+
+  return {
+    'type': 'FeatureCollection',
+    'features': [
+      for (final place in unique)
+        place.toFeature(
+          selected: isSelected(place),
+          inChallenge: challengePlaceIds.contains(place.id),
+          verified: verifiedPlaceIds.contains(place.id),
+        ),
+    ],
+  };
 }

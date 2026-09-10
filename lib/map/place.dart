@@ -121,22 +121,3 @@ String placeStateOf({required bool inChallenge, required bool verified}) {
   if (inChallenge) return 'inChallenge';
   return 'outside';
 }
-
-Map<String, dynamic> featureCollectionOf(
-  Iterable<Place> places, {
-  String? selectedId,
-  Set<String> challengePlaceIds = const {},
-  Set<String> verifiedPlaceIds = const {},
-}) {
-  return {
-    'type': 'FeatureCollection',
-    'features': [
-      for (final place in places)
-        place.toFeature(
-          selected: place.id == selectedId,
-          inChallenge: challengePlaceIds.contains(place.id),
-          verified: verifiedPlaceIds.contains(place.id),
-        ),
-    ],
-  };
-}

@@ -15,8 +15,9 @@ abstract final class MapPalette {
   static const beige = Color(0xFFD8CDB8);
   static const bark = Color(0xFF756653);
 
-  /// Cream at ~94% opacity for overlay chrome.
+  /// Cream at ~94% opacity for overlay chrome and POI disks.
   static const creamFill = Color(0xF0F3EFE5);
+  static const creamRgba94 = 'rgba(243, 239, 229, 0.94)';
 
   static const forestHex = '#35483C';
   static const sageHex = '#9C9A7B';
@@ -24,16 +25,6 @@ abstract final class MapPalette {
   static const creamHex = '#F3EFE5';
   static const verifiedHex = barkHex;
   static const verified = bark;
-
-  /// Forest at ~22% opacity for the selected-marker underlay (in-challenge).
-  static const forestRgba22 = 'rgba(53, 72, 60, 0.22)';
-
-  /// Sage at ~22% opacity for the selected-marker underlay (out-of-challenge).
-  static const sageRgba22 = 'rgba(156, 154, 123, 0.22)';
-
-  /// Bark at ~22% opacity for the selected-marker underlay (verified).
-  static const barkRgba22 = 'rgba(117, 102, 83, 0.22)';
-  static const verifiedRgba22 = barkRgba22;
 }
 
 abstract final class MapOverlayColors {

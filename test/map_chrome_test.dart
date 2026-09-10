@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/map/map_style_config.dart';
 import 'package:viateria/map/place.dart';
+import 'package:viateria/map/place_category.dart';
+import 'package:viateria/map/place_query.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/widgets/map_chrome.dart';
 
@@ -30,12 +32,9 @@ void main() {
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
     expect(MapPalette.forestHex, '#35483C');
     expect(MapPalette.sageHex, '#9C9A7B');
-    expect(MapPalette.forestRgba22, MapStyleConfig.selectedUnderlayColor);
-    expect(MapPalette.sageRgba22, MapStyleConfig.sageUnderlayColor);
-    expect(MapPalette.barkRgba22, MapStyleConfig.barkUnderlayColor);
+    expect(MapPalette.creamRgba94, MapStyleConfig.diskFillColor);
     expect(MapPalette.verifiedHex, MapStyleConfig.barkHex);
     expect(MapPalette.verifiedHex, MapStyleConfig.verifiedHex);
-    expect(MapPalette.verifiedRgba22, MapStyleConfig.verifiedUnderlayColor);
     expect(MapPalette.verified, MapPalette.bark);
     expect(MapStyleConfig.verifiedHex, MapStyleConfig.barkHex);
     expect(MapStyleConfig.verifiedHex, '#756653');
@@ -44,6 +43,7 @@ void main() {
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
+    expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
   });
 
   test('full and compact chrome sizes', () {
@@ -103,6 +103,30 @@ void main() {
     expect((other['properties'] as Map)['inChallenge'], 0);
     expect((other['properties'] as Map)['verified'], 0);
     expect((other['properties'] as Map)['placeState'], 'outside');
+  });
+
+  test('feature collection keeps one marker when places overlap', () {
+    const extra = Place(
+      id: 'karlstejn-dup',
+      name: 'Karlštejn duplicate',
+      category: PlaceCategory.historical,
+      location: GeoPoint(49.9394, 14.1880),
+    );
+    final collection = featureCollectionOf(
+      [...samplePlaces(), extra],
+      challengePlaceIds: const {'karlstejn'},
+    );
+    final features = (collection['features'] as List)
+        .cast<Map<String, dynamic>>();
+    expect(features, hasLength(3));
+    expect(
+      features.where((feature) => feature['id'] == 'karlstejn'),
+      hasLength(1),
+    );
+    expect(
+      features.where((feature) => feature['id'] == 'karlstejn-dup'),
+      isEmpty,
+    );
   });
 
   test('verified tint wins over inChallenge in GeoJSON properties', () {
