@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 
 /// Rewrites a category PNG to a white-alpha silhouette for MapLibre SDF.
 ///
-/// Source files stay forest-tinted on disk (88×88). At register time we keep
-/// alpha and set RGB to white so `icon-color` can tint in-challenge (forest)
-/// vs out-of-challenge (sage) at runtime.
+/// Source files are white-alpha silhouettes (88×88, content ≤75% / 66px).
+/// At register time we keep alpha and set RGB to white so `icon-color` can
+/// tint verified (cream), in-challenge (forest), and outside (sage).
 Future<Uint8List> sdfSilhouettePng(Uint8List pngBytes) async {
   final codec = await ui.instantiateImageCodec(pngBytes);
   final frame = await codec.getNextFrame();

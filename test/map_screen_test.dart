@@ -249,6 +249,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Karlštejn'), findsOneWidget);
     expect(find.text('Staroměstské náměstí'), findsNothing);
+    final listIcon = tester.widget<ColorFiltered>(
+      find.descendant(
+        of: find.byKey(const Key('map-poi-list-karlstejn')),
+        matching: find.byType(ColorFiltered),
+      ),
+    );
+    expect(
+      listIcon.colorFilter,
+      const ColorFilter.mode(MapPalette.forest, BlendMode.srcIn),
+    );
     await tester.tap(find.text('Karlštejn'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('map-poi-sheet')), findsOneWidget);

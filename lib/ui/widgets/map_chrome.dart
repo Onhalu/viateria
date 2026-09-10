@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// Map primary is forest `#35483C`. Cream surfaces stay `#F3EFE5`.
 /// SDF icon-color: sage outside a challenge, forest in-challenge
-/// unverified, bark when verified. Forbidden: `#D4A017` gold,
+/// unverified, cream when verified (solid bark disk). Forbidden: `#D4A017` gold,
 /// `#B8860B` goldenrod, `#2D6A4F` moss, `#1B4332` old forest,
 /// `#3D2914` old bark.
 abstract final class MapPalette {
@@ -15,7 +15,7 @@ abstract final class MapPalette {
   static const beige = Color(0xFFD8CDB8);
   static const bark = Color(0xFF756653);
 
-  /// Cream at ~94% opacity for overlay chrome and POI disks.
+  /// Cream at ~94% opacity for overlay chrome and unverified POI disks.
   static const creamFill = Color(0xF0F3EFE5);
   static const creamRgba94 = 'rgba(243, 239, 229, 0.94)';
 
@@ -23,7 +23,9 @@ abstract final class MapPalette {
   static const sageHex = '#9C9A7B';
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
-  static const verifiedHex = barkHex;
+
+  /// Verified disk fill (solid bark). Icon tint is cream, not this.
+  static const verifiedDiskHex = barkHex;
   static const verified = bark;
 }
 

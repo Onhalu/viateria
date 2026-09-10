@@ -278,11 +278,17 @@ class PlaceListPanel extends StatelessWidget {
                   key: Key('map-poi-list-${place.id}'),
                   dense: compact,
                   minVerticalPadding: compact ? 8 : 14,
-                  leading: Image.asset(
-                    'assets/map/icons/${place.category.iconName}@2x.png',
-                    width: MapChromeSizes.listRowIcon,
-                    height: MapChromeSizes.listRowIcon,
-                    filterQuality: FilterQuality.medium,
+                  leading: ColorFiltered(
+                    colorFilter: const ColorFilter.mode(
+                      MapPalette.forest,
+                      BlendMode.srcIn,
+                    ),
+                    child: Image.asset(
+                      'assets/map/icons/${place.category.iconName}@2x.png',
+                      width: MapChromeSizes.listRowIcon,
+                      height: MapChromeSizes.listRowIcon,
+                      filterQuality: FilterQuality.medium,
+                    ),
                   ),
                   title: Text(
                     place.name,

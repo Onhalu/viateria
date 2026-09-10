@@ -29,21 +29,32 @@ void main() {
     expect(MapStyleConfig.diskRadius, 14);
     expect(MapStyleConfig.selectedDiskRadius, 16);
     expect(MapStyleConfig.diskStrokeWidth, 1.5);
+    expect(MapStyleConfig.verifiedDiskStrokeWidth, 0);
     expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
     expect(MapStyleConfig.diskLayerId, 'poi-disks');
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
     expect(MapStyleConfig.creamHex, '#F3EFE5');
-    expect(MapStyleConfig.verifiedHex, MapStyleConfig.barkHex);
-    expect(MapStyleConfig.verifiedHex, '#756653');
+    expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
+    expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
+    expect(MapStyleConfig.verifiedDiskFill, MapStyleConfig.barkHex);
+    expect(MapStyleConfig.verifiedDiskFill, '#756653');
     expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(
       MapStyleConfig.markerColorExpression,
       contains(MapStyleConfig.placeStateVerified),
     );
     expect(
-      MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.barkHex),
+      MapStyleConfig.markerColorExpression,
+      contains(MapStyleConfig.creamHex),
+    );
+    expect(
+      MapStyleConfig.markerColorExpression.contains(MapStyleConfig.barkHex),
+      isFalse,
+    );
+    expect(
+      MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.creamHex),
       lessThan(
         MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.forestHex),
       ),
@@ -53,6 +64,33 @@ void main() {
       lessThan(
         MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.sageHex),
       ),
+    );
+    expect(
+      MapStyleConfig.diskFillExpression,
+      contains(MapStyleConfig.placeStateVerified),
+    );
+    expect(MapStyleConfig.diskFillExpression, contains(MapStyleConfig.barkHex));
+    expect(
+      MapStyleConfig.diskFillExpression,
+      contains(MapStyleConfig.diskFillColor),
+    );
+    expect(
+      MapStyleConfig.diskStrokeWidthExpression,
+      contains(MapStyleConfig.verifiedDiskStrokeWidth),
+    );
+    expect(
+      MapStyleConfig.diskStrokeWidthExpression,
+      contains(MapStyleConfig.diskStrokeWidth),
+    );
+    expect(
+      MapStyleConfig.diskStrokeColorExpression.contains(MapStyleConfig.barkHex),
+      isFalse,
+    );
+    expect(
+      MapStyleConfig.diskStrokeColorExpression.contains(
+        MapStyleConfig.creamHex,
+      ),
+      isFalse,
     );
   });
 
@@ -81,6 +119,19 @@ void main() {
         File(host).readAsStringSync().contains('selectedUnderlayLayerId'),
         isFalse,
       );
+      expect(
+        File(host).readAsStringSync().contains('diskFillExpression'),
+        isTrue,
+      );
+      expect(
+        File(host).readAsStringSync().contains('diskStrokeWidthExpression'),
+        isTrue,
+      );
+      expect(
+        File(host).readAsStringSync().contains('diskStrokeColorExpression'),
+        isTrue,
+      );
+      expect(File(config).readAsStringSync().contains('verifiedHex'), isFalse);
       expect(File(config).readAsStringSync().contains('#B8860B'), isFalse);
     },
   );

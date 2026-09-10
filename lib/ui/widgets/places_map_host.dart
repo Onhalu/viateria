@@ -209,10 +209,10 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.diskLayerId,
       const CircleLayerProperties(
         circleRadius: MapStyleConfig.diskRadiusExpression,
-        circleColor: MapStyleConfig.diskFillColor,
+        circleColor: MapStyleConfig.diskFillExpression,
         circleOpacity: 1,
-        circleStrokeWidth: MapStyleConfig.diskStrokeWidth,
-        circleStrokeColor: MapStyleConfig.markerColorExpression,
+        circleStrokeWidth: MapStyleConfig.diskStrokeWidthExpression,
+        circleStrokeColor: MapStyleConfig.diskStrokeColorExpression,
         circleStrokeOpacity: 1,
         circlePitchAlignment: 'viewport',
         circlePitchScale: 'viewport',
