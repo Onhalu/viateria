@@ -9,6 +9,7 @@ import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
 import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
+import 'data/verified_places.dart';
 import 'l10n/locale_controller.dart';
 
 Future<void> main() async {
@@ -18,6 +19,8 @@ Future<void> main() async {
   await localeController.load();
   final lastOpened = LastOpenedChallengeStore();
   await lastOpened.load();
+  final verifiedPlaces = VerifiedPlacesStore();
+  await verifiedPlaces.load();
 
   AppServices services;
   if (config.isSupabaseConfigured) {
@@ -34,6 +37,7 @@ Future<void> main() async {
       purchases: SupabasePurchaseRepository(client),
       photos: SupabasePhotoStorage(client),
       photoCapture: LiveCameraPhotoCapture(),
+      verifiedPlaces: verifiedPlaces,
     );
   } else {
     services = AppServices(
@@ -44,6 +48,7 @@ Future<void> main() async {
       purchases: UnconfiguredPurchases(),
       photos: UnconfiguredPhotos(),
       photoCapture: UnconfiguredCapture(),
+      verifiedPlaces: verifiedPlaces,
     );
   }
 

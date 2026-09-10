@@ -8,20 +8,21 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 
 - Challenge catalog: **open** (all waypoints after access) and **story** (next waypoint unlocks only after the previous is complete)
 - Free / paid catalog; **Stripe Checkout** unlocks paid challenges
-- **VerifyWaypoint v1**: live camera photo required, upload to Storage (no GPS)
+- **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
 - Promo stripe (same card chrome as a challenge card), DB-driven
 - Diploma **9:16** with confetti and medals on complete
 - Custom i18n: **cs / en / de**
 - Secrets via environment — never committed
+- **Mapa tab**: MapLibre OSM basemap, památky by type, search/filters/list/locate
 
 ## Out of scope
 
-GPS verify, offline cache, Story Unlock Modal media, Open-Meteo, SOS, GPX export, leaderboards, regional stats map.
+Offline cache, Story Unlock Modal media, Open-Meteo, SOS, GPX export, leaderboards, regional stats map.
 
 ## Stack
 
-Flutter, Leaflet/`flutter_map` + OSM tiles, Supabase (Auth, Postgres, Storage), Stripe, custom i18n.
+Flutter, MapLibre (`maplibre_gl`) + OSM vector styles, Supabase (Auth, Postgres, Storage), Stripe, custom i18n.
 
 ## Setup
 
@@ -32,6 +33,23 @@ flutter run --dart-define-from-file=.env
 ```
 
 Without env vars the app shows a configuration screen instead of inventing catalog content.
+
+### Map style (`MAP_STYLE_URL`)
+
+```bash
+flutter run --dart-define=MAP_STYLE_URL=https://api.maptiler.com/maps/streets-v2/style.json?key=YOUR_KEY
+# or:
+flutter run --dart-define-from-file=.env
+```
+
+| Value | Basemap |
+| --- | --- |
+| Production MapTiler / Stadia / self-hosted style JSON | Use this before release |
+| Empty / omitted | Non-prod fallback: `https://tiles.openfreemap.org/styles/liberty` |
+
+**TODO before release:** set a production style URL. Do **not** use `https://tile.openstreetmap.org` as a raster CDN.
+
+Code: `lib/map/map_style_config.dart`. Mock památky (167 places) live in `assets/map/pois.geojson`.
 
 ### Supabase
 
@@ -77,8 +95,9 @@ Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enf
 ```
 lib/domain/          unlock rules, route planner, photo policy
 lib/data/            Supabase repositories
+lib/map/             MapLibre style, place catalog, search/filter
 lib/l10n/            custom cs/en/de strings
-lib/ui/              catalog, challenge, verify, diploma, settings
+lib/ui/              catalog, challenge, map, verify, diploma, settings
 supabase/migrations  Postgres + RLS + Storage
 supabase/functions   Stripe checkout + webhook
 ```

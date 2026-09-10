@@ -4,6 +4,7 @@ import '../config/app_config.dart';
 import '../domain/photo_verify.dart';
 import 'repositories.dart';
 import 'route_services.dart';
+import 'verified_places.dart';
 
 typedef ExternalUrlOpener = Future<void> Function(Uri url);
 
@@ -29,11 +30,13 @@ class AppServices {
     DeviceLocation? deviceLocation,
     ElevationLookup? elevation,
     ExternalUrlOpener? openUrl,
+    VerifiedPlacesStore? verifiedPlaces,
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
        elevation = elevation ?? PublicElevationLookup(),
-       openUrl = openUrl ?? launchExternalUrl;
+       openUrl = openUrl ?? launchExternalUrl,
+       verifiedPlaces = verifiedPlaces ?? VerifiedPlacesStore();
 
   final AppConfig config;
   final AuthRepository auth;
@@ -47,4 +50,5 @@ class AppServices {
   final DeviceLocation deviceLocation;
   final ElevationLookup elevation;
   final ExternalUrlOpener openUrl;
+  final VerifiedPlacesStore verifiedPlaces;
 }

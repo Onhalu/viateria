@@ -13,9 +13,9 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   confetti: ^0.8.0
-  flutter_map: ^8.1.1
   geolocator: ^14.0.2
   go_router: ^16.2.0
+  maplibre_gl: ^0.27.0
   http: ^1.5.0
   image_picker: ^1.1.2
   intl: ^0.20.2
@@ -33,3 +33,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/map/pois.geojson
+    - assets/map/icons/city@2x.png
+    - assets/map/icons/nature@2x.png
+    - assets/map/icons/technical@2x.png
+    - assets/map/icons/historical@2x.png

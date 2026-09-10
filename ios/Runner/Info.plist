@@ -29,7 +29,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Viateria needs the camera to verify waypoints with a live photo.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Viateria uses your location only to set a route start point.</string>
+	<string>Viateria uses your location to center the map and to set a route start point. Location is never sent to a server.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>
