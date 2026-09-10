@@ -71,6 +71,10 @@ class Place {
         'selected': selected ? 1 : 0,
         'inChallenge': inChallenge ? 1 : 0,
         'verified': verified ? 1 : 0,
+        'placeState': placeStateOf(
+          inChallenge: inChallenge,
+          verified: verified,
+        ),
       },
     };
   }
@@ -109,6 +113,13 @@ class Place {
     }
     return places;
   }
+}
+
+/// Tint state: verified > inChallenge > outside.
+String placeStateOf({required bool inChallenge, required bool verified}) {
+  if (verified) return 'verified';
+  if (inChallenge) return 'inChallenge';
+  return 'outside';
 }
 
 Map<String, dynamic> featureCollectionOf(

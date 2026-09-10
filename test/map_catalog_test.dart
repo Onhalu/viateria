@@ -13,6 +13,8 @@ void main() {
     final decoded = jsonDecode(raw) as Map<String, dynamic>;
     expect(decoded['type'], 'FeatureCollection');
     expect(jsonEncode(decoded).contains('inChallenge'), isFalse);
+    expect(jsonEncode(decoded).contains('placeState'), isFalse);
+    expect(jsonEncode(decoded).contains('"verified"'), isFalse);
 
     final places = Place.fromFeatureCollection(decoded);
     expect(places, hasLength(167));

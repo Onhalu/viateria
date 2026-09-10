@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 /// Map UI tokens (Batch A/B). App shell / catalog still use [AppTheme].
 ///
 /// Map primary is forest `#35483C`. Cream surfaces stay `#F3EFE5`.
-/// Sage `#9C9A7B` tints places that are not in the current challenge
-/// (and every place on the standalone Mapa tab). Verified places use
-/// provisional `#B8860B`. Forbidden: `#D4A017` gold, `#2D6A4F` moss,
-/// `#1B4332` old forest, `#3D2914` old bark.
+/// SDF icon-color: sage outside a challenge, forest in-challenge
+/// unverified, bark when verified. Forbidden: `#D4A017` gold,
+/// `#B8860B` goldenrod, `#2D6A4F` moss, `#1B4332` old forest,
+/// `#3D2914` old bark.
 abstract final class MapPalette {
   static const forest = Color(0xFF35483C);
   static const sage = Color(0xFF9C9A7B);
@@ -22,8 +22,8 @@ abstract final class MapPalette {
   static const sageHex = '#9C9A7B';
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
-  static const verifiedHex = '#B8860B';
-  static const verified = Color(0xFFB8860B);
+  static const verifiedHex = barkHex;
+  static const verified = bark;
 
   /// Forest at ~22% opacity for the selected-marker underlay (in-challenge).
   static const forestRgba22 = 'rgba(53, 72, 60, 0.22)';
@@ -31,8 +31,9 @@ abstract final class MapPalette {
   /// Sage at ~22% opacity for the selected-marker underlay (out-of-challenge).
   static const sageRgba22 = 'rgba(156, 154, 123, 0.22)';
 
-  /// Verified underlay at ~22% opacity.
-  static const verifiedRgba22 = 'rgba(184, 134, 11, 0.22)';
+  /// Bark at ~22% opacity for the selected-marker underlay (verified).
+  static const barkRgba22 = 'rgba(117, 102, 83, 0.22)';
+  static const verifiedRgba22 = barkRgba22;
 }
 
 abstract final class MapOverlayColors {

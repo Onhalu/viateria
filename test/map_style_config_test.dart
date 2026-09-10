@@ -31,13 +31,25 @@ void main() {
     expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
     expect(MapStyleConfig.creamHex, '#F3EFE5');
-    expect(MapStyleConfig.verifiedHex, '#B8860B');
-    expect(MapStyleConfig.verifiedUnderlayColor, 'rgba(184, 134, 11, 0.22)');
-    expect(MapStyleConfig.markerColorExpression.first, 'case');
+    expect(MapStyleConfig.verifiedHex, MapStyleConfig.barkHex);
+    expect(MapStyleConfig.verifiedHex, '#756653');
+    expect(MapStyleConfig.verifiedUnderlayColor, MapStyleConfig.barkUnderlayColor);
+    expect(MapStyleConfig.barkUnderlayColor, 'rgba(117, 102, 83, 0.22)');
+    expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(
-      MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.verifiedHex),
+      MapStyleConfig.markerColorExpression,
+      contains(MapStyleConfig.placeStateVerified),
+    );
+    expect(
+      MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.barkHex),
       lessThan(
         MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.forestHex),
+      ),
+    );
+    expect(
+      MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.forestHex),
+      lessThan(
+        MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.sageHex),
       ),
     );
   });
@@ -62,7 +74,7 @@ void main() {
       expect(File(config).readAsStringSync().contains('labelLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('circleLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('labelLayerId'), isFalse);
-      expect(File(host).readAsStringSync().contains('pointsSourceId'), isFalse);
+      expect(File(config).readAsStringSync().contains('#B8860B'), isFalse);
     },
   );
 }

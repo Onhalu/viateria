@@ -32,10 +32,14 @@ void main() {
     expect(MapPalette.sageHex, '#9C9A7B');
     expect(MapPalette.forestRgba22, MapStyleConfig.selectedUnderlayColor);
     expect(MapPalette.sageRgba22, MapStyleConfig.sageUnderlayColor);
+    expect(MapPalette.barkRgba22, MapStyleConfig.barkUnderlayColor);
+    expect(MapPalette.verifiedHex, MapStyleConfig.barkHex);
     expect(MapPalette.verifiedHex, MapStyleConfig.verifiedHex);
     expect(MapPalette.verifiedRgba22, MapStyleConfig.verifiedUnderlayColor);
-    expect(MapPalette.verified, const Color(0xFFB8860B));
-    expect(MapStyleConfig.verifiedHex, '#B8860B');
+    expect(MapPalette.verified, MapPalette.bark);
+    expect(MapStyleConfig.verifiedHex, MapStyleConfig.barkHex);
+    expect(MapStyleConfig.verifiedHex, '#756653');
+    expect(MapStyleConfig.verifiedHex, isNot('#B8860B'));
     expect(MapStyleConfig.verifiedHex, isNot('#D4A017'));
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
@@ -91,12 +95,14 @@ void main() {
     );
     expect((selected['properties'] as Map)['selected'], 1);
     expect((selected['properties'] as Map)['inChallenge'], 1);
+    expect((selected['properties'] as Map)['placeState'], 'inChallenge');
     final other = features.cast<Map<String, dynamic>>().firstWhere(
       (feature) => feature['id'] == 'staromestske',
     );
     expect((other['properties'] as Map)['selected'], 0);
     expect((other['properties'] as Map)['inChallenge'], 0);
     expect((other['properties'] as Map)['verified'], 0);
+    expect((other['properties'] as Map)['placeState'], 'outside');
   });
 
   test('verified tint wins over inChallenge in GeoJSON properties', () {
@@ -110,12 +116,33 @@ void main() {
         .firstWhere((feature) => feature['id'] == 'karlstejn');
     expect((selected['properties'] as Map)['verified'], 1);
     expect((selected['properties'] as Map)['inChallenge'], 1);
+    expect((selected['properties'] as Map)['placeState'], 'verified');
   });
 
   test('Mapa tab default is sage: no challenge ids means inChallenge 0', () {
     final collection = featureCollectionOf(samplePlaces());
     for (final raw in collection['features'] as List) {
-      expect((raw as Map)['properties']['inChallenge'], 0);
+      final props = (raw as Map)['properties'] as Map;
+      expect(props['inChallenge'], 0);
+      expect(props['placeState'], 'outside');
     }
+  });
+
+  test('standalone verified place uses bark placeState', () {
+    final collection = featureCollectionOf(
+      samplePlaces(),
+      verifiedPlaceIds: const {'karlstejn'},
+    );
+    final features = (collection['features'] as List)
+        .cast<Map<String, dynamic>>();
+    final verified = features.firstWhere(
+      (feature) => feature['id'] == 'karlstejn',
+    );
+    final other = features.firstWhere(
+      (feature) => feature['id'] == 'staromestske',
+    );
+    expect(verified['properties']['placeState'], 'verified');
+    expect(verified['properties']['inChallenge'], 0);
+    expect(other['properties']['placeState'], 'outside');
   });
 }

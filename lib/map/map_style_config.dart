@@ -43,9 +43,15 @@ abstract final class MapStyleConfig {
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 
-  /// Provisional verified fill (UX may change this hex).
-  static const verifiedHex = '#B8860B';
-  static const verifiedUnderlayColor = 'rgba(184, 134, 11, 0.22)';
+  /// SDF `placeState`: verified > inChallenge > outside.
+  static const placeStateOutside = 'outside';
+  static const placeStateInChallenge = 'inChallenge';
+  static const placeStateVerified = 'verified';
+
+  /// Verified fill is bark (UX-approved). Alias so call sites can say verified.
+  static const verifiedHex = barkHex;
+  static const barkUnderlayColor = 'rgba(117, 102, 83, 0.22)';
+  static const verifiedUnderlayColor = barkUnderlayColor;
 
   static const searchDebounce = Duration(milliseconds: 300);
   static const searchLimit = 20;
@@ -64,37 +70,23 @@ abstract final class MapStyleConfig {
     zoom: defaultZoom,
   );
 
-  /// Tint priority: verified > inChallenge > out (sage).
+  /// Tint priority: verified (bark) > inChallenge (forest) > outside (sage).
   static const markerColorExpression = [
-    Expressions.caseExpression,
-    [
-      Expressions.equal,
-      [Expressions.get, 'verified'],
-      1,
-    ],
-    verifiedHex,
-    [
-      Expressions.equal,
-      [Expressions.get, 'inChallenge'],
-      1,
-    ],
+    Expressions.match,
+    [Expressions.get, 'placeState'],
+    placeStateVerified,
+    barkHex,
+    placeStateInChallenge,
     forestHex,
     sageHex,
   ];
 
   static const underlayColorExpression = [
-    Expressions.caseExpression,
-    [
-      Expressions.equal,
-      [Expressions.get, 'verified'],
-      1,
-    ],
-    verifiedUnderlayColor,
-    [
-      Expressions.equal,
-      [Expressions.get, 'inChallenge'],
-      1,
-    ],
+    Expressions.match,
+    [Expressions.get, 'placeState'],
+    placeStateVerified,
+    barkUnderlayColor,
+    placeStateInChallenge,
     selectedUnderlayColor,
     sageUnderlayColor,
   ];
