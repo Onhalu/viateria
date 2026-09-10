@@ -90,6 +90,7 @@ class AppStrings {
     'detailCta',
     'closeCta',
     'detailPlaceholder',
+    'verifyInChallengeHint',
     'locateDenied',
     'locateDisabled',
     'mapLoadError',
@@ -207,6 +208,7 @@ class AppStrings {
   String get detailCta => t('detailCta');
   String get closeCta => t('closeCta');
   String get detailPlaceholder => t('detailPlaceholder');
+  String get verifyInChallengeHint => t('verifyInChallengeHint');
   String get locateDenied => t('locateDenied');
   String get locateDisabled => t('locateDisabled');
   String get mapLoadError => t('mapLoadError');
@@ -351,6 +353,7 @@ class AppStrings {
       'detailCta': 'Details',
       'closeCta': 'Close',
       'detailPlaceholder': 'Place details are coming soon.',
+      'verifyInChallengeHint': 'Verification happens in a challenge.',
       'locateDenied':
           'Location is unavailable. Allow location access in Settings.',
       'locateDisabled':
@@ -475,6 +478,7 @@ class AppStrings {
       'detailCta': 'Detail',
       'closeCta': 'Zavřít',
       'detailPlaceholder': 'Detail památky připravujeme.',
+      'verifyInChallengeHint': 'Ověření je ve výzvě.',
       'locateDenied':
           'Polohu nelze použít. Povolte přístup k poloze v nastavení.',
       'locateDisabled':
@@ -600,6 +604,7 @@ class AppStrings {
       'detailCta': 'Details',
       'closeCta': 'Schließen',
       'detailPlaceholder': 'Objektdetails folgen.',
+      'verifyInChallengeHint': 'Die Prüfung erfolgt in einer Challenge.',
       'locateDenied': 'Standort nicht nutzbar. Erlauben Sie den Zugriff in den Einstellungen.',
       'locateDisabled': 'Ortungsdienste sind aus. Schalten Sie sie in den Geräteeinstellungen ein.',
       'mapLoadError': 'Die Karte konnte nicht geladen werden.',

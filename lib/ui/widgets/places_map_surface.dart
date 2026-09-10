@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
@@ -293,7 +294,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
               userLocation: _controller.userLocation,
               compact: widget.compact,
               onClose: () => _controller.select(null),
-              onDetail: () => _showDetailPlaceholder(strings),
+              onVerify: () => _onVerify(selected, strings),
             ),
           ),
       ],
@@ -403,19 +404,20 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     );
   }
 
-  void _showDetailPlaceholder(AppStrings strings) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        content: Text(strings.detailPlaceholder),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(strings.closeCta),
-          ),
-        ],
-      ),
-    );
+  void _onVerify(Place place, AppStrings strings) {
+    final waypoint = _waypointFor(place);
+    if (waypoint != null) {
+      context.push('/verify/${waypoint.challengeId}/${waypoint.id}');
+      return;
+    }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(strings.verifyInChallengeHint)));
+  }
+
+  Waypoint? _waypointFor(Place place) {
+    final geometry = widget.geometry;
+    if (geometry == null) return null;
+    return geometry.waypointMatching(place);
   }
 
   String _bannerText(AppStrings strings, String code) {

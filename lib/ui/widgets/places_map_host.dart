@@ -44,6 +44,17 @@ class ChallengeMapGeometry {
         bikeLine == other.bikeLine &&
         navigating == other.navigating;
   }
+
+  Waypoint? waypointMatching(Place place, {double radiusKm = 0.2}) {
+    for (final waypoint in waypoints) {
+      if (waypoint.id == place.id) return waypoint;
+      if (distanceKm(place.location, GeoPoint(waypoint.lat, waypoint.lng)) <=
+          radiusKm) {
+        return waypoint;
+      }
+    }
+    return null;
+  }
 }
 
 /// Native MapLibre host: OSM style, památky by type, optional challenge overlay.

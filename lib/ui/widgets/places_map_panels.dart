@@ -130,7 +130,7 @@ class PlaceDetailSheet extends StatelessWidget {
     required this.strings,
     required this.userLocation,
     required this.onClose,
-    required this.onDetail,
+    required this.onVerify,
     this.compact = false,
   });
 
@@ -138,7 +138,7 @@ class PlaceDetailSheet extends StatelessWidget {
   final AppStrings strings;
   final GeoPoint? userLocation;
   final VoidCallback onClose;
-  final VoidCallback onDetail;
+  final VoidCallback onVerify;
   final bool compact;
 
   @override
@@ -186,6 +186,11 @@ class PlaceDetailSheet extends StatelessWidget {
               strings.t(place.category.l10nKey),
               style: const TextStyle(color: MapPalette.bark, fontSize: 14),
             ),
+            const SizedBox(height: 6),
+            Text(
+              strings.detailPlaceholder,
+              style: const TextStyle(color: MapPalette.bark, fontSize: 13),
+            ),
             if (km != null) ...[
               const SizedBox(height: 2),
               Text(
@@ -198,14 +203,14 @@ class PlaceDetailSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: FilledButton(
-                    key: const Key('map-poi-detail'),
-                    onPressed: onDetail,
+                    key: const Key('map-poi-verify'),
+                    onPressed: onVerify,
                     style: FilledButton.styleFrom(
                       backgroundColor: MapPalette.forest,
                       foregroundColor: MapPalette.cream,
                       minimumSize: Size.fromHeight(buttonHeight),
                     ),
-                    child: Text(strings.detailCta),
+                    child: Text(strings.verify),
                   ),
                 ),
                 const SizedBox(width: 12),

@@ -49,7 +49,7 @@ flutter run --dart-define-from-file=.env
 
 **TODO before release:** set a production style URL. Do **not** use `https://tile.openstreetmap.org` as a raster CDN.
 
-Code: `lib/map/map_style_config.dart`. Mock památky live in `assets/map/`.
+Code: `lib/map/map_style_config.dart`. Mock památky (167 places) live in `assets/map/pois.geojson`.
 
 ### Supabase
 

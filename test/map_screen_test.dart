@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/config/app_config.dart';
@@ -11,6 +12,8 @@ import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/places_map_screen.dart';
 import 'package:viateria/ui/widgets/map_chrome.dart';
+import 'package:viateria/ui/widgets/places_map_host.dart';
+import 'package:viateria/ui/widgets/places_map_surface.dart';
 
 import 'helpers/fakes.dart';
 import 'helpers/map_harness.dart';
@@ -94,12 +97,23 @@ void main() {
     expect(find.byKey(const Key('map-poi-sheet-name')), findsOneWidget);
     expect(find.text('Karlštejn'), findsWidgets);
     expect(find.text(strings.t('catHistorical')), findsWidgets);
-    expect(find.text(strings.detailCta), findsOneWidget);
+    expect(find.text(strings.detailPlaceholder), findsOneWidget);
+    expect(find.text(strings.verify), findsOneWidget);
+    expect(find.text(strings.detailCta), findsNothing);
+    expect(find.byKey(const Key('map-poi-verify')), findsOneWidget);
     expect(find.text(strings.closeCta), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('map-poi-close')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('map-view-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Karlštejn'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('map-poi-verify')));
+    await tester.pumpAndSettle();
+    expect(find.text(strings.verifyInChallengeHint), findsOneWidget);
   });
 
   testWidgets('map and list share the same filtered catalog', (tester) async {
@@ -171,5 +185,62 @@ void main() {
     final count = tester.widget<Text>(find.byKey(const Key('map-poi-count')));
     expect(count.style?.color, MapPalette.bark);
     expect(count.style?.fontSize, 13);
+  });
+
+  testWidgets('in-challenge verify opens the verify route', (tester) async {
+    final places = samplePlaces();
+    const waypoint = Waypoint(
+      id: 'wp-karlstejn',
+      challengeId: 'open-1',
+      sortOrder: 0,
+      lat: 49.9394,
+      lng: 14.1880,
+      elevationM: 300,
+      translations: [LocalizedText(locale: 'cs', title: 'Karlštejn')],
+    );
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: PlacesMapSurface(
+              catalog: MemoryPlaceCatalog(places),
+              geometry: const ChallengeMapGeometry(waypoints: [waypoint]),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/verify/:challengeId/:waypointId',
+          builder: (context, state) => Text(
+            'verify-${state.pathParameters['challengeId']}-${state.pathParameters['waypointId']}',
+            key: const Key('verify-route'),
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'cs'),
+          ),
+          ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
+          Provider.value(value: _services()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('map-view-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Karlštejn'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('map-poi-verify')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('verify-route')), findsOneWidget);
+    expect(find.text('verify-open-1-wp-karlstejn'), findsOneWidget);
   });
 }
