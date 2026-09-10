@@ -268,4 +268,110 @@ void main() {
     expect(find.byKey(const Key('verify-route')), findsOneWidget);
     expect(find.text('verify-open-1-wp-karlstejn'), findsOneWidget);
   });
+
+  testWidgets('standalone challenge-only filter empties the map', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    await tester.pumpWidget(_mapApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(3)), findsOneWidget);
+    expect(
+      find.byKey(const Key('map-filter-challenge-only-empty')),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('map-filter-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-filter-challenge-only')), findsOneWidget);
+    expect(find.text(strings.filterChallengeOnly), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('map-filter-challenge-only')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('map-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(0)), findsOneWidget);
+    expect(find.text(strings.filterChallengeOnlyEmpty), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('map-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('map-filter-challenge-only')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('map-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(3)), findsOneWidget);
+    expect(
+      find.byKey(const Key('map-filter-challenge-only-empty')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('challenge-only filter keeps challenge stops on the map', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    final places = samplePlaces();
+    const waypoint = Waypoint(
+      id: 'wp-karlstejn',
+      challengeId: 'open-1',
+      sortOrder: 0,
+      lat: 49.9394,
+      lng: 14.1880,
+      elevationM: 300,
+      translations: [LocalizedText(locale: 'cs', title: 'Karlštejn')],
+    );
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: PlacesMapSurface(
+              catalog: MemoryPlaceCatalog(places),
+              geometry: const ChallengeMapGeometry(waypoints: [waypoint]),
+            ),
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'cs'),
+          ),
+          ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
+          Provider.value(value: _services()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(3)), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('map-filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('map-filter-challenge-only')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('map-filter-apply')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.monumentCount(1)), findsOneWidget);
+    expect(
+      find.byKey(const Key('map-filter-challenge-only-empty')),
+      findsNothing,
+    );
+
+    await tester.enterText(find.byKey(const Key('map-search-field')), 'Starom');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('map-search-staromestske')), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('map-search-karlstejn')), findsOneWidget);
+  });
 }

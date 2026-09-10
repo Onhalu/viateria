@@ -160,4 +160,44 @@ void main() {
       ['karlstejn'],
     );
   });
+
+  test('challenge-only filter keeps membership after categories', () {
+    expect(
+      applyChallengeOnlyFilter(places, {
+        'karlstejn',
+      }, enabled: false).map((p) => p.id),
+      ['karlstejn', 'staromestske', 'pravcicka'],
+    );
+    expect(
+      applyChallengeOnlyFilter(places, {
+        'karlstejn',
+      }, enabled: true).map((p) => p.id),
+      ['karlstejn'],
+    );
+    expect(applyChallengeOnlyFilter(places, {}, enabled: true), isEmpty);
+
+    final cityOnly = applyPlaceFilters(
+      places,
+      categories: {PlaceCategory.city},
+      challengeOnly: true,
+      challengePlaceIds: {'karlstejn'},
+    );
+    expect(cityOnly, isEmpty);
+
+    final historicalChallenge = applyPlaceFilters(
+      places,
+      categories: {PlaceCategory.historical},
+      challengeOnly: true,
+      challengePlaceIds: {'karlstejn'},
+    );
+    expect(historicalChallenge.map((p) => p.id), ['karlstejn']);
+  });
+
+  test('search hits honor challenge-only filter', () {
+    final filtered = applyChallengeOnlyFilter(places, {
+      'karlstejn',
+    }, enabled: true);
+    expect(searchPlaces(filtered, 'Karl').single.id, 'karlstejn');
+    expect(searchPlaces(filtered, 'Starom'), isEmpty);
+  });
 }

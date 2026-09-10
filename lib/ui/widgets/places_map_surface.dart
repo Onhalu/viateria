@@ -72,7 +72,16 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     unawaited(_controller.load());
   }
 
+  @override
+  void didUpdateWidget(covariant PlacesMapSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_sameChallengeGeometry(oldWidget.geometry, widget.geometry)) {
+      _syncChallengeMembership();
+    }
+  }
+
   void _onController() {
+    _syncChallengeMembership();
     if (mounted) setState(() {});
   }
 
@@ -167,6 +176,23 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                   if (_controller.query.trim().isNotEmpty &&
                       _controller.searchHits.isNotEmpty)
                     _searchResults(_controller.searchHits),
+                  if (_controller.challengeOnly &&
+                      _controller.filtered.isEmpty &&
+                      viewMode == MapViewMode.map)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: MapGlass(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Text(
+                            strings.filterChallengeOnlyEmpty,
+                            key: const Key('map-filter-challenge-only-empty'),
+                            style: const TextStyle(color: MapPalette.forest),
+                          ),
+                        ),
+                      ),
+                    ),
                   SizedBox(height: compact ? 6 : 10),
                   Row(
                     children: [
@@ -414,8 +440,40 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
       context: context,
       strings: strings,
       selected: _controller.categories,
+      challengeOnly: _controller.challengeOnly,
     );
-    if (next != null) _controller.setCategories(next);
+    if (next != null) {
+      _controller.setMapFilters(
+        categories: next.categories,
+        challengeOnly: next.challengeOnly,
+      );
+    }
+  }
+
+  void _syncChallengeMembership() {
+    final geometry = widget.geometry;
+    if (geometry == null || geometry.waypoints.isEmpty) {
+      _controller.setChallengePlaceIds(const {});
+      return;
+    }
+    _controller.setChallengePlaceIds(
+      placeIdsInChallenge(
+        _controller.all,
+        waypointIds: geometry.waypoints.map((waypoint) => waypoint.id),
+        waypointLocations: geometry.waypoints.map(
+          (waypoint) => GeoPoint(waypoint.lat, waypoint.lng),
+        ),
+      ),
+    );
+  }
+
+  bool _sameChallengeGeometry(
+    ChallengeMapGeometry? a,
+    ChallengeMapGeometry? b,
+  ) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return a == b;
+    return a.waypoints == b.waypoints;
   }
 
   void _selectFromList(Place place) {

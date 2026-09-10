@@ -6,26 +6,46 @@ import '../../map/place_category.dart';
 import '../../map/place_query.dart';
 import 'map_chrome.dart';
 
-Future<Set<PlaceCategory>?> showMapFilterSheet({
+class MapFilterSelection {
+  const MapFilterSelection({
+    required this.categories,
+    this.challengeOnly = false,
+  });
+
+  final Set<PlaceCategory> categories;
+  final bool challengeOnly;
+}
+
+Future<MapFilterSelection?> showMapFilterSheet({
   required BuildContext context,
   required AppStrings strings,
   required Set<PlaceCategory> selected,
+  bool challengeOnly = false,
 }) {
-  return showModalBottomSheet<Set<PlaceCategory>>(
+  return showModalBottomSheet<MapFilterSelection>(
     context: context,
     backgroundColor: MapOverlayColors.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (ctx) => _FilterBody(strings: strings, initial: selected),
+    builder: (ctx) => _FilterBody(
+      strings: strings,
+      initial: selected,
+      initialChallengeOnly: challengeOnly,
+    ),
   );
 }
 
 class _FilterBody extends StatefulWidget {
-  const _FilterBody({required this.strings, required this.initial});
+  const _FilterBody({
+    required this.strings,
+    required this.initial,
+    required this.initialChallengeOnly,
+  });
 
   final AppStrings strings;
   final Set<PlaceCategory> initial;
+  final bool initialChallengeOnly;
 
   @override
   State<_FilterBody> createState() => _FilterBodyState();
@@ -33,6 +53,7 @@ class _FilterBody extends StatefulWidget {
 
 class _FilterBodyState extends State<_FilterBody> {
   late Set<PlaceCategory> _selected = Set<PlaceCategory>.from(widget.initial);
+  late bool _challengeOnly = widget.initialChallengeOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +106,25 @@ class _FilterBodyState extends State<_FilterBody> {
                       });
                     },
                   ),
+                FilterChip(
+                  key: const Key('map-filter-challenge-only'),
+                  label: Text(strings.filterChallengeOnly),
+                  selected: _challengeOnly,
+                  selectedColor: MapPalette.forest,
+                  checkmarkColor: MapPalette.cream,
+                  labelStyle: TextStyle(
+                    color: _challengeOnly
+                        ? MapPalette.cream
+                        : MapPalette.forest,
+                  ),
+                  backgroundColor: MapPalette.beige,
+                  side: BorderSide(
+                    color: _challengeOnly
+                        ? MapPalette.forest
+                        : MapPalette.beige,
+                  ),
+                  onSelected: (on) => setState(() => _challengeOnly = on),
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -111,7 +151,13 @@ class _FilterBodyState extends State<_FilterBody> {
                     foregroundColor: MapPalette.cream,
                     minimumSize: const Size(120, 48),
                   ),
-                  onPressed: () => Navigator.pop(context, _selected),
+                  onPressed: () => Navigator.pop(
+                    context,
+                    MapFilterSelection(
+                      categories: _selected,
+                      challengeOnly: _challengeOnly,
+                    ),
+                  ),
                   child: Text(strings.applyFilters),
                 ),
               ],

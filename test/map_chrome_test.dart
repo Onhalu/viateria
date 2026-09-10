@@ -82,6 +82,8 @@ void main() {
     expect(cs.t('catHistorical'), 'Historická památka');
     expect(cs.verify, 'Ověřit zastávku');
     expect(cs.verifyInChallengeHint, 'Ověření je ve výzvě.');
+    expect(cs.filterChallengeOnly, 'Jen ve výzvě');
+    expect(cs.filterChallengeOnlyEmpty, 'Na mapě nejsou místa z výzvy.');
   });
 
   test('GeoJSON marks selected and in-challenge places', () {

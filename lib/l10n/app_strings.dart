@@ -103,6 +103,8 @@ class AppStrings {
     'osmAttributionLong',
     'applyFilters',
     'selectAll',
+    'filterChallengeOnly',
+    'filterChallengeOnlyEmpty',
     'locateTooltip',
     'zoomIn',
     'zoomOut',
@@ -228,6 +230,8 @@ class AppStrings {
   String get osmAttributionLong => t('osmAttributionLong');
   String get applyFilters => t('applyFilters');
   String get selectAll => t('selectAll');
+  String get filterChallengeOnly => t('filterChallengeOnly');
+  String get filterChallengeOnlyEmpty => t('filterChallengeOnlyEmpty');
   String get locateTooltip => t('locateTooltip');
   String get zoomIn => t('zoomIn');
   String get zoomOut => t('zoomOut');
@@ -385,6 +389,8 @@ class AppStrings {
       'osmAttributionLong': '© OpenStreetMap contributors',
       'applyFilters': 'Apply',
       'selectAll': 'Select all',
+      'filterChallengeOnly': 'Challenge only',
+      'filterChallengeOnlyEmpty': 'No challenge places on this map.',
       'locateTooltip': 'My location',
       'zoomIn': 'Zoom in',
       'zoomOut': 'Zoom out',
@@ -519,6 +525,8 @@ class AppStrings {
       'osmAttributionLong': '© přispěvatelé OpenStreetMap',
       'applyFilters': 'Použít',
       'selectAll': 'Vybrat vše',
+      'filterChallengeOnly': 'Jen ve výzvě',
+      'filterChallengeOnlyEmpty': 'Na mapě nejsou místa z výzvy.',
       'locateTooltip': 'Moje poloha',
       'zoomIn': 'Přiblížit',
       'zoomOut': 'Oddálit',
@@ -653,6 +661,8 @@ class AppStrings {
       'osmAttributionLong': '© OpenStreetMap-Mitwirkende',
       'applyFilters': 'Übernehmen',
       'selectAll': 'Alle wählen',
+      'filterChallengeOnly': 'Nur in der Challenge',
+      'filterChallengeOnlyEmpty': 'Keine Challenge-Orte auf dieser Karte.',
       'locateTooltip': 'Mein Standort',
       'zoomIn': 'Vergrößern',
       'zoomOut': 'Verkleinern',

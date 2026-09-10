@@ -43,6 +43,35 @@ List<Place> applyCategoryFilter(
   return places.where((p) => selected.contains(p.category)).toList();
 }
 
+/// When [enabled], keep only places in [challengePlaceIds] (`placeIdsInChallenge`).
+/// Empty membership (standalone Mapa) yields an empty list — never throws.
+List<Place> applyChallengeOnlyFilter(
+  List<Place> places,
+  Set<String> challengePlaceIds, {
+  required bool enabled,
+}) {
+  if (!enabled) return List<Place>.from(places);
+  if (challengePlaceIds.isEmpty) return const [];
+  return [
+    for (final place in places)
+      if (challengePlaceIds.contains(place.id)) place,
+  ];
+}
+
+/// Category filter first, then optional challenge-only membership.
+List<Place> applyPlaceFilters(
+  List<Place> places, {
+  required Set<PlaceCategory> categories,
+  bool challengeOnly = false,
+  Set<String> challengePlaceIds = const {},
+}) {
+  return applyChallengeOnlyFilter(
+    applyCategoryFilter(places, categories),
+    challengePlaceIds,
+    enabled: challengeOnly,
+  );
+}
+
 int countInViewport(Iterable<Place> places, GeoBounds bounds) {
   var n = 0;
   for (final place in places) {
