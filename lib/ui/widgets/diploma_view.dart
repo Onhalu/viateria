@@ -2,6 +2,8 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
+import '../../theme/brand_assets.dart';
+import '../../theme/brand_colors.dart';
 
 /// Portrait 9:16 diploma with medals. Confetti is shown on first complete.
 class DiplomaView extends StatelessWidget {
@@ -100,13 +102,9 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF1B4332), Color(0xFF2D6A4F), Color(0xFF40916C)],
-            ),
+            color: BrandColors.cream,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFD4A017), width: 6),
+            border: Border.all(color: BrandColors.beige, width: 6),
           ),
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -117,20 +115,15 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
                 height: 640,
                 child: Column(
                   children: [
-                    const Icon(
-                      Icons.emoji_events,
-                      color: Color(0xFFD4A017),
-                      size: 64,
-                    ),
-                    const SizedBox(height: 12),
+                    const BrandMark(size: 48),
+                    const SizedBox(height: 16),
                     Text(
                       widget.headline ?? widget.strings.diplomaHeadlineDefault,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: BrandColors.forest,
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 0.4,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -138,7 +131,7 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
                       widget.explorerName,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Color(0xFFD4A017),
+                        color: BrandColors.sage,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
@@ -147,14 +140,17 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
                     Text(
                       widget.body ?? widget.strings.congratulations,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(
+                        color: BrandColors.ink,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       widget.challengeTitle,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: BrandColors.forest,
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
@@ -167,18 +163,21 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
                         for (var i = 0; i < widget.medalCount.clamp(1, 8); i++)
                           const Icon(
                             Icons.military_tech,
-                            color: Color(0xFFD4A017),
+                            color: BrandColors.sage,
                             size: 36,
                           ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(date, style: const TextStyle(color: Colors.white70)),
+                    Text(
+                      date,
+                      style: const TextStyle(color: BrandColors.muted),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       widget.strings.appName,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: BrandColors.forest,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -194,10 +193,10 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
             blastDirectionality: BlastDirectionality.explosive,
             shouldLoop: false,
             colors: const [
-              Color(0xFFD4A017),
-              Color(0xFF95D5B2),
-              Color(0xFFFFFFFF),
-              Color(0xFF40916C),
+              BrandColors.forest,
+              BrandColors.sage,
+              BrandColors.beige,
+              BrandColors.cream,
             ],
           ),
       ],

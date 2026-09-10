@@ -15,4 +15,10 @@ void main() {
   test('unknown locale falls back to English', () {
     expect(AppStrings('fr').signIn, AppStrings('en').signIn);
   });
+
+  test('appName is VANDERY in every supported locale', () {
+    for (final locale in AppStrings.supported) {
+      expect(AppStrings(locale).appName, 'VANDERY');
+    }
+  });
 }

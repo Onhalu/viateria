@@ -13,6 +13,8 @@ import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
+import '../../theme/brand_assets.dart';
+import '../../theme/brand_colors.dart';
 import '../widgets/challenge_map.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/route_planner_panel.dart';
@@ -427,7 +429,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       },
     );
     return Scaffold(
-      appBar: widget.embedded ? null : AppBar(title: Text(strings.appName)),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: Text(strings.appName),
+              actions: const [
+                Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: Center(child: BrandMark(size: 24)),
+                ),
+              ],
+            ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
     );
   }
@@ -471,7 +483,7 @@ class _WaypointTile extends StatelessWidget {
               : strings.storyLockedHint,
         ),
         trailing: completed
-            ? const Icon(Icons.check_circle, color: Color(0xFF2D6A4F))
+            ? const Icon(Icons.check_circle, color: BrandColors.success)
             : unlocked
             ? FilledButton(onPressed: onVerify, child: Text(strings.verify))
             : const Icon(Icons.lock_outline),

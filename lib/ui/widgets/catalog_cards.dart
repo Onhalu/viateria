@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
+import '../../theme/brand_colors.dart';
 
 class ChallengeCard extends StatelessWidget {
   const ChallengeCard({
@@ -32,7 +33,7 @@ class ChallengeCard extends StatelessWidget {
               aspectRatio: 16 / 9,
               child: challenge.coverImageUrl == null
                   ? Container(
-                      color: scheme.primaryContainer,
+                      color: BrandColors.beige,
                       child: Icon(
                         Icons.landscape,
                         size: 48,
@@ -43,7 +44,7 @@ class ChallengeCard extends StatelessWidget {
                       challenge.coverImageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => ColoredBox(
-                        color: scheme.primaryContainer,
+                        color: BrandColors.beige,
                         child: const Icon(Icons.landscape, size: 48),
                       ),
                     ),
@@ -64,9 +65,10 @@ class ChallengeCard extends StatelessWidget {
                       ),
                       _Chip(
                         label: challenge.isPaid ? strings.paid : strings.free,
-                        gold: challenge.isPaid,
+                        active: challenge.isPaid,
                       ),
-                      if (completed) _Chip(label: strings.completed),
+                      if (completed)
+                        _Chip(label: strings.completed, active: true),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -109,7 +111,6 @@ class PromoStripeCard extends StatelessWidget {
     final locale = context.watch<LocaleController>().locale;
     final strings = context.watch<LocaleController>().strings;
     final copy = promo.copyFor(locale);
-    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -120,18 +121,18 @@ class PromoStripeCard extends StatelessWidget {
               aspectRatio: 16 / 9,
               child: promo.imageUrl == null
                   ? Container(
-                      color: const Color(0xFFD4A017).withValues(alpha: 0.35),
-                      child: Icon(
+                      color: BrandColors.beige,
+                      child: const Icon(
                         Icons.campaign,
                         size: 48,
-                        color: scheme.onPrimaryContainer,
+                        color: BrandColors.forest,
                       ),
                     )
                   : Image.network(
                       promo.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => const ColoredBox(
-                        color: Color(0xFFE9C46A),
+                        color: BrandColors.beige,
                         child: Icon(Icons.campaign, size: 48),
                       ),
                     ),
@@ -141,7 +142,7 @@ class PromoStripeCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _Chip(label: 'Promo', gold: true),
+                  const _Chip(label: 'Promo', active: true),
                   const SizedBox(height: 8),
                   Text(
                     copy.title,
@@ -176,25 +177,27 @@ class PromoStripeCard extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, this.gold = false});
+  const _Chip({required this.label, this.active = false});
 
   final String label;
-  final bool gold;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: gold
-            ? const Color(0xFFD4A017).withValues(alpha: 0.2)
-            : Theme.of(context).colorScheme.primaryContainer,
+        color: active ? BrandColors.forest : BrandColors.cream,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: active ? BrandColors.forest : BrandColors.beige,
+        ),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w600,
+          color: active ? BrandColors.onPrimary : BrandColors.bark,
         ),
       ),
     );

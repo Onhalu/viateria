@@ -6,6 +6,7 @@ import '../../data/app_services.dart';
 import '../../data/repositories.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
+import '../../theme/brand_assets.dart';
 
 enum _AuthStep { signIn, register, confirmEmail }
 
@@ -140,18 +141,8 @@ class _AuthScreenState extends State<AuthScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             const SizedBox(height: 32),
-            Icon(
-              Icons.hiking,
-              size: 72,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              strings.appName,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+            const Center(
+              child: BrandLockup(width: BrandAssets.splashLockupWidth),
             ),
             if (_step != _AuthStep.signIn) ...[
               const SizedBox(height: 8),

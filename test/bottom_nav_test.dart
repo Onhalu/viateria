@@ -12,6 +12,7 @@ import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/last_challenge_screen.dart';
 import 'package:viateria/ui/widgets/app_shell.dart';
+import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
 
 import 'helpers/fakes.dart';
@@ -141,6 +142,7 @@ void main() {
       find.byKey(const Key('app-bottom-nav-shell')),
     );
     expect(shell.clipBehavior, Clip.antiAlias);
+    expect(shell.color, BrandColors.cream);
     expect(
       shell.shape,
       RoundedRectangleBorder(

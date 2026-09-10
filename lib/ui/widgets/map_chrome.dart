@@ -1,33 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Map UI tokens (Batch A/B). App shell / catalog still use [AppTheme].
-///
-/// Map primary is forest `#35483C`. Cream surfaces stay `#F3EFE5`.
-/// SDF icon-color: sage outside a challenge, forest in-challenge
-/// unverified, cream when verified (solid bark disk). Forbidden: `#D4A017` gold,
-/// `#B8860B` goldenrod, `#2D6A4F` moss, `#1B4332` old forest,
-/// `#3D2914` old bark.
-abstract final class MapPalette {
-  static const forest = Color(0xFF35483C);
-  static const sage = Color(0xFF9C9A7B);
-  static const cream = Color(0xFFF3EFE5);
-  static const neutral = Color(0xFFFAF8F2);
-  static const beige = Color(0xFFD8CDB8);
-  static const bark = Color(0xFF756653);
+import '../../theme/brand_colors.dart';
 
-  /// Cream at ~94% opacity for overlay chrome and unverified POI disks.
-  static const creamFill = Color(0xF0F3EFE5);
-  static const creamRgba94 = 'rgba(243, 239, 229, 0.94)';
+export '../../theme/brand_colors.dart' show BrandColors, MapPalette;
 
-  static const forestHex = '#35483C';
-  static const sageHex = '#9C9A7B';
-  static const barkHex = '#756653';
-  static const creamHex = '#F3EFE5';
-
-  /// Verified disk fill (solid bark). Icon tint is cream, not this.
-  static const verifiedDiskHex = barkHex;
-  static const verified = bark;
-}
+/// Map overlay tokens. Palette lives in [BrandColors] / [MapPalette] so the
+/// app shell and map chrome share one source.
 
 abstract final class MapOverlayColors {
   static const fill = MapPalette.creamFill;

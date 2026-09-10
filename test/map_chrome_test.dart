@@ -23,10 +23,10 @@ void main() {
     expect(MapOverlayColors.accent, MapPalette.forest);
     expect(MapOverlayColors.surface, MapPalette.cream);
 
-    expect(MapOverlayColors.accent, isNot(AppTheme.gold));
-    expect(MapOverlayColors.accent, isNot(MapPalette.sage));
-    expect(MapPalette.forest, isNot(AppTheme.forest));
-    expect(MapPalette.bark, isNot(AppTheme.bark));
+    expect(AppTheme.forest, MapPalette.forest);
+    expect(AppTheme.bark, MapPalette.bark);
+    expect(AppTheme.cream, MapPalette.cream);
+    expect(AppTheme.sage, MapPalette.sage);
     expect(MapPalette.forest, isNot(const Color(0xFF1B4332)));
     expect(MapPalette.bark, isNot(const Color(0xFF3D2914)));
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
