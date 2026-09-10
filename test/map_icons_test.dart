@@ -54,16 +54,15 @@ void main() {
             final i = (y * 88 + x) * 4;
             final a = pixels[i + 3];
             if (a == 0) continue;
+            expect(a, 255, reason: name);
             expect(pixels[i], 255, reason: name);
             expect(pixels[i + 1], 255, reason: name);
             expect(pixels[i + 2], 255, reason: name);
-            if (a > 16) {
-              if (x < minX) minX = x;
-              if (y < minY) minY = y;
-              if (x > maxX) maxX = x;
-              if (y > maxY) maxY = y;
-            }
-            if (a == 255) opaque++;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+            opaque++;
           }
         }
         expect(maxX, greaterThanOrEqualTo(minX), reason: name);
