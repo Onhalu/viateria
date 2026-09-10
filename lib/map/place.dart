@@ -54,6 +54,7 @@ class Place {
   Map<String, dynamic> toFeature({
     bool selected = false,
     bool inChallenge = false,
+    bool verified = false,
   }) {
     return {
       'type': 'Feature',
@@ -69,6 +70,7 @@ class Place {
         'icon': iconName,
         'selected': selected ? 1 : 0,
         'inChallenge': inChallenge ? 1 : 0,
+        'verified': verified ? 1 : 0,
       },
     };
   }
@@ -113,6 +115,7 @@ Map<String, dynamic> featureCollectionOf(
   Iterable<Place> places, {
   String? selectedId,
   Set<String> challengePlaceIds = const {},
+  Set<String> verifiedPlaceIds = const {},
 }) {
   return {
     'type': 'FeatureCollection',
@@ -121,6 +124,7 @@ Map<String, dynamic> featureCollectionOf(
         place.toFeature(
           selected: place.id == selectedId,
           inChallenge: challengePlaceIds.contains(place.id),
+          verified: verifiedPlaceIds.contains(place.id),
         ),
     ],
   };

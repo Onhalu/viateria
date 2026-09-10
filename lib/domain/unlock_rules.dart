@@ -10,10 +10,7 @@ import '../models/models.dart';
 class UnlockRules {
   const UnlockRules();
 
-  bool hasAccess({
-    required PricingType pricing,
-    required bool purchased,
-  }) {
+  bool hasAccess({required PricingType pricing, required bool purchased}) {
     return pricing == PricingType.free || purchased;
   }
 
@@ -53,7 +50,7 @@ class UnlockRules {
     );
   }
 
-  bool canVerifyPhoto({
+  bool canVerify({
     required AccessMode mode,
     required bool hasAccess,
     required List<Waypoint> orderedWaypoints,
@@ -61,6 +58,23 @@ class UnlockRules {
     required Set<String> completedWaypointIds,
   }) {
     return isWaypointUnlockedById(
+      mode: mode,
+      hasAccess: hasAccess,
+      orderedWaypoints: orderedWaypoints,
+      waypointId: waypointId,
+      completedWaypointIds: completedWaypointIds,
+    );
+  }
+
+  /// Same unlock gate as [canVerify]; kept for existing photo-call sites.
+  bool canVerifyPhoto({
+    required AccessMode mode,
+    required bool hasAccess,
+    required List<Waypoint> orderedWaypoints,
+    required String waypointId,
+    required Set<String> completedWaypointIds,
+  }) {
+    return canVerify(
       mode: mode,
       hasAccess: hasAccess,
       orderedWaypoints: orderedWaypoints,

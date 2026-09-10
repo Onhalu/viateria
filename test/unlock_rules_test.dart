@@ -19,10 +19,7 @@ void main() {
       rules.hasAccess(pricing: PricingType.paid, purchased: false),
       isFalse,
     );
-    expect(
-      rules.hasAccess(pricing: PricingType.paid, purchased: true),
-      isTrue,
-    );
+    expect(rules.hasAccess(pricing: PricingType.paid, purchased: true), isTrue);
   });
 
   test('open challenges unlock every waypoint after access', () {
@@ -46,44 +43,47 @@ void main() {
     );
   });
 
-  test('story challenges unlock the next waypoint only after the prior one', () {
-    expect(
-      rules.isWaypointUnlocked(
-        mode: AccessMode.story,
-        hasAccess: true,
-        waypointIndex: 0,
-        completedIndexes: {},
-      ),
-      isTrue,
-    );
-    expect(
-      rules.isWaypointUnlocked(
-        mode: AccessMode.story,
-        hasAccess: true,
-        waypointIndex: 1,
-        completedIndexes: {},
-      ),
-      isFalse,
-    );
-    expect(
-      rules.isWaypointUnlocked(
-        mode: AccessMode.story,
-        hasAccess: true,
-        waypointIndex: 1,
-        completedIndexes: {0},
-      ),
-      isTrue,
-    );
-    expect(
-      rules.isWaypointUnlocked(
-        mode: AccessMode.story,
-        hasAccess: true,
-        waypointIndex: 2,
-        completedIndexes: {0},
-      ),
-      isFalse,
-    );
-  });
+  test(
+    'story challenges unlock the next waypoint only after the prior one',
+    () {
+      expect(
+        rules.isWaypointUnlocked(
+          mode: AccessMode.story,
+          hasAccess: true,
+          waypointIndex: 0,
+          completedIndexes: {},
+        ),
+        isTrue,
+      );
+      expect(
+        rules.isWaypointUnlocked(
+          mode: AccessMode.story,
+          hasAccess: true,
+          waypointIndex: 1,
+          completedIndexes: {},
+        ),
+        isFalse,
+      );
+      expect(
+        rules.isWaypointUnlocked(
+          mode: AccessMode.story,
+          hasAccess: true,
+          waypointIndex: 1,
+          completedIndexes: {0},
+        ),
+        isTrue,
+      );
+      expect(
+        rules.isWaypointUnlocked(
+          mode: AccessMode.story,
+          hasAccess: true,
+          waypointIndex: 2,
+          completedIndexes: {0},
+        ),
+        isFalse,
+      );
+    },
+  );
 
   test('memory progress enforces story order', () async {
     final story = sampleStoryChallenge();
@@ -119,5 +119,41 @@ void main() {
     );
     expect(result.completedWaypointIds, contains('ow-2'));
     expect(result.isCompleted, isFalse);
+  });
+
+  test('canVerify is the same unlock gate for GPS and photo', () {
+    final open = sampleOpenChallenge();
+    expect(
+      rules.canVerify(
+        mode: AccessMode.open,
+        hasAccess: true,
+        orderedWaypoints: open.orderedWaypoints,
+        waypointId: 'ow-2',
+        completedWaypointIds: {},
+      ),
+      isTrue,
+    );
+
+    final story = sampleStoryChallenge();
+    expect(
+      rules.canVerify(
+        mode: AccessMode.story,
+        hasAccess: true,
+        orderedWaypoints: story.orderedWaypoints,
+        waypointId: 'sw-2',
+        completedWaypointIds: {},
+      ),
+      isFalse,
+    );
+    expect(
+      rules.canVerifyPhoto(
+        mode: AccessMode.story,
+        hasAccess: true,
+        orderedWaypoints: story.orderedWaypoints,
+        waypointId: 'sw-2',
+        completedWaypointIds: {'sw-1'},
+      ),
+      isTrue,
+    );
   });
 }

@@ -38,19 +38,40 @@ AppServices _services() {
 }
 
 Widget _mapApp({MemoryPlaceCatalog? catalog}) {
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => Scaffold(
+          body: PlacesMapScreen(
+            catalog: catalog ?? MemoryPlaceCatalog(samplePlaces()),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/verify/place/:placeId',
+        builder: (context, state) => Text(
+          'verify-place-${state.pathParameters['placeId']}',
+          key: const Key('verify-place-route'),
+        ),
+      ),
+      GoRoute(
+        path: '/verify/:challengeId/:waypointId',
+        builder: (context, state) => Text(
+          'verify-${state.pathParameters['challengeId']}-${state.pathParameters['waypointId']}',
+          key: const Key('verify-route'),
+        ),
+      ),
+    ],
+  );
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
       ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
       Provider.value(value: _services()),
     ],
-    child: MaterialApp(
-      home: Scaffold(
-        body: PlacesMapScreen(
-          catalog: catalog ?? MemoryPlaceCatalog(samplePlaces()),
-        ),
-      ),
-    ),
+    child: MaterialApp.router(routerConfig: router),
   );
 }
 
@@ -113,7 +134,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('map-poi-verify')));
     await tester.pumpAndSettle();
-    expect(find.text(strings.verifyInChallengeHint), findsOneWidget);
+    expect(find.byKey(const Key('verify-place-route')), findsOneWidget);
+    expect(find.text('verify-place-karlstejn'), findsOneWidget);
   });
 
   testWidgets('map and list share the same filtered catalog', (tester) async {

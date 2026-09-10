@@ -8,7 +8,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 
 - Challenge catalog: **open** (all waypoints after access) and **story** (next waypoint unlocks only after the previous is complete)
 - Free / paid catalog; **Stripe Checkout** unlocks paid challenges
-- **VerifyWaypoint v1**: live camera photo required, upload to Storage (no GPS)
+- **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
 - Promo stripe (same card chrome as a challenge card), DB-driven
 - Diploma **9:16** with confetti and medals on complete
@@ -18,7 +18,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 
 ## Out of scope
 
-GPS verify, offline cache, Story Unlock Modal media, Open-Meteo, SOS, GPX export, leaderboards, regional stats map.
+Offline cache, Story Unlock Modal media, Open-Meteo, SOS, GPX export, leaderboards, regional stats map.
 
 ## Stack
 

@@ -91,6 +91,10 @@ class AppStrings {
     'closeCta',
     'detailPlaceholder',
     'verifyInChallengeHint',
+    'gpsChecking',
+    'gpsTooFarFallback',
+    'gpsDeniedFallback',
+    'gpsUnavailableFallback',
     'locateDenied',
     'locateDisabled',
     'mapLoadError',
@@ -209,6 +213,10 @@ class AppStrings {
   String get closeCta => t('closeCta');
   String get detailPlaceholder => t('detailPlaceholder');
   String get verifyInChallengeHint => t('verifyInChallengeHint');
+  String get gpsChecking => t('gpsChecking');
+  String get gpsTooFarFallback => t('gpsTooFarFallback');
+  String get gpsDeniedFallback => t('gpsDeniedFallback');
+  String get gpsUnavailableFallback => t('gpsUnavailableFallback');
   String get locateDenied => t('locateDenied');
   String get locateDisabled => t('locateDisabled');
   String get mapLoadError => t('mapLoadError');
@@ -354,6 +362,13 @@ class AppStrings {
       'closeCta': 'Close',
       'detailPlaceholder': 'Place details are coming soon.',
       'verifyInChallengeHint': 'Verification happens in a challenge.',
+      'gpsChecking': 'Checking your location…',
+      'gpsTooFarFallback':
+          'You are too far from this place. Take a live photo to verify.',
+      'gpsDeniedFallback':
+          'Location access was denied. Take a live photo to verify.',
+      'gpsUnavailableFallback':
+          'Location is unavailable. Take a live photo to verify.',
       'locateDenied':
           'Location is unavailable. Allow location access in Settings.',
       'locateDisabled':
@@ -479,6 +494,12 @@ class AppStrings {
       'closeCta': 'Zavřít',
       'detailPlaceholder': 'Detail památky připravujeme.',
       'verifyInChallengeHint': 'Ověření je ve výzvě.',
+      'gpsChecking': 'Ověřuji polohu…',
+      'gpsTooFarFallback':
+          'Jste moc daleko od tohoto místa. Ověřte se živou fotkou.',
+      'gpsDeniedFallback':
+          'Přístup k poloze byl odepřen. Ověřte se živou fotkou.',
+      'gpsUnavailableFallback': 'Poloha není dostupná. Ověřte se živou fotkou.',
       'locateDenied':
           'Polohu nelze použít. Povolte přístup k poloze v nastavení.',
       'locateDisabled':
@@ -605,6 +626,13 @@ class AppStrings {
       'closeCta': 'Schließen',
       'detailPlaceholder': 'Objektdetails folgen.',
       'verifyInChallengeHint': 'Die Prüfung erfolgt in einer Challenge.',
+      'gpsChecking': 'Standort wird geprüft…',
+      'gpsTooFarFallback':
+          'Sie sind zu weit entfernt. Prüfen Sie mit einem Live-Foto.',
+      'gpsDeniedFallback':
+          'Standortzugriff abgelehnt. Prüfen Sie mit einem Live-Foto.',
+      'gpsUnavailableFallback':
+          'Standort nicht verfügbar. Prüfen Sie mit einem Live-Foto.',
       'locateDenied': 'Standort nicht nutzbar. Erlauben Sie den Zugriff in den Einstellungen.',
       'locateDisabled': 'Ortungsdienste sind aus. Schalten Sie sie in den Geräteeinstellungen ein.',
       'mapLoadError': 'Die Karte konnte nicht geladen werden.',

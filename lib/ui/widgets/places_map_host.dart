@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -73,6 +74,7 @@ class PlacesMapHost extends StatefulWidget {
     this.geometry,
     this.onWaypointTap,
     this.selectedPlaceId,
+    this.verifiedPlaceIds = const {},
   });
 
   final List<Place> places;
@@ -87,6 +89,7 @@ class PlacesMapHost extends StatefulWidget {
   final ChallengeMapGeometry? geometry;
   final ValueChanged<Waypoint>? onWaypointTap;
   final String? selectedPlaceId;
+  final Set<String> verifiedPlaceIds;
 
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
@@ -104,7 +107,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.places != widget.places ||
         oldWidget.selectedPlaceId != widget.selectedPlaceId ||
-        !_sameChallengeMembership(oldWidget.geometry, widget.geometry)) {
+        !_sameChallengeMembership(oldWidget.geometry, widget.geometry) ||
+        !setEquals(oldWidget.verifiedPlaceIds, widget.verifiedPlaceIds)) {
       unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
@@ -205,16 +209,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.selectedUnderlayLayerId,
       const CircleLayerProperties(
         circleRadius: MapStyleConfig.selectedUnderlayRadius,
-        circleColor: [
-          Expressions.caseExpression,
-          [
-            Expressions.equal,
-            [Expressions.get, 'inChallenge'],
-            1,
-          ],
-          MapStyleConfig.selectedUnderlayColor,
-          MapStyleConfig.sageUnderlayColor,
-        ],
+        circleColor: MapStyleConfig.underlayColorExpression,
         circleOpacity: 1,
       ),
       filter: _selectedUnderlayFilter,
@@ -235,16 +230,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
           MapStyleConfig.selectedMarkerIconSize,
           MapStyleConfig.markerIconSize,
         ],
-        iconColor: [
-          Expressions.caseExpression,
-          [
-            Expressions.equal,
-            [Expressions.get, 'inChallenge'],
-            1,
-          ],
-          MapStyleConfig.forestHex,
-          MapStyleConfig.sageHex,
-        ],
+        iconColor: MapStyleConfig.markerColorExpression,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
@@ -267,10 +253,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       MapStyleConfig.bikeSourceId,
       GeojsonSourceProperties(data: _emptyCollection()),
     );
-    await controller.addSource(
-      MapStyleConfig.pointsSourceId,
-      GeojsonSourceProperties(data: _emptyCollection()),
-    );
     await controller.addLineLayer(
       MapStyleConfig.bikeSourceId,
       MapStyleConfig.bikeLayerId,
@@ -291,27 +273,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         lineJoin: 'round',
       ),
     );
-    await controller.addCircleLayer(
-      MapStyleConfig.pointsSourceId,
-      MapStyleConfig.circleLayerId,
-      const CircleLayerProperties(
-        circleRadius: 16,
-        circleColor: MapStyleConfig.forestHex,
-        circleStrokeWidth: 2,
-        circleStrokeColor: MapStyleConfig.creamHex,
-      ),
-    );
-    await controller.addSymbolLayer(
-      MapStyleConfig.pointsSourceId,
-      MapStyleConfig.labelLayerId,
-      const SymbolLayerProperties(
-        textField: [Expressions.get, 'label'],
-        textSize: 12,
-        textColor: MapStyleConfig.creamHex,
-        textAllowOverlap: true,
-        textIgnorePlacement: true,
-      ),
-    );
   }
 
   Future<void> _pushPlaces(List<Place> places) async {
@@ -324,6 +285,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         places,
         selectedId: widget.selectedPlaceId,
         challengePlaceIds: _challengePlaceIds(places),
+        verifiedPlaceIds: widget.verifiedPlaceIds,
       ),
     );
   }
@@ -371,11 +333,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       controller,
       MapStyleConfig.hikeSourceId,
       showHike ? _lineCollection(geometry.hikeLine) : _emptyCollection(),
-    );
-    await _setSource(
-      controller,
-      MapStyleConfig.pointsSourceId,
-      _pointsCollection(geometry),
     );
     if (navigating == TravelMode.bike) {
       await controller.setLayerProperties(
@@ -426,26 +383,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     final controller = _controller;
     if (controller == null) return;
 
-    if (widget.geometry != null && widget.onWaypointTap != null) {
-      final waypointHits = await controller.queryRenderedFeatures(point, [
-        MapStyleConfig.circleLayerId,
-        MapStyleConfig.labelLayerId,
-      ], null);
-      if (waypointHits.isNotEmpty) {
-        final feature = _asMap(waypointHits.first);
-        final props = _asMap(feature['properties']);
-        final id = props['id']?.toString();
-        if (id != null) {
-          for (final waypoint in widget.geometry!.waypoints) {
-            if (waypoint.id == id) {
-              widget.onWaypointTap!(waypoint);
-              return;
-            }
-          }
-        }
-      }
-    }
-
     final poiHits = await controller.queryRenderedFeatures(point, [
       MapStyleConfig.symbolLayerId,
       MapStyleConfig.selectedUnderlayLayerId,
@@ -465,7 +402,10 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         break;
       }
     }
-    if (match != null) widget.onPlaceTap?.call(match);
+    if (match == null) return;
+    widget.onPlaceTap?.call(match);
+    final waypoint = widget.geometry?.waypointMatching(match);
+    if (waypoint != null) widget.onWaypointTap?.call(waypoint);
   }
 
   void _onCameraIdle() {
@@ -487,52 +427,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         east: bounds.northeast.longitude,
       ),
     );
-  }
-
-  Map<String, dynamic> _pointsCollection(ChallengeMapGeometry geometry) {
-    final features = <Map<String, dynamic>>[];
-    if (geometry.start != null) {
-      features.add(
-        _pointFeature(
-          id: 'start',
-          point: geometry.start!,
-          label: 'S',
-          kind: 'start',
-        ),
-      );
-    }
-    final ordered = [...geometry.waypoints]
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    for (final waypoint in ordered) {
-      features.add(
-        _pointFeature(
-          id: waypoint.id,
-          point: waypoint.latLng,
-          label: '${waypoint.sortOrder + 1}',
-          kind: waypoint.id == geometry.selectedWaypointId
-              ? 'selected'
-              : 'stop',
-        ),
-      );
-    }
-    return {'type': 'FeatureCollection', 'features': features};
-  }
-
-  Map<String, dynamic> _pointFeature({
-    required String id,
-    required ll.LatLng point,
-    required String label,
-    required String kind,
-  }) {
-    return {
-      'type': 'Feature',
-      'id': id,
-      'geometry': {
-        'type': 'Point',
-        'coordinates': [point.longitude, point.latitude],
-      },
-      'properties': {'id': id, 'label': label, 'kind': kind},
-    };
   }
 
   Map<String, dynamic> _lineCollection(List<ll.LatLng> points) {

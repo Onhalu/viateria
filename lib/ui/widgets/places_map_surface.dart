@@ -102,24 +102,33 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
       fit: StackFit.expand,
       children: [
         embed
-            ? PlacesMapHost(
-                places: _controller.filtered,
-                initialCamera:
-                    widget.initialCamera ?? MapStyleConfig.defaultCamera,
-                geometry: widget.geometry,
-                selectedPlaceId: selected?.id,
-                onWaypointTap: widget.onWaypointTap,
-                onReady: (controller) {
-                  _map = controller;
-                  widget.onReady?.call(controller);
+            ? ListenableBuilder(
+                listenable: context.read<AppServices>().verifiedPlaces,
+                builder: (context, _) {
+                  return PlacesMapHost(
+                    places: _controller.filtered,
+                    initialCamera:
+                        widget.initialCamera ?? MapStyleConfig.defaultCamera,
+                    geometry: widget.geometry,
+                    selectedPlaceId: selected?.id,
+                    verifiedPlaceIds: context
+                        .read<AppServices>()
+                        .verifiedPlaces
+                        .ids,
+                    onWaypointTap: widget.onWaypointTap,
+                    onReady: (controller) {
+                      _map = controller;
+                      widget.onReady?.call(controller);
+                    },
+                    onLayersReady: widget.onLayersReady,
+                    onMapFailed: () {
+                      if (mounted) setState(() => _mapFailed = true);
+                    },
+                    onPlaceTap: _controller.select,
+                    onBackgroundTap: () => _controller.select(null),
+                    onViewportChanged: _controller.setViewport,
+                  );
                 },
-                onLayersReady: widget.onLayersReady,
-                onMapFailed: () {
-                  if (mounted) setState(() => _mapFailed = true);
-                },
-                onPlaceTap: _controller.select,
-                onBackgroundTap: () => _controller.select(null),
-                onViewportChanged: _controller.setViewport,
               )
             : const MapFallbackCanvas(),
         if (_mapFailed)
@@ -294,7 +303,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
               userLocation: _controller.userLocation,
               compact: widget.compact,
               onClose: () => _controller.select(null),
-              onVerify: () => _onVerify(selected, strings),
+              onVerify: () => _onVerify(selected),
             ),
           ),
       ],
@@ -404,14 +413,16 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     );
   }
 
-  void _onVerify(Place place, AppStrings strings) {
+  void _onVerify(Place place) {
     final waypoint = _waypointFor(place);
     if (waypoint != null) {
-      context.push('/verify/${waypoint.challengeId}/${waypoint.id}');
+      context.push(
+        '/verify/${waypoint.challengeId}/${waypoint.id}',
+        extra: place,
+      );
       return;
     }
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(strings.verifyInChallengeHint)));
+    context.push('/verify/place/${place.id}', extra: place);
   }
 
   Waypoint? _waypointFor(Place place) {

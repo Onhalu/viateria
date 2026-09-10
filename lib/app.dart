@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'data/app_services.dart';
 import 'l10n/locale_controller.dart';
 import 'l10n/sdk_fallback_localizations.dart';
+import 'map/place.dart';
 import 'theme/app_theme.dart';
 import 'ui/screens/auth_screen.dart';
 import 'ui/screens/catalog_screen.dart';
@@ -102,11 +103,27 @@ class _ViateriaAppState extends State<ViateriaApp> {
         ),
         GoRoute(
           parentNavigatorKey: rootKey,
+          path: '/verify/place/:placeId',
+          builder: (context, state) {
+            final extra = state.extra;
+            return VerifyWaypointScreen(
+              placeId: state.pathParameters['placeId']!,
+              place: extra is Place ? extra : null,
+            );
+          },
+        ),
+        GoRoute(
+          parentNavigatorKey: rootKey,
           path: '/verify/:challengeId/:waypointId',
-          builder: (context, state) => VerifyWaypointScreen(
-            challengeId: state.pathParameters['challengeId']!,
-            waypointId: state.pathParameters['waypointId']!,
-          ),
+          builder: (context, state) {
+            final extra = state.extra;
+            return VerifyWaypointScreen(
+              challengeId: state.pathParameters['challengeId']!,
+              waypointId: state.pathParameters['waypointId']!,
+              placeId: extra is Place ? extra.id : null,
+              place: extra is Place ? extra : null,
+            );
+          },
         ),
         GoRoute(
           parentNavigatorKey: rootKey,

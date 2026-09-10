@@ -1,5 +1,5 @@
-/// VerifyWaypoint v1: a live camera capture is required.
-/// Gallery / files / GPS are out of scope for this version.
+/// Stop verification: GPS within [VerifyProximity.radiusMeters] is primary.
+/// Live camera photo is the fallback. Gallery / files stay rejected.
 enum PhotoSource { liveCamera, gallery, unknown }
 
 class PhotoCaptureRequest {
@@ -11,7 +11,8 @@ class PhotoCaptureRequest {
 class PhotoVerifyPolicy {
   const PhotoVerifyPolicy();
 
-  /// Gallery and unknown sources are rejected. GPS is not consulted.
+  /// Gallery and unknown sources are rejected. GPS is handled separately
+  /// before this photo fallback runs.
   bool allows(PhotoCaptureRequest request) =>
       request.source == PhotoSource.liveCamera;
 

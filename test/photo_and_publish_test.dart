@@ -5,7 +5,7 @@ import 'package:viateria/models/models.dart';
 void main() {
   const policy = PhotoVerifyPolicy();
 
-  test('live camera photos are required; gallery is rejected', () {
+  test('live camera photos are required for the photo fallback; gallery is rejected', () {
     expect(
       policy.allows(const PhotoCaptureRequest(source: PhotoSource.liveCamera)),
       isTrue,

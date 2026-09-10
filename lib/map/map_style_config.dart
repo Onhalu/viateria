@@ -43,6 +43,10 @@ abstract final class MapStyleConfig {
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 
+  /// Provisional verified fill (UX may change this hex).
+  static const verifiedHex = '#B8860B';
+  static const verifiedUnderlayColor = 'rgba(184, 134, 11, 0.22)';
+
   static const searchDebounce = Duration(milliseconds: 300);
   static const searchLimit = 20;
   static const moveEndThrottle = Duration(milliseconds: 300);
@@ -52,14 +56,46 @@ abstract final class MapStyleConfig {
 
   static const hikeSourceId = 'challenge-hike';
   static const bikeSourceId = 'challenge-bike';
-  static const pointsSourceId = 'challenge-points';
   static const hikeLayerId = 'challenge-hike-line';
   static const bikeLayerId = 'challenge-bike-line';
-  static const circleLayerId = 'challenge-circles';
-  static const labelLayerId = 'challenge-labels';
 
   static const CameraPosition defaultCamera = CameraPosition(
     target: czechCenter,
     zoom: defaultZoom,
   );
+
+  /// Tint priority: verified > inChallenge > out (sage).
+  static const markerColorExpression = [
+    Expressions.caseExpression,
+    [
+      Expressions.equal,
+      [Expressions.get, 'verified'],
+      1,
+    ],
+    verifiedHex,
+    [
+      Expressions.equal,
+      [Expressions.get, 'inChallenge'],
+      1,
+    ],
+    forestHex,
+    sageHex,
+  ];
+
+  static const underlayColorExpression = [
+    Expressions.caseExpression,
+    [
+      Expressions.equal,
+      [Expressions.get, 'verified'],
+      1,
+    ],
+    verifiedUnderlayColor,
+    [
+      Expressions.equal,
+      [Expressions.get, 'inChallenge'],
+      1,
+    ],
+    selectedUnderlayColor,
+    sageUnderlayColor,
+  ];
 }
