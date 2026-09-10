@@ -70,7 +70,7 @@ void main() {
     expect(cs.t('catTechnical'), 'Technická památka');
     expect(cs.t('catHistorical'), 'Historická památka');
     expect(cs.verify, 'Ověřit zastávku');
-    expect(cs.verifyInChallengeHint, 'Ověření je ve výzvě');
+    expect(cs.verifyInChallengeHint, 'Ověření je ve výzvě.');
   });
 
   test('GeoJSON marks selected and in-challenge places', () {
