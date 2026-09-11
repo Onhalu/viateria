@@ -391,7 +391,7 @@ void main() {
       },
     );
 
-    testWidgets('pay CTAs use cs / de product labels', (tester) async {
+    testWidgets('pay CTAs use Czech product labels', (tester) async {
       useTallView(tester);
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
@@ -404,7 +404,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Digitální diplom'), findsOneWidget);
       expect(find.text('Medaile + diplom'), findsOneWidget);
+    });
 
+    testWidgets('pay CTAs use German product labels', (tester) async {
+      useTallView(tester);
+      final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
           buildServices(detail: story),
