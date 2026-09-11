@@ -155,9 +155,9 @@ class _FilterBodyState extends State<_FilterBody> {
       selectedColor: MapPalette.forest,
       checkmarkColor: MapPalette.cream,
       labelStyle: TextStyle(
-        color: selected ? MapPalette.cream : MapPalette.forest,
+        color: selected ? MapPalette.cream : MapPalette.bark,
       ),
-      backgroundColor: MapPalette.beige,
+      backgroundColor: MapPalette.cream,
       side: BorderSide(color: selected ? MapPalette.forest : MapPalette.beige),
       onSelected: onSelected,
     );
@@ -260,6 +260,7 @@ class PlaceDetailSheet extends StatelessWidget {
                     key: const Key('map-poi-close'),
                     onPressed: onClose,
                     style: OutlinedButton.styleFrom(
+                      backgroundColor: MapPalette.cream,
                       foregroundColor: MapPalette.forest,
                       side: const BorderSide(color: MapPalette.beige),
                       minimumSize: Size.fromHeight(buttonHeight),

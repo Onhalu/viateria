@@ -1,11 +1,11 @@
 {
-    "name": "viateria",
-    "short_name": "viateria",
+    "name": "VANDERY",
+    "short_name": "VANDERY",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F3EFE5",
+    "theme_color": "#35483C",
+    "description": "VANDERY — gamified tourist challenges.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

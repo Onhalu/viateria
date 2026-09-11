@@ -287,7 +287,7 @@ class AppStrings {
 
   static const _tables = <String, Map<String, String>>{
     'en': {
-      'appName': 'Viateria',
+      'appName': 'VANDERY',
       'catalogTitle': 'Challenges',
       'catalogEmpty': 'No published challenges yet.',
       'catalogEmptyHint':
@@ -424,7 +424,7 @@ class AppStrings {
       'routeNavigatingBike': 'Cycling navigation',
     },
     'cs': {
-      'appName': 'Viateria',
+      'appName': 'VANDERY',
       'catalogTitle': 'Výzvy',
       'catalogEmpty': 'Zatím žádné zveřejněné výzvy.',
       'catalogEmptyHint':
@@ -560,7 +560,7 @@ class AppStrings {
       'routeNavigatingBike': 'Navigace na kole',
     },
     'de': {
-      'appName': 'Viateria',
+      'appName': 'VANDERY',
       'catalogTitle': 'Challenges',
       'catalogEmpty': 'Noch keine veröffentlichten Challenges.',
       'catalogEmptyHint':

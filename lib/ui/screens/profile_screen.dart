@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/app_services.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
+import '../../theme/brand_assets.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -27,6 +28,8 @@ class ProfileScreen extends StatelessWidget {
       child: ListView(
         children: [
           const SizedBox(height: 24),
+          const Center(child: BrandMark(size: 48)),
+          const SizedBox(height: 16),
           Center(
             child: CircleAvatar(
               radius: 36,

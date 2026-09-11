@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/locale_controller.dart';
+import '../../theme/brand_colors.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -31,7 +32,7 @@ class AppShell extends StatelessWidget {
           child: Material(
             key: const Key('app-bottom-nav-shell'),
             elevation: 3,
-            color: Colors.white,
+            color: BrandColors.cream,
             shadowColor: Colors.black26,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(barRadius),
