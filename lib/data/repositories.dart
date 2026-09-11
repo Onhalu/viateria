@@ -73,7 +73,10 @@ abstract class ProgressRepository {
 
 abstract class PurchaseRepository {
   Future<Purchase?> fetchPurchase(String challengeId);
-  Future<CheckoutSession> startCheckout(String challengeId);
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  });
   Future<Purchase?> refreshPurchase(String challengeId);
 }
 

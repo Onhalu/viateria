@@ -51,6 +51,13 @@ RewardVariant? rewardVariantFromWire(String? value) => switch (value) {
   _ => null,
 };
 
+extension RewardVariantWire on RewardVariant {
+  String get wire => switch (this) {
+    RewardVariant.diploma => 'diploma',
+    RewardVariant.medalAndDiploma => 'medal_and_diploma',
+  };
+}
+
 DateTime? dateTimeFromWire(dynamic value) {
   if (value == null) return null;
   if (value is DateTime) return value;

@@ -36,6 +36,11 @@ Deno.serve(async (req) => {
   if (!challengeId) {
     return json({ error: "challenge_id required" }, 400);
   }
+  const rewardVariant =
+    body.reward_variant === "medal_and_diploma" ||
+    body.reward_variant === "medalAndDiploma"
+      ? "medal_and_diploma"
+      : "diploma";
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -80,6 +85,7 @@ Deno.serve(async (req) => {
     metadata: {
       user_id: user.id,
       challenge_id: challengeId,
+      reward_variant: rewardVariant,
     },
     client_reference_id: `${user.id}:${challengeId}`,
   });
@@ -92,6 +98,7 @@ Deno.serve(async (req) => {
       status: "pending",
       amount_cents: challenge.price_cents,
       currency: challenge.currency ?? "eur",
+      reward_variant: rewardVariant,
     },
     { onConflict: "user_id,challenge_id" },
   );

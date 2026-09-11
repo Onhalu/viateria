@@ -143,6 +143,8 @@ class AppStrings {
     'saveDiploma',
     'woodenMedal',
     'diplomaLabel',
+    'payDigitalDiploma',
+    'payMedalAndDiploma',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -277,6 +279,8 @@ class AppStrings {
   String get saveDiploma => t('saveDiploma');
   String get woodenMedal => t('woodenMedal');
   String get diplomaLabel => t('diplomaLabel');
+  String get payDigitalDiploma => t('payDigitalDiploma');
+  String get payMedalAndDiploma => t('payMedalAndDiploma');
 
   String difficultyLabel(String name) => t(name);
 
@@ -446,6 +450,8 @@ class AppStrings {
       'saveDiploma': 'Save diploma',
       'woodenMedal': 'Wooden medal',
       'diplomaLabel': 'Diploma',
+      'payDigitalDiploma': 'Digital diploma',
+      'payMedalAndDiploma': 'Medal + diploma',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -591,6 +597,8 @@ class AppStrings {
       'saveDiploma': 'Uložit diplom',
       'woodenMedal': 'Dřevěná medaile',
       'diplomaLabel': 'Diplom',
+      'payDigitalDiploma': 'Digitální diplom',
+      'payMedalAndDiploma': 'Medaile + diplom',
     },
     'de': {
       'appName': 'VANDERY',
@@ -735,6 +743,8 @@ class AppStrings {
       'saveDiploma': 'Diplom speichern',
       'woodenMedal': 'Holzmedaille',
       'diplomaLabel': 'Diplom',
+      'payDigitalDiploma': 'Digitales Diplom',
+      'payMedalAndDiploma': 'Medaille + Diplom',
     },
   };
 }

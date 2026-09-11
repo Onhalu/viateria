@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
     const userId = session.metadata?.user_id;
     const challengeId = session.metadata?.challenge_id;
     if (userId && challengeId) {
+      const rewardVariant = session.metadata?.reward_variant;
       await admin
         .from("purchases")
         .update({
@@ -43,6 +44,7 @@ Deno.serve(async (req) => {
             typeof session.payment_intent === "string"
               ? session.payment_intent
               : session.payment_intent?.id ?? null,
+          ...(rewardVariant ? { reward_variant: rewardVariant } : {}),
         })
         .eq("user_id", userId)
         .eq("challenge_id", challengeId);

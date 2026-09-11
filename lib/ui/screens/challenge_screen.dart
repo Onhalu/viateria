@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
@@ -80,13 +79,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _future;
   }
 
-  Future<void> _unlockPaid() async {
+  Future<void> _unlockPaid(RewardVariant variant) async {
     final services = context.read<AppServices>();
-    final session = await services.purchases.startCheckout(widget.challengeId);
-    await launchUrl(
-      Uri.parse(session.url),
-      mode: LaunchMode.externalApplication,
+    final session = await services.purchases.startCheckout(
+      widget.challengeId,
+      rewardVariant: variant,
     );
+    await services.openUrl(Uri.parse(session.url));
     await services.purchases.refreshPurchase(widget.challengeId);
     if (mounted) await _reload();
   }
@@ -390,6 +389,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               onStartNavigation: _startNavigation,
               onEndNavigation: _endNavigation,
             ),
+            if (copy.description.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(copy.description, key: const Key('challenge-info')),
+            ],
             const SizedBox(height: 16),
             Text(
               strings.waypoints,
@@ -416,10 +419,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
-            if (copy.description.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(copy.description, key: const Key('challenge-info')),
-            ],
             if (!hasAccess) ...[
               const SizedBox(height: 16),
               Text(
@@ -427,9 +426,49 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 key: const Key('challenge-unlock-cta'),
               ),
               const SizedBox(height: 8),
-              FilledButton(
-                onPressed: _unlockPaid,
-                child: Text(strings.unlockWithStripe),
+              Row(
+                key: const Key('challenge-pay-ctas'),
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      key: const Key('challenge-pay-diploma'),
+                      onPressed: () => _unlockPaid(RewardVariant.diploma),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: BrandColors.cream,
+                        foregroundColor: BrandColors.forest,
+                        side: const BorderSide(color: BrandColors.forest),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: Text(
+                        strings.payDigitalDiploma,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      key: const Key('challenge-pay-medal'),
+                      onPressed: () =>
+                          _unlockPaid(RewardVariant.medalAndDiploma),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: BrandColors.forest,
+                        foregroundColor: BrandColors.cream,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: Text(
+                        strings.payMedalAndDiploma,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               if (data.purchase?.status == PurchaseStatus.pending)
                 Padding(

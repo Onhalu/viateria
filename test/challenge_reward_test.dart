@@ -37,6 +37,7 @@ AppServices buildServices({
     purchases: purchases ?? MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
+    openUrl: (_) async {},
   );
 }
 
@@ -183,6 +184,8 @@ void main() {
         rewardVariantFromWire('medalAndDiploma'),
         RewardVariant.medalAndDiploma,
       );
+      expect(RewardVariant.diploma.wire, 'diploma');
+      expect(RewardVariant.medalAndDiploma.wire, 'medal_and_diploma');
       expect(rewardVariantFromWire(null), isNull);
       expect(dateTimeFromWire(null), isNull);
       expect(
@@ -215,6 +218,33 @@ void main() {
       expect(refreshed!.isPaid, isTrue);
       expect(refreshed.paidAt, isNotNull);
       expect(refreshed.rewardVariant, RewardVariant.diploma);
+    });
+
+    test('checkout persists the chosen reward variant through pay', () async {
+      final diploma = MemoryPurchases();
+      await diploma.startCheckout(
+        'open-1',
+        rewardVariant: RewardVariant.diploma,
+      );
+      expect(diploma.purchases['open-1']!.rewardVariant, RewardVariant.diploma);
+      expect(
+        (await diploma.refreshPurchase('open-1'))!.rewardVariant,
+        RewardVariant.diploma,
+      );
+
+      final medal = MemoryPurchases();
+      await medal.startCheckout(
+        'story-1',
+        rewardVariant: RewardVariant.medalAndDiploma,
+      );
+      expect(
+        medal.purchases['story-1']!.rewardVariant,
+        RewardVariant.medalAndDiploma,
+      );
+      expect(
+        (await medal.refreshPurchase('story-1'))!.rewardVariant,
+        RewardVariant.medalAndDiploma,
+      );
     });
   });
 
@@ -255,7 +285,7 @@ void main() {
     });
 
     testWidgets(
-      'title, map, planner, places, then info sit above deadline and reward',
+      'title, map, planner, info, then places sit above deadline and reward',
       (tester) async {
         useTallView(tester);
         final strings = AppStrings('en');
@@ -267,10 +297,10 @@ void main() {
             .dy;
         final mapY = tester.getTopLeft(find.byType(ChallengeMap)).dy;
         final plannerY = tester.getTopLeft(find.byType(RoutePlannerPanel)).dy;
-        final waypointsY = tester.getTopLeft(find.text(strings.waypoints)).dy;
         final infoY = tester
             .getTopLeft(find.byKey(const Key('challenge-info')))
             .dy;
+        final waypointsY = tester.getTopLeft(find.text(strings.waypoints)).dy;
         final deadlineY = tester
             .getTopLeft(find.byKey(const Key('challenge-deadline-banner')))
             .dy;
@@ -279,18 +309,20 @@ void main() {
             .dy;
         expect(titleY, lessThan(mapY));
         expect(mapY, lessThan(plannerY));
-        expect(plannerY, lessThan(waypointsY));
-        expect(waypointsY, lessThan(infoY));
-        expect(infoY, lessThan(deadlineY));
+        expect(plannerY, lessThan(infoY));
+        expect(infoY, lessThan(waypointsY));
+        expect(waypointsY, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
         expect(find.byKey(const Key('challenge-unlock-cta')), findsNothing);
+        expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
         expect(find.text('Visit any stop'), findsOneWidget);
         expect(find.text('Open trail'), findsOneWidget);
+        expect(find.text(strings.waypoints), findsOneWidget);
       },
     );
 
     testWidgets(
-      'pay CTA sits after challenge info and before deadline and reward',
+      'info, places, then side-by-side pay CTAs sit above deadline and reward',
       (tester) async {
         useTallView(tester);
         final strings = AppStrings('en');
@@ -307,12 +339,13 @@ void main() {
         final infoY = tester
             .getTopLeft(find.byKey(const Key('challenge-info')))
             .dy;
-        final payY = tester
-            .getTopLeft(find.byKey(const Key('challenge-unlock-cta')))
-            .dy;
-        final stripeY = tester
-            .getTopLeft(find.text(strings.unlockWithStripe))
-            .dy;
+        final waypointsY = tester.getTopLeft(find.text(strings.waypoints)).dy;
+        final diploma = tester.getRect(
+          find.byKey(const Key('challenge-pay-diploma')),
+        );
+        final medal = tester.getRect(
+          find.byKey(const Key('challenge-pay-medal')),
+        );
         final deadlineY = tester
             .getTopLeft(find.byKey(const Key('challenge-deadline-banner')))
             .dy;
@@ -321,12 +354,96 @@ void main() {
             .dy;
         expect(find.text('Unlock in order'), findsOneWidget);
         expect(find.text(strings.challengeLockedPaid), findsOneWidget);
-        expect(infoY, lessThan(payY));
-        expect(payY, lessThan(stripeY));
-        expect(stripeY, lessThan(deadlineY));
+        expect(find.text(strings.waypoints), findsOneWidget);
+        expect(find.text(strings.payDigitalDiploma), findsOneWidget);
+        expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
+        expect(find.text(strings.unlockWithStripe), findsNothing);
+        expect(infoY, lessThan(waypointsY));
+        expect(waypointsY, lessThan(diploma.top));
+        expect(diploma.left, lessThan(medal.left));
+        expect((diploma.center.dy - medal.center.dy).abs(), lessThan(1));
+        expect(medal.left - diploma.right, inInclusiveRange(8, 12));
+        expect(medal.bottom, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
+
+        final diplomaButton = tester.widget<OutlinedButton>(
+          find.byKey(const Key('challenge-pay-diploma')),
+        );
+        final medalButton = tester.widget<FilledButton>(
+          find.byKey(const Key('challenge-pay-medal')),
+        );
+        expect(
+          diplomaButton.style?.foregroundColor?.resolve(const {}),
+          BrandColors.forest,
+        );
+        expect(
+          diplomaButton.style?.side?.resolve(const {})?.color,
+          BrandColors.forest,
+        );
+        expect(
+          medalButton.style?.backgroundColor?.resolve(const {}),
+          BrandColors.forest,
+        );
+        expect(
+          medalButton.style?.foregroundColor?.resolve(const {}),
+          BrandColors.cream,
+        );
       },
     );
+
+    testWidgets('pay CTAs use cs / de product labels', (tester) async {
+      useTallView(tester);
+      final story = sampleStoryChallenge();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story),
+          locale: 'cs',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Digitální diplom'), findsOneWidget);
+      expect(find.text('Medaile + diplom'), findsOneWidget);
+
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story),
+          locale: 'de',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Digitales Diplom'), findsOneWidget);
+      expect(find.text('Medaille + Diplom'), findsOneWidget);
+    });
+
+    testWidgets('tapping a pay CTA persists that variant on the purchase', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final purchases = MemoryPurchases();
+      final story = sampleStoryChallenge();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story, purchases: purchases),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('challenge-pay-medal')));
+      await tester.tap(find.byKey(const Key('challenge-pay-medal')));
+      await tester.pumpAndSettle();
+
+      expect(purchases.purchases['story-1']!.isPaid, isTrue);
+      expect(
+        purchases.purchases['story-1']!.rewardVariant,
+        RewardVariant.medalAndDiploma,
+      );
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+      expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
+    });
 
     testWidgets(
       'locked unpaid reward shows both placeholders and is not tappable',

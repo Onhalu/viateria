@@ -226,13 +226,18 @@ class MemoryPurchases implements PurchaseRepository {
   }
 
   @override
-  Future<CheckoutSession> startCheckout(String challengeId) async {
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  }) async {
+    const session = CheckoutSession(url: 'https://checkout.stripe.com/test');
     purchases[challengeId] = Purchase(
       challengeId: challengeId,
       status: PurchaseStatus.pending,
-      rewardVariant: purchases[challengeId]?.rewardVariant,
+      checkoutUrl: session.url,
+      rewardVariant: rewardVariant ?? purchases[challengeId]?.rewardVariant,
     );
-    return const CheckoutSession(url: 'https://checkout.stripe.com/test');
+    return session;
   }
 }
 

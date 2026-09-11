@@ -78,7 +78,10 @@ class UnconfiguredPurchases implements PurchaseRepository {
   Future<Purchase?> refreshPurchase(String challengeId) async => null;
 
   @override
-  Future<CheckoutSession> startCheckout(String challengeId) {
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  }) {
     throw StateError('Stripe is not configured');
   }
 }

@@ -346,10 +346,16 @@ class SupabasePurchaseRepository implements PurchaseRepository {
   }
 
   @override
-  Future<CheckoutSession> startCheckout(String challengeId) async {
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  }) async {
     final response = await _client.functions.invoke(
       'create-checkout-session',
-      body: {'challenge_id': challengeId},
+      body: {
+        'challenge_id': challengeId,
+        if (rewardVariant != null) 'reward_variant': rewardVariant.wire,
+      },
     );
     final data = Map<String, dynamic>.from(response.data as Map);
     final url = data['url'] as String?;
