@@ -428,49 +428,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 key: const Key('challenge-unlock-cta'),
               ),
               const SizedBox(height: 8),
-              Row(
-                key: const Key('challenge-pay-ctas'),
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      key: const Key('challenge-pay-diploma'),
-                      onPressed: () => _unlockPaid(RewardVariant.diploma),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: BrandColors.cream,
-                        foregroundColor: BrandColors.forest,
-                        side: const BorderSide(color: BrandColors.forest),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 14,
-                        ),
-                      ),
-                      child: Text(
-                        strings.payDigitalDiploma,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      key: const Key('challenge-pay-medal'),
-                      onPressed: () =>
-                          _unlockPaid(RewardVariant.medalAndDiploma),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: BrandColors.forest,
-                        foregroundColor: BrandColors.cream,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 14,
-                        ),
-                      ),
-                      child: Text(
-                        strings.payMedalAndDiploma,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
+              _ChallengePayCtas(
+                strings: strings,
+                onPay: _unlockPaid,
               ),
               if (data.purchase?.status == PurchaseStatus.pending)
                 Padding(
@@ -512,6 +472,100 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               ],
             ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
+    );
+  }
+}
+
+class _ChallengePayCtas extends StatelessWidget {
+  const _ChallengePayCtas({required this.strings, required this.onPay});
+
+  static const gap = 10.0;
+  static const minHeight = 48.0;
+  static const narrowBreakpoint = 320.0;
+
+  final AppStrings strings;
+  final ValueChanged<RewardVariant> onPay;
+
+  @override
+  Widget build(BuildContext context) {
+    final stack = MediaQuery.sizeOf(context).width < narrowBreakpoint;
+    final diploma = _payButton(
+      key: const Key('challenge-pay-diploma'),
+      outlined: true,
+      label: strings.payDigitalDiploma,
+      onPressed: () => onPay(RewardVariant.diploma),
+    );
+    final medal = _payButton(
+      key: const Key('challenge-pay-medal'),
+      outlined: false,
+      label: strings.payMedalAndDiploma,
+      onPressed: () => onPay(RewardVariant.medalAndDiploma),
+    );
+    if (stack) {
+      return Column(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          diploma,
+          const SizedBox(height: gap),
+          medal,
+        ],
+      );
+    }
+    return IntrinsicHeight(
+      child: Row(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(flex: 1, child: diploma),
+          const SizedBox(width: gap),
+          Expanded(flex: 1, child: medal),
+        ],
+      ),
+    );
+  }
+
+  Widget _payButton({
+    required Key key,
+    required bool outlined,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    final child = Text(
+      label,
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+    const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 12);
+    if (outlined) {
+      return OutlinedButton(
+        key: key,
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, minHeight),
+          backgroundColor: BrandColors.cream,
+          foregroundColor: BrandColors.forest,
+          side: const BorderSide(color: BrandColors.forest),
+          padding: padding,
+          alignment: Alignment.center,
+          visualDensity: VisualDensity.standard,
+        ),
+        child: child,
+      );
+    }
+    return FilledButton(
+      key: key,
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(0, minHeight),
+        backgroundColor: BrandColors.forest,
+        foregroundColor: BrandColors.cream,
+        padding: padding,
+        alignment: Alignment.center,
+        visualDensity: VisualDensity.standard,
+      ),
+      child: child,
     );
   }
 }

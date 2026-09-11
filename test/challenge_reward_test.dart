@@ -73,9 +73,18 @@ MemoryProgress completedProgress(ChallengeDetail detail) {
 }
 
 void useTallView(WidgetTester tester) {
-  tester.view.physicalSize = const Size(800, 4000);
+  useView(tester, width: 800, height: 4000);
+}
+
+void useView(
+  WidgetTester tester, {
+  required double width,
+  double height = 4000,
+}) {
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
 }
 
 void main() {
@@ -363,8 +372,16 @@ void main() {
         expect(diploma.left, lessThan(medal.left));
         expect((diploma.center.dy - medal.center.dy).abs(), lessThan(1));
         expect(medal.left - diploma.right, inInclusiveRange(8, 12));
+        expect(diploma.height, greaterThanOrEqualTo(48));
+        expect(medal.height, greaterThanOrEqualTo(48));
+        expect((diploma.height - medal.height).abs(), lessThan(1));
+        expect((diploma.width - medal.width).abs(), lessThan(1));
         expect(medal.bottom, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
+        expect(
+          tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
+          isA<Row>(),
+        );
 
         final diplomaButton = tester.widget<OutlinedButton>(
           find.byKey(const Key('challenge-pay-diploma')),
@@ -372,6 +389,22 @@ void main() {
         final medalButton = tester.widget<FilledButton>(
           find.byKey(const Key('challenge-pay-medal')),
         );
+        final diplomaLabel = tester.widget<Text>(
+          find.descendant(
+            of: find.byKey(const Key('challenge-pay-diploma')),
+            matching: find.byType(Text),
+          ),
+        );
+        final medalLabel = tester.widget<Text>(
+          find.descendant(
+            of: find.byKey(const Key('challenge-pay-medal')),
+            matching: find.byType(Text),
+          ),
+        );
+        expect(diplomaLabel.maxLines, 2);
+        expect(diplomaLabel.textAlign, TextAlign.center);
+        expect(medalLabel.maxLines, 2);
+        expect(medalLabel.textAlign, TextAlign.center);
         expect(
           diplomaButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.forest,
@@ -419,6 +452,58 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Digitales Diplom'), findsOneWidget);
       expect(find.text('Medaille + Diplom'), findsOneWidget);
+    });
+
+    testWidgets('pay CTAs stack only when the viewport is under 320 dp', (
+      tester,
+    ) async {
+      useView(tester, width: 319);
+      final story = sampleStoryChallenge();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
+        isA<Column>(),
+      );
+      final diploma = tester.getRect(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
+      final medal = tester.getRect(find.byKey(const Key('challenge-pay-medal')));
+      expect(diploma.bottom, lessThanOrEqualTo(medal.top));
+      expect(medal.top - diploma.bottom, inInclusiveRange(8, 12));
+      expect(diploma.height, greaterThanOrEqualTo(48));
+      expect(medal.height, greaterThanOrEqualTo(48));
+    });
+
+    testWidgets('pay CTAs stay side-by-side at 320 dp', (tester) async {
+      useView(tester, width: 320);
+      final story = sampleStoryChallenge();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
+        isA<Row>(),
+      );
+      final diploma = tester.getRect(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
+      final medal = tester.getRect(find.byKey(const Key('challenge-pay-medal')));
+      expect(diploma.left, lessThan(medal.left));
+      expect((diploma.height - medal.height).abs(), lessThan(1));
+      expect((diploma.width - medal.width).abs(), lessThan(1));
     });
 
     testWidgets('tapping a pay CTA persists that variant on the purchase', (
