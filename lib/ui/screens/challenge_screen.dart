@@ -326,11 +326,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           children: [
             Text(
               copy.title,
+              key: const Key('challenge-title'),
               style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 8),
-            Text(copy.description),
             const SizedBox(height: 12),
             ChallengeMap(
               waypoints: waypoints,
@@ -417,6 +416,27 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
+            if (copy.description.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(copy.description, key: const Key('challenge-info')),
+            ],
+            if (!hasAccess) ...[
+              const SizedBox(height: 16),
+              Text(
+                strings.challengeLockedPaid,
+                key: const Key('challenge-unlock-cta'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _unlockPaid,
+                child: Text(strings.unlockWithStripe),
+              ),
+              if (data.purchase?.status == PurchaseStatus.pending)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(strings.purchasePending),
+                ),
+            ],
             const SizedBox(height: 16),
             ChallengeDeadlineBanner(
               strings: strings,
@@ -434,20 +454,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   ? () => context.push('/diploma/${challenge.id}', extra: data)
                   : null,
             ),
-            if (!hasAccess) ...[
-              const SizedBox(height: 16),
-              Text(strings.challengeLockedPaid),
-              const SizedBox(height: 8),
-              FilledButton(
-                onPressed: _unlockPaid,
-                child: Text(strings.unlockWithStripe),
-              ),
-              if (data.purchase?.status == PurchaseStatus.pending)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(strings.purchasePending),
-                ),
-            ],
           ],
         );
       },

@@ -13,6 +13,7 @@ import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/challenge_reward_section.dart';
+import 'package:viateria/ui/widgets/route_planner_panel.dart';
 
 import 'helpers/fakes.dart';
 
@@ -253,26 +254,79 @@ void main() {
       expect(find.text('Sep 11, 2026'), findsOneWidget);
     });
 
-    testWidgets('deadline sits above reward, both below map and waypoints', (
-      tester,
-    ) async {
-      useTallView(tester);
-      final strings = AppStrings('cs');
-      await tester.pumpWidget(wrapScreen(buildServices()));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'title, map, planner, places, then info sit above deadline and reward',
+      (tester) async {
+        useTallView(tester);
+        final strings = AppStrings('en');
+        await tester.pumpWidget(wrapScreen(buildServices(), locale: 'en'));
+        await tester.pumpAndSettle();
 
-      final mapY = tester.getTopLeft(find.byType(ChallengeMap)).dy;
-      final waypointsY = tester.getTopLeft(find.text(strings.waypoints)).dy;
-      final deadlineY = tester
-          .getTopLeft(find.byKey(const Key('challenge-deadline-banner')))
-          .dy;
-      final rewardY = tester
-          .getTopLeft(find.byKey(const Key('challenge-reward-section')))
-          .dy;
-      expect(mapY, lessThan(waypointsY));
-      expect(waypointsY, lessThan(deadlineY));
-      expect(deadlineY, lessThan(rewardY));
-    });
+        final titleY = tester
+            .getTopLeft(find.byKey(const Key('challenge-title')))
+            .dy;
+        final mapY = tester.getTopLeft(find.byType(ChallengeMap)).dy;
+        final plannerY = tester.getTopLeft(find.byType(RoutePlannerPanel)).dy;
+        final waypointsY = tester.getTopLeft(find.text(strings.waypoints)).dy;
+        final infoY = tester
+            .getTopLeft(find.byKey(const Key('challenge-info')))
+            .dy;
+        final deadlineY = tester
+            .getTopLeft(find.byKey(const Key('challenge-deadline-banner')))
+            .dy;
+        final rewardY = tester
+            .getTopLeft(find.byKey(const Key('challenge-reward-section')))
+            .dy;
+        expect(titleY, lessThan(mapY));
+        expect(mapY, lessThan(plannerY));
+        expect(plannerY, lessThan(waypointsY));
+        expect(waypointsY, lessThan(infoY));
+        expect(infoY, lessThan(deadlineY));
+        expect(deadlineY, lessThan(rewardY));
+        expect(find.byKey(const Key('challenge-unlock-cta')), findsNothing);
+        expect(find.text('Visit any stop'), findsOneWidget);
+        expect(find.text('Open trail'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'pay CTA sits after challenge info and before deadline and reward',
+      (tester) async {
+        useTallView(tester);
+        final strings = AppStrings('en');
+        final story = sampleStoryChallenge();
+        await tester.pumpWidget(
+          wrapScreen(
+            buildServices(detail: story),
+            locale: 'en',
+            challengeId: 'story-1',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final infoY = tester
+            .getTopLeft(find.byKey(const Key('challenge-info')))
+            .dy;
+        final payY = tester
+            .getTopLeft(find.byKey(const Key('challenge-unlock-cta')))
+            .dy;
+        final stripeY = tester
+            .getTopLeft(find.text(strings.unlockWithStripe))
+            .dy;
+        final deadlineY = tester
+            .getTopLeft(find.byKey(const Key('challenge-deadline-banner')))
+            .dy;
+        final rewardY = tester
+            .getTopLeft(find.byKey(const Key('challenge-reward-section')))
+            .dy;
+        expect(find.text('Unlock in order'), findsOneWidget);
+        expect(find.text(strings.challengeLockedPaid), findsOneWidget);
+        expect(infoY, lessThan(payY));
+        expect(payY, lessThan(stripeY));
+        expect(stripeY, lessThan(deadlineY));
+        expect(deadlineY, lessThan(rewardY));
+      },
+    );
 
     testWidgets(
       'locked unpaid reward shows both placeholders and is not tappable',
