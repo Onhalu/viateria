@@ -196,14 +196,41 @@ class MemoryPurchases implements PurchaseRepository {
       purchases[challengeId];
 
   @override
-  Future<Purchase?> refreshPurchase(String challengeId) =>
-      fetchPurchase(challengeId);
+  Future<Purchase?> refreshPurchase(String challengeId) async {
+    final current = purchases[challengeId];
+    if (current != null && current.status == PurchaseStatus.pending) {
+      return pay(
+        challengeId,
+        rewardVariant: current.rewardVariant ?? RewardVariant.diploma,
+      );
+    }
+    return current;
+  }
+
+  /// Marks the purchase paid and stamps [Purchase.paidAt].
+  Purchase pay(
+    String challengeId, {
+    DateTime? paidAt,
+    RewardVariant? rewardVariant = RewardVariant.diploma,
+  }) {
+    final current = purchases[challengeId];
+    final purchase = Purchase(
+      challengeId: challengeId,
+      status: PurchaseStatus.paid,
+      checkoutUrl: current?.checkoutUrl,
+      paidAt: paidAt ?? DateTime.now(),
+      rewardVariant: rewardVariant ?? current?.rewardVariant,
+    );
+    purchases[challengeId] = purchase;
+    return purchase;
+  }
 
   @override
   Future<CheckoutSession> startCheckout(String challengeId) async {
     purchases[challengeId] = Purchase(
       challengeId: challengeId,
       status: PurchaseStatus.pending,
+      rewardVariant: purchases[challengeId]?.rewardVariant,
     );
     return const CheckoutSession(url: 'https://checkout.stripe.com/test');
   }

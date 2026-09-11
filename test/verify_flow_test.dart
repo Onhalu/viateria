@@ -164,9 +164,10 @@ void main() {
       progress: MemoryProgress(details: [story]),
       purchases: MemoryPurchases(
         purchases: {
-          'story-1': const Purchase(
+          'story-1': Purchase(
             challengeId: 'story-1',
             status: PurchaseStatus.paid,
+            paidAt: DateTime.utc(2026, 3, 11),
           ),
         },
       ),

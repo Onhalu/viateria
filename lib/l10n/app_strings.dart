@@ -135,6 +135,14 @@ class AppStrings {
     'routeEndNavigation',
     'routeNavigatingWalk',
     'routeNavigatingBike',
+    'deadlineCompleteBy',
+    'deadlineAfterPayment',
+    'rewardTitle',
+    'rewardUnlocksAfterComplete',
+    'rewardDependsOnPaidOption',
+    'saveDiploma',
+    'woodenMedal',
+    'diplomaLabel',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -261,6 +269,14 @@ class AppStrings {
   String get routeEndNavigation => t('routeEndNavigation');
   String get routeNavigatingWalk => t('routeNavigatingWalk');
   String get routeNavigatingBike => t('routeNavigatingBike');
+  String get deadlineCompleteBy => t('deadlineCompleteBy');
+  String get deadlineAfterPayment => t('deadlineAfterPayment');
+  String get rewardTitle => t('rewardTitle');
+  String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
+  String get rewardDependsOnPaidOption => t('rewardDependsOnPaidOption');
+  String get saveDiploma => t('saveDiploma');
+  String get woodenMedal => t('woodenMedal');
+  String get diplomaLabel => t('diplomaLabel');
 
   String difficultyLabel(String name) => t(name);
 
@@ -422,6 +438,14 @@ class AppStrings {
       'routeEndNavigation': 'End navigation',
       'routeNavigatingWalk': 'Walking navigation',
       'routeNavigatingBike': 'Cycling navigation',
+      'deadlineCompleteBy': 'Complete by',
+      'deadlineAfterPayment': 'Deadline after payment',
+      'rewardTitle': 'Reward',
+      'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
+      'rewardDependsOnPaidOption': 'Reward depends on your paid option',
+      'saveDiploma': 'Save diploma',
+      'woodenMedal': 'Wooden medal',
+      'diplomaLabel': 'Diploma',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -558,6 +582,15 @@ class AppStrings {
       'routeEndNavigation': 'Ukončit navigaci',
       'routeNavigatingWalk': 'Navigace pěšky',
       'routeNavigatingBike': 'Navigace na kole',
+      'deadlineCompleteBy': 'Výzvu splň do',
+      'deadlineAfterPayment': 'Termín po zaplacení',
+      'rewardTitle': 'Odměna',
+      'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
+      'rewardDependsOnPaidOption':
+          'Odměna podle zvolené varianty po zaplacení',
+      'saveDiploma': 'Uložit diplom',
+      'woodenMedal': 'Dřevěná medaile',
+      'diplomaLabel': 'Diplom',
     },
     'de': {
       'appName': 'VANDERY',
@@ -694,6 +727,14 @@ class AppStrings {
       'routeEndNavigation': 'Navigation beenden',
       'routeNavigatingWalk': 'Fußnavigation',
       'routeNavigatingBike': 'Radnavigation',
+      'deadlineCompleteBy': 'Erfüllen bis',
+      'deadlineAfterPayment': 'Frist nach Zahlung',
+      'rewardTitle': 'Belohnung',
+      'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
+      'rewardDependsOnPaidOption': 'Belohnung je nach gewählter Variante',
+      'saveDiploma': 'Diplom speichern',
+      'woodenMedal': 'Holzmedaille',
+      'diplomaLabel': 'Diplom',
     },
   };
 }

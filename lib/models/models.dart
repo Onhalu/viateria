@@ -55,6 +55,7 @@ class Challenge {
     this.coverImageUrl,
     this.region,
     this.stripePriceId,
+    this.rewardVariant,
   });
 
   final String id;
@@ -68,6 +69,7 @@ class Challenge {
   final String? coverImageUrl;
   final String? region;
   final String? stripePriceId;
+  final RewardVariant? rewardVariant;
 
   bool get isPaid => pricingType == PricingType.paid;
 
@@ -170,11 +172,17 @@ class Purchase {
     required this.challengeId,
     required this.status,
     this.checkoutUrl,
+    this.paidAt,
+    this.rewardVariant,
   });
 
   final String challengeId;
   final PurchaseStatus status;
   final String? checkoutUrl;
+
+  /// Set when [status] becomes [PurchaseStatus.paid]. Null while unpaid.
+  final DateTime? paidAt;
+  final RewardVariant? rewardVariant;
 
   bool get isPaid => status == PurchaseStatus.paid;
 }

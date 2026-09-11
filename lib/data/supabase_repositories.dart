@@ -41,6 +41,7 @@ Challenge _challengeFromRow(Map<String, dynamic> row) {
     coverImageUrl: row['cover_image_url'] as String?,
     region: row['region'] as String?,
     stripePriceId: row['stripe_price_id'] as String?,
+    rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),
     translations: _i18nFromRows(row['challenge_i18n']),
   );
 }
@@ -326,6 +327,8 @@ class SupabasePurchaseRepository implements PurchaseRepository {
     return Purchase(
       challengeId: row['challenge_id'] as String,
       status: purchaseStatusFromWire(row['status'] as String? ?? 'pending'),
+      paidAt: dateTimeFromWire(row['paid_at']),
+      rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),
     );
   }
 

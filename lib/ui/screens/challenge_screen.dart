@@ -8,6 +8,7 @@ import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
 import '../../data/repositories.dart';
 import '../../data/route_services.dart';
+import '../../domain/challenge_reward.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
@@ -16,6 +17,7 @@ import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
 import '../widgets/challenge_map.dart';
+import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/route_planner_panel.dart';
 
@@ -85,6 +87,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       Uri.parse(session.url),
       mode: LaunchMode.externalApplication,
     );
+    await services.purchases.refreshPurchase(widget.challengeId);
     if (mounted) await _reload();
   }
 
@@ -305,6 +308,19 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           waypoints: waypoints,
           completedWaypointIds: completed,
         );
+        final purchasePaid = data.purchase?.isPaid ?? false;
+        final completeBy = ChallengeCompletionWindow.completeBy(
+          data.purchase?.paidAt,
+        );
+        final rewardUnlocked = ChallengeReward.isUnlocked(
+          challengeCompleted: isComplete,
+          purchasePaid: purchasePaid,
+          requiresPurchase: challenge.isPaid,
+        );
+        final rewardVariant = ChallengeReward.variant(
+          purchase: data.purchase,
+          productVariant: challenge.rewardVariant,
+        );
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -315,6 +331,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             ),
             const SizedBox(height: 8),
             Text(copy.description),
+            if (waypoints.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _ChallengeHeroProgress(
+                completed: completed.length,
+                total: waypoints.length,
+              ),
+            ],
             const SizedBox(height: 12),
             ChallengeMap(
               waypoints: waypoints,
@@ -376,29 +399,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               onEndNavigation: _endNavigation,
             ),
             const SizedBox(height: 16),
-            if (!hasAccess) ...[
-              Text(strings.challengeLockedPaid),
-              const SizedBox(height: 8),
-              FilledButton(
-                onPressed: _unlockPaid,
-                child: Text(strings.unlockWithStripe),
-              ),
-              if (data.purchase?.status == PurchaseStatus.pending)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(strings.purchasePending),
-                ),
-            ],
-            if (isComplete)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      context.push('/diploma/${challenge.id}', extra: data),
-                  child: Text(strings.viewDiploma),
-                ),
-              ),
-            const SizedBox(height: 16),
             Text(
               strings.waypoints,
               style: Theme.of(context).textTheme.titleMedium,
@@ -424,6 +424,37 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
+            const SizedBox(height: 16),
+            ChallengeDeadlineBanner(
+              strings: strings,
+              locale: locale,
+              paid: purchasePaid,
+              completeBy: completeBy,
+            ),
+            const SizedBox(height: 16),
+            ChallengeRewardSection(
+              strings: strings,
+              unlocked: rewardUnlocked,
+              paid: purchasePaid,
+              variant: rewardVariant,
+              onSaveDiploma: rewardUnlocked
+                  ? () => context.push('/diploma/${challenge.id}', extra: data)
+                  : null,
+            ),
+            if (!hasAccess) ...[
+              const SizedBox(height: 16),
+              Text(strings.challengeLockedPaid),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: _unlockPaid,
+                child: Text(strings.unlockWithStripe),
+              ),
+              if (data.purchase?.status == PurchaseStatus.pending)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(strings.purchasePending),
+                ),
+            ],
           ],
         );
       },
@@ -441,6 +472,45 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               ],
             ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
+    );
+  }
+}
+
+class _ChallengeHeroProgress extends StatelessWidget {
+  const _ChallengeHeroProgress({
+    required this.completed,
+    required this.total,
+  });
+
+  final int completed;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = total == 0 ? 0.0 : completed / total;
+    return Column(
+      key: const Key('challenge-hero-progress'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: value,
+            minHeight: 6,
+            color: BrandColors.forest,
+            backgroundColor: BrandColors.beige,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '$completed / $total',
+          style: const TextStyle(
+            color: BrandColors.bark,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
