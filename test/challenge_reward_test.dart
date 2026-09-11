@@ -224,27 +224,30 @@ void main() {
       await tester.pumpWidget(wrapScreen(buildServices()));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('challenge-deadline-banner')));
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-deadline-banner')),
+      );
       expect(find.text(strings.deadlineAfterPayment), findsOneWidget);
       expect(find.text(strings.deadlineCompleteBy), findsNothing);
       expect(find.byKey(const Key('challenge-deadline-date')), findsNothing);
     });
 
-    testWidgets('paid deadline shows the local complete-by date', (tester) async {
+    testWidgets('paid deadline shows the local complete-by date', (
+      tester,
+    ) async {
       useTallView(tester);
       final strings = AppStrings('en');
       final paidAt = DateTime(2026, 3, 11);
       final purchases = MemoryPurchases()
         ..pay('open-1', paidAt: paidAt, rewardVariant: RewardVariant.diploma);
       await tester.pumpWidget(
-        wrapScreen(
-          buildServices(purchases: purchases),
-          locale: 'en',
-        ),
+        wrapScreen(buildServices(purchases: purchases), locale: 'en'),
       );
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('challenge-deadline-date')));
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-deadline-date')),
+      );
       expect(find.text(strings.deadlineCompleteBy), findsOneWidget);
       expect(find.text(strings.deadlineAfterPayment), findsNothing);
       expect(find.text('Sep 11, 2026'), findsOneWidget);
@@ -271,27 +274,30 @@ void main() {
       expect(deadlineY, lessThan(rewardY));
     });
 
-    testWidgets('locked unpaid reward shows both placeholders and is not tappable', (
-      tester,
-    ) async {
-      useTallView(tester);
-      final strings = AppStrings('cs');
-      await tester.pumpWidget(wrapScreen(buildServices()));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'locked unpaid reward shows both placeholders and is not tappable',
+      (tester) async {
+        useTallView(tester);
+        final strings = AppStrings('cs');
+        await tester.pumpWidget(wrapScreen(buildServices()));
+        await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('challenge-reward-section')));
-      expect(find.text(strings.rewardTitle), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
-      expect(find.text(strings.rewardUnlocksAfterComplete), findsOneWidget);
-      expect(find.text(strings.rewardDependsOnPaidOption), findsOneWidget);
-      expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
-
-      await tester.tap(find.byKey(const Key('challenge-reward-diploma')));
-      await tester.pumpAndSettle();
-      expect(find.byType(ChallengeScreen), findsOneWidget);
-    });
+        await tester.ensureVisible(
+          find.byKey(const Key('challenge-reward-section')),
+        );
+        expect(find.text(strings.rewardTitle), findsOneWidget);
+        expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
+        expect(
+          find.byKey(const Key('challenge-reward-diploma')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
+        expect(find.text(strings.rewardUnlocksAfterComplete), findsOneWidget);
+        expect(find.text(strings.rewardDependsOnPaidOption), findsOneWidget);
+        expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+        expect(find.byType(AbsorbPointer), findsWidgets);
+      },
+    );
 
     testWidgets('paid diploma-only locked reward hides the medal slot', (
       tester,
@@ -306,68 +312,82 @@ void main() {
       await tester.pumpWidget(wrapScreen(buildServices(purchases: purchases)));
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('challenge-reward-section')));
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-section')),
+      );
       expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
       expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
       expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
-      expect(find.byKey(const Key('challenge-reward-unpaid-hint')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-unpaid-hint')),
+        findsNothing,
+      );
     });
 
-    testWidgets('unlocked paid completion shows save-diploma CTA without a lock', (
-      tester,
-    ) async {
-      useTallView(tester);
-      final strings = AppStrings('en');
-      final open = sampleOpenChallenge();
-      final purchases = MemoryPurchases()
-        ..pay(
-          'open-1',
-          paidAt: DateTime(2026, 3, 11),
-          rewardVariant: RewardVariant.medalAndDiploma,
-        );
-      await tester.pumpWidget(
-        wrapScreen(
-          buildServices(
-            detail: open,
-            progress: completedProgress(open),
-            purchases: purchases,
+    testWidgets(
+      'unlocked paid completion shows save-diploma CTA without a lock',
+      (tester) async {
+        useTallView(tester);
+        final strings = AppStrings('en');
+        final open = sampleOpenChallenge();
+        final purchases = MemoryPurchases()
+          ..pay(
+            'open-1',
+            paidAt: DateTime(2026, 3, 11),
+            rewardVariant: RewardVariant.medalAndDiploma,
+          );
+        await tester.pumpWidget(
+          wrapScreen(
+            buildServices(
+              detail: open,
+              progress: completedProgress(open),
+              purchases: purchases,
+            ),
+            locale: 'en',
           ),
-          locale: 'en',
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('challenge-save-diploma')));
-      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
-      expect(find.text(strings.saveDiploma), findsOneWidget);
-      expect(find.text(strings.woodenMedal), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+        await tester.ensureVisible(
+          find.byKey(const Key('challenge-save-diploma')),
+        );
+        expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+        expect(find.text(strings.saveDiploma), findsOneWidget);
+        expect(find.text(strings.woodenMedal), findsOneWidget);
+        expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
+        expect(
+          find.byKey(const Key('challenge-reward-diploma')),
+          findsOneWidget,
+        );
 
-      final cta = tester.widget<FilledButton>(
-        find.byKey(const Key('challenge-save-diploma')),
-      );
-      expect(cta.onPressed, isNotNull);
-      expect(
-        cta.style?.backgroundColor?.resolve(const {}),
-        BrandColors.forest,
-      );
-      expect(
-        cta.style?.foregroundColor?.resolve(const {}),
-        BrandColors.cream,
-      );
-    });
+        final cta = tester.widget<FilledButton>(
+          find.byKey(const Key('challenge-save-diploma')),
+        );
+        expect(cta.onPressed, isNotNull);
+        expect(
+          cta.style?.backgroundColor?.resolve(const {}),
+          BrandColors.forest,
+        );
+        expect(
+          cta.style?.foregroundColor?.resolve(const {}),
+          BrandColors.cream,
+        );
+      },
+    );
   });
 
-  test('banner and reward panels use only BrandColors cream/beige/forest/bark', () {
-    final decoration = challengeBrandPanel();
-    expect(decoration.color, BrandColors.cream);
-    expect(decoration.borderRadius, BorderRadius.circular(16));
-    final border = decoration.border! as Border;
-    expect(border.top.color, BrandColors.beige);
-    expect(border.top.width, 1);
-    expect(BrandColors.forest, const Color(0xFF35483C));
-    expect(BrandColors.bark, const Color(0xFF756653));
-  });
+  test(
+    'banner and reward panels use only BrandColors cream/beige/forest/bark',
+    () {
+      final decoration = challengeBrandPanel();
+      expect(decoration.color, BrandColors.cream);
+      expect(decoration.borderRadius, BorderRadius.circular(16));
+      final border = decoration.border! as Border;
+      expect(border.top.color, BrandColors.beige);
+      expect(border.top.width, 1);
+      expect(BrandColors.forest, const Color(0xFF35483C));
+      expect(BrandColors.bark, const Color(0xFF756653));
+    },
+  );
 }

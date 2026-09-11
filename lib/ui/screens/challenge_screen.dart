@@ -331,13 +331,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             ),
             const SizedBox(height: 8),
             Text(copy.description),
-            if (waypoints.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              _ChallengeHeroProgress(
-                completed: completed.length,
-                total: waypoints.length,
-              ),
-            ],
             const SizedBox(height: 12),
             ChallengeMap(
               waypoints: waypoints,
@@ -472,45 +465,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               ],
             ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
-    );
-  }
-}
-
-class _ChallengeHeroProgress extends StatelessWidget {
-  const _ChallengeHeroProgress({
-    required this.completed,
-    required this.total,
-  });
-
-  final int completed;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final value = total == 0 ? 0.0 : completed / total;
-    return Column(
-      key: const Key('challenge-hero-progress'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: value,
-            minHeight: 6,
-            color: BrandColors.forest,
-            backgroundColor: BrandColors.beige,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '$completed / $total',
-          style: const TextStyle(
-            color: BrandColors.bark,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }

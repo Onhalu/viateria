@@ -161,10 +161,7 @@ class ChallengeRewardSection extends StatelessWidget {
                 Text(
                   strings.rewardUnlocksAfterComplete,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: BrandColors.bark,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: BrandColors.bark, fontSize: 13),
                 ),
               ],
             ),
@@ -203,7 +200,10 @@ class ChallengeRewardSection extends StatelessWidget {
     );
   }
 
-  Widget _placeholders({required bool includeLabels, bool woodenMedal = false}) {
+  Widget _placeholders({
+    required bool includeLabels,
+    bool woodenMedal = false,
+  }) {
     final diploma = _DiplomaPlaceholder(
       label: includeLabels ? strings.diplomaLabel : null,
     );

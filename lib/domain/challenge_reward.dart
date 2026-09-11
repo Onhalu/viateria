@@ -1,5 +1,3 @@
-import 'package:intl/intl.dart';
-
 import '../models/models.dart';
 
 /// Completion window for every challenge until per-challenge windows exist.
@@ -47,6 +45,21 @@ abstract final class ChallengeReward {
   }
 }
 
+const _enShortMonths = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
 /// Locale-typical calendar date (no time). Uses the device local calendar day.
 String formatLocalDate(DateTime date, String locale) {
   final local = date.toLocal();
@@ -57,6 +70,6 @@ String formatLocalDate(DateTime date, String locale) {
     'cs' => '$day. $month. $year',
     'de' =>
       '${day.toString().padLeft(2, '0')}.${month.toString().padLeft(2, '0')}.$year',
-    _ => DateFormat.yMMMd('en').format(local),
+    _ => '${_enShortMonths[month - 1]} $day, $year',
   };
 }
