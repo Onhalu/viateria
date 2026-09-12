@@ -36,6 +36,11 @@ Deno.serve(async (req) => {
   if (!challengeId) {
     return json({ error: "challenge_id required" }, 400);
   }
+  const rewardVariant =
+    body.reward_variant === "medal_and_diploma" ||
+    body.reward_variant === "medalAndDiploma"
+      ? "medal_and_diploma"
+      : "diploma";
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -44,7 +49,9 @@ Deno.serve(async (req) => {
 
   const { data: challenge, error } = await admin
     .from("challenges")
-    .select("id, pricing_type, price_cents, currency, status, stripe_price_id, challenge_i18n(locale, title)")
+    .select(
+      "id, pricing_type, price_cents, diploma_price_cents, medal_price_cents, currency, status, stripe_price_id, stripe_price_id_diploma, stripe_price_id_medal, challenge_i18n(locale, title)",
+    )
     .eq("id", challengeId)
     .eq("status", "published")
     .single();
@@ -61,18 +68,26 @@ Deno.serve(async (req) => {
     challenge.challenge_i18n?.find((row: { locale: string }) => row.locale === "en")
       ?.title ?? "Viateria challenge";
 
+  const isMedal = rewardVariant === "medal_and_diploma";
+  const stripePriceId = isMedal
+    ? (challenge.stripe_price_id_medal ?? challenge.stripe_price_id)
+    : (challenge.stripe_price_id_diploma ?? challenge.stripe_price_id);
+  const amountCents = isMedal
+    ? (challenge.medal_price_cents ?? challenge.price_cents)
+    : (challenge.diploma_price_cents ?? challenge.price_cents);
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     success_url: `${origin}/challenge/${challengeId}?checkout=success`,
     cancel_url: `${origin}/challenge/${challengeId}?checkout=cancel`,
-    line_items: challenge.stripe_price_id
-      ? [{ price: challenge.stripe_price_id, quantity: 1 }]
+    line_items: stripePriceId
+      ? [{ price: stripePriceId, quantity: 1 }]
       : [
           {
             quantity: 1,
             price_data: {
               currency: challenge.currency ?? "eur",
-              unit_amount: challenge.price_cents,
+              unit_amount: amountCents,
               product_data: { name: title },
             },
           },
@@ -80,6 +95,7 @@ Deno.serve(async (req) => {
     metadata: {
       user_id: user.id,
       challenge_id: challengeId,
+      reward_variant: rewardVariant,
     },
     client_reference_id: `${user.id}:${challengeId}`,
   });
@@ -90,8 +106,9 @@ Deno.serve(async (req) => {
       challenge_id: challengeId,
       stripe_checkout_session_id: session.id,
       status: "pending",
-      amount_cents: challenge.price_cents,
+      amount_cents: amountCents,
       currency: challenge.currency ?? "eur",
+      reward_variant: rewardVariant,
     },
     { onConflict: "user_id,challenge_id" },
   );

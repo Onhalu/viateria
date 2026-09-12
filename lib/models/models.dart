@@ -55,21 +55,59 @@ class Challenge {
     this.coverImageUrl,
     this.region,
     this.stripePriceId,
+    this.stripePriceIdDiploma,
+    this.stripePriceIdMedal,
+    this.rewardVariant,
+    this.diplomaPriceCents,
+    this.medalPriceCents,
   });
 
   final String id;
   final String slug;
   final AccessMode accessMode;
   final PricingType pricingType;
+
+  /// Catalog-card fallback. Same as the diploma (entry) SKU when
+  /// [diplomaPriceCents] is not stored separately.
   final int priceCents;
+
+  /// Digitální diplom / [RewardVariant.diploma]. Null when unset in the catalog.
+  final int? diplomaPriceCents;
+
+  /// Medaile + diplom / [RewardVariant.medalAndDiploma] total. Null when unset.
+  final int? medalPriceCents;
   final String currency;
   final PublishStatus status;
   final List<LocalizedText> translations;
   final String? coverImageUrl;
   final String? region;
+
+  /// Legacy shared Stripe Price id. Used when a per-SKU id is unset.
   final String? stripePriceId;
+  final String? stripePriceIdDiploma;
+  final String? stripePriceIdMedal;
+  final RewardVariant? rewardVariant;
 
   bool get isPaid => pricingType == PricingType.paid;
+
+  int? skuPriceCents(RewardVariant variant) => switch (variant) {
+    RewardVariant.diploma => diplomaPriceCents,
+    RewardVariant.medalAndDiploma => medalPriceCents,
+  };
+
+  /// Pay-CTA amount. Diploma may use [priceCents] when the SKU column is
+  /// missing. Null / ≤0 means the price line should be hidden.
+  int? displayPriceCents(RewardVariant variant) {
+    final sku = skuPriceCents(variant);
+    if (sku != null) return sku > 0 ? sku : null;
+    if (variant == RewardVariant.diploma && priceCents > 0) return priceCents;
+    return null;
+  }
+
+  String? stripePriceIdFor(RewardVariant variant) => switch (variant) {
+    RewardVariant.diploma => stripePriceIdDiploma ?? stripePriceId,
+    RewardVariant.medalAndDiploma => stripePriceIdMedal ?? stripePriceId,
+  };
 
   LocalizedText copyFor(String locale) => pickLocale(translations, locale);
 }
@@ -101,10 +139,7 @@ class Waypoint {
 }
 
 class ChallengeDetail {
-  const ChallengeDetail({
-    required this.challenge,
-    required this.waypoints,
-  });
+  const ChallengeDetail({required this.challenge, required this.waypoints});
 
   final Challenge challenge;
   final List<Waypoint> waypoints;
@@ -170,11 +205,17 @@ class Purchase {
     required this.challengeId,
     required this.status,
     this.checkoutUrl,
+    this.paidAt,
+    this.rewardVariant,
   });
 
   final String challengeId;
   final PurchaseStatus status;
   final String? checkoutUrl;
+
+  /// Set when [status] becomes [PurchaseStatus.paid]. Null while unpaid.
+  final DateTime? paidAt;
+  final RewardVariant? rewardVariant;
 
   bool get isPaid => status == PurchaseStatus.paid;
 }

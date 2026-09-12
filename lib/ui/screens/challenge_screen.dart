@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
 import '../../data/repositories.dart';
 import '../../data/route_services.dart';
+import '../../domain/challenge_reward.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
@@ -16,6 +16,7 @@ import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
 import '../widgets/challenge_map.dart';
+import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/route_planner_panel.dart';
 
@@ -74,17 +75,20 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
     await _future;
   }
 
-  Future<void> _unlockPaid() async {
+  Future<void> _unlockPaid(RewardVariant variant) async {
     final services = context.read<AppServices>();
-    final session = await services.purchases.startCheckout(widget.challengeId);
-    await launchUrl(
-      Uri.parse(session.url),
-      mode: LaunchMode.externalApplication,
+    final session = await services.purchases.startCheckout(
+      widget.challengeId,
+      rewardVariant: variant,
     );
+    await services.openUrl(Uri.parse(session.url));
+    await services.purchases.refreshPurchase(widget.challengeId);
     if (mounted) await _reload();
   }
 
@@ -305,16 +309,28 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           waypoints: waypoints,
           completedWaypointIds: completed,
         );
+        final purchasePaid = data.purchase?.isPaid ?? false;
+        final completeBy = ChallengeCompletionWindow.completeBy(
+          data.purchase?.paidAt,
+        );
+        final rewardUnlocked = ChallengeReward.isUnlocked(
+          challengeCompleted: isComplete,
+          purchasePaid: purchasePaid,
+          requiresPurchase: challenge.isPaid,
+        );
+        final rewardVariant = ChallengeReward.variant(
+          purchase: data.purchase,
+          productVariant: challenge.rewardVariant,
+        );
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Text(
               copy.title,
+              key: const Key('challenge-title'),
               style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 8),
-            Text(copy.description),
             const SizedBox(height: 12),
             ChallengeMap(
               waypoints: waypoints,
@@ -375,13 +391,21 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               onStartNavigation: _startNavigation,
               onEndNavigation: _endNavigation,
             ),
-            const SizedBox(height: 16),
+            if (copy.description.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(copy.description, key: const Key('challenge-info')),
+            ],
             if (!hasAccess) ...[
-              Text(strings.challengeLockedPaid),
+              const SizedBox(height: 16),
+              Text(
+                strings.challengeLockedPaid,
+                key: const Key('challenge-unlock-cta'),
+              ),
               const SizedBox(height: 8),
-              FilledButton(
-                onPressed: _unlockPaid,
-                child: Text(strings.unlockWithStripe),
+              _ChallengePayCtas(
+                strings: strings,
+                challenge: challenge,
+                onPay: _unlockPaid,
               ),
               if (data.purchase?.status == PurchaseStatus.pending)
                 Padding(
@@ -389,15 +413,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   child: Text(strings.purchasePending),
                 ),
             ],
-            if (isComplete)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      context.push('/diploma/${challenge.id}', extra: data),
-                  child: Text(strings.viewDiploma),
-                ),
-              ),
             const SizedBox(height: 16),
             Text(
               strings.waypoints,
@@ -424,6 +439,23 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
+            const SizedBox(height: 16),
+            ChallengeDeadlineBanner(
+              strings: strings,
+              locale: locale,
+              paid: purchasePaid,
+              completeBy: completeBy,
+            ),
+            const SizedBox(height: 16),
+            ChallengeRewardSection(
+              strings: strings,
+              unlocked: rewardUnlocked,
+              paid: purchasePaid,
+              variant: rewardVariant,
+              onSaveDiploma: rewardUnlocked
+                  ? () => context.push('/diploma/${challenge.id}', extra: data)
+                  : null,
+            ),
           ],
         );
       },
@@ -441,6 +473,142 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               ],
             ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
+    );
+  }
+}
+
+class _ChallengePayCtas extends StatelessWidget {
+  const _ChallengePayCtas({
+    required this.strings,
+    required this.challenge,
+    required this.onPay,
+  });
+
+  static const gap = 10.0;
+  static const minHeight = 48.0;
+  static const narrowBreakpoint = 320.0;
+  static const priceSize = 13.5;
+
+  final AppStrings strings;
+  final Challenge challenge;
+  final ValueChanged<RewardVariant> onPay;
+
+  @override
+  Widget build(BuildContext context) {
+    final stack = MediaQuery.sizeOf(context).width < narrowBreakpoint;
+    final diploma = _payButton(
+      key: const Key('challenge-pay-diploma'),
+      priceKey: const Key('challenge-pay-diploma-price'),
+      outlined: true,
+      label: strings.payDigitalDiploma,
+      price: formatChallengePrice(
+        challenge.displayPriceCents(RewardVariant.diploma),
+        challenge.currency,
+        strings.locale,
+      ),
+      onPressed: () => onPay(RewardVariant.diploma),
+    );
+    final medal = _payButton(
+      key: const Key('challenge-pay-medal'),
+      priceKey: const Key('challenge-pay-medal-price'),
+      outlined: false,
+      label: strings.payMedalAndDiploma,
+      price: formatChallengePrice(
+        challenge.displayPriceCents(RewardVariant.medalAndDiploma),
+        challenge.currency,
+        strings.locale,
+      ),
+      onPressed: () => onPay(RewardVariant.medalAndDiploma),
+    );
+    if (stack) {
+      return Column(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          diploma,
+          const SizedBox(height: gap),
+          medal,
+        ],
+      );
+    }
+    return IntrinsicHeight(
+      child: Row(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(flex: 1, child: diploma),
+          const SizedBox(width: gap),
+          Expanded(flex: 1, child: medal),
+        ],
+      ),
+    );
+  }
+
+  Widget _payButton({
+    required Key key,
+    required Key priceKey,
+    required bool outlined,
+    required String label,
+    required String? price,
+    required VoidCallback onPressed,
+  }) {
+    final child = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (price != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            price,
+            key: priceKey,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: priceSize,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+              color: BrandColors.bark,
+            ),
+          ),
+        ],
+      ],
+    );
+    const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 12);
+    if (outlined) {
+      return OutlinedButton(
+        key: key,
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, minHeight),
+          backgroundColor: BrandColors.cream,
+          foregroundColor: BrandColors.forest,
+          side: const BorderSide(color: BrandColors.forest),
+          padding: padding,
+          alignment: Alignment.center,
+          visualDensity: VisualDensity.standard,
+        ),
+        child: child,
+      );
+    }
+    return FilledButton(
+      key: key,
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(0, minHeight),
+        backgroundColor: BrandColors.forest,
+        foregroundColor: BrandColors.cream,
+        padding: padding,
+        alignment: Alignment.center,
+        visualDensity: VisualDensity.standard,
+      ),
+      child: child,
     );
   }
 }

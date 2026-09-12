@@ -29,18 +29,27 @@ List<LocalizedText> _i18nFromRows(
       .toList();
 }
 
+/// Maps a `challenges` row. SKU columns stay nullable. Pay CTAs hide a
+/// line when that SKU is null/≤0; diploma may use `price_cents` as the
+/// catalog fallback when `diploma_price_cents` is missing.
 Challenge _challengeFromRow(Map<String, dynamic> row) {
+  final priceCents = (row['price_cents'] as num?)?.toInt() ?? 0;
   return Challenge(
     id: row['id'] as String,
     slug: row['slug'] as String,
     accessMode: accessModeFromWire(row['access_mode'] as String? ?? 'open'),
     pricingType: pricingTypeFromWire(row['pricing_type'] as String? ?? 'free'),
-    priceCents: (row['price_cents'] as num?)?.toInt() ?? 0,
+    priceCents: priceCents,
+    diplomaPriceCents: (row['diploma_price_cents'] as num?)?.toInt(),
+    medalPriceCents: (row['medal_price_cents'] as num?)?.toInt(),
     currency: row['currency'] as String? ?? 'eur',
     status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
     coverImageUrl: row['cover_image_url'] as String?,
     region: row['region'] as String?,
     stripePriceId: row['stripe_price_id'] as String?,
+    stripePriceIdDiploma: row['stripe_price_id_diploma'] as String?,
+    stripePriceIdMedal: row['stripe_price_id_medal'] as String?,
+    rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),
     translations: _i18nFromRows(row['challenge_i18n']),
   );
 }
@@ -326,6 +335,8 @@ class SupabasePurchaseRepository implements PurchaseRepository {
     return Purchase(
       challengeId: row['challenge_id'] as String,
       status: purchaseStatusFromWire(row['status'] as String? ?? 'pending'),
+      paidAt: dateTimeFromWire(row['paid_at']),
+      rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),
     );
   }
 
@@ -343,10 +354,16 @@ class SupabasePurchaseRepository implements PurchaseRepository {
   }
 
   @override
-  Future<CheckoutSession> startCheckout(String challengeId) async {
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  }) async {
     final response = await _client.functions.invoke(
       'create-checkout-session',
-      body: {'challenge_id': challengeId},
+      body: {
+        'challenge_id': challengeId,
+        if (rewardVariant != null) 'reward_variant': rewardVariant.wire,
+      },
     );
     final data = Map<String, dynamic>.from(response.data as Map);
     final url = data['url'] as String?;

@@ -90,6 +90,9 @@ class MemoryAuth implements AuthRepository {
   }
 }
 
+/// In-memory catalog. Challenges carry both SKU prices
+/// (`diplomaPriceCents` / `medalPriceCents`); `priceCents` is the diploma
+/// fallback used by catalog cards.
 class MemoryCatalog implements CatalogRepository {
   MemoryCatalog({
     List<Challenge>? challenges,
@@ -196,16 +199,48 @@ class MemoryPurchases implements PurchaseRepository {
       purchases[challengeId];
 
   @override
-  Future<Purchase?> refreshPurchase(String challengeId) =>
-      fetchPurchase(challengeId);
+  Future<Purchase?> refreshPurchase(String challengeId) async {
+    final current = purchases[challengeId];
+    if (current != null && current.status == PurchaseStatus.pending) {
+      return pay(
+        challengeId,
+        rewardVariant: current.rewardVariant ?? RewardVariant.diploma,
+      );
+    }
+    return current;
+  }
+
+  /// Marks the purchase paid and stamps [Purchase.paidAt].
+  Purchase pay(
+    String challengeId, {
+    DateTime? paidAt,
+    RewardVariant? rewardVariant = RewardVariant.diploma,
+  }) {
+    final current = purchases[challengeId];
+    final purchase = Purchase(
+      challengeId: challengeId,
+      status: PurchaseStatus.paid,
+      checkoutUrl: current?.checkoutUrl,
+      paidAt: paidAt ?? DateTime.now(),
+      rewardVariant: rewardVariant ?? current?.rewardVariant,
+    );
+    purchases[challengeId] = purchase;
+    return purchase;
+  }
 
   @override
-  Future<CheckoutSession> startCheckout(String challengeId) async {
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  }) async {
+    const session = CheckoutSession(url: 'https://checkout.stripe.com/test');
     purchases[challengeId] = Purchase(
       challengeId: challengeId,
       status: PurchaseStatus.pending,
+      checkoutUrl: session.url,
+      rewardVariant: rewardVariant ?? purchases[challengeId]?.rewardVariant,
     );
-    return const CheckoutSession(url: 'https://checkout.stripe.com/test');
+    return session;
   }
 }
 
@@ -243,6 +278,8 @@ ChallengeDetail sampleOpenChallenge() {
     accessMode: AccessMode.open,
     pricingType: PricingType.free,
     priceCents: 0,
+    diplomaPriceCents: 0,
+    medalPriceCents: 0,
     currency: 'eur',
     status: PublishStatus.published,
     translations: [
@@ -284,8 +321,12 @@ ChallengeDetail sampleStoryChallenge() {
     slug: 'story-trail',
     accessMode: AccessMode.story,
     pricingType: PricingType.paid,
-    priceCents: 900,
+    priceCents: 499,
+    diplomaPriceCents: 499,
+    medalPriceCents: 900,
     currency: 'eur',
+    stripePriceIdDiploma: 'price_diploma_test',
+    stripePriceIdMedal: 'price_medal_test',
     status: PublishStatus.published,
     translations: [
       LocalizedText(

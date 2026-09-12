@@ -70,7 +70,7 @@ Storage bucket: `waypoint-photos` (`{user_id}/{challenge_id}/{waypoint_id}/{uuid
 
 ### Stripe
 
-1. Create a product/price (optional: store `stripe_price_id` on the challenge; otherwise `price_cents` is used)
+1. Create a product/price per SKU (optional: store `stripe_price_id_diploma` / `stripe_price_id_medal`; otherwise `diploma_price_cents` / `medal_price_cents` are used). `price_cents` is the catalog-card fallback and equals the diploma (entry) SKU.
 2. Deploy the two edge functions
 3. Point the webhook at `/functions/v1/stripe-webhook`
 
