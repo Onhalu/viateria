@@ -221,6 +221,7 @@ void main() {
         diplomaPriceCents: 19900,
         medalPriceCents: 39900,
         currency: 'czk',
+        status: PublishStatus.published,
         stripePriceId: 'price_legacy',
         stripePriceIdDiploma: 'price_diploma',
         stripePriceIdMedal: 'price_medal',
@@ -433,8 +434,14 @@ void main() {
         expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
         expect(find.text('€4.99'), findsOneWidget);
         expect(find.text('€9.00'), findsOneWidget);
-        expect(find.byKey(const Key('challenge-pay-diploma-price')), findsOneWidget);
-        expect(find.byKey(const Key('challenge-pay-medal-price')), findsOneWidget);
+        expect(
+          find.byKey(const Key('challenge-pay-diploma-price')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('challenge-pay-medal-price')),
+          findsOneWidget,
+        );
         expect(find.text(strings.unlockWithStripe), findsNothing);
         expect(infoY, lessThan(diploma.top));
         expect(medal.bottom, lessThan(waypointsY));
@@ -485,7 +492,10 @@ void main() {
         expect(diplomaPrice.style?.color, BrandColors.forest);
         expect(medalPrice.data, '€9.00');
         expect(medalPrice.style?.fontSize, 13.5);
-        expect(medalPrice.style?.color, BrandColors.cream.withValues(alpha: 0.82));
+        expect(
+          medalPrice.style?.color,
+          BrandColors.cream.withValues(alpha: 0.82),
+        );
         expect(
           diplomaButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.forest,
@@ -592,7 +602,9 @@ void main() {
       final diploma = tester.getRect(
         find.byKey(const Key('challenge-pay-diploma')),
       );
-      final medal = tester.getRect(find.byKey(const Key('challenge-pay-medal')));
+      final medal = tester.getRect(
+        find.byKey(const Key('challenge-pay-medal')),
+      );
       expect(diploma.bottom, lessThanOrEqualTo(medal.top));
       expect(medal.top - diploma.bottom, inInclusiveRange(8, 12));
       expect(diploma.height, greaterThanOrEqualTo(48));
@@ -617,7 +629,9 @@ void main() {
       final diploma = tester.getRect(
         find.byKey(const Key('challenge-pay-diploma')),
       );
-      final medal = tester.getRect(find.byKey(const Key('challenge-pay-medal')));
+      final medal = tester.getRect(
+        find.byKey(const Key('challenge-pay-medal')),
+      );
       expect(diploma.left, lessThan(medal.left));
       expect((diploma.height - medal.height).abs(), lessThan(1));
       expect((diploma.width - medal.width).abs(), lessThan(1));

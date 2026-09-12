@@ -131,10 +131,7 @@ class Waypoint {
 }
 
 class ChallengeDetail {
-  const ChallengeDetail({
-    required this.challenge,
-    required this.waypoints,
-  });
+  const ChallengeDetail({required this.challenge, required this.waypoints});
 
   final Challenge challenge;
   final List<Waypoint> waypoints;
