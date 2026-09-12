@@ -29,18 +29,25 @@ List<LocalizedText> _i18nFromRows(
       .toList();
 }
 
+/// Maps a `challenges` row. `price_cents` is the catalog fallback (diploma
+/// SKU). Per-SKU columns fall back to that amount when null.
 Challenge _challengeFromRow(Map<String, dynamic> row) {
+  final priceCents = (row['price_cents'] as num?)?.toInt() ?? 0;
   return Challenge(
     id: row['id'] as String,
     slug: row['slug'] as String,
     accessMode: accessModeFromWire(row['access_mode'] as String? ?? 'open'),
     pricingType: pricingTypeFromWire(row['pricing_type'] as String? ?? 'free'),
-    priceCents: (row['price_cents'] as num?)?.toInt() ?? 0,
+    priceCents: priceCents,
+    diplomaPriceCents: (row['diploma_price_cents'] as num?)?.toInt(),
+    medalPriceCents: (row['medal_price_cents'] as num?)?.toInt(),
     currency: row['currency'] as String? ?? 'eur',
     status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
     coverImageUrl: row['cover_image_url'] as String?,
     region: row['region'] as String?,
     stripePriceId: row['stripe_price_id'] as String?,
+    stripePriceIdDiploma: row['stripe_price_id_diploma'] as String?,
+    stripePriceIdMedal: row['stripe_price_id_medal'] as String?,
     rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),
     translations: _i18nFromRows(row['challenge_i18n']),
   );

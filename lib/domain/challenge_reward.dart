@@ -60,6 +60,20 @@ const _enShortMonths = [
   'Dec',
 ];
 
+/// Catalog / pay-CTA amount from minor units. `czk` → `199 Kč`, `eur` → `€4.99`.
+String formatChallengePrice(int cents, String currency) {
+  final code = currency.trim().toLowerCase();
+  final whole = cents % 100 == 0;
+  final amount = whole
+      ? '${cents ~/ 100}'
+      : (cents / 100).toStringAsFixed(2);
+  return switch (code) {
+    'czk' || 'kc' || 'kč' => '$amount Kč',
+    'eur' => whole ? '€$amount.00' : '€$amount',
+    _ => '$amount ${currency.trim().toUpperCase()}',
+  };
+}
+
 /// Locale-typical calendar date (no time). Uses the device local calendar day.
 String formatLocalDate(DateTime date, String locale) {
   final local = date.toLocal();

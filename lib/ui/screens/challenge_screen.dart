@@ -404,6 +404,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               const SizedBox(height: 8),
               _ChallengePayCtas(
                 strings: strings,
+                challenge: challenge,
                 onPay: _unlockPaid,
               ),
               if (data.purchase?.status == PurchaseStatus.pending)
@@ -477,13 +478,19 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 }
 
 class _ChallengePayCtas extends StatelessWidget {
-  const _ChallengePayCtas({required this.strings, required this.onPay});
+  const _ChallengePayCtas({
+    required this.strings,
+    required this.challenge,
+    required this.onPay,
+  });
 
   static const gap = 10.0;
   static const minHeight = 48.0;
   static const narrowBreakpoint = 320.0;
+  static const priceSize = 13.5;
 
   final AppStrings strings;
+  final Challenge challenge;
   final ValueChanged<RewardVariant> onPay;
 
   @override
@@ -491,14 +498,24 @@ class _ChallengePayCtas extends StatelessWidget {
     final stack = MediaQuery.sizeOf(context).width < narrowBreakpoint;
     final diploma = _payButton(
       key: const Key('challenge-pay-diploma'),
+      priceKey: const Key('challenge-pay-diploma-price'),
       outlined: true,
       label: strings.payDigitalDiploma,
+      price: formatChallengePrice(
+        challenge.priceCentsFor(RewardVariant.diploma),
+        challenge.currency,
+      ),
       onPressed: () => onPay(RewardVariant.diploma),
     );
     final medal = _payButton(
       key: const Key('challenge-pay-medal'),
+      priceKey: const Key('challenge-pay-medal-price'),
       outlined: false,
       label: strings.payMedalAndDiploma,
+      price: formatChallengePrice(
+        challenge.priceCentsFor(RewardVariant.medalAndDiploma),
+        challenge.currency,
+      ),
       onPressed: () => onPay(RewardVariant.medalAndDiploma),
     );
     if (stack) {
@@ -527,15 +544,39 @@ class _ChallengePayCtas extends StatelessWidget {
 
   Widget _payButton({
     required Key key,
+    required Key priceKey,
     required bool outlined,
     required String label,
+    required String price,
     required VoidCallback onPressed,
   }) {
-    final child = Text(
-      label,
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+    final child = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          price,
+          key: priceKey,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: priceSize,
+            fontWeight: FontWeight.w600,
+            height: 1.2,
+            color: outlined
+                ? BrandColors.forest
+                : BrandColors.cream.withValues(alpha: 0.82),
+          ),
+        ),
+      ],
     );
     const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 12);
     if (outlined) {

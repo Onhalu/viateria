@@ -90,6 +90,9 @@ class MemoryAuth implements AuthRepository {
   }
 }
 
+/// In-memory catalog. Challenges carry both SKU prices
+/// (`diplomaPriceCents` / `medalPriceCents`); `priceCents` is the diploma
+/// fallback used by catalog cards.
 class MemoryCatalog implements CatalogRepository {
   MemoryCatalog({
     List<Challenge>? challenges,
@@ -275,6 +278,8 @@ ChallengeDetail sampleOpenChallenge() {
     accessMode: AccessMode.open,
     pricingType: PricingType.free,
     priceCents: 0,
+    diplomaPriceCents: 0,
+    medalPriceCents: 0,
     currency: 'eur',
     status: PublishStatus.published,
     translations: [
@@ -316,8 +321,12 @@ ChallengeDetail sampleStoryChallenge() {
     slug: 'story-trail',
     accessMode: AccessMode.story,
     pricingType: PricingType.paid,
-    priceCents: 900,
+    priceCents: 499,
+    diplomaPriceCents: 499,
+    medalPriceCents: 900,
     currency: 'eur',
+    stripePriceIdDiploma: 'price_diploma_test',
+    stripePriceIdMedal: 'price_medal_test',
     status: PublishStatus.published,
     translations: [
       LocalizedText(

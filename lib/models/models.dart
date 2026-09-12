@@ -55,23 +55,51 @@ class Challenge {
     this.coverImageUrl,
     this.region,
     this.stripePriceId,
+    this.stripePriceIdDiploma,
+    this.stripePriceIdMedal,
     this.rewardVariant,
-  });
+    int? diplomaPriceCents,
+    int? medalPriceCents,
+  }) : diplomaPriceCents = diplomaPriceCents ?? priceCents,
+       medalPriceCents = medalPriceCents ?? priceCents;
 
   final String id;
   final String slug;
   final AccessMode accessMode;
   final PricingType pricingType;
+
+  /// Catalog-card fallback. Same as the diploma (entry) SKU when
+  /// [diplomaPriceCents] is not stored separately.
   final int priceCents;
+
+  /// Digitální diplom / [RewardVariant.diploma].
+  final int diplomaPriceCents;
+
+  /// Medaile + diplom / [RewardVariant.medalAndDiploma].
+  final int medalPriceCents;
   final String currency;
   final PublishStatus status;
   final List<LocalizedText> translations;
   final String? coverImageUrl;
   final String? region;
+
+  /// Legacy shared Stripe Price id. Used when a per-SKU id is unset.
   final String? stripePriceId;
+  final String? stripePriceIdDiploma;
+  final String? stripePriceIdMedal;
   final RewardVariant? rewardVariant;
 
   bool get isPaid => pricingType == PricingType.paid;
+
+  int priceCentsFor(RewardVariant variant) => switch (variant) {
+    RewardVariant.diploma => diplomaPriceCents,
+    RewardVariant.medalAndDiploma => medalPriceCents,
+  };
+
+  String? stripePriceIdFor(RewardVariant variant) => switch (variant) {
+    RewardVariant.diploma => stripePriceIdDiploma ?? stripePriceId,
+    RewardVariant.medalAndDiploma => stripePriceIdMedal ?? stripePriceId,
+  };
 
   LocalizedText copyFor(String locale) => pickLocale(translations, locale);
 }

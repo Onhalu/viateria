@@ -183,6 +183,71 @@ void main() {
       expect(formatLocalDate(date, 'en'), 'Sep 11, 2026');
     });
 
+    test('formats SKU prices from challenge currency', () {
+      expect(formatChallengePrice(19900, 'czk'), '199 Kč');
+      expect(formatChallengePrice(499, 'eur'), '€4.99');
+      expect(formatChallengePrice(900, 'EUR'), '€9.00');
+      expect(formatChallengePrice(500, 'usd'), '5 USD');
+    });
+
+    test('SKU prices fall back to price_cents and expose Stripe ids', () {
+      const fallback = Challenge(
+        id: 'c',
+        slug: 'c',
+        accessMode: AccessMode.open,
+        pricingType: PricingType.paid,
+        priceCents: 499,
+        currency: 'eur',
+        status: PublishStatus.published,
+        stripePriceId: 'price_legacy',
+        translations: [LocalizedText(locale: 'en', title: 'C')],
+      );
+      expect(fallback.diplomaPriceCents, 499);
+      expect(fallback.medalPriceCents, 499);
+      expect(fallback.priceCentsFor(RewardVariant.diploma), 499);
+      expect(fallback.priceCentsFor(RewardVariant.medalAndDiploma), 499);
+      expect(fallback.stripePriceIdFor(RewardVariant.diploma), 'price_legacy');
+      expect(
+        fallback.stripePriceIdFor(RewardVariant.medalAndDiploma),
+        'price_legacy',
+      );
+
+      const priced = Challenge(
+        id: 'c',
+        slug: 'c',
+        accessMode: AccessMode.open,
+        pricingType: PricingType.paid,
+        priceCents: 499,
+        diplomaPriceCents: 19900,
+        medalPriceCents: 39900,
+        currency: 'czk',
+        stripePriceId: 'price_legacy',
+        stripePriceIdDiploma: 'price_diploma',
+        stripePriceIdMedal: 'price_medal',
+        translations: [LocalizedText(locale: 'cs', title: 'C')],
+      );
+      expect(priced.priceCents, 499);
+      expect(priced.priceCentsFor(RewardVariant.diploma), 19900);
+      expect(priced.priceCentsFor(RewardVariant.medalAndDiploma), 39900);
+      expect(priced.stripePriceIdFor(RewardVariant.diploma), 'price_diploma');
+      expect(
+        priced.stripePriceIdFor(RewardVariant.medalAndDiploma),
+        'price_medal',
+      );
+    });
+
+    test('memory catalog seeds expose both SKU prices', () {
+      final story = sampleStoryChallenge().challenge;
+      expect(story.diplomaPriceCents, 499);
+      expect(story.medalPriceCents, 900);
+      expect(story.priceCents, 499);
+      expect(story.stripePriceIdDiploma, 'price_diploma_test');
+      expect(story.stripePriceIdMedal, 'price_medal_test');
+      final open = sampleOpenChallenge().challenge;
+      expect(open.diplomaPriceCents, 0);
+      expect(open.medalPriceCents, 0);
+    });
+
     test('wire parsers read paidAt and reward variant', () {
       expect(rewardVariantFromWire('diploma'), RewardVariant.diploma);
       expect(
@@ -366,6 +431,10 @@ void main() {
         expect(find.text(strings.waypoints), findsOneWidget);
         expect(find.text(strings.payDigitalDiploma), findsOneWidget);
         expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
+        expect(find.text('€4.99'), findsOneWidget);
+        expect(find.text('€9.00'), findsOneWidget);
+        expect(find.byKey(const Key('challenge-pay-diploma-price')), findsOneWidget);
+        expect(find.byKey(const Key('challenge-pay-medal-price')), findsOneWidget);
         expect(find.text(strings.unlockWithStripe), findsNothing);
         expect(infoY, lessThan(diploma.top));
         expect(medal.bottom, lessThan(waypointsY));
@@ -392,19 +461,31 @@ void main() {
         final diplomaLabel = tester.widget<Text>(
           find.descendant(
             of: find.byKey(const Key('challenge-pay-diploma')),
-            matching: find.byType(Text),
+            matching: find.text(strings.payDigitalDiploma),
           ),
         );
         final medalLabel = tester.widget<Text>(
           find.descendant(
             of: find.byKey(const Key('challenge-pay-medal')),
-            matching: find.byType(Text),
+            matching: find.text(strings.payMedalAndDiploma),
           ),
+        );
+        final diplomaPrice = tester.widget<Text>(
+          find.byKey(const Key('challenge-pay-diploma-price')),
+        );
+        final medalPrice = tester.widget<Text>(
+          find.byKey(const Key('challenge-pay-medal-price')),
         );
         expect(diplomaLabel.maxLines, 2);
         expect(diplomaLabel.textAlign, TextAlign.center);
         expect(medalLabel.maxLines, 2);
         expect(medalLabel.textAlign, TextAlign.center);
+        expect(diplomaPrice.data, '€4.99');
+        expect(diplomaPrice.style?.fontSize, 13.5);
+        expect(diplomaPrice.style?.color, BrandColors.forest);
+        expect(medalPrice.data, '€9.00');
+        expect(medalPrice.style?.fontSize, 13.5);
+        expect(medalPrice.style?.color, BrandColors.cream.withValues(alpha: 0.82));
         expect(
           diplomaButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.forest,
@@ -435,6 +516,42 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('Digitální diplom'), findsOneWidget);
+      expect(find.text('Medaile + diplom'), findsOneWidget);
+      expect(find.text('€4.99'), findsOneWidget);
+      expect(find.text('€9.00'), findsOneWidget);
+    });
+
+    testWidgets('pay CTAs format CZK prices from challenge data', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final story = sampleStoryChallenge();
+      final czk = ChallengeDetail(
+        challenge: Challenge(
+          id: story.challenge.id,
+          slug: story.challenge.slug,
+          accessMode: story.challenge.accessMode,
+          pricingType: story.challenge.pricingType,
+          priceCents: 19900,
+          diplomaPriceCents: 19900,
+          medalPriceCents: 39900,
+          currency: 'czk',
+          status: story.challenge.status,
+          translations: story.challenge.translations,
+        ),
+        waypoints: story.waypoints,
+      );
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: czk),
+          locale: 'cs',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('199 Kč'), findsOneWidget);
+      expect(find.text('399 Kč'), findsOneWidget);
       expect(find.text('Digitální diplom'), findsOneWidget);
       expect(find.text('Medaile + diplom'), findsOneWidget);
     });
