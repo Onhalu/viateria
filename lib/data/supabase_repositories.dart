@@ -29,8 +29,9 @@ List<LocalizedText> _i18nFromRows(
       .toList();
 }
 
-/// Maps a `challenges` row. `price_cents` is the catalog fallback (diploma
-/// SKU). Per-SKU columns fall back to that amount when null.
+/// Maps a `challenges` row. SKU columns stay nullable. Pay CTAs hide a
+/// line when that SKU is null/≤0; diploma may use `price_cents` as the
+/// catalog fallback when `diploma_price_cents` is missing.
 Challenge _challengeFromRow(Map<String, dynamic> row) {
   final priceCents = (row['price_cents'] as num?)?.toInt() ?? 0;
   return Challenge(

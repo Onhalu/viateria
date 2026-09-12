@@ -60,18 +60,43 @@ const _enShortMonths = [
   'Dec',
 ];
 
-/// Catalog / pay-CTA amount from minor units. `czk` → `199 Kč`, `eur` → `€4.99`.
-String formatChallengePrice(int cents, String currency) {
+/// Narrow no-break space for CS grouping and the currency gap (`1 249 Kč`).
+const priceThinSpace = '\u202F';
+
+/// Catalog / pay-CTA amount from minor units + UI locale.
+/// CS CZK → `1 249 Kč` (thin-space grouping). Null / ≤0 → no display string.
+String? formatChallengePrice(
+  int? cents,
+  String currency, [
+  String locale = 'en',
+]) {
+  if (cents == null || cents <= 0) return null;
   final code = currency.trim().toLowerCase();
-  final whole = cents % 100 == 0;
-  final amount = whole
-      ? '${cents ~/ 100}'
-      : (cents / 100).toStringAsFixed(2);
+  final csStyle = locale == 'cs' || locale == 'de';
+  final grouped = _groupThousands(cents ~/ 100, csStyle ? priceThinSpace : ',');
+  final frac = cents % 100;
+  final needsFraction = code == 'eur' || frac != 0;
+  final amount = needsFraction
+      ? '$grouped${csStyle ? ',' : '.'}${frac.toString().padLeft(2, '0')}'
+      : grouped;
   return switch (code) {
-    'czk' || 'kc' || 'kč' => '$amount Kč',
-    'eur' => whole ? '€$amount.00' : '€$amount',
+    'czk' || 'kc' || 'kč' => '$amount${priceThinSpace}Kč',
+    'eur' => csStyle ? '$amount$priceThinSpace€' : '€$amount',
     _ => '$amount ${currency.trim().toUpperCase()}',
   };
+}
+
+String _groupThousands(int value, String separator) {
+  final digits = value.toString();
+  if (digits.length <= 3) return digits;
+  final buf = StringBuffer();
+  final lead = digits.length % 3;
+  if (lead > 0) buf.write(digits.substring(0, lead));
+  for (var i = lead; i < digits.length; i += 3) {
+    if (buf.isNotEmpty) buf.write(separator);
+    buf.write(digits.substring(i, i + 3));
+  }
+  return buf.toString();
 }
 
 /// Locale-typical calendar date (no time). Uses the device local calendar day.

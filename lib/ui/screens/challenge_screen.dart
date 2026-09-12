@@ -502,8 +502,9 @@ class _ChallengePayCtas extends StatelessWidget {
       outlined: true,
       label: strings.payDigitalDiploma,
       price: formatChallengePrice(
-        challenge.priceCentsFor(RewardVariant.diploma),
+        challenge.displayPriceCents(RewardVariant.diploma),
         challenge.currency,
+        strings.locale,
       ),
       onPressed: () => onPay(RewardVariant.diploma),
     );
@@ -513,8 +514,9 @@ class _ChallengePayCtas extends StatelessWidget {
       outlined: false,
       label: strings.payMedalAndDiploma,
       price: formatChallengePrice(
-        challenge.priceCentsFor(RewardVariant.medalAndDiploma),
+        challenge.displayPriceCents(RewardVariant.medalAndDiploma),
         challenge.currency,
+        strings.locale,
       ),
       onPressed: () => onPay(RewardVariant.medalAndDiploma),
     );
@@ -547,7 +549,7 @@ class _ChallengePayCtas extends StatelessWidget {
     required Key priceKey,
     required bool outlined,
     required String label,
-    required String price,
+    required String? price,
     required VoidCallback onPressed,
   }) {
     final child = Column(
@@ -560,22 +562,22 @@ class _ChallengePayCtas extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 2),
-        Text(
-          price,
-          key: priceKey,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: priceSize,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-            color: outlined
-                ? BrandColors.forest
-                : BrandColors.cream.withValues(alpha: 0.82),
+        if (price != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            price,
+            key: priceKey,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: priceSize,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+              color: BrandColors.bark,
+            ),
           ),
-        ),
+        ],
       ],
     );
     const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 12);

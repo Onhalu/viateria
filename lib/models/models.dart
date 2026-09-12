@@ -58,10 +58,9 @@ class Challenge {
     this.stripePriceIdDiploma,
     this.stripePriceIdMedal,
     this.rewardVariant,
-    int? diplomaPriceCents,
-    int? medalPriceCents,
-  }) : diplomaPriceCents = diplomaPriceCents ?? priceCents,
-       medalPriceCents = medalPriceCents ?? priceCents;
+    this.diplomaPriceCents,
+    this.medalPriceCents,
+  });
 
   final String id;
   final String slug;
@@ -72,11 +71,11 @@ class Challenge {
   /// [diplomaPriceCents] is not stored separately.
   final int priceCents;
 
-  /// Digitální diplom / [RewardVariant.diploma].
-  final int diplomaPriceCents;
+  /// Digitální diplom / [RewardVariant.diploma]. Null when unset in the catalog.
+  final int? diplomaPriceCents;
 
-  /// Medaile + diplom / [RewardVariant.medalAndDiploma].
-  final int medalPriceCents;
+  /// Medaile + diplom / [RewardVariant.medalAndDiploma] total. Null when unset.
+  final int? medalPriceCents;
   final String currency;
   final PublishStatus status;
   final List<LocalizedText> translations;
@@ -91,10 +90,19 @@ class Challenge {
 
   bool get isPaid => pricingType == PricingType.paid;
 
-  int priceCentsFor(RewardVariant variant) => switch (variant) {
+  int? skuPriceCents(RewardVariant variant) => switch (variant) {
     RewardVariant.diploma => diplomaPriceCents,
     RewardVariant.medalAndDiploma => medalPriceCents,
   };
+
+  /// Pay-CTA amount. Diploma may use [priceCents] when the SKU column is
+  /// missing. Null / ≤0 means the price line should be hidden.
+  int? displayPriceCents(RewardVariant variant) {
+    final sku = skuPriceCents(variant);
+    if (sku != null) return sku > 0 ? sku : null;
+    if (variant == RewardVariant.diploma && priceCents > 0) return priceCents;
+    return null;
+  }
 
   String? stripePriceIdFor(RewardVariant variant) => switch (variant) {
     RewardVariant.diploma => stripePriceIdDiploma ?? stripePriceId,
