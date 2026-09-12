@@ -395,6 +395,23 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               const SizedBox(height: 16),
               Text(copy.description, key: const Key('challenge-info')),
             ],
+            if (!hasAccess) ...[
+              const SizedBox(height: 16),
+              Text(
+                strings.challengeLockedPaid,
+                key: const Key('challenge-unlock-cta'),
+              ),
+              const SizedBox(height: 8),
+              _ChallengePayCtas(
+                strings: strings,
+                onPay: _unlockPaid,
+              ),
+              if (data.purchase?.status == PurchaseStatus.pending)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(strings.purchasePending),
+                ),
+            ],
             const SizedBox(height: 16),
             Text(
               strings.waypoints,
@@ -421,23 +438,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
-            if (!hasAccess) ...[
-              const SizedBox(height: 16),
-              Text(
-                strings.challengeLockedPaid,
-                key: const Key('challenge-unlock-cta'),
-              ),
-              const SizedBox(height: 8),
-              _ChallengePayCtas(
-                strings: strings,
-                onPay: _unlockPaid,
-              ),
-              if (data.purchase?.status == PurchaseStatus.pending)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(strings.purchasePending),
-                ),
-            ],
             const SizedBox(height: 16),
             ChallengeDeadlineBanner(
               strings: strings,

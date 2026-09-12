@@ -331,7 +331,7 @@ void main() {
     );
 
     testWidgets(
-      'info, places, then side-by-side pay CTAs sit above deadline and reward',
+      'info, then side-by-side pay CTAs, then places sit above deadline and reward',
       (tester) async {
         useTallView(tester);
         final strings = AppStrings('en');
@@ -367,8 +367,8 @@ void main() {
         expect(find.text(strings.payDigitalDiploma), findsOneWidget);
         expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
         expect(find.text(strings.unlockWithStripe), findsNothing);
-        expect(infoY, lessThan(waypointsY));
-        expect(waypointsY, lessThan(diploma.top));
+        expect(infoY, lessThan(diploma.top));
+        expect(medal.bottom, lessThan(waypointsY));
         expect(diploma.left, lessThan(medal.left));
         expect((diploma.center.dy - medal.center.dy).abs(), lessThan(1));
         expect(medal.left - diploma.right, inInclusiveRange(8, 12));
@@ -376,7 +376,7 @@ void main() {
         expect(medal.height, greaterThanOrEqualTo(48));
         expect((diploma.height - medal.height).abs(), lessThan(1));
         expect((diploma.width - medal.width).abs(), lessThan(1));
-        expect(medal.bottom, lessThan(deadlineY));
+        expect(waypointsY, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
         expect(
           tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
