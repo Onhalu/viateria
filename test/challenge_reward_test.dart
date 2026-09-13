@@ -833,6 +833,47 @@ void main() {
       );
       expect(opened, [Uri.parse(fapiCheckoutUrlFor(RewardVariant.diploma))]);
       expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+      expect(find.text(AppStrings('en').purchasePending), findsOneWidget);
+      expect(find.text(AppStrings('en').congratulations), findsNothing);
+    });
+
+    testWidgets('resume after FAPI reloads paid purchase without a thank-you', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final strings = AppStrings('en');
+      final purchases = MemoryPurchases(completeOnRefresh: false);
+      final story = sampleStoryChallenge();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story, purchases: purchases),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
+      await tester.tap(find.byKey(const Key('challenge-pay-diploma')));
+      await tester.pumpAndSettle();
+      expect(find.text(strings.purchasePending), findsOneWidget);
+      expect(find.text(strings.congratulations), findsNothing);
+
+      purchases.pay(
+        'story-1',
+        paidAt: DateTime(2026, 3, 11),
+        rewardVariant: RewardVariant.diploma,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+      expect(find.text(strings.purchasePending), findsNothing);
+      expect(find.text(strings.congratulations), findsNothing);
+      expect(find.text(strings.deadlineCompleteBy), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
     });
 
     testWidgets('pay CTA without a FAPI form URL is disabled and is a no-op', (
