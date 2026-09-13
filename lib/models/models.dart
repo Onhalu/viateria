@@ -57,6 +57,8 @@ class Challenge {
     this.stripePriceId,
     this.stripePriceIdDiploma,
     this.stripePriceIdMedal,
+    this.fapiFormUrlDiploma,
+    this.fapiFormUrlMedal,
     this.rewardVariant,
     this.diplomaPriceCents,
     this.medalPriceCents,
@@ -86,6 +88,14 @@ class Challenge {
   final String? stripePriceId;
   final String? stripePriceIdDiploma;
   final String? stripePriceIdMedal;
+
+  /// Public FAPI sales-form page for Digitální diplom. Null / blank disables
+  /// that CTA. Prefill query params are added by `start-fapi-checkout`.
+  final String? fapiFormUrlDiploma;
+
+  /// Public FAPI sales-form page for Medaile + diplom. Null / blank disables
+  /// that CTA.
+  final String? fapiFormUrlMedal;
   final RewardVariant? rewardVariant;
 
   bool get isPaid => pricingType == PricingType.paid;
@@ -109,7 +119,23 @@ class Challenge {
     RewardVariant.medalAndDiploma => stripePriceIdMedal ?? stripePriceId,
   };
 
+  /// http(s) FAPI form URL for [variant], or null when unset / not openable.
+  String? fapiFormUrlFor(RewardVariant variant) => switch (variant) {
+    RewardVariant.diploma => httpUrlOrNull(fapiFormUrlDiploma),
+    RewardVariant.medalAndDiploma => httpUrlOrNull(fapiFormUrlMedal),
+  };
+
   LocalizedText copyFor(String locale) => pickLocale(translations, locale);
+}
+
+/// Trims [value] and keeps it only when it is an absolute http(s) URL.
+String? httpUrlOrNull(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null || !uri.hasScheme || !uri.hasAuthority) return null;
+  if (uri.scheme != 'http' && uri.scheme != 'https') return null;
+  return trimmed;
 }
 
 class Waypoint {

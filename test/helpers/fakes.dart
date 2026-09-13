@@ -189,10 +189,16 @@ class MemoryProgress implements ProgressRepository {
 }
 
 class MemoryPurchases implements PurchaseRepository {
-  MemoryPurchases({Map<String, Purchase>? purchases})
-    : purchases = purchases ?? {};
+  MemoryPurchases({
+    Map<String, Purchase>? purchases,
+    this.completeOnRefresh = true,
+  }) : purchases = purchases ?? {};
 
   final Map<String, Purchase> purchases;
+
+  /// Widget tests that need the pay CTAs to stay visible after a tap
+  /// set this to false. Default true matches the previous auto-pay refresh.
+  final bool completeOnRefresh;
 
   @override
   Future<Purchase?> fetchPurchase(String challengeId) async =>
@@ -201,7 +207,9 @@ class MemoryPurchases implements PurchaseRepository {
   @override
   Future<Purchase?> refreshPurchase(String challengeId) async {
     final current = purchases[challengeId];
-    if (current != null && current.status == PurchaseStatus.pending) {
+    if (completeOnRefresh &&
+        current != null &&
+        current.status == PurchaseStatus.pending) {
       return pay(
         challengeId,
         rewardVariant: current.rewardVariant ?? RewardVariant.diploma,
@@ -233,16 +241,26 @@ class MemoryPurchases implements PurchaseRepository {
     String challengeId, {
     RewardVariant? rewardVariant,
   }) async {
-    const session = CheckoutSession(url: 'https://checkout.stripe.com/test');
+    final variant =
+        rewardVariant ??
+        purchases[challengeId]?.rewardVariant ??
+        RewardVariant.diploma;
+    final session = CheckoutSession(url: fapiCheckoutUrlFor(variant));
     purchases[challengeId] = Purchase(
       challengeId: challengeId,
       status: PurchaseStatus.pending,
       checkoutUrl: session.url,
-      rewardVariant: rewardVariant ?? purchases[challengeId]?.rewardVariant,
+      rewardVariant: variant,
     );
     return session;
   }
 }
+
+/// Fake FAPI form URLs returned by [MemoryPurchases.startCheckout].
+String fapiCheckoutUrlFor(RewardVariant variant) => switch (variant) {
+  RewardVariant.diploma => 'https://form.fapi.cz/diploma-test',
+  RewardVariant.medalAndDiploma => 'https://form.fapi.cz/medal-test',
+};
 
 class MemoryPhotos implements PhotoStorage {
   final List<String> uploaded = [];
@@ -327,6 +345,8 @@ ChallengeDetail sampleStoryChallenge() {
     currency: 'eur',
     stripePriceIdDiploma: 'price_diploma_test',
     stripePriceIdMedal: 'price_medal_test',
+    fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
+    fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
     status: PublishStatus.published,
     translations: [
       LocalizedText(

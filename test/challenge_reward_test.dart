@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
+import 'package:viateria/data/challenge_mapping.dart';
 import 'package:viateria/domain/challenge_reward.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
@@ -21,6 +22,7 @@ AppServices buildServices({
   MemoryProgress? progress,
   MemoryPurchases? purchases,
   ChallengeDetail? detail,
+  ExternalUrlOpener? openUrl,
 }) {
   final open = detail ?? sampleOpenChallenge();
   return AppServices(
@@ -37,7 +39,7 @@ AppServices buildServices({
     purchases: purchases ?? MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
-    openUrl: (_) async {},
+    openUrl: openUrl ?? (_) async {},
   );
 }
 
@@ -201,7 +203,7 @@ void main() {
       expect(formatChallengePrice(-19900, 'eur'), isNull);
     });
 
-    test('SKU prices fall back to price_cents and expose Stripe ids', () {
+    test('SKU prices fall back to price_cents and expose checkout URLs', () {
       const fallback = Challenge(
         id: 'c',
         slug: 'c',
@@ -222,6 +224,8 @@ void main() {
         fallback.stripePriceIdFor(RewardVariant.medalAndDiploma),
         'price_legacy',
       );
+      expect(fallback.fapiFormUrlFor(RewardVariant.diploma), isNull);
+      expect(fallback.fapiFormUrlFor(RewardVariant.medalAndDiploma), isNull);
 
       const priced = Challenge(
         id: 'c',
@@ -236,6 +240,8 @@ void main() {
         stripePriceId: 'price_legacy',
         stripePriceIdDiploma: 'price_diploma',
         stripePriceIdMedal: 'price_medal',
+        fapiFormUrlDiploma: ' https://form.fapi.cz/diploma ',
+        fapiFormUrlMedal: 'javascript:alert(1)',
         translations: [LocalizedText(locale: 'cs', title: 'C')],
       );
       expect(priced.priceCents, 499);
@@ -246,6 +252,14 @@ void main() {
         priced.stripePriceIdFor(RewardVariant.medalAndDiploma),
         'price_medal',
       );
+      expect(
+        priced.fapiFormUrlFor(RewardVariant.diploma),
+        'https://form.fapi.cz/diploma',
+      );
+      expect(priced.fapiFormUrlFor(RewardVariant.medalAndDiploma), isNull);
+      expect(httpUrlOrNull(''), isNull);
+      expect(httpUrlOrNull('   '), isNull);
+      expect(httpUrlOrNull('/relative'), isNull);
 
       const zeroDiploma = Challenge(
         id: 'c',
@@ -273,6 +287,8 @@ void main() {
       expect(story.priceCents, 499);
       expect(story.stripePriceIdDiploma, 'price_diploma_test');
       expect(story.stripePriceIdMedal, 'price_medal_test');
+      expect(story.fapiFormUrlDiploma, 'https://form.fapi.cz/diploma-test');
+      expect(story.fapiFormUrlMedal, 'https://form.fapi.cz/medal-test');
       final open = sampleOpenChallenge().challenge;
       expect(open.diplomaPriceCents, 0);
       expect(open.medalPriceCents, 0);
@@ -298,6 +314,34 @@ void main() {
       );
       final now = DateTime(2026, 3, 11);
       expect(dateTimeFromWire(now), now);
+    });
+
+    test('supabase mapping loads trimmed FAPI form URLs', () {
+      final mapped = challengeFromRow({
+        'id': 'c',
+        'slug': 'c',
+        'access_mode': 'open',
+        'pricing_type': 'paid',
+        'price_cents': 499,
+        'diploma_price_cents': 19900,
+        'medal_price_cents': 39900,
+        'currency': 'czk',
+        'status': 'published',
+        'fapi_form_url_diploma': ' https://form.fapi.cz/d ',
+        'fapi_form_url_medal': '',
+        'challenge_i18n': [
+          {'locale': 'cs', 'title': 'C', 'description': ''},
+        ],
+      });
+      expect(mapped.fapiFormUrlDiploma, 'https://form.fapi.cz/d');
+      expect(mapped.fapiFormUrlMedal, isNull);
+      expect(
+        mapped.fapiFormUrlFor(RewardVariant.diploma),
+        'https://form.fapi.cz/d',
+      );
+      expect(mapped.fapiFormUrlFor(RewardVariant.medalAndDiploma), isNull);
+      expect(mapped.displayPriceCents(RewardVariant.diploma), 19900);
+      expect(mapped.displayPriceCents(RewardVariant.medalAndDiploma), 39900);
     });
 
     test('memory store stamps paidAt when the purchase is paid', () async {
@@ -725,11 +769,16 @@ void main() {
       tester,
     ) async {
       useTallView(tester);
+      final opened = <Uri>[];
       final purchases = MemoryPurchases();
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
-          buildServices(detail: story, purchases: purchases),
+          buildServices(
+            detail: story,
+            purchases: purchases,
+            openUrl: (uri) async => opened.add(uri),
+          ),
           locale: 'en',
           challengeId: 'story-1',
         ),
@@ -745,8 +794,99 @@ void main() {
         purchases.purchases['story-1']!.rewardVariant,
         RewardVariant.medalAndDiploma,
       );
+      expect(
+        opened,
+        [Uri.parse(fapiCheckoutUrlFor(RewardVariant.medalAndDiploma))],
+      );
       expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
       expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
+    });
+
+    testWidgets('diploma CTA opens the diploma FAPI form URL', (tester) async {
+      useTallView(tester);
+      final opened = <Uri>[];
+      final purchases = MemoryPurchases(completeOnRefresh: false);
+      final story = sampleStoryChallenge();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(
+            detail: story,
+            purchases: purchases,
+            openUrl: (uri) async => opened.add(uri),
+          ),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('challenge-pay-diploma')));
+      await tester.tap(find.byKey(const Key('challenge-pay-diploma')));
+      await tester.pumpAndSettle();
+
+      expect(purchases.purchases['story-1']!.isPaid, isFalse);
+      expect(purchases.purchases['story-1']!.status, PurchaseStatus.pending);
+      expect(
+        purchases.purchases['story-1']!.rewardVariant,
+        RewardVariant.diploma,
+      );
+      expect(opened, [Uri.parse(fapiCheckoutUrlFor(RewardVariant.diploma))]);
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+    });
+
+    testWidgets('pay CTA without a FAPI form URL is disabled and is a no-op', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final opened = <Uri>[];
+      final purchases = MemoryPurchases(completeOnRefresh: false);
+      final story = sampleStoryChallenge();
+      final missingMedal = ChallengeDetail(
+        challenge: Challenge(
+          id: story.challenge.id,
+          slug: story.challenge.slug,
+          accessMode: story.challenge.accessMode,
+          pricingType: story.challenge.pricingType,
+          priceCents: story.challenge.priceCents,
+          diplomaPriceCents: story.challenge.diplomaPriceCents,
+          medalPriceCents: story.challenge.medalPriceCents,
+          currency: story.challenge.currency,
+          status: story.challenge.status,
+          translations: story.challenge.translations,
+          fapiFormUrlDiploma: story.challenge.fapiFormUrlDiploma,
+          fapiFormUrlMedal: '',
+        ),
+        waypoints: story.waypoints,
+      );
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(
+            detail: missingMedal,
+            purchases: purchases,
+            openUrl: (uri) async => opened.add(uri),
+          ),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final diploma = tester.widget<OutlinedButton>(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
+      final medal = tester.widget<FilledButton>(
+        find.byKey(const Key('challenge-pay-medal')),
+      );
+      expect(diploma.onPressed, isNotNull);
+      expect(medal.onPressed, isNull);
+      expect(find.text('€4.99'), findsOneWidget);
+      expect(find.text('€9.00'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('challenge-pay-medal')));
+      await tester.tap(find.byKey(const Key('challenge-pay-medal')));
+      await tester.pumpAndSettle();
+      expect(opened, isEmpty);
+      expect(purchases.purchases.containsKey('story-1'), isFalse);
     });
 
     testWidgets(

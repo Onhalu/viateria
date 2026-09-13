@@ -82,7 +82,7 @@ class UnconfiguredPurchases implements PurchaseRepository {
     String challengeId, {
     RewardVariant? rewardVariant,
   }) {
-    throw StateError('Stripe is not configured');
+    throw StateError('Checkout is not configured');
   }
 }
 

@@ -82,12 +82,16 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   }
 
   Future<void> _unlockPaid(RewardVariant variant) async {
+    final data = await _future;
+    final formUrl = data?.detail.challenge.fapiFormUrlFor(variant);
+    if (formUrl == null) return;
     final services = context.read<AppServices>();
     final session = await services.purchases.startCheckout(
       widget.challengeId,
       rewardVariant: variant,
     );
-    await services.openUrl(Uri.parse(session.url));
+    final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
+    await services.openUrl(Uri.parse(checkoutUrl));
     await services.purchases.refreshPurchase(widget.challengeId);
     if (mounted) await _reload();
   }
@@ -506,7 +510,9 @@ class _ChallengePayCtas extends StatelessWidget {
         challenge.currency,
         strings.locale,
       ),
-      onPressed: () => onPay(RewardVariant.diploma),
+      onPressed: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
+          ? null
+          : () => onPay(RewardVariant.diploma),
     );
     final medal = _payButton(
       key: const Key('challenge-pay-medal'),
@@ -518,7 +524,9 @@ class _ChallengePayCtas extends StatelessWidget {
         challenge.currency,
         strings.locale,
       ),
-      onPressed: () => onPay(RewardVariant.medalAndDiploma),
+      onPressed: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
+          ? null
+          : () => onPay(RewardVariant.medalAndDiploma),
     );
     if (stack) {
       return Column(
@@ -550,7 +558,7 @@ class _ChallengePayCtas extends StatelessWidget {
     required bool outlined,
     required String label,
     required String? price,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     final child = Column(
       mainAxisSize: MainAxisSize.min,
