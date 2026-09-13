@@ -522,13 +522,62 @@ class _ChallengePayCtas extends StatelessWidget {
   });
 
   static const gap = 10.0;
-  static const minHeight = 48.0;
+  static const minHeight = 52.0;
   static const narrowBreakpoint = 320.0;
-  static const priceSize = 13.5;
+  static const radius = 16.0;
+  static const borderWidth = 2.0;
+  static const labelSize = 15.5;
+  static const priceSize = 16.5;
+  static const priceGap = 5.0;
+  static const padding = EdgeInsets.symmetric(horizontal: 14, vertical: 11);
 
   final AppStrings strings;
   final Challenge challenge;
   final ValueChanged<RewardVariant> onPay;
+
+  static Color _ctaTone(Color color, Set<WidgetState> states) {
+    if (states.contains(WidgetState.disabled)) {
+      return color.withValues(alpha: 0.38);
+    }
+    if (states.contains(WidgetState.pressed)) {
+      return color.withValues(alpha: 0.85);
+    }
+    return color;
+  }
+
+  ButtonStyle _ctaStyle({required bool outlined}) {
+    final background = outlined ? BrandColors.cream : BrandColors.forest;
+    final foreground = outlined ? BrandColors.forest : BrandColors.cream;
+    return ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, minHeight)),
+      padding: const WidgetStatePropertyAll(padding),
+      alignment: Alignment.center,
+      visualDensity: VisualDensity.standard,
+      elevation: const WidgetStatePropertyAll(0),
+      shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+      surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      splashFactory: NoSplash.splashFactory,
+      shape: const WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(radius)),
+        ),
+      ),
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (states) => _ctaTone(background, states),
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (states) => _ctaTone(foreground, states),
+      ),
+      side: WidgetStateProperty.resolveWith((states) {
+        if (!outlined) return BorderSide.none;
+        return BorderSide(
+          color: _ctaTone(BrandColors.forest, states),
+          width: borderWidth,
+        );
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -593,6 +642,13 @@ class _ChallengePayCtas extends StatelessWidget {
     required String? price,
     required VoidCallback? onPressed,
   }) {
+    final states = <WidgetState>{
+      if (onPressed == null) WidgetState.disabled,
+    };
+    final ink = _ctaTone(
+      outlined ? BrandColors.forest : BrandColors.cream,
+      states,
+    );
     final child = Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -602,53 +658,44 @@ class _ChallengePayCtas extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: labelSize,
+            fontWeight: FontWeight.w600,
+            height: 1.2,
+            color: ink,
+          ),
         ),
         if (price != null) ...[
-          const SizedBox(height: 2),
+          const SizedBox(height: priceGap),
           Text(
             price,
             key: priceKey,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: priceSize,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               height: 1.2,
-              color: BrandColors.bark,
+              color: ink,
             ),
           ),
         ],
       ],
     );
-    const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 12);
+    final style = _ctaStyle(outlined: outlined);
     if (outlined) {
       return OutlinedButton(
         key: key,
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, minHeight),
-          backgroundColor: BrandColors.cream,
-          foregroundColor: BrandColors.forest,
-          side: const BorderSide(color: BrandColors.forest),
-          padding: padding,
-          alignment: Alignment.center,
-          visualDensity: VisualDensity.standard,
-        ),
+        style: style,
         child: child,
       );
     }
     return FilledButton(
       key: key,
       onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size(0, minHeight),
-        backgroundColor: BrandColors.forest,
-        foregroundColor: BrandColors.cream,
-        padding: padding,
-        alignment: Alignment.center,
-        visualDensity: VisualDensity.standard,
-      ),
+      style: style,
       child: child,
     );
   }

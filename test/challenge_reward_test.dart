@@ -521,8 +521,8 @@ void main() {
         expect(diploma.left, lessThan(medal.left));
         expect((diploma.center.dy - medal.center.dy).abs(), lessThan(1));
         expect(medal.left - diploma.right, inInclusiveRange(8, 12));
-        expect(diploma.height, greaterThanOrEqualTo(48));
-        expect(medal.height, greaterThanOrEqualTo(48));
+        expect(diploma.height, greaterThanOrEqualTo(52));
+        expect(medal.height, greaterThanOrEqualTo(52));
         expect((diploma.height - medal.height).abs(), lessThan(1));
         expect((diploma.width - medal.width).abs(), lessThan(1));
         expect(waypointsY, lessThan(deadlineY));
@@ -558,23 +558,44 @@ void main() {
         );
         expect(diplomaLabel.maxLines, 2);
         expect(diplomaLabel.textAlign, TextAlign.center);
+        expect(diplomaLabel.style?.fontSize, 15.5);
+        expect(diplomaLabel.style?.fontWeight, FontWeight.w600);
+        expect(diplomaLabel.style?.color, BrandColors.forest);
         expect(medalLabel.maxLines, 2);
         expect(medalLabel.textAlign, TextAlign.center);
+        expect(medalLabel.style?.fontSize, 15.5);
+        expect(medalLabel.style?.fontWeight, FontWeight.w600);
+        expect(medalLabel.style?.color, BrandColors.cream);
         expect(diplomaPrice.data, '€4.99');
-        expect(diplomaPrice.style?.fontSize, 13.5);
-        expect(diplomaPrice.style?.color, BrandColors.bark);
+        expect(diplomaPrice.style?.fontSize, 16.5);
+        expect(diplomaPrice.style?.fontWeight, FontWeight.w700);
+        expect(diplomaPrice.style?.color, BrandColors.forest);
         expect(medalPrice.data, '€9.00');
-        expect(medalPrice.style?.fontSize, 13.5);
-        expect(medalPrice.style?.color, BrandColors.bark);
+        expect(medalPrice.style?.fontSize, 16.5);
+        expect(medalPrice.style?.fontWeight, FontWeight.w700);
+        expect(medalPrice.style?.color, BrandColors.cream);
         expect(diplomaPrice.textAlign, TextAlign.center);
         expect(medalPrice.textAlign, TextAlign.center);
+        expect(
+          diplomaButton.style?.backgroundColor?.resolve(const {}),
+          BrandColors.cream,
+        );
         expect(
           diplomaButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.forest,
         );
         expect(
-          diplomaButton.style?.side?.resolve(const {})?.color,
-          BrandColors.forest,
+          diplomaButton.style?.side?.resolve(const {}),
+          const BorderSide(color: BrandColors.forest, width: 2),
+        );
+        expect(diplomaButton.style?.elevation?.resolve(const {}), 0);
+        expect(
+          diplomaButton.style?.overlayColor?.resolve({WidgetState.pressed}),
+          Colors.transparent,
+        );
+        expect(
+          diplomaButton.style?.backgroundColor?.resolve({WidgetState.pressed}),
+          BrandColors.cream.withValues(alpha: 0.85),
         );
         expect(
           medalButton.style?.backgroundColor?.resolve(const {}),
@@ -583,6 +604,39 @@ void main() {
         expect(
           medalButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.cream,
+        );
+        expect(
+          medalButton.style?.side?.resolve(const {}),
+          BorderSide.none,
+        );
+        expect(medalButton.style?.elevation?.resolve(const {}), 0);
+        expect(
+          medalButton.style?.overlayColor?.resolve({WidgetState.pressed}),
+          Colors.transparent,
+        );
+        expect(
+          medalButton.style?.backgroundColor?.resolve({WidgetState.pressed}),
+          BrandColors.forest.withValues(alpha: 0.85),
+        );
+        expect(
+          medalButton.style?.backgroundColor?.resolve(const {}),
+          isNot(BrandColors.sage),
+        );
+        final diplomaShape =
+            diplomaButton.style?.shape?.resolve(const {})
+                as RoundedRectangleBorder?;
+        final medalShape =
+            medalButton.style?.shape?.resolve(const {})
+                as RoundedRectangleBorder?;
+        expect(diplomaShape?.borderRadius, BorderRadius.circular(16));
+        expect(medalShape?.borderRadius, BorderRadius.circular(16));
+        expect(
+          diplomaButton.style?.padding?.resolve(const {}),
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        );
+        expect(
+          medalButton.style?.padding?.resolve(const {}),
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         );
       },
     );
@@ -644,14 +698,14 @@ void main() {
             .widget<Text>(find.byKey(const Key('challenge-pay-diploma-price')))
             .style
             ?.color,
-        BrandColors.bark,
+        BrandColors.forest,
       );
       expect(
         tester
             .widget<Text>(find.byKey(const Key('challenge-pay-medal-price')))
             .style
             ?.color,
-        BrandColors.bark,
+        BrandColors.cream,
       );
     });
 
@@ -735,8 +789,8 @@ void main() {
       );
       expect(diploma.bottom, lessThanOrEqualTo(medal.top));
       expect(medal.top - diploma.bottom, inInclusiveRange(8, 12));
-      expect(diploma.height, greaterThanOrEqualTo(48));
-      expect(medal.height, greaterThanOrEqualTo(48));
+      expect(diploma.height, greaterThanOrEqualTo(52));
+      expect(medal.height, greaterThanOrEqualTo(52));
     });
 
     testWidgets('pay CTAs stay side-by-side at 320 dp', (tester) async {
@@ -923,6 +977,20 @@ void main() {
       expect(medal.onPressed, isNull);
       expect(find.text('€4.99'), findsOneWidget);
       expect(find.text('€9.00'), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('challenge-pay-diploma-price')))
+            .style
+            ?.color,
+        BrandColors.forest,
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const Key('challenge-pay-medal-price')))
+            .style
+            ?.color,
+        BrandColors.cream.withValues(alpha: 0.38),
+      );
 
       await tester.ensureVisible(find.byKey(const Key('challenge-pay-medal')));
       await tester.tap(find.byKey(const Key('challenge-pay-medal')));
