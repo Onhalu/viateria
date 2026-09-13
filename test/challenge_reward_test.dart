@@ -605,10 +605,7 @@ void main() {
           medalButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.cream,
         );
-        expect(
-          medalButton.style?.side?.resolve(const {}),
-          BorderSide.none,
-        );
+        expect(medalButton.style?.side?.resolve(const {}), BorderSide.none);
         expect(medalButton.style?.elevation?.resolve(const {}), 0);
         expect(
           medalButton.style?.overlayColor?.resolve({WidgetState.pressed}),
@@ -622,12 +619,12 @@ void main() {
           medalButton.style?.backgroundColor?.resolve(const {}),
           isNot(BrandColors.sage),
         );
-        final diplomaShape =
-            diplomaButton.style?.shape?.resolve(const {})
-                as RoundedRectangleBorder?;
-        final medalShape =
-            medalButton.style?.shape?.resolve(const {})
-                as RoundedRectangleBorder?;
+        final diplomaShape = diplomaButton.style?.shape?.resolve(
+          const {},
+        ) as RoundedRectangleBorder?;
+        final medalShape = medalButton.style?.shape?.resolve(
+          const {},
+        ) as RoundedRectangleBorder?;
         expect(diplomaShape?.borderRadius, BorderRadius.circular(16));
         expect(medalShape?.borderRadius, BorderRadius.circular(16));
         expect(
@@ -675,6 +672,8 @@ void main() {
           currency: 'czk',
           status: story.challenge.status,
           translations: story.challenge.translations,
+          fapiFormUrlDiploma: story.challenge.fapiFormUrlDiploma,
+          fapiFormUrlMedal: story.challenge.fapiFormUrlMedal,
         ),
         waypoints: story.waypoints,
       );

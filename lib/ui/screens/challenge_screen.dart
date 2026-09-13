@@ -642,9 +642,7 @@ class _ChallengePayCtas extends StatelessWidget {
     required String? price,
     required VoidCallback? onPressed,
   }) {
-    final states = <WidgetState>{
-      if (onPressed == null) WidgetState.disabled,
-    };
+    final states = <WidgetState>{if (onPressed == null) WidgetState.disabled};
     final ink = _ctaTone(
       outlined ? BrandColors.forest : BrandColors.cream,
       states,
