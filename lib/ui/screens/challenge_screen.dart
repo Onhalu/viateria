@@ -83,6 +83,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 
   Future<void> _unlockPaid(RewardVariant variant) async {
     final data = await _future;
+    if (!mounted) return;
     final formUrl = data?.detail.challenge.fapiFormUrlFor(variant);
     if (formUrl == null) return;
     final services = context.read<AppServices>();
@@ -90,6 +91,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       widget.challengeId,
       rewardVariant: variant,
     );
+    if (!mounted) return;
     final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
     await services.openUrl(Uri.parse(checkoutUrl));
     await services.purchases.refreshPurchase(widget.challengeId);

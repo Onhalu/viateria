@@ -9,9 +9,8 @@
  *   fapi-form-notes, fapi-form-email, fapi-form-customField-{id}
  */
 
-import { md5 } from "https://esm.sh/@noble/hashes@1.7.1/md5.js";
-import { sha1 } from "https://esm.sh/@noble/hashes@1.7.1/sha1.js";
-import { bytesToHex } from "https://esm.sh/@noble/hashes@1.7.1/utils.js";
+import { crypto } from "jsr:@std/crypto@1.0.4";
+import { encodeHex } from "jsr:@std/encoding@1.0.10/hex";
 
 export const FAPI_API_BASE = "https://api.fapi.cz";
 
@@ -130,34 +129,40 @@ export function fapiPrefillParams(input: {
   return params;
 }
 
-function hexMd5(text: string): string {
-  return bytesToHex(md5(new TextEncoder().encode(text)));
+async function hexDigest(
+  algorithm: "MD5" | "SHA-1",
+  text: string,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    algorithm,
+    new TextEncoder().encode(text),
+  );
+  return encodeHex(digest);
 }
 
-function hexSha1(text: string): string {
-  return bytesToHex(sha1(new TextEncoder().encode(text)));
-}
-
-export function invoiceSecurityHash(
+export async function invoiceSecurityHash(
   invoice: FapiInvoice,
   time: number | string,
-): string | null {
+): Promise<string | null> {
   const id = invoice.id;
   const number = invoice.number;
   if (id == null || number == null) return null;
   let itemsSecurityHash = "";
   for (const item of invoice.items ?? []) {
-    itemsSecurityHash += hexMd5(`${item.id ?? ""}${item.name ?? ""}`);
+    itemsSecurityHash += await hexDigest(
+      "MD5",
+      `${item.id ?? ""}${item.name ?? ""}`,
+    );
   }
-  return hexSha1(`${time}${id}${number}${itemsSecurityHash}`);
+  return await hexDigest("SHA-1", `${time}${id}${number}${itemsSecurityHash}`);
 }
 
-export function isInvoiceSecurityValid(
+export async function isInvoiceSecurityValid(
   invoice: FapiInvoice,
   time: number | string,
   expectedSecurity: string,
-): boolean {
-  const actual = invoiceSecurityHash(invoice, time);
+): Promise<boolean> {
+  const actual = await invoiceSecurityHash(invoice, time);
   if (actual == null || !expectedSecurity) return false;
   return timingSafeEqual(actual, expectedSecurity);
 }

@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     return json({ status: "FAILED", message: "invoice lookup failed" }, 400);
   }
 
-  if (!isInvoiceSecurityValid(invoice, notice.time, notice.security)) {
+  if (!await isInvoiceSecurityValid(invoice, notice.time, notice.security)) {
     return json({ status: "FAILED", message: "Invalid security" }, 400);
   }
 

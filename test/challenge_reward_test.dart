@@ -794,10 +794,9 @@ void main() {
         purchases.purchases['story-1']!.rewardVariant,
         RewardVariant.medalAndDiploma,
       );
-      expect(
-        opened,
-        [Uri.parse(fapiCheckoutUrlFor(RewardVariant.medalAndDiploma))],
-      );
+      expect(opened, [
+        Uri.parse(fapiCheckoutUrlFor(RewardVariant.medalAndDiploma)),
+      ]);
       expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
       expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
     });
@@ -820,7 +819,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.byKey(const Key('challenge-pay-diploma')));
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
       await tester.tap(find.byKey(const Key('challenge-pay-diploma')));
       await tester.pumpAndSettle();
 

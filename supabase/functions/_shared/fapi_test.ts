@@ -62,20 +62,20 @@ Deno.test("prefill appends notes and custom fields", () => {
   }
 });
 
-Deno.test("invoice security hash matches PHP SecurityChecker", () => {
+Deno.test("invoice security hash matches PHP SecurityChecker", async () => {
   const invoice = {
     id: 239,
     number: "20180020",
     items: [{ id: 600, name: "simple" }],
   };
-  const hash = invoiceSecurityHash(invoice, 1710000000);
+  const hash = await invoiceSecurityHash(invoice, 1710000000);
   if (!hash || hash.length !== 40) {
     throw new Error(`unexpected hash ${hash}`);
   }
-  if (!isInvoiceSecurityValid(invoice, 1710000000, hash)) {
+  if (!await isInvoiceSecurityValid(invoice, 1710000000, hash)) {
     throw new Error("self-check failed");
   }
-  if (isInvoiceSecurityValid(invoice, 1710000000, "deadbeef")) {
+  if (await isInvoiceSecurityValid(invoice, 1710000000, "deadbeef")) {
     throw new Error("should reject");
   }
 });
