@@ -51,6 +51,7 @@ Widget wrapPayment({
   AppServices? services,
 }) {
   return TickerMode(
+    key: ValueKey('$locale-${identityHashCode(controller)}-$autoLoad'),
     enabled: false,
     child: MultiProvider(
       providers: [

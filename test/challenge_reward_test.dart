@@ -861,7 +861,7 @@ void main() {
         find.text(fapiCheckoutUrlFor(RewardVariant.medalAndDiploma)),
         findsOneWidget,
       );
-      expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+      expect(find.text(AppStrings('en').paymentTitle), findsOneWidget);
     });
 
     testWidgets('diploma CTA opens the diploma FAPI form in a WebView', (

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -35,6 +37,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   late final PaymentCheckoutController _controller;
   var _ownsController = false;
   var _autoPopScheduled = false;
+  Timer? _autoPopTimer;
 
   @override
   void initState() {
@@ -62,7 +65,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
     if (autoPop == null || _autoPopScheduled) return;
     if (_controller.phase != PaymentCheckoutPhase.success) return;
     _autoPopScheduled = true;
-    Future<void>.delayed(autoPop, () {
+    _autoPopTimer = Timer(autoPop, () {
       if (!mounted) return;
       if (_controller.phase != PaymentCheckoutPhase.success) return;
       Navigator.of(context).pop(true);
@@ -71,6 +74,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
 
   @override
   void dispose() {
+    _autoPopTimer?.cancel();
     _controller.removeListener(_onControllerTick);
     if (_ownsController) _controller.dispose();
     super.dispose();
