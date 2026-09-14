@@ -310,6 +310,12 @@ void main() {
       await tester.tap(find.byKey(const Key('route-start-place-ow-2')));
       await tester.pumpAndSettle();
 
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      scrollable.position.jumpTo(0);
+      await tester.pump();
+
       expect(find.text(strings.openInOsm), findsNothing);
       expect(find.byKey(const Key('route-map-nav-actions')), findsOneWidget);
       expect(find.byKey(const Key('route-map-navigate-hike')), findsOneWidget);
@@ -317,9 +323,6 @@ void main() {
       expect(find.byKey(const Key('route-navigate-hike')), findsOneWidget);
       expect(find.byKey(const Key('route-navigate-bike')), findsOneWidget);
 
-      await tester.ensureVisible(
-        find.byKey(const Key('route-map-navigate-hike')),
-      );
       await tester.tap(find.byKey(const Key('route-map-navigate-hike')));
       await tester.pumpAndSettle();
 
@@ -332,6 +335,8 @@ void main() {
       expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
       expect(find.byKey(const Key('route-bike-stats')), findsOneWidget);
 
+      scrollable.position.jumpTo(0);
+      await tester.pump();
       await tester.tap(find.byKey(const Key('route-end-navigation')));
       await tester.pumpAndSettle();
 

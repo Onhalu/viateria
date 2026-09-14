@@ -14,6 +14,9 @@ enum PurchaseStatus { pending, paid, failed, refunded }
 
 enum VerifyMethod { photo }
 
+/// Reward product attached to a paid purchase (or its Stripe/product row).
+enum RewardVariant { diploma, medalAndDiploma }
+
 AccessMode accessModeFromWire(String value) => switch (value) {
   'story' => AccessMode.story,
   _ => AccessMode.open,
@@ -41,6 +44,26 @@ PurchaseStatus purchaseStatusFromWire(String value) => switch (value) {
   'refunded' => PurchaseStatus.refunded,
   _ => PurchaseStatus.pending,
 };
+
+RewardVariant? rewardVariantFromWire(String? value) => switch (value) {
+  'diploma' => RewardVariant.diploma,
+  'medal_and_diploma' || 'medalAndDiploma' => RewardVariant.medalAndDiploma,
+  _ => null,
+};
+
+extension RewardVariantWire on RewardVariant {
+  String get wire => switch (this) {
+    RewardVariant.diploma => 'diploma',
+    RewardVariant.medalAndDiploma => 'medal_and_diploma',
+  };
+}
+
+DateTime? dateTimeFromWire(dynamic value) {
+  if (value == null) return null;
+  if (value is DateTime) return value;
+  if (value is String && value.isNotEmpty) return DateTime.tryParse(value);
+  return null;
+}
 
 extension PublishStatusWire on PublishStatus {
   String get wire => name;

@@ -8,3 +8,9 @@ verify_jwt = true
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.start-fapi-checkout]
+verify_jwt = true
+
+[functions.fapi-webhook]
+verify_jwt = false

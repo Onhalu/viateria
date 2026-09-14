@@ -90,6 +90,9 @@ class MemoryAuth implements AuthRepository {
   }
 }
 
+/// In-memory catalog. Challenges carry both SKU prices
+/// (`diplomaPriceCents` / `medalPriceCents`); `priceCents` is the diploma
+/// fallback used by catalog cards.
 class MemoryCatalog implements CatalogRepository {
   MemoryCatalog({
     List<Challenge>? challenges,
@@ -186,28 +189,78 @@ class MemoryProgress implements ProgressRepository {
 }
 
 class MemoryPurchases implements PurchaseRepository {
-  MemoryPurchases({Map<String, Purchase>? purchases})
-    : purchases = purchases ?? {};
+  MemoryPurchases({
+    Map<String, Purchase>? purchases,
+    this.completeOnRefresh = true,
+  }) : purchases = purchases ?? {};
 
   final Map<String, Purchase> purchases;
+
+  /// Widget tests that need the pay CTAs to stay visible after a tap
+  /// set this to false. Default true matches the previous auto-pay refresh.
+  final bool completeOnRefresh;
 
   @override
   Future<Purchase?> fetchPurchase(String challengeId) async =>
       purchases[challengeId];
 
   @override
-  Future<Purchase?> refreshPurchase(String challengeId) =>
-      fetchPurchase(challengeId);
+  Future<Purchase?> refreshPurchase(String challengeId) async {
+    final current = purchases[challengeId];
+    if (completeOnRefresh &&
+        current != null &&
+        current.status == PurchaseStatus.pending) {
+      return pay(
+        challengeId,
+        rewardVariant: current.rewardVariant ?? RewardVariant.diploma,
+      );
+    }
+    return current;
+  }
+
+  /// Marks the purchase paid and stamps [Purchase.paidAt].
+  Purchase pay(
+    String challengeId, {
+    DateTime? paidAt,
+    RewardVariant? rewardVariant = RewardVariant.diploma,
+  }) {
+    final current = purchases[challengeId];
+    final purchase = Purchase(
+      challengeId: challengeId,
+      status: PurchaseStatus.paid,
+      checkoutUrl: current?.checkoutUrl,
+      paidAt: paidAt ?? DateTime.now(),
+      rewardVariant: rewardVariant ?? current?.rewardVariant,
+    );
+    purchases[challengeId] = purchase;
+    return purchase;
+  }
 
   @override
-  Future<CheckoutSession> startCheckout(String challengeId) async {
+  Future<CheckoutSession> startCheckout(
+    String challengeId, {
+    RewardVariant? rewardVariant,
+  }) async {
+    final variant =
+        rewardVariant ??
+        purchases[challengeId]?.rewardVariant ??
+        RewardVariant.diploma;
+    final session = CheckoutSession(url: fapiCheckoutUrlFor(variant));
     purchases[challengeId] = Purchase(
       challengeId: challengeId,
       status: PurchaseStatus.pending,
+      checkoutUrl: session.url,
+      rewardVariant: variant,
     );
-    return const CheckoutSession(url: 'https://checkout.stripe.com/test');
+    return session;
   }
 }
+
+/// Fake FAPI form URLs returned by [MemoryPurchases.startCheckout].
+String fapiCheckoutUrlFor(RewardVariant variant) => switch (variant) {
+  RewardVariant.diploma => 'https://form.fapi.cz/diploma-test',
+  RewardVariant.medalAndDiploma => 'https://form.fapi.cz/medal-test',
+};
 
 class MemoryPhotos implements PhotoStorage {
   final List<String> uploaded = [];
@@ -243,6 +296,8 @@ ChallengeDetail sampleOpenChallenge() {
     accessMode: AccessMode.open,
     pricingType: PricingType.free,
     priceCents: 0,
+    diplomaPriceCents: 0,
+    medalPriceCents: 0,
     currency: 'eur',
     status: PublishStatus.published,
     translations: [
@@ -284,8 +339,14 @@ ChallengeDetail sampleStoryChallenge() {
     slug: 'story-trail',
     accessMode: AccessMode.story,
     pricingType: PricingType.paid,
-    priceCents: 900,
+    priceCents: 499,
+    diplomaPriceCents: 499,
+    medalPriceCents: 900,
     currency: 'eur',
+    stripePriceIdDiploma: 'price_diploma_test',
+    stripePriceIdMedal: 'price_medal_test',
+    fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
+    fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
     status: PublishStatus.published,
     translations: [
       LocalizedText(

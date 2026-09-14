@@ -1,12 +1,24 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "https://esm.sh/stripe@16.12.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
+import {
+  appendFapiPrefill,
+  fapiPrefillParams,
+  httpUrlOrNull,
+  parseRewardVariant,
+} from "../_shared/fapi.ts";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
-  apiVersion: "2024-06-20",
-  httpClient: Stripe.createFetchHttpClient(),
-});
-
+/**
+ * Authenticated start of a FAPI sales-form checkout.
+ *
+ * Upserts `purchases` as pending with the chosen reward_variant, then returns
+ * the challenge's FAPI form URL with prefilled metadata so `fapi-webhook`
+ * can match the paid invoice back to this user + challenge.
+ *
+ * Required form custom fields (create in FAPI → Prodej → Vlastní pole):
+ *   user_id, challenge_id, reward_variant
+ * Optional secrets for URL prefill: FAPI_CUSTOM_FIELD_ID_USER / _CHALLENGE / _REWARD
+ * Notes fallback (always set): fapi-form-notes=viateria:<user_id>:<challenge_id>:<reward_variant>
+ */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: cors() });
@@ -36,11 +48,7 @@ Deno.serve(async (req) => {
   if (!challengeId) {
     return json({ error: "challenge_id required" }, 400);
   }
-  const rewardVariant =
-    body.reward_variant === "medal_and_diploma" ||
-    body.reward_variant === "medalAndDiploma"
-      ? "medal_and_diploma"
-      : "diploma";
+  const rewardVariant = parseRewardVariant(body.reward_variant);
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -50,7 +58,7 @@ Deno.serve(async (req) => {
   const { data: challenge, error } = await admin
     .from("challenges")
     .select(
-      "id, pricing_type, price_cents, diploma_price_cents, medal_price_cents, currency, status, stripe_price_id, stripe_price_id_diploma, stripe_price_id_medal, challenge_i18n(locale, title)",
+      "id, pricing_type, price_cents, diploma_price_cents, medal_price_cents, currency, status, fapi_form_url_diploma, fapi_form_url_medal",
     )
     .eq("id", challengeId)
     .eq("status", "published")
@@ -63,48 +71,32 @@ Deno.serve(async (req) => {
     return json({ error: "challenge is free" }, 400);
   }
 
-  const origin = req.headers.get("origin") ?? "https://viateria.app";
-  const title =
-    challenge.challenge_i18n?.find((row: { locale: string }) => row.locale === "en")
-      ?.title ?? "Viateria challenge";
-
   const isMedal = rewardVariant === "medal_and_diploma";
-  const stripePriceId = isMedal
-    ? (challenge.stripe_price_id_medal ?? challenge.stripe_price_id)
-    : (challenge.stripe_price_id_diploma ?? challenge.stripe_price_id);
+  const formUrl = httpUrlOrNull(
+    isMedal ? challenge.fapi_form_url_medal : challenge.fapi_form_url_diploma,
+  );
+  if (!formUrl) {
+    return json({ error: "fapi form url missing" }, 400);
+  }
+
+  const { data: existing } = await admin
+    .from("purchases")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("challenge_id", challengeId)
+    .maybeSingle();
+  if (existing?.status === "paid") {
+    return json({ error: "already paid" }, 409);
+  }
+
   const amountCents = isMedal
     ? (challenge.medal_price_cents ?? challenge.price_cents)
     : (challenge.diploma_price_cents ?? challenge.price_cents);
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    success_url: `${origin}/challenge/${challengeId}?checkout=success`,
-    cancel_url: `${origin}/challenge/${challengeId}?checkout=cancel`,
-    line_items: stripePriceId
-      ? [{ price: stripePriceId, quantity: 1 }]
-      : [
-          {
-            quantity: 1,
-            price_data: {
-              currency: challenge.currency ?? "eur",
-              unit_amount: amountCents,
-              product_data: { name: title },
-            },
-          },
-        ],
-    metadata: {
-      user_id: user.id,
-      challenge_id: challengeId,
-      reward_variant: rewardVariant,
-    },
-    client_reference_id: `${user.id}:${challengeId}`,
-  });
 
   await admin.from("purchases").upsert(
     {
       user_id: user.id,
       challenge_id: challengeId,
-      stripe_checkout_session_id: session.id,
       status: "pending",
       amount_cents: amountCents,
       currency: challenge.currency ?? "eur",
@@ -113,7 +105,20 @@ Deno.serve(async (req) => {
     { onConflict: "user_id,challenge_id" },
   );
 
-  return json({ url: session.url });
+  const url = appendFapiPrefill(
+    formUrl,
+    fapiPrefillParams({
+      userId: user.id,
+      challengeId,
+      rewardVariant,
+      email: user.email,
+      customFieldIdUser: Deno.env.get("FAPI_CUSTOM_FIELD_ID_USER"),
+      customFieldIdChallenge: Deno.env.get("FAPI_CUSTOM_FIELD_ID_CHALLENGE"),
+      customFieldIdReward: Deno.env.get("FAPI_CUSTOM_FIELD_ID_REWARD"),
+    }),
+  );
+
+  return json({ url });
 });
 
 function cors() {

@@ -7,7 +7,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 ## SPEC v1 (in scope)
 
 - Challenge catalog: **open** (all waypoints after access) and **story** (next waypoint unlocks only after the previous is complete)
-- Free / paid catalog; **Stripe Checkout** unlocks paid challenges
+- Free / paid catalog; **FAPI sales forms** unlock paid challenges (Stripe edge functions remain unused by the CTA)
 - **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
 - Promo stripe (same card chrome as a challenge card), DB-driven
@@ -22,13 +22,13 @@ Offline cache, Story Unlock Modal media, Open-Meteo, SOS, GPX export, leaderboar
 
 ## Stack
 
-Flutter, MapLibre (`maplibre_gl`) + OSM vector styles, Supabase (Auth, Postgres, Storage), Stripe, custom i18n.
+Flutter, MapLibre (`maplibre_gl`) + OSM vector styles, Supabase (Auth, Postgres, Storage), FAPI sales forms, custom i18n.
 
 ## Setup
 
 ```bash
 flutter pub get
-cp .env.example .env   # fill SUPABASE_URL, SUPABASE_ANON_KEY, STRIPE_PUBLISHABLE_KEY
+cp .env.example .env   # fill SUPABASE_URL, SUPABASE_ANON_KEY, STRIPE_PUBLISHABLE_KEY (legacy)
 flutter run --dart-define-from-file=.env
 ```
 
@@ -61,18 +61,26 @@ Author content in the dashboard. Only `status = published` is visible. Publish t
 
 Edge functions:
 
-- `create-checkout-session` — authenticated; creates a Stripe Checkout session for a paid published challenge
-- `stripe-webhook` — marks `purchases.status = paid` on `checkout.session.completed`
+- `start-fapi-checkout` — authenticated; upserts a pending purchase and returns the FAPI form URL for the chosen reward variant
+- `fapi-webhook` — marks `purchases.status = paid` on a verified FAPI paid-invoice notification
+- `create-checkout-session` / `stripe-webhook` — leftover Stripe path; not used by the Flutter pay CTAs
 
-Set function secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, plus the standard Supabase keys.
+Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, optional `FAPI_WEBHOOK_SECURITY` and `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
 Storage bucket: `waypoint-photos` (`{user_id}/{challenge_id}/{waypoint_id}/{uuid}.jpg`).
 
-### Stripe
+### FAPI
 
-1. Create a product/price (optional: store `stripe_price_id` on the challenge; otherwise `price_cents` is used)
-2. Deploy the two edge functions
-3. Point the webhook at `/functions/v1/stripe-webhook`
+1. Create two sales forms in FAPI (digital diploma, medal + diploma). Do not invent URLs in the repo — paste each public form-page URL into `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` when ready. A null/empty URL disables that pay CTA.
+2. Create custom fields named `user_id`, `challenge_id`, `reward_variant` and add them to both forms (see `supabase/functions/fapi-webhook/README.md`).
+3. Deploy `start-fapi-checkout` and `fapi-webhook`.
+4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`.
+
+Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback).
+
+### Stripe (unused by CTAs)
+
+Stripe Price id columns and the two Stripe edge functions remain for a later cleanup. Pay CTAs no longer open Checkout.
 
 ## Tests
 
@@ -99,5 +107,5 @@ lib/map/             MapLibre style, place catalog, search/filter
 lib/l10n/            custom cs/en/de strings
 lib/ui/              catalog, challenge, map, verify, diploma, settings
 supabase/migrations  Postgres + RLS + Storage
-supabase/functions   Stripe checkout + webhook
+supabase/functions   FAPI checkout + webhook (Stripe leftovers kept)
 ```

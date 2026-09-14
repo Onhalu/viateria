@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
 import '../../data/repositories.dart';
 import '../../data/route_services.dart';
+import '../../domain/challenge_reward.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
@@ -16,6 +16,7 @@ import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
 import '../widgets/challenge_map.dart';
+import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/route_planner_panel.dart';
 
@@ -33,11 +34,13 @@ class ChallengeScreen extends StatefulWidget {
   State<ChallengeScreen> createState() => _ChallengeScreenState();
 }
 
-class _ChallengeScreenState extends State<ChallengeScreen> {
+class _ChallengeScreenState extends State<ChallengeScreen>
+    with WidgetsBindingObserver {
   static const _rules = UnlockRules();
 
   Future<_ChallengePageData>? _future;
   final _startController = TextEditingController();
+  var _awaitingCheckoutReturn = false;
 
   String? _destinationId;
   RouteEndpoint? _start;
@@ -49,6 +52,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   TravelMode? _navigating;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
@@ -57,8 +66,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _startController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_awaitingCheckoutReturn) {
+      return;
+    }
+    _refreshAfterCheckout();
   }
 
   Future<_ChallengePageData> _load() async {
@@ -74,18 +92,41 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   }
 
   Future<void> _reload() async {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
     await _future;
   }
 
-  Future<void> _unlockPaid() async {
+  Future<void> _unlockPaid(RewardVariant variant) async {
+    final data = await _future;
+    if (!mounted) return;
+    final formUrl = data?.detail.challenge.fapiFormUrlFor(variant);
+    if (formUrl == null) return;
     final services = context.read<AppServices>();
-    final session = await services.purchases.startCheckout(widget.challengeId);
-    await launchUrl(
-      Uri.parse(session.url),
-      mode: LaunchMode.externalApplication,
+    final session = await services.purchases.startCheckout(
+      widget.challengeId,
+      rewardVariant: variant,
     );
-    if (mounted) await _reload();
+    if (!mounted) return;
+    final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
+    _awaitingCheckoutReturn = true;
+    await services.openUrl(Uri.parse(checkoutUrl));
+    await _refreshAfterCheckout();
+  }
+
+  /// Reloads purchase + challenge after FAPI (openUrl return and app resume).
+  /// Does not invent a paid / thank-you state — UI follows `purchases`.
+  Future<void> _refreshAfterCheckout() async {
+    if (!mounted) return;
+    final services = context.read<AppServices>();
+    await services.purchases.refreshPurchase(widget.challengeId);
+    if (!mounted) return;
+    await _reload();
+    final data = await _future;
+    if (data?.purchase?.isPaid ?? false) {
+      _awaitingCheckoutReturn = false;
+    }
   }
 
   Waypoint? _destinationOf(List<Waypoint> waypoints) {
@@ -305,16 +346,28 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           waypoints: waypoints,
           completedWaypointIds: completed,
         );
+        final purchasePaid = data.purchase?.isPaid ?? false;
+        final completeBy = ChallengeCompletionWindow.completeBy(
+          data.purchase?.paidAt,
+        );
+        final rewardUnlocked = ChallengeReward.isUnlocked(
+          challengeCompleted: isComplete,
+          purchasePaid: purchasePaid,
+          requiresPurchase: challenge.isPaid,
+        );
+        final rewardVariant = ChallengeReward.variant(
+          purchase: data.purchase,
+          productVariant: challenge.rewardVariant,
+        );
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Text(
               copy.title,
+              key: const Key('challenge-title'),
               style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 8),
-            Text(copy.description),
             const SizedBox(height: 12),
             ChallengeMap(
               waypoints: waypoints,
@@ -375,13 +428,21 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               onStartNavigation: _startNavigation,
               onEndNavigation: _endNavigation,
             ),
-            const SizedBox(height: 16),
+            if (copy.description.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(copy.description, key: const Key('challenge-info')),
+            ],
             if (!hasAccess) ...[
-              Text(strings.challengeLockedPaid),
+              const SizedBox(height: 16),
+              Text(
+                strings.challengeLockedPaid,
+                key: const Key('challenge-unlock-cta'),
+              ),
               const SizedBox(height: 8),
-              FilledButton(
-                onPressed: _unlockPaid,
-                child: Text(strings.unlockWithStripe),
+              _ChallengePayCtas(
+                strings: strings,
+                challenge: challenge,
+                onPay: _unlockPaid,
               ),
               if (data.purchase?.status == PurchaseStatus.pending)
                 Padding(
@@ -389,15 +450,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   child: Text(strings.purchasePending),
                 ),
             ],
-            if (isComplete)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      context.push('/diploma/${challenge.id}', extra: data),
-                  child: Text(strings.viewDiploma),
-                ),
-              ),
             const SizedBox(height: 16),
             Text(
               strings.waypoints,
@@ -424,6 +476,23 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 onVerify: () =>
                     context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
+            const SizedBox(height: 16),
+            ChallengeDeadlineBanner(
+              strings: strings,
+              locale: locale,
+              paid: purchasePaid,
+              completeBy: completeBy,
+            ),
+            const SizedBox(height: 16),
+            ChallengeRewardSection(
+              strings: strings,
+              unlocked: rewardUnlocked,
+              paid: purchasePaid,
+              variant: rewardVariant,
+              onSaveDiploma: rewardUnlocked
+                  ? () => context.push('/diploma/${challenge.id}', extra: data)
+                  : null,
+            ),
           ],
         );
       },
@@ -441,6 +510,191 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               ],
             ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
+    );
+  }
+}
+
+class _ChallengePayCtas extends StatelessWidget {
+  const _ChallengePayCtas({
+    required this.strings,
+    required this.challenge,
+    required this.onPay,
+  });
+
+  static const gap = 10.0;
+  static const minHeight = 52.0;
+  static const narrowBreakpoint = 320.0;
+  static const radius = 16.0;
+  static const borderWidth = 2.0;
+  static const labelSize = 15.5;
+  static const priceSize = 16.5;
+  static const priceGap = 5.0;
+  static const padding = EdgeInsets.symmetric(horizontal: 14, vertical: 11);
+
+  final AppStrings strings;
+  final Challenge challenge;
+  final ValueChanged<RewardVariant> onPay;
+
+  static Color _ctaTone(Color color, Set<WidgetState> states) {
+    if (states.contains(WidgetState.disabled)) {
+      return color.withValues(alpha: 0.38);
+    }
+    if (states.contains(WidgetState.pressed)) {
+      return color.withValues(alpha: 0.85);
+    }
+    return color;
+  }
+
+  ButtonStyle _ctaStyle({required bool outlined}) {
+    final background = outlined ? BrandColors.cream : BrandColors.forest;
+    final foreground = outlined ? BrandColors.forest : BrandColors.cream;
+    return ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, minHeight)),
+      padding: const WidgetStatePropertyAll(padding),
+      alignment: Alignment.center,
+      visualDensity: VisualDensity.standard,
+      elevation: const WidgetStatePropertyAll(0),
+      shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+      surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+      splashFactory: NoSplash.splashFactory,
+      shape: const WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(radius)),
+        ),
+      ),
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (states) => _ctaTone(background, states),
+      ),
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (states) => _ctaTone(foreground, states),
+      ),
+      side: WidgetStateProperty.resolveWith((states) {
+        if (!outlined) return BorderSide.none;
+        return BorderSide(
+          color: _ctaTone(BrandColors.forest, states),
+          width: borderWidth,
+        );
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stack = MediaQuery.sizeOf(context).width < narrowBreakpoint;
+    final diploma = _payButton(
+      key: const Key('challenge-pay-diploma'),
+      priceKey: const Key('challenge-pay-diploma-price'),
+      outlined: true,
+      label: strings.payDigitalDiploma,
+      price: formatChallengePrice(
+        challenge.displayPriceCents(RewardVariant.diploma),
+        challenge.currency,
+        strings.locale,
+      ),
+      onPressed: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
+          ? null
+          : () => onPay(RewardVariant.diploma),
+    );
+    final medal = _payButton(
+      key: const Key('challenge-pay-medal'),
+      priceKey: const Key('challenge-pay-medal-price'),
+      outlined: false,
+      label: strings.payMedalAndDiploma,
+      price: formatChallengePrice(
+        challenge.displayPriceCents(RewardVariant.medalAndDiploma),
+        challenge.currency,
+        strings.locale,
+      ),
+      onPressed: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
+          ? null
+          : () => onPay(RewardVariant.medalAndDiploma),
+    );
+    if (stack) {
+      return Column(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          diploma,
+          const SizedBox(height: gap),
+          medal,
+        ],
+      );
+    }
+    return IntrinsicHeight(
+      child: Row(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(flex: 1, child: diploma),
+          const SizedBox(width: gap),
+          Expanded(flex: 1, child: medal),
+        ],
+      ),
+    );
+  }
+
+  Widget _payButton({
+    required Key key,
+    required Key priceKey,
+    required bool outlined,
+    required String label,
+    required String? price,
+    required VoidCallback? onPressed,
+  }) {
+    final states = <WidgetState>{if (onPressed == null) WidgetState.disabled};
+    final ink = _ctaTone(
+      outlined ? BrandColors.forest : BrandColors.cream,
+      states,
+    );
+    final child = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: labelSize,
+            fontWeight: FontWeight.w600,
+            height: 1.2,
+            color: ink,
+          ),
+        ),
+        if (price != null) ...[
+          const SizedBox(height: priceGap),
+          Text(
+            price,
+            key: priceKey,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: priceSize,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+              color: ink,
+            ),
+          ),
+        ],
+      ],
+    );
+    final style = _ctaStyle(outlined: outlined);
+    if (outlined) {
+      return OutlinedButton(
+        key: key,
+        onPressed: onPressed,
+        style: style,
+        child: child,
+      );
+    }
+    return FilledButton(
+      key: key,
+      onPressed: onPressed,
+      style: style,
+      child: child,
     );
   }
 }
