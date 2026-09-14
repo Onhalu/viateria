@@ -19,6 +19,7 @@ import '../widgets/challenge_map.dart';
 import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/route_planner_panel.dart';
+import 'payment_checkout_screen.dart';
 
 class ChallengeScreen extends StatefulWidget {
   const ChallengeScreen({
@@ -34,13 +35,11 @@ class ChallengeScreen extends StatefulWidget {
   State<ChallengeScreen> createState() => _ChallengeScreenState();
 }
 
-class _ChallengeScreenState extends State<ChallengeScreen>
-    with WidgetsBindingObserver {
+class _ChallengeScreenState extends State<ChallengeScreen> {
   static const _rules = UnlockRules();
 
   Future<_ChallengePageData>? _future;
   final _startController = TextEditingController();
-  var _awaitingCheckoutReturn = false;
 
   String? _destinationId;
   RouteEndpoint? _start;
@@ -52,12 +51,6 @@ class _ChallengeScreenState extends State<ChallengeScreen>
   TravelMode? _navigating;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
@@ -66,17 +59,8 @@ class _ChallengeScreenState extends State<ChallengeScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _startController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || !_awaitingCheckoutReturn) {
-      return;
-    }
-    _refreshAfterCheckout();
   }
 
   Future<_ChallengePageData> _load() async {
@@ -110,23 +94,16 @@ class _ChallengeScreenState extends State<ChallengeScreen>
     );
     if (!mounted) return;
     final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
-    _awaitingCheckoutReturn = true;
-    await services.openUrl(Uri.parse(checkoutUrl));
-    await _refreshAfterCheckout();
-  }
-
-  /// Reloads purchase + challenge after FAPI (openUrl return and app resume).
-  /// Does not invent a paid / thank-you state — UI follows `purchases`.
-  Future<void> _refreshAfterCheckout() async {
-    if (!mounted) return;
-    final services = context.read<AppServices>();
-    await services.purchases.refreshPurchase(widget.challengeId);
+    await Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => PaymentCheckoutScreen(
+          challengeId: widget.challengeId,
+          checkoutUrl: checkoutUrl,
+        ),
+      ),
+    );
     if (!mounted) return;
     await _reload();
-    final data = await _future;
-    if (data?.purchase?.isPaid ?? false) {
-      _awaitingCheckoutReturn = false;
-    }
   }
 
   Waypoint? _destinationOf(List<Waypoint> waypoints) {

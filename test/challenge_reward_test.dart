@@ -14,8 +14,10 @@ import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/challenge_reward_section.dart';
+import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
 import 'package:viateria/ui/widgets/route_planner_panel.dart';
 
+import 'helpers/fake_payment_webview.dart';
 import 'helpers/fakes.dart';
 
 AppServices buildServices({
@@ -94,6 +96,11 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    debugPaymentWebViewBuilder = fakePaymentWebViewBuilder();
+  });
+
+  tearDown(() {
+    debugPaymentWebViewBuilder = null;
   });
 
   group('domain', () {
@@ -818,12 +825,12 @@ void main() {
       expect((diploma.width - medal.width).abs(), lessThan(1));
     });
 
-    testWidgets('tapping a pay CTA persists that variant on the purchase', (
+    testWidgets('tapping a pay CTA opens in-app checkout for that variant', (
       tester,
     ) async {
       useTallView(tester);
       final opened = <Uri>[];
-      final purchases = MemoryPurchases();
+      final purchases = MemoryPurchases(completeOnRefresh: false);
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
@@ -842,19 +849,24 @@ void main() {
       await tester.tap(find.byKey(const Key('challenge-pay-medal')));
       await tester.pumpAndSettle();
 
-      expect(purchases.purchases['story-1']!.isPaid, isTrue);
+      expect(purchases.purchases['story-1']!.isPaid, isFalse);
+      expect(purchases.purchases['story-1']!.status, PurchaseStatus.pending);
       expect(
         purchases.purchases['story-1']!.rewardVariant,
         RewardVariant.medalAndDiploma,
       );
-      expect(opened, [
-        Uri.parse(fapiCheckoutUrlFor(RewardVariant.medalAndDiploma)),
-      ]);
+      expect(opened, isEmpty);
+      expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      expect(
+        find.text(fapiCheckoutUrlFor(RewardVariant.medalAndDiploma)),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
-      expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
     });
 
-    testWidgets('diploma CTA opens the diploma FAPI form URL', (tester) async {
+    testWidgets('diploma CTA opens the diploma FAPI form in a WebView', (
+      tester,
+    ) async {
       useTallView(tester);
       final opened = <Uri>[];
       final purchases = MemoryPurchases(completeOnRefresh: false);
@@ -884,18 +896,22 @@ void main() {
         purchases.purchases['story-1']!.rewardVariant,
         RewardVariant.diploma,
       );
-      expect(opened, [Uri.parse(fapiCheckoutUrlFor(RewardVariant.diploma))]);
-      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-      expect(find.text(AppStrings('en').purchasePending), findsOneWidget);
+      expect(opened, isEmpty);
+      expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      expect(
+        find.text(fapiCheckoutUrlFor(RewardVariant.diploma)),
+        findsOneWidget,
+      );
+      expect(find.text(AppStrings('en').paymentTitle), findsOneWidget);
       expect(find.text(AppStrings('en').congratulations), findsNothing);
     });
 
-    testWidgets('resume after FAPI reloads paid purchase without a thank-you', (
+    testWidgets('paid webhook after FAPI submit shows success then refreshes', (
       tester,
     ) async {
       useTallView(tester);
       final strings = AppStrings('en');
-      final purchases = MemoryPurchases(completeOnRefresh: false);
+      final purchases = MemoryPurchases();
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
@@ -911,15 +927,18 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('challenge-pay-diploma')));
       await tester.pumpAndSettle();
-      expect(find.text(strings.purchasePending), findsOneWidget);
-      expect(find.text(strings.congratulations), findsNothing);
+      expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      expect(find.byKey(const Key('payment-success')), findsNothing);
 
-      purchases.pay(
-        'story-1',
-        paidAt: DateTime(2026, 3, 11),
-        rewardVariant: RewardVariant.diploma,
-      );
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.tap(find.byKey(const Key('payment-fake-submit')));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('payment-success')), findsOneWidget);
+      expect(find.text(strings.paymentSuccessTitle), findsOneWidget);
+      expect(purchases.purchases['story-1']!.isPaid, isTrue);
+
+      await tester.tap(find.byKey(const Key('payment-back-to-challenge')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
