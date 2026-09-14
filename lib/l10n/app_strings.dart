@@ -145,6 +145,18 @@ class AppStrings {
     'diplomaLabel',
     'payDigitalDiploma',
     'payMedalAndDiploma',
+    'paymentTitle',
+    'paymentLoadingForm',
+    'paymentProcessingTitle',
+    'paymentProcessingBody',
+    'paymentSuccessTitle',
+    'paymentSuccessBody',
+    'paymentTimeoutBody',
+    'paymentBackToChallenge',
+    'paymentRetry',
+    'paymentLeaveConfirm',
+    'paymentLeave',
+    'paymentStay',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -281,6 +293,18 @@ class AppStrings {
   String get diplomaLabel => t('diplomaLabel');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
+  String get paymentTitle => t('paymentTitle');
+  String get paymentLoadingForm => t('paymentLoadingForm');
+  String get paymentProcessingTitle => t('paymentProcessingTitle');
+  String get paymentProcessingBody => t('paymentProcessingBody');
+  String get paymentSuccessTitle => t('paymentSuccessTitle');
+  String get paymentSuccessBody => t('paymentSuccessBody');
+  String get paymentTimeoutBody => t('paymentTimeoutBody');
+  String get paymentBackToChallenge => t('paymentBackToChallenge');
+  String get paymentRetry => t('paymentRetry');
+  String get paymentLeaveConfirm => t('paymentLeaveConfirm');
+  String get paymentLeave => t('paymentLeave');
+  String get paymentStay => t('paymentStay');
 
   String difficultyLabel(String name) => t(name);
 
@@ -452,6 +476,19 @@ class AppStrings {
       'diplomaLabel': 'Diploma',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
+      'paymentTitle': 'Payment',
+      'paymentLoadingForm': 'Loading payment form…',
+      'paymentProcessingTitle': 'Processing payment',
+      'paymentProcessingBody': 'Please wait while we confirm your payment.',
+      'paymentSuccessTitle': 'Payment confirmed',
+      'paymentSuccessBody': 'Your challenge is unlocked.',
+      'paymentTimeoutBody':
+          "We haven't seen the payment yet. Try refreshing the challenge.",
+      'paymentBackToChallenge': 'Back to challenge',
+      'paymentRetry': 'Try again',
+      'paymentLeaveConfirm': 'Payment is still running. Leave anyway?',
+      'paymentLeave': 'Leave',
+      'paymentStay': 'Stay',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -592,13 +629,25 @@ class AppStrings {
       'deadlineAfterPayment': 'Termín po zaplacení',
       'rewardTitle': 'Odměna',
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
-      'rewardDependsOnPaidOption':
-          'Odměna podle zvolené varianty po zaplacení',
+      'rewardDependsOnPaidOption': 'Odměna podle zvolené varianty po zaplacení',
       'saveDiploma': 'Uložit diplom',
       'woodenMedal': 'Dřevěná medaile',
       'diplomaLabel': 'Diplom',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
+      'paymentTitle': 'Platba',
+      'paymentLoadingForm': 'Načítám platební formulář…',
+      'paymentProcessingTitle': 'Platba se zpracovává',
+      'paymentProcessingBody': 'Chvilku strpení, potvrzujeme platbu.',
+      'paymentSuccessTitle': 'Platba potvrzena',
+      'paymentSuccessBody':
+          'Výzva je odemčená. Můžeš sledovat termín a odměnu.',
+      'paymentTimeoutBody': 'Platbu zatím nevidíme. Zkus obnovit výzvu.',
+      'paymentBackToChallenge': 'Zpět k výzvě',
+      'paymentRetry': 'Zkusit znovu',
+      'paymentLeaveConfirm': 'Platba ještě běží. Opravdu odejít?',
+      'paymentLeave': 'Odejít',
+      'paymentStay': 'Zůstat',
     },
     'de': {
       'appName': 'VANDERY',
@@ -745,6 +794,18 @@ class AppStrings {
       'diplomaLabel': 'Diplom',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
+      'paymentTitle': 'Zahlung',
+      'paymentLoadingForm': 'Zahlungsformular wird geladen…',
+      'paymentProcessingTitle': 'Zahlung wird verarbeitet',
+      'paymentProcessingBody': 'Bitte warten Sie auf die Bestätigung.',
+      'paymentSuccessTitle': 'Zahlung bestätigt',
+      'paymentSuccessBody': 'Deine Challenge ist freigeschaltet.',
+      'paymentTimeoutBody': 'Wir sehen die Zahlung noch nicht. Bitte die Challenge aktualisieren.',
+      'paymentBackToChallenge': 'Zurück zur Challenge',
+      'paymentRetry': 'Erneut versuchen',
+      'paymentLeaveConfirm': 'Die Zahlung läuft noch. Wirklich verlassen?',
+      'paymentLeave': 'Verlassen',
+      'paymentStay': 'Bleiben',
     },
   };
 }

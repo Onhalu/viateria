@@ -195,6 +195,7 @@ class MemoryPurchases implements PurchaseRepository {
   }) : purchases = purchases ?? {};
 
   final Map<String, Purchase> purchases;
+  var refreshCalls = 0;
 
   /// Widget tests that need the pay CTAs to stay visible after a tap
   /// set this to false. Default true matches the previous auto-pay refresh.
@@ -206,6 +207,7 @@ class MemoryPurchases implements PurchaseRepository {
 
   @override
   Future<Purchase?> refreshPurchase(String challengeId) async {
+    refreshCalls++;
     final current = purchases[challengeId];
     if (completeOnRefresh &&
         current != null &&
