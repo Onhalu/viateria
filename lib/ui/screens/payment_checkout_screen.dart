@@ -11,8 +11,9 @@ import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../widgets/fapi_checkout_webview.dart';
 
-/// Full-screen in-app FAPI checkout. Body is the sales-form WebView; cream
-/// overlays cover loading, processing, timeout, and confirmed-paid success.
+/// Full-screen in-app FAPI checkout. Body is the sales-form embed
+/// (`webview_flutter` on iOS/Android, iframe on Flutter web); cream overlays
+/// cover loading, processing, timeout, and confirmed-paid success.
 class PaymentCheckoutScreen extends StatefulWidget {
   const PaymentCheckoutScreen({
     super.key,
@@ -131,6 +132,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
       onJsMessage: (message) {
         _controller.onJsMessage(message);
       },
+      onNeedPaidWatch: _controller.startQuietPaidWatch,
     );
     return PopScope(
       canPop: !_controller.isProcessing,

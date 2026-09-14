@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
 
-/// In-widget-test stand-in for [FapiCheckoutWebView] (no platform WebView).
+/// In-widget-test stand-in for [FapiCheckoutWebView] (no platform WebView / iframe).
 class FakePaymentWebView extends StatefulWidget {
   const FakePaymentWebView({
     super.key,

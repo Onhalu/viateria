@@ -158,6 +158,108 @@ void main() {
     });
   });
 
+  group('Flutter web iframe bridge', () {
+    test('VM / mobile embed is webview_flutter (iframe is dart.library.html)', () {
+      expect(kFapiCheckoutEmbedKind, 'webview_flutter');
+    });
+
+    test('first iframe load marks loaded, starts quiet watch, forwards URL', () {
+      var loaded = 0;
+      var watches = 0;
+      Uri? seen;
+      final host = PaymentWebViewHost(
+        checkoutUrl: 'https://form.fapi.cz/diploma-test',
+        onLoaded: () => loaded++,
+        onUrlChanged: (url) => seen = url,
+        onSubmitted: () {},
+        onJsMessage: (_) {},
+        onNeedPaidWatch: () => watches++,
+      );
+
+      handleFapiWebIFrameLoad(
+        host: host,
+        isFirstLoad: true,
+        url: Uri.parse('https://form.fapi.cz/diploma-test'),
+      );
+
+      expect(loaded, 1);
+      expect(watches, 1);
+      expect(seen, Uri.parse('https://form.fapi.cz/diploma-test'));
+    });
+
+    test('cross-origin first load still marks loaded without a URL', () {
+      var loaded = 0;
+      var watches = 0;
+      Uri? seen;
+      final host = PaymentWebViewHost(
+        checkoutUrl: 'https://form.fapi.cz/diploma-test',
+        onLoaded: () => loaded++,
+        onUrlChanged: (url) => seen = url,
+        onSubmitted: () {},
+        onJsMessage: (_) {},
+        onNeedPaidWatch: () => watches++,
+      );
+
+      handleFapiWebIFrameLoad(host: host, isFirstLoad: true);
+
+      expect(loaded, 1);
+      expect(watches, 1);
+      expect(seen, isNull);
+    });
+
+    test('later load without URL does not re-fire loaded or fake submit', () {
+      var loaded = 0;
+      var submitted = 0;
+      var watches = 0;
+      final host = PaymentWebViewHost(
+        checkoutUrl: 'https://form.fapi.cz/diploma-test',
+        onLoaded: () => loaded++,
+        onUrlChanged: (_) {},
+        onSubmitted: () => submitted++,
+        onJsMessage: (_) {},
+        onNeedPaidWatch: () => watches++,
+      );
+
+      handleFapiWebIFrameLoad(host: host, isFirstLoad: false);
+
+      expect(loaded, 0);
+      expect(watches, 0);
+      expect(submitted, 0);
+    });
+
+    test('later thank-you URL is forwarded to the host', () {
+      Uri? seen;
+      final host = PaymentWebViewHost(
+        checkoutUrl: 'https://form.fapi.cz/diploma-test',
+        onLoaded: () {},
+        onUrlChanged: (url) => seen = url,
+        onSubmitted: () {},
+        onJsMessage: (_) {},
+      );
+
+      handleFapiWebIFrameLoad(
+        host: host,
+        isFirstLoad: false,
+        url: Uri.parse('https://form.fapi.cz/dekujeme'),
+      );
+
+      expect(seen, Uri.parse('https://form.fapi.cz/dekujeme'));
+      expect(
+        looksLikeFapiFormCompletion(seen!),
+        isTrue,
+      );
+    });
+
+    test('postMessage text trims JS-channel payloads and ignores junk', () {
+      expect(fapiCheckoutPostMessageText('submit'), 'submit');
+      expect(fapiCheckoutPostMessageText('  thankyou-dom  '), 'thankyou-dom');
+      expect(fapiCheckoutPostMessageText(''), isNull);
+      expect(fapiCheckoutPostMessageText('   '), isNull);
+      expect(fapiCheckoutPostMessageText(null), isNull);
+      expect(fapiCheckoutPostMessageText(12), isNull);
+    });
+  });
+
   group('PaymentCheckoutController', () {
     test(
       'loading → form → processing → success when purchase is paid',
@@ -221,6 +323,63 @@ void main() {
       controller.onUrlChanged(Uri.parse('https://form.fapi.cz/dekujeme'));
       await controller.beginProcessing();
       expect(controller.phase, PaymentCheckoutPhase.success);
+    });
+
+    test('quiet watch stays in form until paid and never times out', () async {
+      var polls = 0;
+      final controller = controllerWith(
+        refreshPurchase: () async {
+          polls++;
+          return polls >= 3 ? paidPurchase() : pendingPurchase();
+        },
+      );
+      addTearDown(controller.dispose);
+
+      controller.onWebViewLoaded();
+      expect(controller.phase, PaymentCheckoutPhase.form);
+      await controller.startQuietPaidWatch();
+      expect(controller.phase, PaymentCheckoutPhase.success);
+      expect(controller.pollCount, 3);
+    });
+
+    test('quiet watch pending never becomes success or timeout', () async {
+      var polls = 0;
+      late PaymentCheckoutController controller;
+      controller = controllerWith(
+        refreshPurchase: () async {
+          polls++;
+          return pendingPurchase();
+        },
+        delay: (_) async {
+          if (polls >= 4) controller.dispose();
+        },
+      );
+
+      controller.onWebViewLoaded();
+      await controller.startQuietPaidWatch();
+      expect(controller.phase, PaymentCheckoutPhase.form);
+      expect(controller.phase, isNot(PaymentCheckoutPhase.success));
+      expect(controller.phase, isNot(PaymentCheckoutPhase.timeout));
+      expect(polls, greaterThanOrEqualTo(4));
+    });
+
+    test('quiet watch then thank-you URL still uses processing overlay', () async {
+      final gate = Completer<void>();
+      final controller = controllerWith(
+        refreshPurchase: () async => pendingPurchase(),
+        delay: (_) => gate.future,
+      );
+      addTearDown(() {
+        gate.complete();
+        controller.dispose();
+      });
+
+      controller.onWebViewLoaded();
+      controller.startQuietPaidWatch();
+      expect(controller.phase, PaymentCheckoutPhase.form);
+      controller.onUrlChanged(Uri.parse('https://form.fapi.cz/dekujeme'));
+      expect(controller.phase, PaymentCheckoutPhase.processing);
+      expect(controller.showProcessingOverlay, isTrue);
     });
 
     test('hides processing overlay on a 3DS host', () async {

@@ -17,17 +17,20 @@ const kPaymentSuccessAutoPop = Duration(seconds: 2);
 
 /// Detection heuristic for FAPI form completion (NOT payment confirmation).
 ///
-/// We treat the WebView as "submitted / finished" when:
+/// We treat the embed as "submitted / finished" when:
 /// 1. The navigated URL path, query, or fragment looks like a thank-you,
 ///    order-status, or payment-success page (cs / en / de tokens, including
 ///    dekujeme / děkujeme / danke), and the host is not a known card-gateway
 ///    or 3-D Secure ACS; or
 /// 2. Injected JavaScript posts `submit` (capture-phase `submit` listener) or
-///    `thankyou-dom` (body text contains a thank-you phrase).
+///    `thankyou-dom` (body text contains a thank-you phrase). On Flutter web
+///    that arrives via `window.postMessage` when the iframe is same-origin.
 ///
 /// Either signal starts purchase polling. The processing overlay is hidden
 /// while [isPaymentGatewayUrl] is true so a 3-D Secure redirect stays
-/// interactive. Success is ONLY `purchases.status == paid` from the backend.
+/// interactive. On Flutter web, [startQuietPaidWatch] also polls without an
+/// overlay because cross-origin iframes often hide navigation. Success is
+/// ONLY `purchases.status == paid` from the backend.
 bool looksLikeFapiFormCompletion(Uri uri) {
   if (isPaymentGatewayUrl(uri)) return false;
   final haystack = '${uri.path} ${uri.query} ${uri.fragment}'.toLowerCase();
@@ -126,6 +129,7 @@ class PaymentCheckoutController extends ChangeNotifier {
 
   var _disposed = false;
   var _pollGeneration = 0;
+  var _quietGeneration = 0;
   Future<void>? _inFlight;
 
   bool get isProcessing => phase == PaymentCheckoutPhase.processing;
@@ -185,6 +189,18 @@ class PaymentCheckoutController extends ChangeNotifier {
     return _inFlight!;
   }
 
+  /// Polls for `paid` without covering the form or applying [pollTimeout].
+  ///
+  /// Flutter web iframes often cannot observe FAPI navigation or inject a JS
+  /// channel (cross-origin). This watch is the fallback so success still
+  /// appears when the webhook marks the row paid. Pending never counts as paid.
+  Future<void> startQuietPaidWatch() {
+    if (_disposed) return Future.value();
+    if (phase == PaymentCheckoutPhase.success) return Future.value();
+    final generation = ++_quietGeneration;
+    return _quietPoll(generation);
+  }
+
   Future<void> _poll() async {
     final generation = ++_pollGeneration;
     final started = clock();
@@ -208,10 +224,27 @@ class PaymentCheckoutController extends ChangeNotifier {
     }
   }
 
+  Future<void> _quietPoll(int generation) async {
+    while (!_disposed &&
+        generation == _quietGeneration &&
+        phase != PaymentCheckoutPhase.success) {
+      pollCount++;
+      final purchase = await refreshPurchase();
+      if (_disposed || generation != _quietGeneration) return;
+      if (purchase?.status == PurchaseStatus.paid) {
+        phase = PaymentCheckoutPhase.success;
+        notifyListeners();
+        return;
+      }
+      await delay(pollInterval);
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true;
     _pollGeneration++;
+    _quietGeneration++;
     super.dispose();
   }
 }
