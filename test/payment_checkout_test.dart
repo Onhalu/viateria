@@ -159,7 +159,7 @@ void main() {
   });
 
   group('Flutter web iframe bridge', () {
-    test('VM / mobile embed is webview_flutter (iframe is dart.library.html)', () {
+    test('VM / mobile embed is webview_flutter (iframe is html/js_interop)', () {
       expect(kFapiCheckoutEmbedKind, 'webview_flutter');
     });
 

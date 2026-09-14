@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'fapi_checkout_webview_io.dart'
     if (dart.library.html) 'fapi_checkout_webview_web.dart'
+    if (dart.library.js_interop) 'fapi_checkout_webview_web.dart'
     as embed;
 import 'payment_webview_host.dart';
 
@@ -10,7 +11,7 @@ export 'payment_webview_host.dart';
 /// How [FapiCheckoutWebView] embeds the sales form on this platform.
 ///
 /// * `webview_flutter` — iOS / Android (and VM widget tests)
-/// * `iframe` — Flutter web (`HtmlElementView` + `package:web`)
+/// * `iframe` — Flutter web (`HtmlElementView` + `package:web`, JS and Wasm)
 ///
 /// `webview_flutter_web` is intentionally not used: it only implements
 /// `loadRequest` / `loadHtmlString`, so `WebViewController` JS channels and
