@@ -212,7 +212,14 @@ void main() {
     await tester.pumpAndSettle();
 
     final card = find.widgetWithText(ChallengeCard, 'Open trail');
-    await tester.scrollUntilVisible(card, 300);
+    await tester.scrollUntilVisible(
+      card,
+      300,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('catalog-results')),
+        matching: find.byType(Scrollable),
+      ),
+    );
     await tester.tap(card);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -276,7 +283,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Weekend hike'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Open trail'), 400);
+      await tester.scrollUntilVisible(
+        find.text('Open trail'),
+        400,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('catalog-results')),
+          matching: find.byType(Scrollable),
+        ),
+      );
       expect(find.text('Open trail'), findsOneWidget);
       expect(find.text('Hidden draft'), findsNothing);
     },

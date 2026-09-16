@@ -81,6 +81,11 @@ Widget wrapApp(AppServices services, {LocaleController? locale}) {
   );
 }
 
+Finder catalogResultsScrollable() => find.descendant(
+  of: find.byKey(const Key('catalog-results')),
+  matching: find.byType(Scrollable),
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -93,9 +98,17 @@ void main() {
       await tester.pumpWidget(wrap(const CatalogScreen(), buildServices()));
       await tester.pumpAndSettle();
       expect(find.text('Weekend hike'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Open trail'), 400);
+      await tester.scrollUntilVisible(
+        find.text('Open trail'),
+        400,
+        scrollable: catalogResultsScrollable(),
+      );
       expect(find.text('Open trail'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Story trail'), 400);
+      await tester.scrollUntilVisible(
+        find.text('Story trail'),
+        400,
+        scrollable: catalogResultsScrollable(),
+      );
       expect(find.text('Story trail'), findsOneWidget);
       expect(find.text('Hidden draft'), findsNothing);
     },
