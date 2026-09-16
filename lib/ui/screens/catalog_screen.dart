@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
+import '../../domain/catalog_query.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../navigation.dart';
 import '../widgets/catalog_cards.dart';
+import '../widgets/catalog_filters.dart';
+import '../widgets/empty_state.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -17,11 +20,19 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   Future<_CatalogData>? _future;
+  final _search = TextEditingController();
+  CatalogFilter _filter = const CatalogFilter();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   Future<_CatalogData> _load() async {
@@ -34,6 +45,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Future<void> _reload() async {
     setState(() => _future = _load());
     await _future;
+  }
+
+  void _applyFilter(CatalogFilter next) {
+    if (_search.text != next.query) {
+      _search.value = TextEditingValue(
+        text: next.query,
+        selection: TextSelection.collapsed(offset: next.query.length),
+      );
+    }
+    setState(() => _filter = next);
   }
 
   @override
@@ -60,46 +81,90 @@ class _CatalogScreenState extends State<CatalogScreen> {
               );
             }
             final data = snapshot.data!;
-            if (data.challenges.isEmpty && data.promos.isEmpty) {
-              return RefreshIndicator(
-                onRefresh: _reload,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(24),
-                  children: [
-                    const SizedBox(height: 80),
-                    Text(
-                      strings.catalogEmpty,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(strings.catalogEmptyHint, textAlign: TextAlign.center),
-                  ],
+            final visible = filterCatalogChallenges(data.challenges, _filter);
+            final noMatches =
+                data.challenges.isNotEmpty &&
+                visible.isEmpty &&
+                _filter.isActive;
+            final cmsEmpty = data.challenges.isEmpty && data.promos.isEmpty;
+            final promos = !noMatches && _filter.showPromos
+                ? data.promos
+                : const <PromoStripe>[];
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: CatalogSearchField(
+                    controller: _search,
+                    hintText: strings.catalogSearchHint,
+                    onChanged: (value) =>
+                        _applyFilter(_filter.copyWith(query: value)),
+                  ),
                 ),
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: _reload,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  for (final promo in data.promos) ...[
-                    PromoStripeCard(
-                      promo: promo,
-                      onTap: () => _openPromo(promo),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  for (final challenge in data.challenges) ...[
-                    ChallengeCard(
-                      challenge: challenge,
-                      onTap: () => openChallenge(context, challenge.id),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ],
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
+                  child: CatalogFilterChipRow(
+                    filter: _filter,
+                    strings: strings,
+                    onChanged: _applyFilter,
+                  ),
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _reload,
+                    child: cmsEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(24),
+                            children: [
+                              const SizedBox(height: 80),
+                              Text(
+                                strings.catalogEmpty,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                strings.catalogEmptyHint,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          )
+                        : noMatches
+                        ? EmptyState(
+                            key: const Key('catalog-no-matches'),
+                            title: strings.catalogNoMatches,
+                            hint: strings.catalogNoMatchesHint,
+                            actionLabel: strings.catalogClearFilters,
+                            outlinedAction: true,
+                            onAction: () => _applyFilter(const CatalogFilter()),
+                          )
+                        : ListView(
+                            key: const Key('catalog-results'),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                            children: [
+                              for (final promo in promos) ...[
+                                PromoStripeCard(
+                                  promo: promo,
+                                  onTap: () => _openPromo(promo),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              for (final challenge in visible) ...[
+                                ChallengeCard(
+                                  challenge: challenge,
+                                  onTap: () =>
+                                      openChallenge(context, challenge.id),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ],
+                          ),
+                  ),
+                ),
+              ],
             );
           },
         ),

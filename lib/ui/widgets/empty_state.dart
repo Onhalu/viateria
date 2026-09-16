@@ -7,12 +7,14 @@ class EmptyState extends StatelessWidget {
     this.hint,
     this.actionLabel,
     this.onAction,
+    this.outlinedAction = false,
   });
 
   final String title;
   final String? hint;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final bool outlinedAction;
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +35,12 @@ class EmptyState extends StatelessWidget {
         if (actionLabel != null && onAction != null) ...[
           const SizedBox(height: 16),
           Center(
-            child: FilledButton.tonal(
-              onPressed: onAction,
-              child: Text(actionLabel!),
-            ),
+            child: outlinedAction
+                ? OutlinedButton(onPressed: onAction, child: Text(actionLabel!))
+                : FilledButton.tonal(
+                    onPressed: onAction,
+                    child: Text(actionLabel!),
+                  ),
           ),
         ],
       ],

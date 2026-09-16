@@ -54,6 +54,7 @@ class Challenge {
     required this.translations,
     this.coverImageUrl,
     this.region,
+    this.countryCode,
     this.stripePriceId,
     this.stripePriceIdDiploma,
     this.stripePriceIdMedal,
@@ -82,7 +83,12 @@ class Challenge {
   final PublishStatus status;
   final List<LocalizedText> translations;
   final String? coverImageUrl;
+
+  /// Free-text place / range label for cards (Pálava, Beskydy, …).
   final String? region;
+
+  /// ISO 3166-1 alpha-2 used by catalog region chips: CZ SK AT DE PL.
+  final String? countryCode;
 
   /// Legacy shared Stripe Price id. Used when a per-SKU id is unset.
   final String? stripePriceId;

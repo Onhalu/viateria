@@ -1,3 +1,4 @@
+import '../domain/catalog_query.dart';
 import '../models/models.dart';
 
 List<LocalizedText> i18nFromRows(
@@ -41,6 +42,10 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
     status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
     coverImageUrl: row['cover_image_url'] as String?,
     region: row['region'] as String?,
+    countryCode: resolveCountryCode(
+      countryCode: row['country_code'] as String?,
+      region: row['region'] as String?,
+    ),
     stripePriceId: row['stripe_price_id'] as String?,
     stripePriceIdDiploma: row['stripe_price_id_diploma'] as String?,
     stripePriceIdMedal: row['stripe_price_id_medal'] as String?,

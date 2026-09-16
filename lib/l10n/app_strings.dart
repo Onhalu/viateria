@@ -12,6 +12,12 @@ class AppStrings {
     'catalogTitle',
     'catalogEmpty',
     'catalogEmptyHint',
+    'catalogSearchHint',
+    'catalogFilterOpen',
+    'catalogFilterStory',
+    'catalogClearFilters',
+    'catalogNoMatches',
+    'catalogNoMatchesHint',
     'signIn',
     'signUp',
     'email',
@@ -165,6 +171,12 @@ class AppStrings {
   String get catalogTitle => t('catalogTitle');
   String get catalogEmpty => t('catalogEmpty');
   String get catalogEmptyHint => t('catalogEmptyHint');
+  String get catalogSearchHint => t('catalogSearchHint');
+  String get catalogFilterOpen => t('catalogFilterOpen');
+  String get catalogFilterStory => t('catalogFilterStory');
+  String get catalogClearFilters => t('catalogClearFilters');
+  String get catalogNoMatches => t('catalogNoMatches');
+  String get catalogNoMatchesHint => t('catalogNoMatchesHint');
   String get signIn => t('signIn');
   String get signUp => t('signUp');
   String get email => t('email');
@@ -336,6 +348,12 @@ class AppStrings {
       'catalogEmpty': 'No published challenges yet.',
       'catalogEmptyHint':
           'Content lives in Supabase CMS. Publish a challenge to see it here.',
+      'catalogSearchHint': 'Search challenges',
+      'catalogFilterOpen': 'Open',
+      'catalogFilterStory': 'Story',
+      'catalogClearFilters': 'Clear filters',
+      'catalogNoMatches': 'No matches',
+      'catalogNoMatchesHint': 'Try different filters or search.',
       'signIn': 'Sign in',
       'signUp': 'Create account',
       'email': 'Email',
@@ -496,6 +514,12 @@ class AppStrings {
       'catalogEmpty': 'Zatím žádné zveřejněné výzvy.',
       'catalogEmptyHint':
           'Obsah žije v Supabase CMS. Zveřejněte výzvu, aby se zde objevila.',
+      'catalogSearchHint': 'Hledat výzvy',
+      'catalogFilterOpen': 'Otevřené',
+      'catalogFilterStory': 'Příběh',
+      'catalogClearFilters': 'Zrušit filtry',
+      'catalogNoMatches': 'Nic nesedí',
+      'catalogNoMatchesHint': 'Uprav filtry nebo hledaný text.',
       'signIn': 'Přihlásit se',
       'signUp': 'Vytvořit účet',
       'email': 'E-mail',
@@ -655,6 +679,12 @@ class AppStrings {
       'catalogEmpty': 'Noch keine veröffentlichten Challenges.',
       'catalogEmptyHint':
           'Inhalte liegen im Supabase-CMS. Veröffentlichen Sie eine Challenge.',
+      'catalogSearchHint': 'Challenges suchen',
+      'catalogFilterOpen': 'Offen',
+      'catalogFilterStory': 'Geschichte',
+      'catalogClearFilters': 'Filter zurücksetzen',
+      'catalogNoMatches': 'Keine Treffer',
+      'catalogNoMatchesHint': 'Andere Filter oder Suche versuchen.',
       'signIn': 'Anmelden',
       'signUp': 'Konto erstellen',
       'email': 'E-Mail',
