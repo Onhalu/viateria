@@ -82,6 +82,19 @@ Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents
 
 Stripe Price id columns and the two Stripe edge functions remain for a later cleanup. Pay CTAs no longer open Checkout.
 
+## DEMO — Material scaffold (do not merge)
+
+This branch ships a **debug/profile-only** Flutter Material 3 reference shell so the official `flutter create` / Material template can be inspected next to Viateria. **Do not merge to `main`** unless explicitly asked.
+
+**How to open**
+
+1. Run a debug or profile build (`flutter run` — not `--release`).
+2. Sign in as usual. The app still boots to Catalog / the tab shell.
+3. Open **Profile** and tap **DEMO — Material scaffold**.
+4. Or navigate to `/demo/material`.
+
+Release builds hide the Profile entry and redirect the route to `/`. The demo wraps itself in `ColorScheme.fromSeed`; it does **not** replace `AppTheme` / `BrandColors`.
+
 ## Tests
 
 ```bash

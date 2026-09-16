@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../theme/brand_assets.dart';
+import 'demo_material_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -79,6 +81,18 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          if (DemoMaterialScreen.isEnabled)
+            ListTile(
+              key: const Key('demo-material-entry'),
+              leading: const Icon(Icons.science_outlined),
+              title: const Text('DEMO — Material scaffold'),
+              subtitle: const Text(
+                'Flutter Material 3 reference. Do not merge.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(DemoMaterialScreen.routePath),
+            ),
+          if (DemoMaterialScreen.isEnabled) const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OutlinedButton(

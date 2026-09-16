@@ -11,6 +11,7 @@ import 'ui/screens/auth_screen.dart';
 import 'ui/screens/catalog_screen.dart';
 import 'ui/screens/challenge_screen.dart';
 import 'ui/screens/challenges_map_screen.dart';
+import 'ui/screens/demo_material_screen.dart';
 import 'ui/screens/diploma_screen.dart';
 import 'ui/screens/last_challenge_screen.dart';
 import 'ui/screens/missing_config_screen.dart';
@@ -95,6 +96,13 @@ class _ViateriaAppState extends State<ViateriaApp> {
           ],
         ),
         GoRoute(path: '/settings', redirect: (context, state) => '/profile'),
+        GoRoute(
+          parentNavigatorKey: rootKey,
+          path: DemoMaterialScreen.routePath,
+          redirect: (context, state) =>
+              DemoMaterialScreen.isEnabled ? null : '/',
+          builder: (context, state) => const DemoMaterialScreen(),
+        ),
         GoRoute(
           parentNavigatorKey: rootKey,
           path: '/challenge/:id',
