@@ -123,13 +123,18 @@ void main() {
 
     await tester.tap(find.text('List'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('demo-material-list')), findsOneWidget);
     expect(find.text('Catalog stays the home tab'), findsOneWidget);
     expect(find.byType(Card), findsWidgets);
     expect(find.text('Filled'), findsOneWidget);
 
-    await tester.tap(find.text('Colors'));
+    await tester.tap(find.byIcon(Icons.palette_outlined));
     await tester.pumpAndSettle();
-    expect(find.textContaining('ColorScheme.fromSeed'), findsWidgets);
+    expect(find.byKey(const Key('demo-material-colors')), findsOneWidget);
+    expect(
+      find.textContaining('ColorScheme.fromSeed (flutter create default)'),
+      findsOneWidget,
+    );
     expect(find.text('BrandColors.forest'), findsOneWidget);
     expect(find.text('BrandColors.cream'), findsOneWidget);
     expect(find.textContaining('not replaced'), findsOneWidget);

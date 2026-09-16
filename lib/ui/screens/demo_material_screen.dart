@@ -143,6 +143,25 @@ class _DemoMaterialScreenState extends State<DemoMaterialScreen> {
   }
 }
 
+class _DemoScroll extends StatelessWidget {
+  const _DemoScroll({this.pageKey, required this.children});
+
+  final Key? pageKey;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      key: pageKey,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
 class _DemoHomePage extends StatelessWidget {
   const _DemoHomePage({required this.counter});
 
@@ -151,8 +170,7 @@ class _DemoHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return _DemoScroll(
       children: [
         const _DemoBanner(),
         const SizedBox(height: 32),
@@ -185,8 +203,8 @@ class _DemoListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return _DemoScroll(
+      pageKey: const Key('demo-material-list'),
       children: [
         const _DemoBanner(),
         const SizedBox(height: 8),
@@ -194,7 +212,9 @@ class _DemoListPage extends StatelessWidget {
           child: ListTile(
             leading: const Icon(Icons.explore),
             title: const Text('Catalog stays the home tab'),
-            subtitle: const Text('This demo is a sibling route, not a replacement.'),
+            subtitle: const Text(
+              'This demo is a sibling route, not a replacement.',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
           ),
@@ -203,7 +223,9 @@ class _DemoListPage extends StatelessWidget {
           child: ListTile(
             leading: const Icon(Icons.map_outlined),
             title: const Text('Maps, FAPI, auth unchanged'),
-            subtitle: const Text('Open /demo/material only from Profile in debug/profile.'),
+            subtitle: const Text(
+              'Open /demo/material only from Profile in debug/profile.',
+            ),
             onTap: () {},
           ),
         ),
@@ -213,7 +235,10 @@ class _DemoListPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sample card', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Sample card',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 const Text(
                   'Filled, outlined, and tonal buttons from the Material 3 template.',
@@ -228,7 +253,10 @@ class _DemoListPage extends StatelessWidget {
                       onPressed: () {},
                       child: const Text('Tonal'),
                     ),
-                    OutlinedButton(onPressed: () {}, child: const Text('Outlined')),
+                    OutlinedButton(
+                      onPressed: () {},
+                      child: const Text('Outlined'),
+                    ),
                     TextButton(onPressed: () {}, child: const Text('Text')),
                   ],
                 ),
@@ -252,8 +280,8 @@ class _DemoColorsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return _DemoScroll(
+      pageKey: const Key('demo-material-colors'),
       children: [
         const _DemoBanner(),
         const SizedBox(height: 8),
@@ -362,10 +390,12 @@ class _Swatch extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          width: 88,
+          width: 96,
           child: Text(
             label,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall,
           ),
         ),
