@@ -114,7 +114,7 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: BrandColors.cream,
-        indicatorColor: BrandColors.beige,
+        indicatorColor: BrandColors.sage,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         iconTheme: WidgetStateProperty.resolveWith((states) {

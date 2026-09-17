@@ -43,6 +43,8 @@ class AppShell extends StatelessWidget {
               selectedIndex: navigationShell.currentIndex,
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               backgroundColor: Colors.transparent,
+              indicatorColor: BrandColors.sage,
+              surfaceTintColor: Colors.transparent,
               elevation: 0,
               destinations: [
                 NavigationDestination(

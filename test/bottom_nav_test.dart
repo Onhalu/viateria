@@ -227,6 +227,8 @@ void main() {
     expect(store.challengeId, 'open-1');
     expect(find.text('Visit any stop'), findsWidgets);
     expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -356,5 +358,92 @@ void main() {
     expect(find.byKey(const Key('map-load-error')), findsNothing);
     expect(find.byKey(const Key('map-search-field')), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('bottom nav colors are cream bar, sage indicator, forest selected', (
+    tester,
+  ) async {
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+
+    final shell = tester.widget<Material>(
+      find.byKey(const Key('app-bottom-nav-shell')),
+    );
+    expect(shell.color, BrandColors.cream);
+
+    final nav = tester.widget<NavigationBar>(
+      find.byKey(const Key('app-bottom-nav')),
+    );
+    expect(nav.backgroundColor, Colors.transparent);
+    expect(nav.indicatorColor, BrandColors.sage);
+
+    final selectedIcon = tester.element(find.byIcon(Icons.explore));
+    expect(IconTheme.of(selectedIcon).color, BrandColors.forest);
+
+    final unselectedIcon = tester.element(find.byIcon(Icons.flag_outlined));
+    expect(IconTheme.of(unselectedIcon).color, BrandColors.sage);
+
+    final theme = Theme.of(tester.element(find.byType(NavigationBar)));
+    expect(
+      theme.navigationBarTheme.labelTextStyle
+          ?.resolve({WidgetState.selected})
+          ?.color,
+      BrandColors.forest,
+    );
+    expect(
+      theme.navigationBarTheme.labelTextStyle?.resolve({})?.color,
+      BrandColors.bark,
+    );
+  });
+
+  testWidgets('opening a challenge keeps the shell so tabs stay reachable', (
+    tester,
+  ) async {
+    final strings = AppStrings('en');
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+
+    final card = find.widgetWithText(ChallengeCard, 'Open trail');
+    await tester.scrollUntilVisible(
+      card,
+      300,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('catalog-results')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(card);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const Key('challenge-title')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+    expect(find.byType(AppShell), findsOneWidget);
+
+    await tester.tap(find.text(strings.navMap));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+
+    await tester.tap(find.text(strings.catalogTitle));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const Key('challenge-title')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const Key('catalog-results')), findsOneWidget);
+    expect(find.byKey(const Key('challenge-title')), findsNothing);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 }
