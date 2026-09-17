@@ -34,6 +34,71 @@ flutter run --dart-define-from-file=.env
 
 Without env vars the app shows a configuration screen instead of inventing catalog content.
 
+## Web release (WEDOS / Limitlessdreams)
+
+Production URL: <http://viateria.limitlessdreams.cz/> (domain root, `base-href` `/`). Hosting is WEDOS; Limitlessdreams handles FTP. Android/iOS builds are unchanged.
+
+The compile-time names are the same as local `.env` / `String.fromEnvironment` in `lib/config/app_config.dart` and `lib/map/map_style_config.dart`:
+
+| `--dart-define` / secret | Required for a working site | Source |
+| --- | --- | --- |
+| `SUPABASE_URL` | **Yes** | `AppConfig.fromEnvironment` |
+| `SUPABASE_ANON_KEY` | **Yes** | `AppConfig.fromEnvironment` |
+| `MAP_STYLE_URL` | No (falls back to OpenFreeMap Liberty) | `MapStyleConfig.styleUrlFromEnv` |
+| `STRIPE_PUBLISHABLE_KEY` | No (unused by pay CTAs) | `AppConfig.fromEnvironment` |
+
+### 1. GitHub Actions secrets (Ondřej)
+
+Repo → **Settings → Secrets and variables → Actions → New repository secret**. Names must match the table above (do not invent aliases).
+
+Optional auto-deploy secrets — **not required to merge**; the `viateria-web` artifact is enough for v1:
+
+| Secret | Meaning |
+| --- | --- |
+| `FTP_HOST` | WEDOS FTP hostname |
+| `FTP_USER` | FTP username |
+| `FTP_PASS` | FTP password |
+| `FTP_PATH` | Remote directory (use `/` if the user is already chrooted to the domain web root) |
+
+If `FTP_HOST` / `FTP_USER` / `FTP_PASS` are all set, the **Web release** workflow uploads `build/web` after a successful build (`workflow_dispatch` or push to `main` only — never from pull requests). If they are missing, the job still succeeds and you download the artifact.
+
+### 2. Build and download the artifact
+
+1. **Actions → Web release → Run workflow** (`workflow_dispatch`). Pushes to `main` also run it.
+2. Command used in CI:
+
+   ```bash
+   flutter build web --release --base-href=/ \
+     --dart-define=SUPABASE_URL=… \
+     --dart-define=SUPABASE_ANON_KEY=…
+   ```
+
+3. Download the **`viateria-web`** artifact (zip). Unzip it: the archive root **is** the site root (`index.html`, `flutter_bootstrap.js` / `flutter.js`, `.htaccess`, `assets/`, …) — i.e. the contents of `build/web/**`.
+4. FTP those files to the WEDOS domain root for `viateria.limitlessdreams.cz`. Confirm `.htaccess` is uploaded (it is a hidden file).
+
+Local equivalent:
+
+```bash
+flutter build web --release --base-href=/ --dart-define-from-file=.env
+cp web/.htaccess build/web/.htaccess
+```
+
+`<base href="$FLUTTER_BASE_HREF">` in `web/index.html` is rewritten to `/` by `--base-href=/`, so `flutter.js` / `flutter_bootstrap.js` resolve at the domain root.
+
+### 3. Apache `.htaccess` (WEDOS)
+
+Apache must serve `index.html` for unknown paths (Flutter web SPA). Hash routes (`/#/map`) already work at the domain root; the rewrite still covers refreshes, bookmarks, and missing files. `web/.htaccess` is copied into `build/web` by CI. If FTP clients skip dotfiles, create it on the server:
+
+```
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+```
+
+
 ### Map style (`MAP_STYLE_URL`)
 
 ```bash

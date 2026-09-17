@@ -1,0 +1,124 @@
+# Flutter web release for http://viateria.limitlessdreams.cz/ (WEDOS FTP).
+#
+# Dart-define names match lib/config/app_config.dart and
+# lib/map/map_style_config.dart (String.fromEnvironment). Do not rename.
+name: Web release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-web:
+    name: flutter build web
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Pinned to the 3.47 stable line (project .metadata is 3.47.2 / Dart ^3.13.2).
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.4'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Warn if Supabase secrets are empty
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL and/or SUPABASE_ANON_KEY are empty. The web build will show the in-app missing-config screen. Set these repository secrets before a production deploy."
+          fi
+
+      - name: Build web (release, base-href /)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          MAP_STYLE_URL: ${{ secrets.MAP_STYLE_URL }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+        run: |
+          flutter build web --release --base-href=/ \
+            --dart-define="SUPABASE_URL=${SUPABASE_URL}" \
+            --dart-define="SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" \
+            --dart-define="MAP_STYLE_URL=${MAP_STYLE_URL}" \
+            --dart-define="STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}"
+
+      # Flutter may skip dotfiles when copying web/ → build/web.
+      - name: Install Apache SPA rewrite (.htaccess)
+        run: cp web/.htaccess build/web/.htaccess
+
+      - name: Verify domain-root index and loader
+        run: |
+          set -euo pipefail
+          test -f build/web/index.html
+          grep -q '<base href="/">' build/web/index.html
+          if [ ! -f build/web/flutter_bootstrap.js ] && [ ! -f build/web/flutter.js ]; then
+            echo "Neither flutter_bootstrap.js nor flutter.js was produced under build/web"
+            ls -la build/web
+            exit 1
+          fi
+          test -f build/web/.htaccess
+          echo "build/web layout:"
+          find build/web -maxdepth 2 -printf '%P\n' | sort | head -80
+
+      - name: Upload viateria-web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: viateria-web
+          path: build/web
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Detect optional FTP secrets
+        id: ftp
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          if [ -n "$FTP_HOST" ] && [ -n "$FTP_USER" ] && [ -n "$FTP_PASS" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "FTP_HOST/USER/PASS not set — skipping deploy. Download the viateria-web artifact for Limitlessdreams / WEDOS FTP."
+          fi
+
+      # Never FTP from pull_request. Artifact-only is enough to merge.
+      - name: Deploy to WEDOS FTP (optional)
+        if: >-
+          steps.ftp.outputs.enabled == 'true' &&
+          (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main')
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          FTP_PATH: ${{ secrets.FTP_PATH }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+          REMOTE="${FTP_PATH:-/}"
+          lftp -c "
+            set ssl:verify-certificate true;
+            set ftp:ssl-allow yes;
+            set ftp:ssl-protect-data yes;
+            open -u ${FTP_USER},${FTP_PASS} ${FTP_HOST};
+            mirror -R --verbose --only-newer --no-empty-dirs --exclude-glob .DS_Store ./build/web ${REMOTE};
+            bye
+          "
