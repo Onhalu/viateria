@@ -360,41 +360,42 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
-  testWidgets('bottom nav colors are cream bar, sage indicator, forest selected', (
-    tester,
-  ) async {
-    await tester.pumpWidget(wrapApp(buildServices()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'bottom nav colors are cream bar, sage indicator, forest selected',
+    (tester) async {
+      await tester.pumpWidget(wrapApp(buildServices()));
+      await tester.pumpAndSettle();
 
-    final shell = tester.widget<Material>(
-      find.byKey(const Key('app-bottom-nav-shell')),
-    );
-    expect(shell.color, BrandColors.cream);
+      final shell = tester.widget<Material>(
+        find.byKey(const Key('app-bottom-nav-shell')),
+      );
+      expect(shell.color, BrandColors.cream);
 
-    final nav = tester.widget<NavigationBar>(
-      find.byKey(const Key('app-bottom-nav')),
-    );
-    expect(nav.backgroundColor, Colors.transparent);
-    expect(nav.indicatorColor, BrandColors.sage);
+      final nav = tester.widget<NavigationBar>(
+        find.byKey(const Key('app-bottom-nav')),
+      );
+      expect(nav.backgroundColor, Colors.transparent);
+      expect(nav.indicatorColor, BrandColors.sage);
 
-    final selectedIcon = tester.element(find.byIcon(Icons.explore));
-    expect(IconTheme.of(selectedIcon).color, BrandColors.forest);
+      final selectedIcon = tester.element(find.byIcon(Icons.explore));
+      expect(IconTheme.of(selectedIcon).color, BrandColors.forest);
 
-    final unselectedIcon = tester.element(find.byIcon(Icons.flag_outlined));
-    expect(IconTheme.of(unselectedIcon).color, BrandColors.sage);
+      final unselectedIcon = tester.element(find.byIcon(Icons.flag_outlined));
+      expect(IconTheme.of(unselectedIcon).color, BrandColors.sage);
 
-    final theme = Theme.of(tester.element(find.byType(NavigationBar)));
-    expect(
-      theme.navigationBarTheme.labelTextStyle
-          ?.resolve({WidgetState.selected})
-          ?.color,
-      BrandColors.forest,
-    );
-    expect(
-      theme.navigationBarTheme.labelTextStyle?.resolve({})?.color,
-      BrandColors.bark,
-    );
-  });
+      final theme = Theme.of(tester.element(find.byType(NavigationBar)));
+      expect(
+        theme.navigationBarTheme.labelTextStyle?.resolve({
+          WidgetState.selected,
+        })?.color,
+        BrandColors.forest,
+      );
+      expect(
+        theme.navigationBarTheme.labelTextStyle?.resolve({})?.color,
+        BrandColors.bark,
+      );
+    },
+  );
 
   testWidgets('opening a challenge keeps the shell so tabs stay reachable', (
     tester,
@@ -439,11 +440,10 @@ void main() {
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
 
     await tester.pageBack();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('catalog-results')), findsOneWidget);
-    expect(find.byKey(const Key('challenge-title')), findsNothing);
+    expect(find.byType(AppBar), findsNothing);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 }

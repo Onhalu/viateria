@@ -52,10 +52,8 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: BrandColors.cream,
       canvasColor: BrandColors.cream,
       dividerColor: BrandColors.beige,
-      textTheme: ThemeData(brightness: Brightness.light).textTheme.apply(
-        bodyColor: BrandColors.ink,
-        displayColor: BrandColors.ink,
-      ),
+      textTheme: ThemeData(brightness: Brightness.light).textTheme
+          .apply(bodyColor: BrandColors.ink, displayColor: BrandColors.ink),
       appBarTheme: const AppBarTheme(
         backgroundColor: BrandColors.cream,
         foregroundColor: BrandColors.forest,

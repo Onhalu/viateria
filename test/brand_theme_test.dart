@@ -71,7 +71,9 @@ void main() {
     expect(theme.navigationBarTheme.backgroundColor, BrandColors.cream);
     expect(theme.navigationBarTheme.indicatorColor, BrandColors.sage);
     expect(
-      theme.navigationBarTheme.iconTheme?.resolve({WidgetState.selected})?.color,
+      theme.navigationBarTheme.iconTheme?.resolve({
+        WidgetState.selected,
+      })?.color,
       BrandColors.forest,
     );
     expect(
@@ -79,9 +81,9 @@ void main() {
       BrandColors.sage,
     );
     expect(
-      theme.navigationBarTheme.labelTextStyle
-          ?.resolve({WidgetState.selected})
-          ?.color,
+      theme.navigationBarTheme.labelTextStyle?.resolve({
+        WidgetState.selected,
+      })?.color,
       BrandColors.forest,
     );
     expect(
