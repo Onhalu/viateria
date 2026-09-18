@@ -183,7 +183,8 @@ String foldCatalogText(String input) {
 /// Search matches any locale's title + description on the challenge.
 /// Length chips use [routeStats] derived from waypoints; a challenge
 /// without a length band never matches a selected length chip.
-/// A null CMS difficulty never matches a selected difficulty chip.
+/// A null CMS difficulty does not exclude a challenge when a difficulty
+/// chip is active — only challenges that have a value are filtered.
 List<Challenge> filterCatalogChallenges(
   Iterable<Challenge> challenges,
   CatalogFilter filter, {
@@ -225,7 +226,7 @@ bool _matchesChallenge(
   }
   if (filter.difficulties.isNotEmpty) {
     final difficulty = challenge.difficulty;
-    if (difficulty == null || !filter.difficulties.contains(difficulty)) {
+    if (difficulty != null && !filter.difficulties.contains(difficulty)) {
       return false;
     }
   }

@@ -510,14 +510,28 @@ void main() {
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-search-field')),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-filter-chips')),
       ),
-      findsNothing,
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-length-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-difficulty-chips')),
+      ),
+      findsOneWidget,
     );
 
     final header = tester.widget<Material>(
@@ -615,18 +629,34 @@ void main() {
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
     );
-    expect(searchRect.top, greaterThan(headerRect.bottom));
+    final greetingBottom = tester
+        .getBottomLeft(find.byKey(const Key('catalog-welcome-greeting')))
+        .dy;
+    expect(searchRect.top, greaterThan(greetingBottom));
+    expect(searchRect.bottom, lessThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
-    expect(searchRect.left, CatalogWelcomeHeader.horizontalInset);
-    expect(chipsRect.left, CatalogWelcomeHeader.horizontalInset);
+    expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
+    expect(
+      searchRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
+    );
+    expect(
+      chipsRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
+    );
     expect(
       searchRect.right,
-      screenSize.width - CatalogWelcomeHeader.horizontalInset,
+      headerRect.right - CatalogWelcomeHeader.innerHorizontalPadding,
     );
     final searchField = tester.widget<TextField>(
       find.byKey(const Key('catalog-search-field')),
     );
-    expect(searchField.decoration?.fillColor, BrandColors.cream);
+    expect(searchField.decoration?.fillColor, BrandColors.creamFill);
+    expect(searchField.style?.color, BrandColors.forest);
+    expect(
+      (searchField.decoration?.prefixIcon as Icon?)?.color,
+      BrandColors.forest,
+    );
   });
 
   testWidgets(
@@ -766,9 +796,6 @@ void main() {
     );
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
     expect(find.byType(Badge), findsNothing);
-    expect(
-      find.text(strings.language, skipOffstage: false),
-      findsOneWidget,
-    );
+    expect(find.text(strings.language, skipOffstage: false), findsOneWidget);
   });
 }

@@ -21,6 +21,12 @@ import 'package:viateria/ui/widgets/country_flag.dart';
 import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
 
+Material _chipMaterial(WidgetTester tester, Key key) {
+  return tester.widget<Material>(
+    find.descendant(of: find.byKey(key), matching: find.byType(Material)),
+  );
+}
+
 Challenge _challenge({
   required String id,
   required String title,
@@ -282,7 +288,7 @@ void main() {
       );
     });
 
-    test('difficulty chips exclude null and unmatched values', () {
+    test('difficulty chips skip null and exclude unmatched values', () {
       final easy = _challenge(
         id: 'easy',
         title: 'Easy walk',
@@ -300,7 +306,7 @@ void main() {
           hard,
           unset,
         ], CatalogFilter(difficulties: {CatalogDifficulty.easy})),
-        [easy],
+        [easy, unset],
       );
       expect(
         filterCatalogChallenges(
@@ -309,7 +315,7 @@ void main() {
             difficulties: {CatalogDifficulty.easy, CatalogDifficulty.hard},
           ),
         ),
-        [easy, hard],
+        [easy, hard, unset],
       );
       expect(
         filterCatalogChallenges([
@@ -317,7 +323,7 @@ void main() {
           hard,
           unset,
         ], CatalogFilter(difficulties: {CatalogDifficulty.normal})),
-        isEmpty,
+        [unset],
       );
     });
 
@@ -635,7 +641,7 @@ void main() {
     expect(find.textContaining('🇨🇿'), findsNothing);
   });
 
-  testWidgets('search and chips sit below the sage welcome panel', (
+  testWidgets('search and chips sit inside the sage welcome panel', (
     tester,
   ) async {
     await _pumpCatalog(tester);
@@ -644,11 +650,46 @@ void main() {
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-search-field')),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-filter-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-length-difficulty-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-length-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-difficulty-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-results')),
+        matching: find.byKey(const Key('catalog-search-field')),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-results')),
         matching: find.byKey(const Key('catalog-filter-chips')),
       ),
       findsNothing,
@@ -658,6 +699,7 @@ void main() {
       find.byKey(const Key('catalog-welcome-header')),
     );
     expect(header.color, BrandColors.shellFill);
+    expect(BrandColors.shellFill, const Color(0xFF7D8B6A));
     final headerRect = tester.getRect(
       find.byKey(const Key('catalog-welcome-header')),
     );
@@ -667,17 +709,71 @@ void main() {
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
     );
-    expect(searchRect.top, greaterThan(headerRect.bottom));
+    expect(searchRect.top, greaterThan(headerRect.top));
+    expect(searchRect.bottom, lessThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
-    expect(searchRect.left, CatalogWelcomeHeader.horizontalInset);
-    expect(chipsRect.left, CatalogWelcomeHeader.horizontalInset);
+    expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
+    expect(
+      searchRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
+    );
+    expect(
+      chipsRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
+    );
+    expect(headerRect.left, CatalogWelcomeHeader.horizontalInset);
     expect(
       tester
           .widget<TextField>(find.byKey(const Key('catalog-search-field')))
           .decoration
           ?.fillColor,
-      BrandColors.cream,
+      BrandColors.creamFill,
     );
+
+    final unselected = _chipMaterial(
+      tester,
+      const Key('catalog-filter-price-free'),
+    );
+    expect(unselected.color, BrandColors.creamPill);
+    expect((unselected.shape as RoundedRectangleBorder).side, BorderSide.none);
+    final unselectedLabel = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('catalog-filter-price-free')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(unselectedLabel.style?.color, BrandColors.cream);
+    expect(unselectedLabel.style?.fontWeight, FontWeight.w600);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-price-free')));
+    await tester.pumpAndSettle();
+    final selected = _chipMaterial(
+      tester,
+      const Key('catalog-filter-price-free'),
+    );
+    expect(selected.color, BrandColors.cream);
+    expect((selected.shape as RoundedRectangleBorder).side, BorderSide.none);
+    final selectedLabel = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('catalog-filter-price-free')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(selectedLabel.style?.color, BrandColors.forest);
+    expect(selectedLabel.style?.fontWeight, FontWeight.w600);
+
+    final clear = tester.widget<TextButton>(
+      find.byKey(const Key('catalog-clear-filters')),
+    );
+    expect(clear.style?.foregroundColor?.resolve({}), BrandColors.cream);
+    final clearLabel = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('catalog-clear-filters')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(clearLabel.style?.color, BrandColors.cream);
+    expect(clearLabel.style?.decoration, TextDecoration.underline);
   });
 
   testWidgets('discover sections follow chips: hero, featured, regions', (
@@ -769,6 +865,20 @@ void main() {
     'length and difficulty sit under price in the main filter, not the results list',
     (tester) async {
       await _pumpCatalog(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalog-welcome-header')),
+          matching: find.byKey(const Key('catalog-length-chips')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalog-welcome-header')),
+          matching: find.byKey(const Key('catalog-difficulty-chips')),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.descendant(
           of: find.byType(CatalogFilterChipRow),
@@ -930,7 +1040,7 @@ void main() {
   });
 
   testWidgets(
-    'difficulty chip hides ungraded challenges and clear-all resets',
+    'difficulty chip keeps ungraded challenges and clear-all resets',
     (tester) async {
       final easy = _challenge(
         id: 'easy-1',
@@ -988,8 +1098,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('catalog-featured-easy-1')), findsOneWidget);
       expect(find.byKey(const Key('catalog-featured-hard-1')), findsNothing);
-      expect(find.byKey(const Key('catalog-featured-unset-1')), findsNothing);
-      expect(find.text('No grade'), findsNothing);
+      expect(find.byKey(const Key('catalog-featured-unset-1')), findsOneWidget);
+      expect(find.text('No grade'), findsAtLeastNWidgets(1));
 
       await tester.fling(
         find.byKey(const Key('catalog-filter-chips')),

@@ -9,11 +9,12 @@ abstract final class BrandColors {
   static const sage = Color(0xFF9C9A7B);
   static const cream = Color(0xFFF3EFE5);
 
-  /// Fill for the floating bottom nav and inset catalog welcome header only.
-  /// Chips/accents keep [sage] `#9C9A7B`.
+  /// Fill for the floating bottom nav and inset catalog welcome header.
+  /// Greeting, search, and filter chips share this bar with the nav.
   static const shellFill = Color(0xFF7D8B6A);
 
-  /// Cream at 22% — selected nav pill and header round-button fill.
+  /// Cream at 22% — selected nav pill, header round-button fill, and
+  /// unselected chips on [shellFill].
   static Color get creamPill => cream.withValues(alpha: 0.22);
 
   /// Nav elevation tint (forest at 13%, within the 12–14% spec).
@@ -32,7 +33,8 @@ abstract final class BrandColors {
   /// Material 3 system error. Never outdoor orange.
   static const error = Color(0xFFBA1A1A);
 
-  /// Cream at ~94% opacity for overlay chrome and unverified POI disks.
+  /// Cream at ~94% opacity for catalog search on [shellFill], overlay
+  /// chrome, and unverified POI disks.
   static const creamFill = Color(0xF0F3EFE5);
   static const creamRgba94 = 'rgba(243, 239, 229, 0.94)';
 

@@ -7,7 +7,6 @@ import '../../domain/catalog_query.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../navigation.dart';
-import '../widgets/app_shell.dart';
 import '../widgets/catalog_cards.dart';
 import '../widgets/catalog_filters.dart';
 import '../widgets/catalog_welcome_header.dart';
@@ -65,33 +64,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       body: Column(
         children: [
-          const CatalogWelcomeHeader(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppShell.horizontalInset,
-              0,
-              AppShell.horizontalInset,
-              8,
-            ),
-            child: CatalogSearchField(
-              controller: _search,
-              hintText: strings.catalogSearchHint,
-              onChanged: (value) =>
-                  _applyFilter(_filter.copyWith(query: value)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppShell.horizontalInset,
-              0,
-              AppShell.horizontalInset,
-              8,
-            ),
-            child: CatalogFilterChipRow(
-              filter: _filter,
-              strings: strings,
-              onChanged: _applyFilter,
-            ),
+          CatalogWelcomeHeader(
+            search: _search,
+            filter: _filter,
+            onFilterChanged: _applyFilter,
           ),
           Expanded(
             child: SafeArea(
