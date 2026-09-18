@@ -421,6 +421,12 @@ void main() {
     await tester.tap(find.byKey(const Key('catalog-filter-price-free')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-clear-filters')), findsOneWidget);
+    await tester.fling(
+      find.byKey(const Key('catalog-filter-chips')),
+      const Offset(-400, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('catalog-clear-filters')));
     await tester.pumpAndSettle();
     expect(find.text('Open trail'), findsOneWidget);
