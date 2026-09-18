@@ -135,9 +135,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   final promos = !noMatches && _filter.showPromos
                       ? data.promos
                       : const <PromoStripe>[];
-                  final showLength = routeStats.values.any(
-                    (stats) => stats.lengthBand != null,
-                  );
 
                   return RefreshIndicator(
                     onRefresh: _reload,
@@ -184,20 +181,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 routeStats: routeStats,
                                 onOpen: (challenge) =>
                                     openChallenge(context, challenge.id),
-                              ),
-                              if (showLength) ...[
-                                const SizedBox(height: 16),
-                                CatalogLengthChipRow(
-                                  filter: _filter,
-                                  strings: strings,
-                                  onChanged: _applyFilter,
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              CatalogDifficultyChipRow(
-                                filter: _filter,
-                                strings: strings,
-                                onChanged: _applyFilter,
                               ),
                               const SizedBox(height: 16),
                               CatalogFeaturedSection(

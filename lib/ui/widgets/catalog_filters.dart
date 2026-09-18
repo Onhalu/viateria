@@ -65,93 +65,126 @@ class CatalogFilterChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: ListView(
-        key: const Key('catalog-filter-chips'),
-        scrollDirection: Axis.horizontal,
-        children: [
-          CatalogFilterChip(
-            key: const Key('catalog-filter-price-free'),
-            selected: filter.pricingTypes.contains(PricingType.free),
-            label: strings.free,
-            onTap: () => onChanged(
-              filter.copyWith(
-                pricingTypes: _toggle(filter.pricingTypes, PricingType.free),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          CatalogFilterChip(
-            key: const Key('catalog-filter-price-paid'),
-            selected: filter.pricingTypes.contains(PricingType.paid),
-            label: strings.paid,
-            onTap: () => onChanged(
-              filter.copyWith(
-                pricingTypes: _toggle(filter.pricingTypes, PricingType.paid),
-              ),
-            ),
-          ),
-          const _ChipGroupGap(),
-          CatalogFilterChip(
-            key: const Key('catalog-filter-mode-open'),
-            selected: filter.accessModes.contains(AccessMode.open),
-            label: strings.catalogFilterOpen,
-            onTap: () => onChanged(
-              filter.copyWith(
-                accessModes: _toggle(filter.accessModes, AccessMode.open),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          CatalogFilterChip(
-            key: const Key('catalog-filter-mode-story'),
-            selected: filter.accessModes.contains(AccessMode.story),
-            label: strings.catalogFilterStory,
-            onTap: () => onChanged(
-              filter.copyWith(
-                accessModes: _toggle(filter.accessModes, AccessMode.story),
-              ),
-            ),
-          ),
-          const _ChipGroupGap(),
-          for (var i = 0; i < catalogCountryCodes.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            CatalogFilterChip(
-              key: Key('catalog-filter-region-${catalogCountryCodes[i]}'),
-              selected: filter.countryCodes.contains(catalogCountryCodes[i]),
-              semanticLabel: catalogCountryCodes[i],
-              flagCode: catalogCountryCodes[i],
-              onTap: () => onChanged(
-                filter.copyWith(
-                  countryCodes: _toggle(
-                    filter.countryCodes,
-                    catalogCountryCodes[i],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 36,
+          child: ListView(
+            key: const Key('catalog-filter-chips'),
+            scrollDirection: Axis.horizontal,
+            children: [
+              CatalogFilterChip(
+                key: const Key('catalog-filter-price-free'),
+                selected: filter.pricingTypes.contains(PricingType.free),
+                label: strings.free,
+                onTap: () => onChanged(
+                  filter.copyWith(
+                    pricingTypes: _toggle(
+                      filter.pricingTypes,
+                      PricingType.free,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-          if (filter.isActive) ...[
-            const SizedBox(width: 12),
-            Center(
-              child: TextButton(
-                key: const Key('catalog-clear-filters'),
-                style: TextButton.styleFrom(
-                  foregroundColor: BrandColors.bark,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              const SizedBox(width: 8),
+              CatalogFilterChip(
+                key: const Key('catalog-filter-price-paid'),
+                selected: filter.pricingTypes.contains(PricingType.paid),
+                label: strings.paid,
+                onTap: () => onChanged(
+                  filter.copyWith(
+                    pricingTypes: _toggle(
+                      filter.pricingTypes,
+                      PricingType.paid,
+                    ),
+                  ),
                 ),
-                onPressed: () {
-                  onChanged(filter.cleared());
-                },
-                child: Text(strings.catalogClearFilters),
               ),
+              const _ChipGroupGap(),
+              CatalogFilterChip(
+                key: const Key('catalog-filter-mode-open'),
+                selected: filter.accessModes.contains(AccessMode.open),
+                label: strings.catalogFilterOpen,
+                onTap: () => onChanged(
+                  filter.copyWith(
+                    accessModes: _toggle(filter.accessModes, AccessMode.open),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              CatalogFilterChip(
+                key: const Key('catalog-filter-mode-story'),
+                selected: filter.accessModes.contains(AccessMode.story),
+                label: strings.catalogFilterStory,
+                onTap: () => onChanged(
+                  filter.copyWith(
+                    accessModes: _toggle(filter.accessModes, AccessMode.story),
+                  ),
+                ),
+              ),
+              const _ChipGroupGap(),
+              for (var i = 0; i < catalogCountryCodes.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                CatalogFilterChip(
+                  key: Key('catalog-filter-region-${catalogCountryCodes[i]}'),
+                  selected: filter.countryCodes.contains(
+                    catalogCountryCodes[i],
+                  ),
+                  semanticLabel: catalogCountryCodes[i],
+                  flagCode: catalogCountryCodes[i],
+                  onTap: () => onChanged(
+                    filter.copyWith(
+                      countryCodes: _toggle(
+                        filter.countryCodes,
+                        catalogCountryCodes[i],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              if (filter.isActive) ...[
+                const SizedBox(width: 12),
+                Center(
+                  child: TextButton(
+                    key: const Key('catalog-clear-filters'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: BrandColors.bark,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () {
+                      onChanged(filter.cleared());
+                    },
+                    child: Text(strings.catalogClearFilters),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          key: const Key('catalog-length-difficulty-chips'),
+          spacing: 0,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            CatalogLengthChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
+            ),
+            const _ChipGroupGap(),
+            CatalogDifficultyChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
             ),
           ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -170,35 +203,29 @@ class CatalogLengthChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Row(
       key: const Key('catalog-length-chips'),
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        primary: false,
-        children: [
-          for (var i = 0; i < CatalogLengthBand.values.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            CatalogFilterChip(
-              key: Key(
-                'catalog-filter-length-${CatalogLengthBand.values[i].name}',
-              ),
-              selected: filter.lengthBands.contains(
-                CatalogLengthBand.values[i],
-              ),
-              label: _lengthLabel(strings, CatalogLengthBand.values[i]),
-              onTap: () => onChanged(
-                filter.copyWith(
-                  lengthBands: _toggle(
-                    filter.lengthBands,
-                    CatalogLengthBand.values[i],
-                  ),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < CatalogLengthBand.values.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          CatalogFilterChip(
+            key: Key(
+              'catalog-filter-length-${CatalogLengthBand.values[i].name}',
+            ),
+            selected: filter.lengthBands.contains(CatalogLengthBand.values[i]),
+            label: _lengthLabel(strings, CatalogLengthBand.values[i]),
+            onTap: () => onChanged(
+              filter.copyWith(
+                lengthBands: _toggle(
+                  filter.lengthBands,
+                  CatalogLengthBand.values[i],
                 ),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -217,35 +244,29 @@ class CatalogDifficultyChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Row(
       key: const Key('catalog-difficulty-chips'),
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        primary: false,
-        children: [
-          for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            CatalogFilterChip(
-              key: Key(
-                'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
-              ),
-              selected: filter.difficulties.contains(
-                CatalogDifficulty.values[i],
-              ),
-              label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
-              onTap: () => onChanged(
-                filter.copyWith(
-                  difficulties: _toggle(
-                    filter.difficulties,
-                    CatalogDifficulty.values[i],
-                  ),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          CatalogFilterChip(
+            key: Key(
+              'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
+            ),
+            selected: filter.difficulties.contains(CatalogDifficulty.values[i]),
+            label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
+            onTap: () => onChanged(
+              filter.copyWith(
+                difficulties: _toggle(
+                  filter.difficulties,
+                  CatalogDifficulty.values[i],
                 ),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
