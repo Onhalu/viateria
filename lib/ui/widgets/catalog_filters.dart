@@ -29,18 +29,22 @@ class CatalogSearchField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: BrandColors.forest),
+        hintStyle: TextStyle(color: BrandColors.forest.withValues(alpha: 0.7)),
         filled: true,
-        fillColor: BrandColors.cream,
+        fillColor: BrandColors.creamFill,
         prefixIcon: const Icon(Icons.search, color: BrandColors.forest),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 10,
         ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: BrandColors.beige),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -78,6 +82,7 @@ class CatalogFilterChipRow extends StatelessWidget {
                 key: const Key('catalog-filter-price-free'),
                 selected: filter.pricingTypes.contains(PricingType.free),
                 label: strings.free,
+                onShell: true,
                 onTap: () => onChanged(
                   filter.copyWith(
                     pricingTypes: _toggle(
@@ -92,6 +97,7 @@ class CatalogFilterChipRow extends StatelessWidget {
                 key: const Key('catalog-filter-price-paid'),
                 selected: filter.pricingTypes.contains(PricingType.paid),
                 label: strings.paid,
+                onShell: true,
                 onTap: () => onChanged(
                   filter.copyWith(
                     pricingTypes: _toggle(
@@ -106,6 +112,7 @@ class CatalogFilterChipRow extends StatelessWidget {
                 key: const Key('catalog-filter-mode-open'),
                 selected: filter.accessModes.contains(AccessMode.open),
                 label: strings.catalogFilterOpen,
+                onShell: true,
                 onTap: () => onChanged(
                   filter.copyWith(
                     accessModes: _toggle(filter.accessModes, AccessMode.open),
@@ -117,6 +124,7 @@ class CatalogFilterChipRow extends StatelessWidget {
                 key: const Key('catalog-filter-mode-story'),
                 selected: filter.accessModes.contains(AccessMode.story),
                 label: strings.catalogFilterStory,
+                onShell: true,
                 onTap: () => onChanged(
                   filter.copyWith(
                     accessModes: _toggle(filter.accessModes, AccessMode.story),
@@ -133,6 +141,7 @@ class CatalogFilterChipRow extends StatelessWidget {
                   ),
                   semanticLabel: catalogCountryCodes[i],
                   flagCode: catalogCountryCodes[i],
+                  onShell: true,
                   onTap: () => onChanged(
                     filter.copyWith(
                       countryCodes: _toggle(
@@ -149,7 +158,7 @@ class CatalogFilterChipRow extends StatelessWidget {
                   child: TextButton(
                     key: const Key('catalog-clear-filters'),
                     style: TextButton.styleFrom(
-                      foregroundColor: BrandColors.bark,
+                      foregroundColor: BrandColors.cream,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       minimumSize: const Size(0, 36),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -157,7 +166,14 @@ class CatalogFilterChipRow extends StatelessWidget {
                     onPressed: () {
                       onChanged(filter.cleared());
                     },
-                    child: Text(strings.catalogClearFilters),
+                    child: Text(
+                      strings.catalogClearFilters,
+                      style: const TextStyle(
+                        color: BrandColors.cream,
+                        decoration: TextDecoration.underline,
+                        decorationColor: BrandColors.cream,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -165,28 +181,22 @@ class CatalogFilterChipRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.topLeft,
-          child: OverflowBar(
-            key: const Key('catalog-length-difficulty-chips'),
-            alignment: MainAxisAlignment.start,
-            overflowAlignment: OverflowBarAlignment.start,
-            overflowSpacing: 8,
-            spacing: 0,
-            children: [
-              CatalogLengthChipRow(
-                filter: filter,
-                strings: strings,
-                onChanged: onChanged,
-              ),
-              const _ChipGroupGap(),
-              CatalogDifficultyChipRow(
-                filter: filter,
-                strings: strings,
-                onChanged: onChanged,
-              ),
-            ],
-          ),
+        Column(
+          key: const Key('catalog-length-difficulty-chips'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CatalogLengthChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
+            ),
+            const SizedBox(height: 8),
+            CatalogDifficultyChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
+            ),
+          ],
         ),
       ],
     );
@@ -207,28 +217,21 @@ class CatalogLengthChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
       key: const Key('catalog-length-chips'),
-      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        for (var i = 0; i < CatalogLengthBand.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+        for (final band in CatalogLengthBand.values)
           CatalogFilterChip(
-            key: Key(
-              'catalog-filter-length-${CatalogLengthBand.values[i].name}',
-            ),
-            selected: filter.lengthBands.contains(CatalogLengthBand.values[i]),
-            label: _lengthLabel(strings, CatalogLengthBand.values[i]),
+            key: Key('catalog-filter-length-${band.name}'),
+            selected: filter.lengthBands.contains(band),
+            label: _lengthLabel(strings, band),
+            onShell: true,
             onTap: () => onChanged(
-              filter.copyWith(
-                lengthBands: _toggle(
-                  filter.lengthBands,
-                  CatalogLengthBand.values[i],
-                ),
-              ),
+              filter.copyWith(lengthBands: _toggle(filter.lengthBands, band)),
             ),
           ),
-        ],
       ],
     );
   }
@@ -248,28 +251,23 @@ class CatalogDifficultyChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
       key: const Key('catalog-difficulty-chips'),
-      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+        for (final difficulty in CatalogDifficulty.values)
           CatalogFilterChip(
-            key: Key(
-              'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
-            ),
-            selected: filter.difficulties.contains(CatalogDifficulty.values[i]),
-            label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
+            key: Key('catalog-filter-difficulty-${difficulty.name}'),
+            selected: filter.difficulties.contains(difficulty),
+            label: _difficultyLabel(strings, difficulty),
+            onShell: true,
             onTap: () => onChanged(
               filter.copyWith(
-                difficulties: _toggle(
-                  filter.difficulties,
-                  CatalogDifficulty.values[i],
-                ),
+                difficulties: _toggle(filter.difficulties, difficulty),
               ),
             ),
           ),
-        ],
       ],
     );
   }
@@ -358,6 +356,7 @@ class CatalogFilterChip extends StatelessWidget {
     this.label,
     this.flagCode,
     this.semanticLabel,
+    this.onShell = false,
   });
 
   final bool selected;
@@ -366,11 +365,16 @@ class CatalogFilterChip extends StatelessWidget {
   final String? flagCode;
   final String? semanticLabel;
 
+  /// When true, chips sit on [BrandColors.shellFill]: cream @ 22% unselected,
+  /// solid cream selected, no border.
+  final bool onShell;
+
   @override
   Widget build(BuildContext context) {
     final isFlag = flagCode != null;
-    final borderWidth = selected ? 2.0 : 1.0;
-    final fill = selected && !isFlag ? BrandColors.forest : BrandColors.cream;
+    final fill = onShell
+        ? (selected ? BrandColors.cream : BrandColors.creamPill)
+        : (selected && !isFlag ? BrandColors.forest : BrandColors.cream);
     final border = selected ? BrandColors.forest : BrandColors.beige;
     return Semantics(
       button: true,
@@ -380,7 +384,9 @@ class CatalogFilterChip extends StatelessWidget {
         color: fill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: border, width: borderWidth),
+          side: onShell
+              ? BorderSide.none
+              : BorderSide(color: border, width: selected ? 2.0 : 1.0),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -397,9 +403,13 @@ class CatalogFilterChip extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: selected
-                                  ? BrandColors.onPrimary
-                                  : BrandColors.bark,
+                              color: onShell
+                                  ? (selected
+                                        ? BrandColors.forest
+                                        : BrandColors.cream)
+                                  : (selected
+                                        ? BrandColors.onPrimary
+                                        : BrandColors.bark),
                             ),
                       ),
               ),
@@ -416,14 +426,14 @@ class _ChipGroupGap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       width: 21,
       height: 36,
       child: Center(
         child: SizedBox(
           width: 1,
           height: 16,
-          child: ColoredBox(color: BrandColors.sage),
+          child: ColoredBox(color: BrandColors.cream.withValues(alpha: 0.4)),
         ),
       ),
     );
