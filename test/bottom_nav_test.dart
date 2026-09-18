@@ -573,7 +573,10 @@ void main() {
     );
     expect(localeButton.style?.foregroundColor?.resolve({}), BrandColors.cream);
     final profileButton = tester.widget<IconButton>(
-      find.byKey(const Key('catalog-welcome-profile')),
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-profile')),
+        matching: find.byType(IconButton),
+      ),
     );
     expect(
       profileButton.style?.backgroundColor?.resolve({}),
