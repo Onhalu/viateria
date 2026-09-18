@@ -186,53 +186,44 @@ class _ProfileStatsBody extends StatelessWidget {
   final List<CategoryVisitCount> counts;
   final List<Challenge> completed;
 
+  static const _gridGap = 12.0;
+
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleSmall
         ?.copyWith(fontWeight: FontWeight.w700, color: BrandColors.forest);
-    final countStyle = Theme.of(context).textTheme.bodyMedium
-        ?.copyWith(fontWeight: FontWeight.w600, color: BrandColors.bark);
+    final rows = [counts.take(2).toList(), counts.skip(2).take(2).toList()];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Text(
-            strings.visitedPlaces,
-            key: const Key('profile-visited-title'),
-            style: titleStyle,
-          ),
-        ),
-        KeyedSubtree(
-          key: const Key('profile-visited-places'),
-          child: Column(
-            children: [
-              for (final row in counts)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  child: Row(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: KeyedSubtree(
+            key: const Key('profile-visited-places'),
+            child: Column(
+              children: [
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (i > 0) const SizedBox(height: _gridGap),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          strings.t(row.category.l10nKey),
-                          style: Theme.of(context).textTheme.bodyMedium,
+                      for (var j = 0; j < rows[i].length; j++) ...[
+                        if (j > 0) const SizedBox(width: _gridGap),
+                        Expanded(
+                          child: _CategoryVisitCard(
+                            strings: strings,
+                            count: rows[i][j],
+                          ),
                         ),
-                      ),
-                      Text(
-                        row.fraction,
-                        key: Key('profile-visited-${row.category.name}'),
-                        style: countStyle,
-                      ),
+                      ],
                     ],
                   ),
-                ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
           child: Text(
@@ -263,18 +254,87 @@ class _ProfileStatsBody extends StatelessWidget {
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                         ),
-                        title: Text(challenge.copyFor(locale).title),
+                        title: Text(
+                          challenge.copyFor(locale).title,
+                          style: const TextStyle(color: BrandColors.forest),
+                        ),
                         trailing: const Icon(
                           Icons.chevron_right,
-                          color: BrandColors.bark,
+                          color: BrandColors.forest,
                         ),
-                        onTap: () => openChallenge(context, challenge.id),
+                        onTap: () => openChallenge(
+                          context,
+                          challenge.id,
+                          fromProfile: true,
+                        ),
                       ),
                   ],
                 ),
         ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+class _CategoryVisitCard extends StatelessWidget {
+  const _CategoryVisitCard({required this.strings, required this.count});
+
+  final AppStrings strings;
+  final CategoryVisitCount count;
+
+  static const _iconSize = 22.0;
+  static const _radius = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      key: Key('profile-visited-card-${count.category.name}'),
+      decoration: BoxDecoration(
+        color: BrandColors.cream,
+        borderRadius: BorderRadius.circular(_radius),
+        border: Border.all(color: BrandColors.beige),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ColorFiltered(
+              colorFilter: const ColorFilter.mode(
+                BrandColors.forest,
+                BlendMode.srcIn,
+              ),
+              child: Image.asset(
+                'assets/map/icons/${count.category.iconName}@2x.png',
+                width: _iconSize,
+                height: _iconSize,
+                filterQuality: FilterQuality.medium,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              strings.t(count.category.profileL10nKey),
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.2,
+                color: BrandColors.bark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              count.fraction,
+              key: Key('profile-visited-${count.category.name}'),
+              style: const TextStyle(
+                fontSize: 20,
+                height: 1.2,
+                fontWeight: FontWeight.w700,
+                color: BrandColors.forest,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

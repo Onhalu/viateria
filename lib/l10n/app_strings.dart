@@ -174,6 +174,10 @@ class AppStrings {
     'paymentLeave',
     'paymentStay',
     'visitedPlaces',
+    'profileCatCity',
+    'profileCatNature',
+    'profileCatTechnical',
+    'profileCatHistorical',
     'completedChallenges',
     'completedChallengesEmpty',
   ];
@@ -341,6 +345,10 @@ class AppStrings {
   String get paymentLeave => t('paymentLeave');
   String get paymentStay => t('paymentStay');
   String get visitedPlaces => t('visitedPlaces');
+  String get profileCatCity => t('profileCatCity');
+  String get profileCatNature => t('profileCatNature');
+  String get profileCatTechnical => t('profileCatTechnical');
+  String get profileCatHistorical => t('profileCatHistorical');
   String get completedChallenges => t('completedChallenges');
   String get completedChallengesEmpty => t('completedChallengesEmpty');
 
@@ -544,8 +552,12 @@ class AppStrings {
       'paymentLeave': 'Leave',
       'paymentStay': 'Stay',
       'visitedPlaces': 'Visited places',
+      'profileCatCity': 'City',
+      'profileCatNature': 'Nature',
+      'profileCatTechnical': 'Technical',
+      'profileCatHistorical': 'Historical',
       'completedChallenges': 'Completed challenges',
-      'completedChallengesEmpty': 'No completed challenges yet',
+      'completedChallengesEmpty': 'No completed challenges yet.',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -722,8 +734,12 @@ class AppStrings {
       'paymentLeave': 'Odejít',
       'paymentStay': 'Zůstat',
       'visitedPlaces': 'Navštívená místa',
+      'profileCatCity': 'Město',
+      'profileCatNature': 'Příroda',
+      'profileCatTechnical': 'Technická',
+      'profileCatHistorical': 'Historická',
       'completedChallenges': 'Dokončené výzvy',
-      'completedChallengesEmpty': 'Zatím žádná dokončená výzva',
+      'completedChallengesEmpty': 'Zatím žádná dokončená výzva.',
     },
     'de': {
       'appName': 'VANDERY',
@@ -899,8 +915,12 @@ class AppStrings {
       'paymentLeave': 'Verlassen',
       'paymentStay': 'Bleiben',
       'visitedPlaces': 'Besuchte Orte',
+      'profileCatCity': 'Stadt',
+      'profileCatNature': 'Natur',
+      'profileCatTechnical': 'Technisch',
+      'profileCatHistorical': 'Historisch',
       'completedChallenges': 'Abgeschlossene Challenges',
-      'completedChallengesEmpty': 'Noch keine abgeschlossene Challenge',
+      'completedChallengesEmpty': 'Noch keine abgeschlossene Challenge.',
     },
   };
 }

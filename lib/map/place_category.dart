@@ -13,6 +13,14 @@ enum PlaceCategory {
 
   String get iconName => name;
 
+  /// Short profile-stat labels (město / příroda / …), not the map filter names.
+  String get profileL10nKey => switch (this) {
+    PlaceCategory.city => 'profileCatCity',
+    PlaceCategory.nature => 'profileCatNature',
+    PlaceCategory.technical => 'profileCatTechnical',
+    PlaceCategory.historical => 'profileCatHistorical',
+  };
+
   static PlaceCategory fromWire(String value) {
     return switch (value) {
       'city' => PlaceCategory.city,
