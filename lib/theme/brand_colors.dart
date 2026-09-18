@@ -8,6 +8,10 @@ abstract final class BrandColors {
   static const forest = Color(0xFF35483C);
   static const sage = Color(0xFF9C9A7B);
   static const cream = Color(0xFFF3EFE5);
+
+  /// Fill for the floating bottom nav and inset catalog welcome header.
+  /// Same as [sage] until UX ships a greener token — change this one line.
+  static const shellFill = sage;
   static const neutral = Color(0xFFFAF8F2);
   static const beige = Color(0xFFD8CDB8);
   static const bark = Color(0xFF756653);

@@ -32,6 +32,7 @@ void main() {
   test('AppTheme and MapPalette share BrandColors tokens', () {
     expect(BrandColors.forest, const Color(0xFF35483C));
     expect(BrandColors.sage, const Color(0xFF9C9A7B));
+    expect(BrandColors.shellFill, BrandColors.sage);
     expect(BrandColors.cream, const Color(0xFFF3EFE5));
     expect(BrandColors.neutral, const Color(0xFFFAF8F2));
     expect(BrandColors.beige, const Color(0xFFD8CDB8));
@@ -68,7 +69,7 @@ void main() {
     expect(theme.scaffoldBackgroundColor, BrandColors.cream);
     expect(theme.appBarTheme.backgroundColor, BrandColors.cream);
     expect(theme.appBarTheme.foregroundColor, BrandColors.forest);
-    expect(theme.navigationBarTheme.backgroundColor, BrandColors.sage);
+    expect(theme.navigationBarTheme.backgroundColor, BrandColors.shellFill);
     expect(
       theme.navigationBarTheme.indicatorColor,
       BrandColors.cream.withValues(alpha: 0.22),

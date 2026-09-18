@@ -10,6 +10,10 @@ class AppShell extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  static const horizontalInset = 16.0;
+  static const bottomInset = 12.0;
+  static const topInset = 8.0;
+  static const barRadius = 28.0;
   static const indicatorSize = Size(40, 32);
   static const indicatorRadius = 16.0;
   static const pressedOpacity = 0.85;
@@ -20,8 +24,6 @@ class AppShell extends StatelessWidget {
       BrandColors.forest.withValues(alpha: unselectedOpacity);
 
   static Color get selectedPill => BrandColors.cream.withValues(alpha: 0.22);
-
-  static Color get hairline => BrandColors.forest.withValues(alpha: 0.12);
 
   @override
   Widget build(BuildContext context) {
@@ -51,44 +53,49 @@ class AppShell extends StatelessWidget {
 
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: Material(
-        key: const Key('app-bottom-nav-shell'),
-        color: BrandColors.sage,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ColoredBox(
-              color: hairline,
-              child: const SizedBox(height: 1, width: double.infinity),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            horizontalInset,
+            topInset,
+            horizontalInset,
+            bottomInset,
+          ),
+          child: Material(
+            key: const Key('app-bottom-nav-shell'),
+            elevation: 3,
+            color: BrandColors.shellFill,
+            shadowColor: Colors.black26,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(barRadius),
             ),
-            SafeArea(
-              top: false,
-              child: SizedBox(
-                key: const Key('app-bottom-nav'),
-                height: barHeight,
-                child: Row(
-                  children: [
-                    for (var index = 0; index < destinations.length; index++)
-                      Expanded(
-                        child: _SageNavDestination(
-                          icon: destinations[index].icon,
-                          selectedIcon: destinations[index].selectedIcon,
-                          label: destinations[index].label,
-                          selected: navigationShell.currentIndex == index,
-                          onTap: () {
-                            navigationShell.goBranch(
-                              index,
-                              initialLocation:
-                                  index == navigationShell.currentIndex,
-                            );
-                          },
-                        ),
+            clipBehavior: Clip.antiAlias,
+            child: SizedBox(
+              key: const Key('app-bottom-nav'),
+              height: barHeight,
+              child: Row(
+                children: [
+                  for (var index = 0; index < destinations.length; index++)
+                    Expanded(
+                      child: _SageNavDestination(
+                        icon: destinations[index].icon,
+                        selectedIcon: destinations[index].selectedIcon,
+                        label: destinations[index].label,
+                        selected: navigationShell.currentIndex == index,
+                        onTap: () {
+                          navigationShell.goBranch(
+                            index,
+                            initialLocation:
+                                index == navigationShell.currentIndex,
+                          );
+                        },
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

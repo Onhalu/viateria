@@ -139,56 +139,74 @@ void main() {
     expect(find.text('Weekend hike'), findsOneWidget);
 
     final navRect = tester.getRect(nav);
-    expect(navRect.left, 0);
-    expect(navRect.right, screenSize.width);
+    expect(navRect.left, AppShell.horizontalInset);
+    expect(navRect.right, screenSize.width - AppShell.horizontalInset);
+    expect(navRect.bottom, lessThan(screenSize.height));
 
     final shell = tester.widget<Material>(
       find.byKey(const Key('app-bottom-nav-shell')),
     );
-    expect(shell.color, BrandColors.sage);
-    final shellRect = tester.getRect(
-      find.byKey(const Key('app-bottom-nav-shell')),
-    );
-    expect(shellRect.left, 0);
-    expect(shellRect.right, screenSize.width);
-    expect(shellRect.bottom, screenSize.height);
-  });
-
-  testWidgets('bottom nav is full-width sage including the home indicator', (
-    tester,
-  ) async {
-    const homeIndicator = 34.0;
-    tester.view.physicalSize = const Size(800, 1600);
-    tester.view.devicePixelRatio = 1.0;
-    tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
-    tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-      tester.view.resetPadding();
-      tester.view.resetViewPadding();
-    });
-
-    await tester.pumpWidget(wrapApp(buildServices()));
-    await tester.pumpAndSettle();
-
-    final screenSize = tester.getSize(find.byType(Scaffold).first);
-    final shellRect = tester.getRect(
-      find.byKey(const Key('app-bottom-nav-shell')),
-    );
-    expect(shellRect.left, 0);
-    expect(shellRect.right, screenSize.width);
-    expect(shellRect.bottom, screenSize.height);
-
-    final navRect = tester.getRect(find.byKey(const Key('app-bottom-nav')));
-    expect(navRect.left, 0);
-    expect(navRect.right, screenSize.width);
+    expect(shell.color, BrandColors.shellFill);
+    expect(shell.elevation, 3);
+    expect(shell.clipBehavior, Clip.antiAlias);
     expect(
-      navRect.bottom,
-      lessThanOrEqualTo(screenSize.height - homeIndicator + 0.5),
+      shell.shape,
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppShell.barRadius),
+      ),
     );
-    expect(navRect.bottom, lessThan(screenSize.height));
+    final shellRect = tester.getRect(
+      find.byKey(const Key('app-bottom-nav-shell')),
+    );
+    expect(shellRect.left, AppShell.horizontalInset);
+    expect(shellRect.right, screenSize.width - AppShell.horizontalInset);
+    expect(shellRect.bottom, lessThan(screenSize.height));
   });
+
+  testWidgets(
+    'bottom nav floats above the home indicator without painting sage edge-to-edge',
+    (tester) async {
+      const homeIndicator = 34.0;
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
+      tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPadding();
+        tester.view.resetViewPadding();
+      });
+
+      await tester.pumpWidget(wrapApp(buildServices()));
+      await tester.pumpAndSettle();
+
+      final screenSize = tester.getSize(find.byType(Scaffold).first);
+      final shellRect = tester.getRect(
+        find.byKey(const Key('app-bottom-nav-shell')),
+      );
+      expect(shellRect.left, AppShell.horizontalInset);
+      expect(shellRect.right, screenSize.width - AppShell.horizontalInset);
+      expect(
+        shellRect.bottom,
+        lessThanOrEqualTo(
+          screenSize.height - homeIndicator - AppShell.bottomInset + 0.5,
+        ),
+      );
+      expect(shellRect.bottom, lessThan(screenSize.height - homeIndicator));
+      expect(shellRect.top, greaterThan(screenSize.height / 2));
+
+      final navRect = tester.getRect(find.byKey(const Key('app-bottom-nav')));
+      expect(navRect.left, AppShell.horizontalInset);
+      expect(navRect.right, screenSize.width - AppShell.horizontalInset);
+      expect(
+        navRect.bottom,
+        lessThanOrEqualTo(
+          screenSize.height - homeIndicator - AppShell.bottomInset + 0.5,
+        ),
+      );
+    },
+  );
 
   testWidgets('last-challenge tab shows empty state when none opened', (
     tester,
@@ -381,7 +399,8 @@ void main() {
       final shell = tester.widget<Material>(
         find.byKey(const Key('app-bottom-nav-shell')),
       );
-      expect(shell.color, BrandColors.sage);
+      expect(shell.color, BrandColors.shellFill);
+      expect(BrandColors.shellFill, BrandColors.sage);
 
       final pillSize = tester.getSize(
         find.byKey(const Key('sage-nav-indicator')),
@@ -478,6 +497,7 @@ void main() {
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
+    final screenSize = tester.getSize(find.byType(Scaffold).first);
     expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
     expect(find.text(strings.welcomeBack), findsOneWidget);
     expect(find.byKey(const Key('catalog-welcome-name')), findsOneWidget);
@@ -486,19 +506,43 @@ void main() {
       'Ada',
     );
     expect(find.byType(Badge), findsNothing);
+    expect(find.byKey(const Key('catalog-welcome-map')), findsNothing);
+    expect(find.byKey(const Key('catalog-welcome-locale')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-profile')), findsOneWidget);
     expect(find.byKey(const Key('catalog-search-field')), findsOneWidget);
     expect(find.byKey(const Key('catalog-filter-chips')), findsOneWidget);
 
-    final header = tester.widget<ColoredBox>(
+    final header = tester.widget<Material>(
       find.byKey(const Key('catalog-welcome-header')),
     );
-    expect(header.color, BrandColors.sage);
+    expect(header.color, BrandColors.shellFill);
+    expect(header.clipBehavior, Clip.antiAlias);
+    expect(
+      header.shape,
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CatalogWelcomeHeader.barRadius),
+      ),
+    );
 
     expect(
       tester.getSize(find.byKey(const Key('catalog-welcome-avatar'))),
       const Size(
         CatalogWelcomeHeader.avatarSize,
         CatalogWelcomeHeader.avatarSize,
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('catalog-welcome-locale'))),
+      const Size(
+        CatalogWelcomeHeader.actionSize,
+        CatalogWelcomeHeader.actionSize,
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('catalog-welcome-profile'))),
+      const Size(
+        CatalogWelcomeHeader.actionSize,
+        CatalogWelcomeHeader.actionSize,
       ),
     );
 
@@ -512,14 +556,29 @@ void main() {
     expect(name.style?.color, BrandColors.cream);
     expect(name.style?.fontWeight, FontWeight.w700);
 
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('catalog-welcome-locale-label')))
+          .data,
+      'EN',
+    );
+
     final headerRect = tester.getRect(
       find.byKey(const Key('catalog-welcome-header')),
     );
-    expect(headerRect.left, 0);
-    expect(headerRect.top, 0);
+    expect(headerRect.left, CatalogWelcomeHeader.horizontalInset);
+    expect(
+      headerRect.right,
+      screenSize.width - CatalogWelcomeHeader.horizontalInset,
+    );
+    expect(headerRect.top, CatalogWelcomeHeader.topGap);
     expect(
       tester.getTopLeft(find.byKey(const Key('catalog-search-field'))).dy,
       greaterThan(headerRect.bottom),
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('catalog-search-field'))).left,
+      CatalogWelcomeHeader.horizontalInset,
     );
   });
 
@@ -557,23 +616,106 @@ void main() {
     );
   });
 
-  testWidgets('catalog welcome map and profile buttons switch tabs', (
+  testWidgets(
+    'catalog welcome header stays cream in the status bar and inset below it',
+    (tester) async {
+      const statusBar = 47.0;
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = const FakeViewPadding(top: statusBar);
+      tester.view.viewPadding = const FakeViewPadding(top: statusBar);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPadding();
+        tester.view.resetViewPadding();
+      });
+
+      await tester.pumpWidget(wrapApp(buildServices()));
+      await tester.pumpAndSettle();
+
+      final screenSize = tester.getSize(find.byType(Scaffold).first);
+      final headerRect = tester.getRect(
+        find.byKey(const Key('catalog-welcome-header')),
+      );
+      expect(headerRect.left, CatalogWelcomeHeader.horizontalInset);
+      expect(
+        headerRect.right,
+        screenSize.width - CatalogWelcomeHeader.horizontalInset,
+      );
+      expect(headerRect.top, statusBar + CatalogWelcomeHeader.topGap);
+      expect(headerRect.top, greaterThan(statusBar));
+
+      final catalogScaffold = tester.widget<Scaffold>(
+        find.ancestor(
+          of: find.byKey(const Key('catalog-welcome-header')),
+          matching: find.byType(Scaffold),
+        ),
+      );
+      expect(
+        catalogScaffold.backgroundColor ??
+            Theme.of(
+              tester.element(find.byKey(const Key('catalog-welcome-header'))),
+            ).scaffoldBackgroundColor,
+        BrandColors.cream,
+      );
+    },
+  );
+
+  testWidgets('catalog welcome locale menu switches CS / EN / DE', (
     tester,
   ) async {
+    final locale = LocaleController(initial: 'en');
+    await tester.pumpWidget(wrapApp(buildServices(), locale: locale));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('catalog-welcome-map')), findsNothing);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('catalog-welcome-locale-label')))
+          .data,
+      'EN',
+    );
+    expect(find.text(AppStrings('en').welcomeBack), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-locale')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-welcome-locale-cs')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-locale-en')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-locale-de')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-locale-cs')));
+    await tester.pumpAndSettle();
+
+    expect(locale.locale, 'cs');
+    expect(find.text(AppStrings('cs').welcomeBack), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('catalog-welcome-locale-label')))
+          .data,
+      'CS',
+    );
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-locale')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-welcome-locale-de')));
+    await tester.pumpAndSettle();
+    expect(locale.locale, 'de');
+    expect(find.text(AppStrings('de').welcomeBack), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('catalog-welcome-locale-label')))
+          .data,
+      'DE',
+    );
+  });
+
+  testWidgets('catalog welcome profile button switches tabs', (tester) async {
     final strings = AppStrings('en');
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('catalog-welcome-map')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
-    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
-
-    await tester.tap(find.text(strings.catalogTitle));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
+    expect(find.byKey(const Key('catalog-welcome-map')), findsNothing);
     await tester.tap(find.byKey(const Key('catalog-welcome-profile')));
     await tester.pumpAndSettle();
     expect(
@@ -585,5 +727,6 @@ void main() {
     );
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
     expect(find.byType(Badge), findsNothing);
+    expect(find.text(strings.language), findsOneWidget);
   });
 }
