@@ -46,6 +46,7 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
       countryCode: row['country_code'] as String?,
       region: row['region'] as String?,
     ),
+    difficulty: catalogDifficultyFromWire(row['difficulty'] as String?),
     stripePriceId: row['stripe_price_id'] as String?,
     stripePriceIdDiploma: row['stripe_price_id_diploma'] as String?,
     stripePriceIdMedal: row['stripe_price_id_medal'] as String?,

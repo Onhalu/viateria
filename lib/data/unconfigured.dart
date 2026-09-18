@@ -52,6 +52,9 @@ class UnconfiguredCatalog implements CatalogRepository {
   Future<List<Challenge>> fetchPublishedChallenges() async => const [];
 
   @override
+  Future<List<ChallengeDetail>> fetchPublishedDetails() async => const [];
+
+  @override
   Future<List<PromoStripe>> fetchPublishedPromos({DateTime? now}) async =>
       const [];
 }

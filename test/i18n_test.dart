@@ -34,4 +34,28 @@ void main() {
     expect(AppStrings('en').welcomeNameFallback, 'traveler');
     expect(AppStrings('de').welcomeNameFallback, 'Wanderer');
   });
+
+  test('catalog discover copy is localized', () {
+    expect(AppStrings('cs').catalogFeatured, 'Vybrané');
+    expect(AppStrings('en').catalogFeatured, 'Featured');
+    expect(AppStrings('de').catalogFeatured, 'Ausgewählt');
+    expect(AppStrings('cs').catalogLengthShort, 'Krátká');
+    expect(AppStrings('en').catalogLengthShort, 'Short');
+    expect(AppStrings('de').catalogLengthShort, 'Kurz');
+    expect(AppStrings('cs').catalogLengthMedium, 'Střední');
+    expect(AppStrings('en').catalogLengthMedium, 'Medium');
+    expect(AppStrings('de').catalogLengthMedium, 'Mittel');
+    expect(AppStrings('cs').catalogLengthLong, 'Dlouhá');
+    expect(AppStrings('en').catalogLengthLong, 'Long');
+    expect(AppStrings('de').catalogLengthLong, 'Lang');
+    expect(AppStrings('cs').catalogDifficultyEasy, 'Lehká');
+    expect(AppStrings('en').catalogDifficultyEasy, 'Easy');
+    expect(AppStrings('de').catalogDifficultyEasy, 'Leicht');
+    expect(AppStrings('cs').catalogDifficultyNormal, 'Běžná');
+    expect(AppStrings('en').catalogDifficultyNormal, 'Normal');
+    expect(AppStrings('de').catalogDifficultyNormal, 'Normal');
+    expect(AppStrings('cs').catalogDifficultyHard, 'Náročná');
+    expect(AppStrings('en').catalogDifficultyHard, 'Hard');
+    expect(AppStrings('de').catalogDifficultyHard, 'Anspruchsvoll');
+  });
 }

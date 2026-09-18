@@ -1,7 +1,69 @@
 import '../models/models.dart';
+import 'route_planner.dart';
 
 /// ISO country codes shown as catalog region chips.
 const catalogCountryCodes = ['CZ', 'SK', 'AT', 'DE', 'PL'];
+
+/// Length bands for catalog chips and card labels.
+///
+/// Bounds use actual hike hours from [CatalogRouteStats.estimatedDuration]:
+/// short < 3 h, medium 3–6 h, long ≥ 6 h. Never invent hours for the UI.
+enum CatalogLengthBand { short, medium, long }
+
+/// Haversine + hike-time summary derived from stored waypoints.
+///
+/// There is no CMS duration/distance column. Stats come from ordered
+/// `waypoints.lat/lng/elevation_m` via [RoutePlanner] (hike / Naismith).
+/// Null when a challenge has fewer than two waypoints or time rounds to
+/// nothing — callers must hide the length label.
+class CatalogRouteStats {
+  const CatalogRouteStats({this.distanceKm, this.estimatedDuration});
+
+  final double? distanceKm;
+  final Duration? estimatedDuration;
+
+  CatalogLengthBand? get lengthBand {
+    final duration = estimatedDuration;
+    if (duration == null) return null;
+    return catalogLengthBandFor(duration);
+  }
+}
+
+CatalogLengthBand catalogLengthBandFor(Duration duration) {
+  final hours = duration.inMinutes / 60.0;
+  if (hours < 3) return CatalogLengthBand.short;
+  if (hours < 6) return CatalogLengthBand.medium;
+  return CatalogLengthBand.long;
+}
+
+/// Route length and hike time from stored waypoint coordinates.
+///
+/// Source: catalog `waypoints` already loaded with each published challenge
+/// (not a new duration column). Uses [RoutePlanner.plan] in hike mode.
+CatalogRouteStats? catalogRouteStatsFromWaypoints(List<Waypoint> waypoints) {
+  if (waypoints.length < 2) return null;
+  final summary = const RoutePlanner().plan(
+    mode: TravelMode.hike,
+    waypoints: waypoints,
+  );
+  final distance = summary.distanceKm >= 0.05 ? summary.distanceKm : null;
+  final duration = summary.estimatedTime.inMinutes > 0
+      ? summary.estimatedTime
+      : null;
+  if (distance == null && duration == null) return null;
+  return CatalogRouteStats(distanceKm: distance, estimatedDuration: duration);
+}
+
+Map<String, CatalogRouteStats> catalogRouteStatsByChallenge(
+  Iterable<ChallengeDetail> details,
+) {
+  final out = <String, CatalogRouteStats>{};
+  for (final detail in details) {
+    final stats = catalogRouteStatsFromWaypoints(detail.orderedWaypoints);
+    if (stats != null) out[detail.challenge.id] = stats;
+  }
+  return out;
+}
 
 /// Catalog search + chip selection. Empty groups mean "all".
 class CatalogFilter {
@@ -10,17 +72,23 @@ class CatalogFilter {
     this.pricingTypes = const {},
     this.accessModes = const {},
     this.countryCodes = const {},
+    this.lengthBands = const {},
+    this.difficulties = const {},
   });
 
   final String query;
   final Set<PricingType> pricingTypes;
   final Set<AccessMode> accessModes;
   final Set<String> countryCodes;
+  final Set<CatalogLengthBand> lengthBands;
+  final Set<CatalogDifficulty> difficulties;
 
   bool get hasActiveChips =>
       pricingTypes.isNotEmpty ||
       accessModes.isNotEmpty ||
-      countryCodes.isNotEmpty;
+      countryCodes.isNotEmpty ||
+      lengthBands.isNotEmpty ||
+      difficulties.isNotEmpty;
 
   bool get isActive => query.trim().isNotEmpty || hasActiveChips;
 
@@ -32,12 +100,16 @@ class CatalogFilter {
     Set<PricingType>? pricingTypes,
     Set<AccessMode>? accessModes,
     Set<String>? countryCodes,
+    Set<CatalogLengthBand>? lengthBands,
+    Set<CatalogDifficulty>? difficulties,
   }) {
     return CatalogFilter(
       query: query ?? this.query,
       pricingTypes: pricingTypes ?? this.pricingTypes,
       accessModes: accessModes ?? this.accessModes,
       countryCodes: countryCodes ?? this.countryCodes,
+      lengthBands: lengthBands ?? this.lengthBands,
+      difficulties: difficulties ?? this.difficulties,
     );
   }
 
@@ -105,17 +177,23 @@ String foldCatalogText(String input) {
   return buf.toString();
 }
 
-/// Price OR, mode OR, region OR; groups AND search AND chips.
+/// Price OR, mode OR, region OR, length OR, difficulty OR; groups AND
+/// search AND chips.
 ///
 /// Search matches any locale's title + description on the challenge.
+/// Length chips use [routeStats] derived from waypoints; a challenge
+/// without a length band never matches a selected length chip.
+/// A null CMS difficulty never matches a selected difficulty chip.
 List<Challenge> filterCatalogChallenges(
   Iterable<Challenge> challenges,
-  CatalogFilter filter,
-) {
+  CatalogFilter filter, {
+  Map<String, CatalogRouteStats> routeStats = const {},
+}) {
   final foldedQuery = foldCatalogText(filter.query.trim());
   return [
     for (final challenge in challenges)
-      if (_matchesChallenge(challenge, filter, foldedQuery)) challenge,
+      if (_matchesChallenge(challenge, filter, foldedQuery, routeStats))
+        challenge,
   ];
 }
 
@@ -123,6 +201,7 @@ bool _matchesChallenge(
   Challenge challenge,
   CatalogFilter filter,
   String foldedQuery,
+  Map<String, CatalogRouteStats> routeStats,
 ) {
   if (filter.pricingTypes.isNotEmpty &&
       !filter.pricingTypes.contains(challenge.pricingType)) {
@@ -135,6 +214,18 @@ bool _matchesChallenge(
   if (filter.countryCodes.isNotEmpty) {
     final code = challenge.countryCode;
     if (code == null || !filter.countryCodes.contains(code)) {
+      return false;
+    }
+  }
+  if (filter.lengthBands.isNotEmpty) {
+    final band = routeStats[challenge.id]?.lengthBand;
+    if (band == null || !filter.lengthBands.contains(band)) {
+      return false;
+    }
+  }
+  if (filter.difficulties.isNotEmpty) {
+    final difficulty = challenge.difficulty;
+    if (difficulty == null || !filter.difficulties.contains(difficulty)) {
       return false;
     }
   }

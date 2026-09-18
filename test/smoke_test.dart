@@ -13,6 +13,7 @@ import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/missing_config_screen.dart';
 import 'package:viateria/ui/widgets/diploma_view.dart';
 
+import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
 
 AppServices buildServices({
@@ -81,10 +82,7 @@ Widget wrapApp(AppServices services, {LocaleController? locale}) {
   );
 }
 
-Finder catalogResultsScrollable() => find.descendant(
-  of: find.byKey(const Key('catalog-results')),
-  matching: find.byType(Scrollable),
-);
+Finder catalogResultsScrollable() => catalogVerticalScrollable();
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -99,17 +97,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Weekend hike'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('Open trail'),
+        find.byKey(const Key('catalog-hero-open-1')),
         400,
         scrollable: catalogResultsScrollable(),
       );
-      expect(find.text('Open trail'), findsOneWidget);
+      expect(find.text('Open trail'), findsAtLeastNWidgets(1));
       await tester.scrollUntilVisible(
-        find.text('Story trail'),
+        find.byKey(const Key('catalog-featured-story-1')),
         400,
         scrollable: catalogResultsScrollable(),
       );
-      expect(find.text('Story trail'), findsOneWidget);
+      expect(find.text('Story trail'), findsAtLeastNWidgets(1));
       expect(find.text('Hidden draft'), findsNothing);
     },
   );

@@ -55,6 +55,7 @@ class Challenge {
     this.coverImageUrl,
     this.region,
     this.countryCode,
+    this.difficulty,
     this.stripePriceId,
     this.stripePriceIdDiploma,
     this.stripePriceIdMedal,
@@ -89,6 +90,9 @@ class Challenge {
 
   /// ISO 3166-1 alpha-2 used by catalog region chips: CZ SK AT DE PL.
   final String? countryCode;
+
+  /// CMS `easy` / `normal` / `hard`. Null hides the catalog label.
+  final CatalogDifficulty? difficulty;
 
   /// Legacy shared Stripe Price id. Used when a per-SKU id is unset.
   final String? stripePriceId;

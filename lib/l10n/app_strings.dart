@@ -18,6 +18,14 @@ class AppStrings {
     'catalogClearFilters',
     'catalogNoMatches',
     'catalogNoMatchesHint',
+    'catalogFeatured',
+    'catalogRegions',
+    'catalogLengthShort',
+    'catalogLengthMedium',
+    'catalogLengthLong',
+    'catalogDifficultyEasy',
+    'catalogDifficultyNormal',
+    'catalogDifficultyHard',
     'signIn',
     'signUp',
     'email',
@@ -179,6 +187,14 @@ class AppStrings {
   String get catalogClearFilters => t('catalogClearFilters');
   String get catalogNoMatches => t('catalogNoMatches');
   String get catalogNoMatchesHint => t('catalogNoMatchesHint');
+  String get catalogFeatured => t('catalogFeatured');
+  String get catalogRegions => t('catalogRegions');
+  String get catalogLengthShort => t('catalogLengthShort');
+  String get catalogLengthMedium => t('catalogLengthMedium');
+  String get catalogLengthLong => t('catalogLengthLong');
+  String get catalogDifficultyEasy => t('catalogDifficultyEasy');
+  String get catalogDifficultyNormal => t('catalogDifficultyNormal');
+  String get catalogDifficultyHard => t('catalogDifficultyHard');
   String get signIn => t('signIn');
   String get signUp => t('signUp');
   String get email => t('email');
@@ -358,6 +374,14 @@ class AppStrings {
       'catalogClearFilters': 'Clear filters',
       'catalogNoMatches': 'No matches',
       'catalogNoMatchesHint': 'Try different filters or search.',
+      'catalogFeatured': 'Featured',
+      'catalogRegions': 'Regions',
+      'catalogLengthShort': 'Short',
+      'catalogLengthMedium': 'Medium',
+      'catalogLengthLong': 'Long',
+      'catalogDifficultyEasy': 'Easy',
+      'catalogDifficultyNormal': 'Normal',
+      'catalogDifficultyHard': 'Hard',
       'signIn': 'Sign in',
       'signUp': 'Create account',
       'email': 'Email',
@@ -526,6 +550,14 @@ class AppStrings {
       'catalogClearFilters': 'Zrušit filtry',
       'catalogNoMatches': 'Nic nesedí',
       'catalogNoMatchesHint': 'Uprav filtry nebo hledaný text.',
+      'catalogFeatured': 'Vybrané',
+      'catalogRegions': 'Regiony',
+      'catalogLengthShort': 'Krátká',
+      'catalogLengthMedium': 'Střední',
+      'catalogLengthLong': 'Dlouhá',
+      'catalogDifficultyEasy': 'Lehká',
+      'catalogDifficultyNormal': 'Běžná',
+      'catalogDifficultyHard': 'Náročná',
       'signIn': 'Přihlásit se',
       'signUp': 'Vytvořit účet',
       'email': 'E-mail',
@@ -693,6 +725,14 @@ class AppStrings {
       'catalogClearFilters': 'Filter zurücksetzen',
       'catalogNoMatches': 'Keine Treffer',
       'catalogNoMatchesHint': 'Andere Filter oder Suche versuchen.',
+      'catalogFeatured': 'Ausgewählt',
+      'catalogRegions': 'Regionen',
+      'catalogLengthShort': 'Kurz',
+      'catalogLengthMedium': 'Mittel',
+      'catalogLengthLong': 'Lang',
+      'catalogDifficultyEasy': 'Leicht',
+      'catalogDifficultyNormal': 'Normal',
+      'catalogDifficultyHard': 'Anspruchsvoll',
       'signIn': 'Anmelden',
       'signUp': 'Konto erstellen',
       'email': 'E-Mail',

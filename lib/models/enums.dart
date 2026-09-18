@@ -8,6 +8,10 @@ enum TravelMode { hike, bike }
 
 enum Difficulty { easy, moderate, hard, expert }
 
+/// CMS catalog difficulty. Distinct from [Difficulty] (RoutePlanner).
+/// Null on the challenge means the catalog hides the label.
+enum CatalogDifficulty { easy, normal, hard }
+
 enum ChallengeRunStatus { inProgress, completed }
 
 enum PurchaseStatus { pending, paid, failed, refunded }
@@ -48,6 +52,13 @@ PurchaseStatus purchaseStatusFromWire(String value) => switch (value) {
 RewardVariant? rewardVariantFromWire(String? value) => switch (value) {
   'diploma' => RewardVariant.diploma,
   'medal_and_diploma' || 'medalAndDiploma' => RewardVariant.medalAndDiploma,
+  _ => null,
+};
+
+CatalogDifficulty? catalogDifficultyFromWire(String? value) => switch (value) {
+  'easy' => CatalogDifficulty.easy,
+  'normal' => CatalogDifficulty.normal,
+  'hard' => CatalogDifficulty.hard,
   _ => null,
 };
 

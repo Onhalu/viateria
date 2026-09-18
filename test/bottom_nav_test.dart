@@ -14,9 +14,9 @@ import 'package:viateria/ui/screens/last_challenge_screen.dart';
 import 'package:viateria/ui/screens/profile_screen.dart';
 import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/theme/brand_colors.dart';
-import 'package:viateria/ui/widgets/catalog_cards.dart';
 import 'package:viateria/ui/widgets/catalog_welcome_header.dart';
 
+import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
 
 AppServices buildServices({
@@ -237,14 +237,11 @@ void main() {
     await tester.pumpWidget(wrapApp(buildServices(), lastOpened: store));
     await tester.pumpAndSettle();
 
-    final card = find.widgetWithText(ChallengeCard, 'Open trail');
+    final card = find.byKey(const Key('catalog-hero-open-1'));
     await tester.scrollUntilVisible(
       card,
       300,
-      scrollable: find.descendant(
-        of: find.byKey(const Key('catalog-results')),
-        matching: find.byType(Scrollable),
-      ),
+      scrollable: catalogVerticalScrollable(),
     );
     await tester.tap(card);
     await tester.pump();
@@ -317,14 +314,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Weekend hike'), findsOneWidget);
       await tester.scrollUntilVisible(
-        find.text('Open trail'),
+        find.byKey(const Key('catalog-hero-open-1')),
         400,
-        scrollable: find.descendant(
-          of: find.byKey(const Key('catalog-results')),
-          matching: find.byType(Scrollable),
-        ),
+        scrollable: catalogVerticalScrollable(),
       );
-      expect(find.text('Open trail'), findsOneWidget);
+      expect(find.text('Open trail'), findsAtLeastNWidgets(1));
       expect(find.text('Hidden draft'), findsNothing);
     },
   );
@@ -454,14 +448,11 @@ void main() {
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
-    final card = find.widgetWithText(ChallengeCard, 'Open trail');
+    final card = find.byKey(const Key('catalog-hero-open-1'));
     await tester.scrollUntilVisible(
       card,
       300,
-      scrollable: find.descendant(
-        of: find.byKey(const Key('catalog-results')),
-        matching: find.byType(Scrollable),
-      ),
+      scrollable: catalogVerticalScrollable(),
     );
     await tester.tap(card);
     await tester.pump();
@@ -519,14 +510,14 @@ void main() {
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-search-field')),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-filter-chips')),
       ),
-      findsOneWidget,
+      findsNothing,
     );
 
     final header = tester.widget<Material>(
@@ -624,24 +615,13 @@ void main() {
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
     );
-    final greetingBottom = tester
-        .getBottomLeft(find.byKey(const Key('catalog-welcome-greeting')))
-        .dy;
-    expect(searchRect.top, greaterThan(greetingBottom));
-    expect(searchRect.bottom, lessThan(headerRect.bottom));
+    expect(searchRect.top, greaterThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
-    expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
-    expect(
-      searchRect.left,
-      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
-    );
-    expect(
-      chipsRect.left,
-      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
-    );
+    expect(searchRect.left, CatalogWelcomeHeader.horizontalInset);
+    expect(chipsRect.left, CatalogWelcomeHeader.horizontalInset);
     expect(
       searchRect.right,
-      headerRect.right - CatalogWelcomeHeader.innerHorizontalPadding,
+      screenSize.width - CatalogWelcomeHeader.horizontalInset,
     );
     final searchField = tester.widget<TextField>(
       find.byKey(const Key('catalog-search-field')),
