@@ -148,6 +148,7 @@ void main() {
     );
     expect(shell.color, BrandColors.shellFill);
     expect(shell.elevation, 3);
+    expect(shell.shadowColor, BrandColors.shellShadow);
     expect(shell.clipBehavior, Clip.antiAlias);
     expect(
       shell.shape,
@@ -391,7 +392,7 @@ void main() {
   });
 
   testWidgets(
-    'bottom nav is sage with cream selected pill and forest unselected',
+    'bottom nav is shellFill with cream selected pill and forest unselected',
     (tester) async {
       await tester.pumpWidget(wrapApp(buildServices()));
       await tester.pumpAndSettle();
@@ -400,7 +401,9 @@ void main() {
         find.byKey(const Key('app-bottom-nav-shell')),
       );
       expect(shell.color, BrandColors.shellFill);
-      expect(BrandColors.shellFill, BrandColors.sage);
+      expect(BrandColors.shellFill, const Color(0xFF7D8B6A));
+      expect(BrandColors.sage, const Color(0xFF9C9A7B));
+      expect(shell.shadowColor, BrandColors.shellShadow);
 
       final pillSize = tester.getSize(
         find.byKey(const Key('sage-nav-indicator')),
@@ -516,6 +519,8 @@ void main() {
       find.byKey(const Key('catalog-welcome-header')),
     );
     expect(header.color, BrandColors.shellFill);
+    expect(BrandColors.shellFill, const Color(0xFF7D8B6A));
+    expect(BrandColors.sage, const Color(0xFF9C9A7B));
     expect(header.clipBehavior, Clip.antiAlias);
     expect(
       header.shape,
@@ -549,12 +554,35 @@ void main() {
     final greeting = tester.widget<Text>(
       find.byKey(const Key('catalog-welcome-greeting')),
     );
-    expect(greeting.style?.color, BrandColors.cream.withValues(alpha: 0.85));
+    expect(greeting.style?.color, BrandColors.cream);
     final name = tester.widget<Text>(
       find.byKey(const Key('catalog-welcome-name')),
     );
     expect(name.style?.color, BrandColors.cream);
     expect(name.style?.fontWeight, FontWeight.w700);
+
+    final localeButton = tester.widget<IconButton>(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-locale')),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(
+      localeButton.style?.backgroundColor?.resolve({}),
+      BrandColors.creamPill,
+    );
+    expect(localeButton.style?.foregroundColor?.resolve({}), BrandColors.cream);
+    final profileButton = tester.widget<IconButton>(
+      find.byKey(const Key('catalog-welcome-profile')),
+    );
+    expect(
+      profileButton.style?.backgroundColor?.resolve({}),
+      BrandColors.creamPill,
+    );
+    expect(
+      profileButton.style?.foregroundColor?.resolve({}),
+      BrandColors.cream,
+    );
 
     expect(
       tester

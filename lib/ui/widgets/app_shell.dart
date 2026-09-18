@@ -23,7 +23,7 @@ class AppShell extends StatelessWidget {
   static Color get unselectedForeground =>
       BrandColors.forest.withValues(alpha: unselectedOpacity);
 
-  static Color get selectedPill => BrandColors.cream.withValues(alpha: 0.22);
+  static Color get selectedPill => BrandColors.creamPill;
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +66,7 @@ class AppShell extends StatelessWidget {
             key: const Key('app-bottom-nav-shell'),
             elevation: 3,
             color: BrandColors.shellFill,
-            shadowColor: Colors.black26,
+            shadowColor: BrandColors.shellShadow,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(barRadius),
             ),

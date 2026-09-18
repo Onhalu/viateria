@@ -112,7 +112,7 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: BrandColors.shellFill,
-        indicatorColor: BrandColors.cream.withValues(alpha: 0.22),
+        indicatorColor: BrandColors.creamPill,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),

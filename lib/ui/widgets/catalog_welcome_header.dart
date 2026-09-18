@@ -18,6 +18,16 @@ class CatalogWelcomeHeader extends StatelessWidget {
   static const barRadius = AppShell.barRadius;
   static const innerPadding = EdgeInsets.fromLTRB(12, 10, 8, 10);
 
+  static ButtonStyle get actionStyle => IconButton.styleFrom(
+    foregroundColor: BrandColors.cream,
+    backgroundColor: BrandColors.creamPill,
+    minimumSize: const Size(actionSize, actionSize),
+    maximumSize: const Size(actionSize, actionSize),
+    padding: EdgeInsets.zero,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    shape: const CircleBorder(),
+  );
+
   @override
   Widget build(BuildContext context) {
     final localeController = context.watch<LocaleController>();
@@ -79,8 +89,8 @@ class CatalogWelcomeHeader extends StatelessWidget {
                       Text(
                         strings.welcomeBack,
                         key: const Key('catalog-welcome-greeting'),
-                        style: TextStyle(
-                          color: BrandColors.cream.withValues(alpha: 0.85),
+                        style: const TextStyle(
+                          color: BrandColors.cream,
                           fontSize: 13,
                           height: 1.2,
                         ),
@@ -164,20 +174,7 @@ class _LocaleHeaderButton extends StatelessWidget {
                 menuController.open();
               }
             },
-            style: IconButton.styleFrom(
-              foregroundColor: BrandColors.cream,
-              minimumSize: const Size(
-                CatalogWelcomeHeader.actionSize,
-                CatalogWelcomeHeader.actionSize,
-              ),
-              maximumSize: const Size(
-                CatalogWelcomeHeader.actionSize,
-                CatalogWelcomeHeader.actionSize,
-              ),
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: const CircleBorder(),
-            ),
+            style: CatalogWelcomeHeader.actionStyle,
             icon: Text(
               current.toUpperCase(),
               key: const Key('catalog-welcome-locale-label'),
@@ -212,20 +209,7 @@ class _RoundHeaderButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      style: IconButton.styleFrom(
-        foregroundColor: BrandColors.cream,
-        minimumSize: const Size(
-          CatalogWelcomeHeader.actionSize,
-          CatalogWelcomeHeader.actionSize,
-        ),
-        maximumSize: const Size(
-          CatalogWelcomeHeader.actionSize,
-          CatalogWelcomeHeader.actionSize,
-        ),
-        padding: EdgeInsets.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        shape: const CircleBorder(),
-      ),
+      style: CatalogWelcomeHeader.actionStyle,
       icon: Icon(icon, size: 22, color: BrandColors.cream),
     );
   }
