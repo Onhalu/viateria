@@ -2,18 +2,62 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
+import '../../domain/profile_stats.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
+import '../../map/place.dart';
+import '../../map/place_catalog.dart';
+import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
+import '../../theme/brand_colors.dart';
+import '../navigation.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key, this.places});
+
+  /// Test seam. Production uses [AssetPlaceCatalog].
+  final PlaceCatalog? places;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<_ProfileStatsData>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<_ProfileStatsData> _load() async {
+    final services = context.read<AppServices>();
+    final catalog = widget.places ?? const AssetPlaceCatalog();
+    final places = await _orDefault(catalog.fetchAll(), const <Place>[]);
+    final completed = await _orDefault(
+      services.progress.fetchCompleted(),
+      const <ChallengeProgress>[],
+    );
+    final published = await _orDefault(
+      services.catalog.fetchPublishedChallenges(),
+      const <Challenge>[],
+    );
+    return _ProfileStatsData(
+      places: places,
+      completed: completedChallengesForProfile(
+        published: published,
+        completedProgress: completed,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final localeController = context.watch<LocaleController>();
     final strings = localeController.strings;
-    final user = context.read<AppServices>().auth.currentUser;
+    final services = context.read<AppServices>();
+    final user = services.auth.currentUser;
     final name = user?.displayName?.trim();
     final email = user?.email?.trim();
     final identity = (name != null && name.isNotEmpty)
@@ -43,13 +87,10 @@ class ProfileScreen extends StatelessWidget {
           Text(
             identity,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
-          if (email != null &&
-              email.isNotEmpty &&
-              email != identity) ...[
+          if (email != null && email.isNotEmpty && email != identity) ...[
             const SizedBox(height: 4),
             Text(
               email,
@@ -58,6 +99,33 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 24),
+          FutureBuilder<_ProfileStatsData>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final data = snapshot.data ?? const _ProfileStatsData();
+              return ListenableBuilder(
+                listenable: services.verifiedPlaces,
+                builder: (context, _) {
+                  return _ProfileStatsBody(
+                    strings: strings,
+                    locale: localeController.locale,
+                    counts: visitedPlaceCountsByCategory(
+                      places: data.places,
+                      verifiedIds: services.verifiedPlaces.ids,
+                    ),
+                    completed: data.completed,
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 8),
           ListTile(title: Text(strings.language)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -95,6 +163,127 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+Future<T> _orDefault<T>(Future<T> future, T fallback) async {
+  try {
+    return await future;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+class _ProfileStatsData {
+  const _ProfileStatsData({this.places = const [], this.completed = const []});
+
+  final List<Place> places;
+  final List<Challenge> completed;
+}
+
+class _ProfileStatsBody extends StatelessWidget {
+  const _ProfileStatsBody({
+    required this.strings,
+    required this.locale,
+    required this.counts,
+    required this.completed,
+  });
+
+  final AppStrings strings;
+  final String locale;
+  final List<CategoryVisitCount> counts;
+  final List<Challenge> completed;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleSmall
+        ?.copyWith(fontWeight: FontWeight.w700, color: BrandColors.forest);
+    final countStyle = Theme.of(context).textTheme.bodyMedium
+        ?.copyWith(fontWeight: FontWeight.w600, color: BrandColors.bark);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(
+            strings.visitedPlaces,
+            key: const Key('profile-visited-title'),
+            style: titleStyle,
+          ),
+        ),
+        KeyedSubtree(
+          key: const Key('profile-visited-places'),
+          child: Column(
+            children: [
+              for (final row in counts)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.t(row.category.l10nKey),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      Text(
+                        row.fraction,
+                        key: Key('profile-visited-${row.category.name}'),
+                        style: countStyle,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Text(
+            strings.completedChallenges,
+            key: const Key('profile-completed-title'),
+            style: titleStyle,
+          ),
+        ),
+        KeyedSubtree(
+          key: const Key('profile-completed-challenges'),
+          child: completed.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Text(
+                    strings.completedChallengesEmpty,
+                    key: const Key('profile-completed-empty'),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: BrandColors.bark),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (final challenge in completed)
+                      ListTile(
+                        key: Key('profile-completed-${challenge.id}'),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                        ),
+                        title: Text(challenge.copyFor(locale).title),
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: BrandColors.bark,
+                        ),
+                        onTap: () => openChallenge(context, challenge.id),
+                      ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }

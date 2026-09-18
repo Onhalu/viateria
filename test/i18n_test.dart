@@ -58,4 +58,25 @@ void main() {
     expect(AppStrings('en').catalogDifficultyHard, 'Hard');
     expect(AppStrings('de').catalogDifficultyHard, 'Anspruchsvoll');
   });
+
+  test('profile stats copy is localized', () {
+    expect(AppStrings('cs').visitedPlaces, 'Navštívená místa');
+    expect(AppStrings('en').visitedPlaces, 'Visited places');
+    expect(AppStrings('de').visitedPlaces, 'Besuchte Orte');
+    expect(AppStrings('cs').completedChallenges, 'Dokončené výzvy');
+    expect(AppStrings('en').completedChallenges, 'Completed challenges');
+    expect(AppStrings('de').completedChallenges, 'Abgeschlossene Challenges');
+    expect(
+      AppStrings('cs').completedChallengesEmpty,
+      'Zatím žádná dokončená výzva',
+    );
+    expect(
+      AppStrings('en').completedChallengesEmpty,
+      'No completed challenges yet',
+    );
+    expect(
+      AppStrings('de').completedChallengesEmpty,
+      'Noch keine abgeschlossene Challenge',
+    );
+  });
 }

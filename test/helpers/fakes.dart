@@ -173,6 +173,23 @@ class MemoryProgress implements ProgressRepository {
   }
 
   @override
+  Future<List<ChallengeProgress>> fetchCompleted() async {
+    final forced = fetchProgressError;
+    if (forced != null) throw forced;
+    final ids = {...completed.keys, ...statuses.keys};
+    return [
+      for (final id in ids)
+        if (statuses[id] == ChallengeRunStatus.completed)
+          ChallengeProgress(
+            challengeId: id,
+            status: ChallengeRunStatus.completed,
+            completedWaypointIds: {...?completed[id]},
+            completedAt: DateTime.utc(2026, 9, 7),
+          ),
+    ];
+  }
+
+  @override
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,
     required String waypointId,
