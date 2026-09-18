@@ -156,8 +156,8 @@ class CatalogFilterChipRow extends StatelessWidget {
   }
 }
 
-class CatalogDurationChipRow extends StatelessWidget {
-  const CatalogDurationChipRow({
+class CatalogLengthChipRow extends StatelessWidget {
+  const CatalogLengthChipRow({
     super.key,
     required this.filter,
     required this.strings,
@@ -171,27 +171,74 @@ class CatalogDurationChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      key: const Key('catalog-duration-chips'),
+      key: const Key('catalog-length-chips'),
       height: 36,
       child: ListView(
         scrollDirection: Axis.horizontal,
         primary: false,
         children: [
-          for (var i = 0; i < CatalogDurationBucket.values.length; i++) ...[
+          for (var i = 0; i < CatalogLengthBand.values.length; i++) ...[
             if (i > 0) const SizedBox(width: 8),
             CatalogFilterChip(
               key: Key(
-                'catalog-filter-duration-${CatalogDurationBucket.values[i].name}',
+                'catalog-filter-length-${CatalogLengthBand.values[i].name}',
               ),
-              selected: filter.durationBuckets.contains(
-                CatalogDurationBucket.values[i],
+              selected: filter.lengthBands.contains(
+                CatalogLengthBand.values[i],
               ),
-              label: _durationLabel(strings, CatalogDurationBucket.values[i]),
+              label: _lengthLabel(strings, CatalogLengthBand.values[i]),
               onTap: () => onChanged(
                 filter.copyWith(
-                  durationBuckets: _toggle(
-                    filter.durationBuckets,
-                    CatalogDurationBucket.values[i],
+                  lengthBands: _toggle(
+                    filter.lengthBands,
+                    CatalogLengthBand.values[i],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class CatalogDifficultyChipRow extends StatelessWidget {
+  const CatalogDifficultyChipRow({
+    super.key,
+    required this.filter,
+    required this.strings,
+    required this.onChanged,
+  });
+
+  final CatalogFilter filter;
+  final AppStrings strings;
+  final ValueChanged<CatalogFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const Key('catalog-difficulty-chips'),
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        children: [
+          for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            CatalogFilterChip(
+              key: Key(
+                'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
+              ),
+              selected: filter.difficulties.contains(
+                CatalogDifficulty.values[i],
+              ),
+              label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
+              onTap: () => onChanged(
+                filter.copyWith(
+                  difficulties: _toggle(
+                    filter.difficulties,
+                    CatalogDifficulty.values[i],
                   ),
                 ),
               ),
@@ -262,11 +309,19 @@ class CatalogRegionsSection extends StatelessWidget {
   }
 }
 
-String _durationLabel(AppStrings strings, CatalogDurationBucket bucket) {
-  return switch (bucket) {
-    CatalogDurationBucket.short => strings.catalogDurationShort,
-    CatalogDurationBucket.halfDay => strings.catalogDurationHalfDay,
-    CatalogDurationBucket.fullDay => strings.catalogDurationFullDay,
+String _lengthLabel(AppStrings strings, CatalogLengthBand band) {
+  return switch (band) {
+    CatalogLengthBand.short => strings.catalogLengthShort,
+    CatalogLengthBand.medium => strings.catalogLengthMedium,
+    CatalogLengthBand.long => strings.catalogLengthLong,
+  };
+}
+
+String _difficultyLabel(AppStrings strings, CatalogDifficulty difficulty) {
+  return switch (difficulty) {
+    CatalogDifficulty.easy => strings.catalogDifficultyEasy,
+    CatalogDifficulty.normal => strings.catalogDifficultyNormal,
+    CatalogDifficulty.hard => strings.catalogDifficultyHard,
   };
 }
 

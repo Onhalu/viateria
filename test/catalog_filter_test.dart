@@ -29,6 +29,7 @@ Challenge _challenge({
   PricingType pricing = PricingType.free,
   String? countryCode,
   String? region,
+  CatalogDifficulty? difficulty,
   List<LocalizedText>? translations,
 }) {
   return Challenge(
@@ -41,6 +42,7 @@ Challenge _challenge({
     status: PublishStatus.published,
     region: region,
     countryCode: countryCode,
+    difficulty: difficulty,
     translations:
         translations ??
         [LocalizedText(locale: 'en', title: title, description: description)],
@@ -49,6 +51,7 @@ Challenge _challenge({
 
 AppServices _services({
   List<Challenge>? challenges,
+  List<ChallengeDetail>? details,
   List<PromoStripe>? promos,
 }) {
   final open = sampleOpenChallenge();
@@ -64,10 +67,10 @@ AppServices _services({
     ),
     catalog: MemoryCatalog(
       challenges: challenges ?? [open.challenge, story.challenge],
-      details: [open, story],
+      details: details ?? [open, story],
       promos: promos ?? [samplePromo()],
     ),
-    progress: MemoryProgress(details: [open, story]),
+    progress: MemoryProgress(details: details ?? [open, story]),
     purchases: MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
@@ -89,6 +92,7 @@ Future<void> _pumpCatalog(
   WidgetTester tester, {
   String locale = 'en',
   List<Challenge>? challenges,
+  List<ChallengeDetail>? details,
   List<PromoStripe>? promos,
 }) async {
   tester.view.physicalSize = const Size(800, 2400);
@@ -97,7 +101,7 @@ Future<void> _pumpCatalog(
   await tester.pumpWidget(
     _wrap(
       const CatalogScreen(),
-      _services(challenges: challenges, promos: promos),
+      _services(challenges: challenges, details: details, promos: promos),
       locale: locale,
     ),
   );
@@ -256,14 +260,14 @@ void main() {
       expect(const CatalogFilter(query: '  hike ').showPromos, isFalse);
     });
 
-    test('duration chips filter by waypoint-derived hike time', () {
+    test('length chips filter by waypoint-derived hike time', () {
       final open = sampleOpenChallenge();
       final stats = catalogRouteStatsByChallenge([open]);
-      expect(stats[open.challenge.id]?.bucket, CatalogDurationBucket.short);
+      expect(stats[open.challenge.id]?.lengthBand, CatalogLengthBand.short);
       expect(
         filterCatalogChallenges(
           [open.challenge],
-          CatalogFilter(durationBuckets: {CatalogDurationBucket.short}),
+          CatalogFilter(lengthBands: {CatalogLengthBand.short}),
           routeStats: stats,
         ),
         [open.challenge],
@@ -271,7 +275,83 @@ void main() {
       expect(
         filterCatalogChallenges(
           [open.challenge],
-          CatalogFilter(durationBuckets: {CatalogDurationBucket.fullDay}),
+          CatalogFilter(lengthBands: {CatalogLengthBand.long}),
+          routeStats: stats,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('difficulty chips exclude null and unmatched values', () {
+      final easy = _challenge(
+        id: 'easy',
+        title: 'Easy walk',
+        difficulty: CatalogDifficulty.easy,
+      );
+      final hard = _challenge(
+        id: 'hard',
+        title: 'Hard climb',
+        difficulty: CatalogDifficulty.hard,
+      );
+      final unset = _challenge(id: 'unset', title: 'No grade');
+      expect(
+        filterCatalogChallenges([
+          easy,
+          hard,
+          unset,
+        ], CatalogFilter(difficulties: {CatalogDifficulty.easy})),
+        [easy],
+      );
+      expect(
+        filterCatalogChallenges(
+          [easy, hard, unset],
+          CatalogFilter(
+            difficulties: {CatalogDifficulty.easy, CatalogDifficulty.hard},
+          ),
+        ),
+        [easy, hard],
+      );
+      expect(
+        filterCatalogChallenges([
+          easy,
+          hard,
+          unset,
+        ], CatalogFilter(difficulties: {CatalogDifficulty.normal})),
+        isEmpty,
+      );
+    });
+
+    test('length and difficulty AND with other groups', () {
+      final match = _challenge(
+        id: 'm',
+        title: 'Match',
+        pricing: PricingType.paid,
+        difficulty: CatalogDifficulty.easy,
+        countryCode: 'CZ',
+      );
+      final stats = {
+        'm': const CatalogRouteStats(estimatedDuration: Duration(hours: 2)),
+      };
+      expect(
+        filterCatalogChallenges(
+          [match],
+          CatalogFilter(
+            pricingTypes: {PricingType.paid},
+            lengthBands: {CatalogLengthBand.short},
+            difficulties: {CatalogDifficulty.easy},
+          ),
+          routeStats: stats,
+        ),
+        [match],
+      );
+      expect(
+        filterCatalogChallenges(
+          [match],
+          CatalogFilter(
+            pricingTypes: {PricingType.paid},
+            lengthBands: {CatalogLengthBand.long},
+            difficulties: {CatalogDifficulty.easy},
+          ),
           routeStats: stats,
         ),
         isEmpty,
@@ -340,6 +420,38 @@ void main() {
       expect(inferred.accessMode, AccessMode.story);
       expect(inferred.region, 'Beskydy');
       expect(inferred.countryCode, 'CZ');
+      expect(inferred.difficulty, isNull);
+
+      final graded = challengeFromRow({
+        'id': 'c3',
+        'slug': 'c3',
+        'access_mode': 'open',
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'difficulty': 'hard',
+        'challenge_i18n': [
+          {'locale': 'cs', 'title': 'H', 'description': ''},
+        ],
+      });
+      expect(graded.difficulty, CatalogDifficulty.hard);
+      expect(
+        challengeFromRow({
+          'id': 'c4',
+          'slug': 'c4',
+          'access_mode': 'open',
+          'pricing_type': 'free',
+          'price_cents': 0,
+          'currency': 'eur',
+          'status': 'published',
+          'difficulty': 'legendary',
+          'challenge_i18n': [
+            {'locale': 'cs', 'title': 'X', 'description': ''},
+          ],
+        }).difficulty,
+        isNull,
+      );
     });
   });
 
@@ -370,21 +482,21 @@ void main() {
       expect(stats!.distanceKm, greaterThan(1));
       expect(stats.distanceKm, lessThan(3));
       expect(stats.estimatedDuration, isNotNull);
-      expect(stats.bucket, CatalogDurationBucket.short);
+      expect(stats.lengthBand, CatalogLengthBand.short);
     });
 
-    test('classifies 3h as half-day and 6h as full day', () {
+    test('classifies 3h as medium and 6h as long', () {
       expect(
-        catalogDurationBucketFor(const Duration(hours: 2, minutes: 59)),
-        CatalogDurationBucket.short,
+        catalogLengthBandFor(const Duration(hours: 2, minutes: 59)),
+        CatalogLengthBand.short,
       );
       expect(
-        catalogDurationBucketFor(const Duration(hours: 3)),
-        CatalogDurationBucket.halfDay,
+        catalogLengthBandFor(const Duration(hours: 3)),
+        CatalogLengthBand.medium,
       );
       expect(
-        catalogDurationBucketFor(const Duration(hours: 6)),
-        CatalogDurationBucket.fullDay,
+        catalogLengthBandFor(const Duration(hours: 6)),
+        CatalogLengthBand.long,
       );
     });
   });
@@ -569,14 +681,22 @@ void main() {
   });
 
   testWidgets(
-    'discover sections follow chips: hero, duration, featured, regions',
+    'discover sections follow chips: hero, length, difficulty, featured, regions',
     (tester) async {
       await _pumpCatalog(tester);
       expect(find.byKey(const Key('catalog-hero-carousel')), findsOneWidget);
       expect(find.byKey(const Key('catalog-hero-open-1')), findsOneWidget);
       expect(find.byKey(const Key('catalog-hero-next')), findsOneWidget);
-      expect(find.byKey(const Key('catalog-duration-chips')), findsOneWidget);
-      expect(find.text(AppStrings('en').catalogDurationShort), findsOneWidget);
+      expect(find.byKey(const Key('catalog-length-chips')), findsOneWidget);
+      expect(
+        find.byKey(const Key('catalog-filter-length-short')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('catalog-difficulty-chips')), findsOneWidget);
+      expect(
+        find.byKey(const Key('catalog-filter-difficulty-easy')),
+        findsOneWidget,
+      );
       expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
       expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
       expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
@@ -587,8 +707,11 @@ void main() {
       final heroRect = tester.getRect(
         find.byKey(const Key('catalog-hero-carousel')),
       );
-      final durationRect = tester.getRect(
-        find.byKey(const Key('catalog-duration-chips')),
+      final lengthRect = tester.getRect(
+        find.byKey(const Key('catalog-length-chips')),
+      );
+      final difficultyRect = tester.getRect(
+        find.byKey(const Key('catalog-difficulty-chips')),
       );
       final featuredRect = tester.getRect(
         find.byKey(const Key('catalog-featured')),
@@ -598,13 +721,14 @@ void main() {
       );
       expect(heroRect.top, greaterThan(chipsRect.bottom));
       expect(heroRect.width / heroRect.height, closeTo(16 / 9, 0.08));
-      expect(durationRect.top, greaterThan(heroRect.bottom - 0.5));
-      expect(featuredRect.top, greaterThan(durationRect.bottom - 0.5));
+      expect(lengthRect.top, greaterThan(heroRect.bottom - 0.5));
+      expect(difficultyRect.top, greaterThan(lengthRect.bottom - 0.5));
+      expect(featuredRect.top, greaterThan(difficultyRect.bottom - 0.5));
       expect(regionsRect.top, greaterThan(featuredRect.bottom - 0.5));
     },
   );
 
-  testWidgets('duration section is omitted without waypoint route data', (
+  testWidgets('length section is omitted without waypoint route data', (
     tester,
   ) async {
     await _pumpCatalog(
@@ -616,21 +740,31 @@ void main() {
     );
     expect(find.text('No route yet'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-hero-solo')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-duration-chips')), findsNothing);
-    expect(find.text(AppStrings('en').catalogDurationShort), findsNothing);
+    expect(find.byKey(const Key('catalog-length-chips')), findsNothing);
+    expect(find.byKey(const Key('catalog-filter-length-short')), findsNothing);
+    expect(find.byKey(const Key('catalog-difficulty-chips')), findsOneWidget);
     expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
   });
 
   testWidgets('featured title is Czech', (tester) async {
     await _pumpCatalog(tester, locale: 'cs');
     expect(find.text('Vybrané'), findsOneWidget);
-    expect(find.text('Krátké'), findsOneWidget);
+    expect(
+      find.byKey(const Key('catalog-filter-length-short')),
+      findsOneWidget,
+    );
+    expect(find.text('Krátká'), findsWidgets);
+    expect(find.text('Lehká'), findsOneWidget);
+    expect(find.text('Běžná'), findsOneWidget);
+    expect(find.text('Náročná'), findsOneWidget);
   });
 
   testWidgets('featured title is German', (tester) async {
     await _pumpCatalog(tester, locale: 'de');
     expect(find.text('Ausgewählt'), findsOneWidget);
-    expect(find.text('Kurz'), findsOneWidget);
+    expect(find.text('Kurz'), findsWidgets);
+    expect(find.text('Leicht'), findsOneWidget);
+    expect(find.text('Anspruchsvoll'), findsOneWidget);
   });
 
   testWidgets('regions section uses the same country_code filter', (
@@ -651,4 +785,149 @@ void main() {
     );
     expect(filterChip.selected, isTrue);
   });
+
+  testWidgets('featured follows the same chips as the rest of the catalog', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester);
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-story-1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-price-paid')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsNothing);
+    expect(find.byKey(const Key('catalog-featured-story-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-hero-open-1')), findsNothing);
+    expect(find.byKey(const Key('catalog-hero-story-1')), findsOneWidget);
+  });
+
+  testWidgets('catalog hero and cards never show exact hours or km', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester);
+    expect(find.textContaining(' h'), findsNothing);
+    expect(find.textContaining(' km'), findsNothing);
+    expect(find.text('1 h'), findsNothing);
+    expect(find.text('2 h'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-featured-open-1')),
+        matching: find.text(AppStrings('en').catalogLengthShort),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-featured-open-1')),
+        matching: find.text(AppStrings('en').catalogDifficultyEasy),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('length chip filters featured and clear-all restores it', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('catalog-filter-length-long')),
+      200,
+      scrollable: catalogVerticalScrollable(),
+    );
+    await tester.tap(find.byKey(const Key('catalog-filter-length-long')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-no-matches')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsNothing);
+
+    await tester.fling(
+      find.byKey(const Key('catalog-filter-chips')),
+      const Offset(-400, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-clear-filters')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-story-1')), findsOneWidget);
+  });
+
+  testWidgets(
+    'difficulty chip hides ungraded challenges and clear-all resets',
+    (tester) async {
+      final easy = _challenge(
+        id: 'easy-1',
+        title: 'Easy walk',
+        difficulty: CatalogDifficulty.easy,
+        countryCode: 'CZ',
+      );
+      final hard = _challenge(
+        id: 'hard-1',
+        title: 'Hard climb',
+        difficulty: CatalogDifficulty.hard,
+        countryCode: 'SK',
+      );
+      final unset = _challenge(
+        id: 'unset-1',
+        title: 'No grade',
+        countryCode: 'AT',
+      );
+      await _pumpCatalog(
+        tester,
+        challenges: [easy, hard, unset],
+        details: [
+          ChallengeDetail(
+            challenge: easy,
+            waypoints: sampleOpenChallenge().waypoints,
+          ),
+          ChallengeDetail(
+            challenge: hard,
+            waypoints: sampleStoryChallenge().waypoints,
+          ),
+          ChallengeDetail(challenge: unset, waypoints: const []),
+        ],
+        promos: const [],
+      );
+
+      expect(find.byKey(const Key('catalog-featured-easy-1')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-featured-hard-1')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-featured-unset-1')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalog-featured-easy-1')),
+          matching: find.text('Easy'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalog-featured-unset-1')),
+          matching: find.text('Easy'),
+        ),
+        findsNothing,
+      );
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('catalog-filter-difficulty-easy')),
+        200,
+        scrollable: catalogVerticalScrollable(),
+      );
+      await tester.tap(find.byKey(const Key('catalog-filter-difficulty-easy')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('catalog-featured-easy-1')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-featured-hard-1')), findsNothing);
+      expect(find.byKey(const Key('catalog-featured-unset-1')), findsNothing);
+      expect(find.text('No grade'), findsNothing);
+
+      await tester.fling(
+        find.byKey(const Key('catalog-filter-chips')),
+        const Offset(-400, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('catalog-clear-filters')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('catalog-featured-hard-1')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-featured-unset-1')), findsOneWidget);
+    },
+  );
 }

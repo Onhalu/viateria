@@ -322,10 +322,11 @@ class _HeroSlide extends StatelessWidget {
                         height: 1.2,
                       ),
                     ),
-                    if (stats != null && stats!.hasMeta) ...[
+                    if (_hasCatalogMeta(stats, challenge.difficulty)) ...[
                       const SizedBox(height: 4),
-                      CatalogRouteMeta(
-                        stats: stats!,
+                      CatalogChallengeMeta(
+                        stats: stats,
+                        difficulty: challenge.difficulty,
                         strings: strings,
                         color: BrandColors.cream,
                       ),
@@ -444,10 +445,11 @@ class CatalogFeaturedCard extends StatelessWidget {
                           height: 1.2,
                         ),
                       ),
-                      if (stats != null && stats!.hasMeta) ...[
+                      if (_hasCatalogMeta(stats, challenge.difficulty)) ...[
                         const SizedBox(height: 4),
-                        CatalogRouteMeta(
-                          stats: stats!,
+                        CatalogChallengeMeta(
+                          stats: stats,
+                          difficulty: challenge.difficulty,
                           strings: strings,
                           color: BrandColors.bark,
                         ),
@@ -488,24 +490,35 @@ class CatalogCoverImage extends StatelessWidget {
   }
 }
 
-class CatalogRouteMeta extends StatelessWidget {
-  const CatalogRouteMeta({
+class CatalogChallengeMeta extends StatelessWidget {
+  const CatalogChallengeMeta({
     super.key,
-    required this.stats,
     required this.strings,
     required this.color,
+    this.stats,
+    this.difficulty,
   });
 
-  final CatalogRouteStats stats;
+  final CatalogRouteStats? stats;
+  final CatalogDifficulty? difficulty;
   final AppStrings strings;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final parts = <String>[
-      if (stats.estimatedDuration != null)
-        strings.formatCatalogHours(stats.estimatedDuration!),
-      if (stats.distanceKm != null) strings.formatDistanceKm(stats.distanceKm!),
+      if (stats?.lengthBand != null)
+        switch (stats!.lengthBand!) {
+          CatalogLengthBand.short => strings.catalogLengthShort,
+          CatalogLengthBand.medium => strings.catalogLengthMedium,
+          CatalogLengthBand.long => strings.catalogLengthLong,
+        },
+      if (difficulty != null)
+        switch (difficulty!) {
+          CatalogDifficulty.easy => strings.catalogDifficultyEasy,
+          CatalogDifficulty.normal => strings.catalogDifficultyNormal,
+          CatalogDifficulty.hard => strings.catalogDifficultyHard,
+        },
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
     return Text(
@@ -520,6 +533,10 @@ class CatalogRouteMeta extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _hasCatalogMeta(CatalogRouteStats? stats, CatalogDifficulty? difficulty) {
+  return stats?.lengthBand != null || difficulty != null;
 }
 
 class _Chip extends StatelessWidget {

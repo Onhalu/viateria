@@ -39,19 +39,23 @@ void main() {
     expect(AppStrings('cs').catalogFeatured, 'Vybrané');
     expect(AppStrings('en').catalogFeatured, 'Featured');
     expect(AppStrings('de').catalogFeatured, 'Ausgewählt');
-    expect(AppStrings('cs').catalogDurationShort, 'Krátké');
-    expect(AppStrings('en').catalogDurationShort, 'Short');
-    expect(AppStrings('de').catalogDurationShort, 'Kurz');
-    expect(AppStrings('cs').catalogDurationHalfDay, 'Půlden');
-    expect(AppStrings('en').catalogDurationHalfDay, 'Half-day');
-    expect(AppStrings('de').catalogDurationHalfDay, 'Halbtag');
-    expect(AppStrings('cs').catalogDurationFullDay, 'Celodenní');
-    expect(AppStrings('en').catalogDurationFullDay, 'Full day');
-    expect(AppStrings('de').catalogDurationFullDay, 'Ganztag');
-    expect(
-      AppStrings('en').formatCatalogHours(const Duration(hours: 2)),
-      '2 h',
-    );
-    expect(AppStrings('cs').formatDistanceKm(12.0), '12 km');
+    expect(AppStrings('cs').catalogLengthShort, 'Krátká');
+    expect(AppStrings('en').catalogLengthShort, 'Short');
+    expect(AppStrings('de').catalogLengthShort, 'Kurz');
+    expect(AppStrings('cs').catalogLengthMedium, 'Střední');
+    expect(AppStrings('en').catalogLengthMedium, 'Medium');
+    expect(AppStrings('de').catalogLengthMedium, 'Mittel');
+    expect(AppStrings('cs').catalogLengthLong, 'Dlouhá');
+    expect(AppStrings('en').catalogLengthLong, 'Long');
+    expect(AppStrings('de').catalogLengthLong, 'Lang');
+    expect(AppStrings('cs').catalogDifficultyEasy, 'Lehká');
+    expect(AppStrings('en').catalogDifficultyEasy, 'Easy');
+    expect(AppStrings('de').catalogDifficultyEasy, 'Leicht');
+    expect(AppStrings('cs').catalogDifficultyNormal, 'Běžná');
+    expect(AppStrings('en').catalogDifficultyNormal, 'Normal');
+    expect(AppStrings('de').catalogDifficultyNormal, 'Normal');
+    expect(AppStrings('cs').catalogDifficultyHard, 'Náročná');
+    expect(AppStrings('en').catalogDifficultyHard, 'Hard');
+    expect(AppStrings('de').catalogDifficultyHard, 'Anspruchsvoll');
   });
 }
