@@ -514,6 +514,20 @@ void main() {
     expect(find.byKey(const Key('catalog-welcome-profile')), findsOneWidget);
     expect(find.byKey(const Key('catalog-search-field')), findsOneWidget);
     expect(find.byKey(const Key('catalog-filter-chips')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-search-field')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-filter-chips')),
+      ),
+      findsOneWidget,
+    );
 
     final header = tester.widget<Material>(
       find.byKey(const Key('catalog-welcome-header')),
@@ -603,14 +617,36 @@ void main() {
       screenSize.width - CatalogWelcomeHeader.horizontalInset,
     );
     expect(headerRect.top, CatalogWelcomeHeader.topGap);
+
+    final searchRect = tester.getRect(
+      find.byKey(const Key('catalog-search-field')),
+    );
+    final chipsRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-chips')),
+    );
+    final greetingBottom = tester
+        .getBottomLeft(find.byKey(const Key('catalog-welcome-greeting')))
+        .dy;
+    expect(searchRect.top, greaterThan(greetingBottom));
+    expect(searchRect.bottom, lessThan(headerRect.bottom));
+    expect(chipsRect.top, greaterThan(searchRect.bottom));
+    expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
     expect(
-      tester.getTopLeft(find.byKey(const Key('catalog-search-field'))).dy,
-      greaterThan(headerRect.bottom),
+      searchRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
     );
     expect(
-      tester.getRect(find.byKey(const Key('catalog-search-field'))).left,
-      CatalogWelcomeHeader.horizontalInset,
+      chipsRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
     );
+    expect(
+      searchRect.right,
+      headerRect.right - CatalogWelcomeHeader.innerHorizontalPadding,
+    );
+    final searchField = tester.widget<TextField>(
+      find.byKey(const Key('catalog-search-field')),
+    );
+    expect(searchField.decoration?.fillColor, BrandColors.cream);
   });
 
   testWidgets(
