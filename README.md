@@ -75,7 +75,7 @@ cp web/.htaccess build/web/.htaccess
 
 Apache must serve `index.html` for unknown paths (Flutter web SPA) **and** override WEDOS's default `Cache-Control: max-age=259200` (3 days). Without the cache rules, browsers keep a stale `main.dart.js` after FTP deploy.
 
-`web/.htaccess` is copied into `build/web` by CI. If an FTP client skips dotfiles, upload that file to the domain root. Header rules:
+`web/.htaccess` is copied into `build/web` by CI. If an FTP client skips dotfiles, upload that file to the domain root. Header rules (`Header always set` replaces the WEDOS vhost default; `Expires` is unset on revalidate files so it cannot linger at +3 days):
 
 | Files | `Cache-Control` | Why |
 | --- | --- | --- |

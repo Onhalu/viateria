@@ -9,11 +9,13 @@ RewriteRule . /index.html [L]
 <IfModule mod_headers.c>
   # Entrypoint + Flutter loader / SW / build id: always revalidate.
   <FilesMatch "^(index\.html|flutter_bootstrap\.js|flutter_service_worker\.js|\.last_build_id)$">
+    Header always unset Expires
     Header always set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 
   # Unhashed JS bundles (and deferred parts): never keep for multiple days.
   <FilesMatch "^(main\.dart\.js|main\.dart\.js_[0-9]+\.part\.js|flutter\.js)$">
+    Header always unset Expires
     Header always set Cache-Control "max-age=0, must-revalidate"
   </FilesMatch>
 
