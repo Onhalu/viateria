@@ -18,6 +18,7 @@ import 'package:viateria/ui/widgets/catalog_filters.dart';
 import 'package:viateria/ui/widgets/catalog_welcome_header.dart';
 import 'package:viateria/ui/widgets/country_flag.dart';
 
+import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
 
 Challenge _challenge({
@@ -620,10 +621,13 @@ void main() {
     expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
   });
 
-  testWidgets('featured title is localized', (tester) async {
+  testWidgets('featured title is Czech', (tester) async {
     await _pumpCatalog(tester, locale: 'cs');
     expect(find.text('Vybrané'), findsOneWidget);
     expect(find.text('Krátké'), findsOneWidget);
+  });
+
+  testWidgets('featured title is German', (tester) async {
     await _pumpCatalog(tester, locale: 'de');
     expect(find.text('Ausgewählt'), findsOneWidget);
     expect(find.text('Kurz'), findsOneWidget);
@@ -636,10 +640,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const Key('catalog-regions-CZ')),
       400,
-      scrollable: find.descendant(
-        of: find.byKey(const Key('catalog-results')),
-        matching: find.byType(Scrollable),
-      ),
+      scrollable: catalogVerticalScrollable(),
     );
     await tester.tap(find.byKey(const Key('catalog-regions-CZ')));
     await tester.pumpAndSettle();
