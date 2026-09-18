@@ -136,7 +136,7 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
     final nav = find.byKey(const Key('app-bottom-nav'));
     expect(nav, findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav-shell')), findsOneWidget);
 
     final strings = AppStrings('en');
     expect(find.text(strings.catalogTitle), findsOneWidget);

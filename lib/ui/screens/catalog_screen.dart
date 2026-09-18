@@ -8,7 +8,7 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../navigation.dart';
 import '../widgets/catalog_cards.dart';
-import '../widgets/catalog_filters.dart';
+import '../widgets/catalog_welcome_header.dart';
 import '../widgets/empty_state.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -61,58 +61,53 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: FutureBuilder<_CatalogData>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(strings.errorGeneric),
-                    TextButton(onPressed: _reload, child: Text(strings.retry)),
-                  ],
-                ),
-              );
-            }
-            final data = snapshot.data!;
-            final visible = filterCatalogChallenges(data.challenges, _filter);
-            final noMatches =
-                data.challenges.isNotEmpty &&
-                visible.isEmpty &&
-                _filter.isActive;
-            final cmsEmpty = data.challenges.isEmpty && data.promos.isEmpty;
-            final promos = !noMatches && _filter.showPromos
-                ? data.promos
-                : const <PromoStripe>[];
+      body: Column(
+        children: [
+          CatalogWelcomeHeader(
+            search: _search,
+            filter: _filter,
+            onFilterChanged: _applyFilter,
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: FutureBuilder<_CatalogData>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(strings.errorGeneric),
+                          TextButton(
+                            onPressed: _reload,
+                            child: Text(strings.retry),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  final data = snapshot.data!;
+                  final visible = filterCatalogChallenges(
+                    data.challenges,
+                    _filter,
+                  );
+                  final noMatches =
+                      data.challenges.isNotEmpty &&
+                      visible.isEmpty &&
+                      _filter.isActive;
+                  final cmsEmpty =
+                      data.challenges.isEmpty && data.promos.isEmpty;
+                  final promos = !noMatches && _filter.showPromos
+                      ? data.promos
+                      : const <PromoStripe>[];
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: CatalogSearchField(
-                    controller: _search,
-                    hintText: strings.catalogSearchHint,
-                    onChanged: (value) =>
-                        _applyFilter(_filter.copyWith(query: value)),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 0, 8),
-                  child: CatalogFilterChipRow(
-                    filter: _filter,
-                    strings: strings,
-                    onChanged: _applyFilter,
-                  ),
-                ),
-                Expanded(
-                  child: RefreshIndicator(
+                  return RefreshIndicator(
                     onRefresh: _reload,
                     child: cmsEmpty
                         ? ListView(
@@ -162,12 +157,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               ],
                             ],
                           ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

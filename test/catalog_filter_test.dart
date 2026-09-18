@@ -12,8 +12,10 @@ import 'package:viateria/domain/catalog_query.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
+import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/widgets/catalog_filters.dart';
+import 'package:viateria/ui/widgets/catalog_welcome_header.dart';
 import 'package:viateria/ui/widgets/country_flag.dart';
 
 import 'helpers/fakes.dart';
@@ -419,6 +421,12 @@ void main() {
     await tester.tap(find.byKey(const Key('catalog-filter-price-free')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-clear-filters')), findsOneWidget);
+    await tester.fling(
+      find.byKey(const Key('catalog-filter-chips')),
+      const Offset(-400, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('catalog-clear-filters')));
     await tester.pumpAndSettle();
     expect(find.text('Open trail'), findsOneWidget);
@@ -444,5 +452,58 @@ void main() {
     expect(find.byType(CatalogFilterChipRow), findsOneWidget);
     expect(find.byType(CountryFlag), findsNWidgets(5));
     expect(find.textContaining('🇨🇿'), findsNothing);
+  });
+
+  testWidgets('search and chips sit inside the sage welcome panel', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-search-field')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-filter-chips')),
+      ),
+      findsOneWidget,
+    );
+
+    final header = tester.widget<Material>(
+      find.byKey(const Key('catalog-welcome-header')),
+    );
+    expect(header.color, BrandColors.shellFill);
+    final headerRect = tester.getRect(
+      find.byKey(const Key('catalog-welcome-header')),
+    );
+    final searchRect = tester.getRect(
+      find.byKey(const Key('catalog-search-field')),
+    );
+    final chipsRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-chips')),
+    );
+    expect(searchRect.top, greaterThan(headerRect.top));
+    expect(searchRect.bottom, lessThan(headerRect.bottom));
+    expect(chipsRect.top, greaterThan(searchRect.bottom));
+    expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
+    expect(
+      searchRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
+    );
+    expect(
+      chipsRect.left,
+      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('catalog-search-field')))
+          .decoration
+          ?.fillColor,
+      BrandColors.cream,
+    );
   });
 }

@@ -32,6 +32,8 @@ void main() {
   test('AppTheme and MapPalette share BrandColors tokens', () {
     expect(BrandColors.forest, const Color(0xFF35483C));
     expect(BrandColors.sage, const Color(0xFF9C9A7B));
+    expect(BrandColors.shellFill, const Color(0xFF7D8B6A));
+    expect(BrandColors.shellFill, isNot(BrandColors.sage));
     expect(BrandColors.cream, const Color(0xFFF3EFE5));
     expect(BrandColors.neutral, const Color(0xFFFAF8F2));
     expect(BrandColors.beige, const Color(0xFFD8CDB8));
@@ -43,6 +45,8 @@ void main() {
     expect(BrandColors.success, BrandColors.forest);
     expect(BrandColors.warning, BrandColors.sage);
     expect(BrandColors.error, const Color(0xFFBA1A1A));
+    expect(BrandColors.creamPill, BrandColors.cream.withValues(alpha: 0.22));
+    expect(BrandColors.shellShadow, BrandColors.forest.withValues(alpha: 0.13));
 
     expect(AppTheme.forest, MapPalette.forest);
     expect(AppTheme.cream, MapPalette.cream);
@@ -68,7 +72,34 @@ void main() {
     expect(theme.scaffoldBackgroundColor, BrandColors.cream);
     expect(theme.appBarTheme.backgroundColor, BrandColors.cream);
     expect(theme.appBarTheme.foregroundColor, BrandColors.forest);
-    expect(theme.navigationBarTheme.backgroundColor, BrandColors.cream);
+    expect(theme.navigationBarTheme.backgroundColor, BrandColors.shellFill);
+    expect(theme.navigationBarTheme.indicatorColor, BrandColors.creamPill);
+    expect(
+      theme.navigationBarTheme.iconTheme?.resolve({
+        WidgetState.selected,
+      })?.color,
+      BrandColors.cream,
+    );
+    expect(
+      theme.navigationBarTheme.iconTheme?.resolve({})?.color,
+      BrandColors.forest.withValues(alpha: 0.75),
+    );
+    expect(
+      theme.navigationBarTheme.labelTextStyle?.resolve({
+        WidgetState.selected,
+      })?.color,
+      BrandColors.cream,
+    );
+    expect(
+      theme.navigationBarTheme.labelTextStyle?.resolve({
+        WidgetState.selected,
+      })?.fontWeight,
+      FontWeight.w600,
+    );
+    expect(
+      theme.navigationBarTheme.labelTextStyle?.resolve({})?.color,
+      BrandColors.forest.withValues(alpha: 0.75),
+    );
     expect(
       theme.filledButtonTheme.style?.backgroundColor?.resolve({}),
       BrandColors.forest,

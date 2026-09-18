@@ -79,6 +79,8 @@ class AppStrings {
     'navLastChallenge',
     'navMap',
     'navProfile',
+    'welcomeBack',
+    'welcomeNameFallback',
     'lastChallengeEmpty',
     'lastChallengeEmptyHint',
     'lastChallengeMissing',
@@ -238,6 +240,8 @@ class AppStrings {
   String get navLastChallenge => t('navLastChallenge');
   String get navMap => t('navMap');
   String get navProfile => t('navProfile');
+  String get welcomeBack => t('welcomeBack');
+  String get welcomeNameFallback => t('welcomeNameFallback');
   String get lastChallengeEmpty => t('lastChallengeEmpty');
   String get lastChallengeEmptyHint => t('lastChallengeEmptyHint');
   String get lastChallengeMissing => t('lastChallengeMissing');
@@ -415,6 +419,8 @@ class AppStrings {
       'navLastChallenge': 'Last challenge',
       'navMap': 'Map',
       'navProfile': 'Profile',
+      'welcomeBack': 'Welcome back',
+      'welcomeNameFallback': 'traveler',
       'lastChallengeEmpty': 'You have not opened a challenge yet.',
       'lastChallengeEmptyHint': 'Open a challenge from the catalog or the map and it will show up here.',
       'lastChallengeMissing': 'That challenge is no longer available.',
@@ -581,6 +587,8 @@ class AppStrings {
       'navLastChallenge': 'Poslední výzva',
       'navMap': 'Mapa',
       'navProfile': 'Profil',
+      'welcomeBack': 'Vítej zpět',
+      'welcomeNameFallback': 'cestovateli',
       'lastChallengeEmpty': 'Zatím jste neotevřeli žádnou výzvu.',
       'lastChallengeEmptyHint':
           'Otevřete výzvu v katalogu nebo na mapě a objeví se tady.',
@@ -747,6 +755,8 @@ class AppStrings {
       'navLastChallenge': 'Letzte Challenge',
       'navMap': 'Karte',
       'navProfile': 'Profil',
+      'welcomeBack': 'Willkommen zurück',
+      'welcomeNameFallback': 'Wanderer',
       'lastChallengeEmpty': 'Sie haben noch keine Challenge geöffnet.',
       'lastChallengeEmptyHint': 'Öffnen Sie eine Challenge im Katalog oder auf der Karte, dann finden Sie sie hier.',
       'lastChallengeMissing': 'Die letzte Challenge ist nicht mehr verfügbar.',

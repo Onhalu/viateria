@@ -65,6 +65,15 @@ class _ViateriaAppState extends State<ViateriaApp> {
                 GoRoute(
                   path: '/',
                   builder: (context, state) => const CatalogScreen(),
+                  routes: [
+                    // Nested so AppShell / bottom nav stay mounted.
+                    GoRoute(
+                      path: 'challenge/:id',
+                      builder: (context, state) => ChallengeScreen(
+                        challengeId: state.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -95,12 +104,6 @@ class _ViateriaAppState extends State<ViateriaApp> {
           ],
         ),
         GoRoute(path: '/settings', redirect: (context, state) => '/profile'),
-        GoRoute(
-          parentNavigatorKey: rootKey,
-          path: '/challenge/:id',
-          builder: (context, state) =>
-              ChallengeScreen(challengeId: state.pathParameters['id']!),
-        ),
         GoRoute(
           parentNavigatorKey: rootKey,
           path: '/verify/place/:placeId',

@@ -8,6 +8,16 @@ abstract final class BrandColors {
   static const forest = Color(0xFF35483C);
   static const sage = Color(0xFF9C9A7B);
   static const cream = Color(0xFFF3EFE5);
+
+  /// Fill for the floating bottom nav and inset catalog welcome header only.
+  /// Chips/accents keep [sage] `#9C9A7B`.
+  static const shellFill = Color(0xFF7D8B6A);
+
+  /// Cream at 22% — selected nav pill and header round-button fill.
+  static Color get creamPill => cream.withValues(alpha: 0.22);
+
+  /// Nav elevation tint (forest at 13%, within the 12–14% spec).
+  static Color get shellShadow => forest.withValues(alpha: 0.13);
   static const neutral = Color(0xFFFAF8F2);
   static const beige = Color(0xFFD8CDB8);
   static const bark = Color(0xFF756653);
@@ -28,6 +38,7 @@ abstract final class BrandColors {
 
   static const forestHex = '#35483C';
   static const sageHex = '#9C9A7B';
+  static const shellFillHex = '#7D8B6A';
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 
