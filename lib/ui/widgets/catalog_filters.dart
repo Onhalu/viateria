@@ -165,24 +165,28 @@ class CatalogFilterChipRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Wrap(
-          key: const Key('catalog-length-difficulty-chips'),
-          spacing: 0,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            CatalogLengthChipRow(
-              filter: filter,
-              strings: strings,
-              onChanged: onChanged,
-            ),
-            const _ChipGroupGap(),
-            CatalogDifficultyChipRow(
-              filter: filter,
-              strings: strings,
-              onChanged: onChanged,
-            ),
-          ],
+        Align(
+          alignment: Alignment.topLeft,
+          child: OverflowBar(
+            key: const Key('catalog-length-difficulty-chips'),
+            alignment: MainAxisAlignment.start,
+            overflowAlignment: OverflowBarAlignment.start,
+            overflowSpacing: 8,
+            spacing: 0,
+            children: [
+              CatalogLengthChipRow(
+                filter: filter,
+                strings: strings,
+                onChanged: onChanged,
+              ),
+              const _ChipGroupGap(),
+              CatalogDifficultyChipRow(
+                filter: filter,
+                strings: strings,
+                onChanged: onChanged,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -412,8 +416,9 @@ class _ChipGroupGap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10),
+    return const SizedBox(
+      width: 21,
+      height: 36,
       child: Center(
         child: SizedBox(
           width: 1,
