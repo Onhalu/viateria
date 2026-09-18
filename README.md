@@ -34,6 +34,56 @@ flutter run --dart-define-from-file=.env
 
 Without env vars the app shows a configuration screen instead of inventing catalog content.
 
+## Web release (WEDOS / Limitlessdreams)
+
+Production URL: <http://viateria.limitlessdreams.cz/> (domain root, `base-href` `/`). Hosting is WEDOS; Limitlessdreams handles FTP. Android/iOS builds are unchanged.
+
+The compile-time names are the same as local `.env` / `String.fromEnvironment` in `lib/config/app_config.dart` and `lib/map/map_style_config.dart`:
+
+| `--dart-define` / secret | Required for a working site | Source |
+| --- | --- | --- |
+| `SUPABASE_URL` | **Yes** | `AppConfig.fromEnvironment` |
+| `SUPABASE_ANON_KEY` | **Yes** | `AppConfig.fromEnvironment` |
+| `MAP_STYLE_URL` | No (falls back to OpenFreeMap Liberty) | `MapStyleConfig.styleUrlFromEnv` |
+| `STRIPE_PUBLISHABLE_KEY` | No (unused by pay CTAs) | `AppConfig.fromEnvironment` |
+
+### 1. GitHub Actions secrets
+
+Repo → **Settings → Secrets and variables → Actions → New repository secret**. Names must match the table above (do not invent aliases).
+
+| Secret | Meaning |
+| --- | --- |
+| `FTP_HOST` | WEDOS FTP hostname |
+| `FTP_USER` | FTP username |
+| `FTP_PASS` | FTP password |
+| `FTP_PATH` | Remote directory relative to the FTP home. Leave unset/empty to use `domains/viateria.limitlessdreams.cz`. Never `/` (main hub) and never `subdom/…` (HTTP 500). |
+
+Pushes to `main` and **Actions → Web release → Run workflow** build `flutter build web --release --base-href=/` and upload the `viateria-web` artifact. If `FTP_HOST` / `FTP_USER` / `FTP_PASS` are set, the same job then FTPS-uploads `build/web` into that remote directory. Deploy never runs on pull requests.
+
+WEDOS FTPS needs `curl --ssl-reqd --ftp-pasv --ftp-skip-pasv-ip --ftp-create-dirs` with per-file retries (`tool/wedos_ftp_upload.sh`). A one-shot `lftp mirror` fails with `425 Security: Bad IP connecting`.
+
+### 2. Local web build
+
+```bash
+flutter build web --release --base-href=/ --dart-define-from-file=.env
+cp web/.htaccess build/web/.htaccess
+```
+
+`<base href="$FLUTTER_BASE_HREF">` in `web/index.html` is rewritten to `/` by `--base-href=/`.
+
+### 3. Apache `.htaccess` (WEDOS)
+
+Apache must serve `index.html` for unknown paths (Flutter web SPA). `web/.htaccess` is copied into `build/web` by CI. If an FTP client skips dotfiles, create it on the server:
+
+```
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+```
+
 ### Map style (`MAP_STYLE_URL`)
 
 ```bash
