@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -23,15 +25,19 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  Future<_ProfileStatsData>? _future;
+  var _started = false;
+  List<Place> _places = const [];
+  List<Challenge> _completed = const [];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _load();
+    if (_started) return;
+    _started = true;
+    unawaited(_load());
   }
 
-  Future<_ProfileStatsData> _load() async {
+  Future<void> _load() async {
     final services = context.read<AppServices>();
     final catalog = widget.places ?? const AssetPlaceCatalog();
     final places = await _orDefault(catalog.fetchAll(), const <Place>[]);
@@ -43,13 +49,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       services.catalog.fetchPublishedChallenges(),
       const <Challenge>[],
     );
-    return _ProfileStatsData(
-      places: places,
-      completed: completedChallengesForProfile(
+    if (!mounted) return;
+    setState(() {
+      _places = places;
+      _completed = completedChallengesForProfile(
         published: published,
         completedProgress: completed,
-      ),
-    );
+      );
+    });
   }
 
   @override
@@ -69,99 +76,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return SafeArea(
       bottom: false,
-      child: ListView(
-        children: [
-          const SizedBox(height: 24),
-          const Center(child: BrandMark(size: 48)),
-          const SizedBox(height: 16),
-          Center(
-            child: CircleAvatar(
-              radius: 36,
-              child: Text(
-                initial,
-                style: Theme.of(context).textTheme.headlineSmall,
+      child: Material(
+        color: BrandColors.cream,
+        child: ListView(
+          children: [
+            const SizedBox(height: 24),
+            const Center(child: BrandMark(size: 48)),
+            const SizedBox(height: 16),
+            Center(
+              child: CircleAvatar(
+                radius: 36,
+                child: Text(
+                  initial,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            identity,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          if (email != null && email.isNotEmpty && email != identity) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
             Text(
-              email,
+              identity,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
-          ],
-          const SizedBox(height: 24),
-          FutureBuilder<_ProfileStatsData>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
+            if (email != null && email.isNotEmpty && email != identity) ...[
+              const SizedBox(height: 4),
+              Text(
+                email,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+            const SizedBox(height: 24),
+            ListenableBuilder(
+              listenable: services.verifiedPlaces,
+              builder: (context, _) {
+                return _ProfileStatsBody(
+                  strings: strings,
+                  locale: localeController.locale,
+                  counts: visitedPlaceCountsByCategory(
+                    places: _places,
+                    verifiedIds: services.verifiedPlaces.ids,
+                  ),
+                  completed: _completed,
                 );
-              }
-              final data = snapshot.data ?? const _ProfileStatsData();
-              return ListenableBuilder(
-                listenable: services.verifiedPlaces,
-                builder: (context, _) {
-                  return _ProfileStatsBody(
-                    strings: strings,
-                    locale: localeController.locale,
-                    counts: visitedPlaceCountsByCategory(
-                      places: data.places,
-                      verifiedIds: services.verifiedPlaces.ids,
-                    ),
-                    completed: data.completed,
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          ListTile(title: Text(strings.language)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'cs', label: Text('CS')),
-                ButtonSegment(value: 'en', label: Text('EN')),
-                ButtonSegment(value: 'de', label: Text('DE')),
-              ],
-              selected: {localeController.locale},
-              onSelectionChanged: (value) async {
-                final next = value.first;
-                final auth = context.read<AppServices>().auth;
-                await localeController.setLocale(next);
-                if (auth.currentUser != null) {
-                  await auth.updateLocale(next);
-                }
               },
             ),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: OutlinedButton(
-              onPressed: () => context.read<AppServices>().auth.signOut(),
-              child: Text(strings.signOut),
+            const SizedBox(height: 8),
+            ListTile(title: Text(strings.language)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'cs', label: Text('CS')),
+                  ButtonSegment(value: 'en', label: Text('EN')),
+                  ButtonSegment(value: 'de', label: Text('DE')),
+                ],
+                selected: {localeController.locale},
+                onSelectionChanged: (value) async {
+                  final next = value.first;
+                  final auth = context.read<AppServices>().auth;
+                  await localeController.setLocale(next);
+                  if (auth.currentUser != null) {
+                    await auth.updateLocale(next);
+                  }
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Center(
-            child: Text(
-              AppStrings.supported.join(' · '),
-              style: Theme.of(context).textTheme.bodySmall,
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: OutlinedButton(
+                onPressed: () => context.read<AppServices>().auth.signOut(),
+                child: Text(strings.signOut),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Center(
+              child: Text(
+                AppStrings.supported.join(' · '),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -173,13 +171,6 @@ Future<T> _orDefault<T>(Future<T> future, T fallback) async {
   } catch (_) {
     return fallback;
   }
-}
-
-class _ProfileStatsData {
-  const _ProfileStatsData({this.places = const [], this.completed = const []});
-
-  final List<Place> places;
-  final List<Challenge> completed;
 }
 
 class _ProfileStatsBody extends StatelessWidget {

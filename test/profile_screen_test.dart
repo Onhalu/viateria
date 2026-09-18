@@ -71,8 +71,9 @@ Widget _wrap(
     routes: [
       GoRoute(
         path: '/profile',
-        builder: (context, state) =>
-            ProfileScreen(places: MemoryPlaceCatalog(_places())),
+        builder: (context, state) => Scaffold(
+          body: ProfileScreen(places: MemoryPlaceCatalog(_places())),
+        ),
       ),
       GoRoute(
         path: '/challenge/:id',
@@ -134,6 +135,11 @@ void main() {
     expect(find.text(strings.t('catCity')), findsOneWidget);
     expect(find.text(strings.completedChallenges), findsOneWidget);
     expect(find.text(strings.completedChallengesEmpty), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(strings.signOut),
+      80,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text(strings.language), findsOneWidget);
     expect(find.text(strings.signOut), findsOneWidget);
 
