@@ -181,28 +181,22 @@ class CatalogFilterChipRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.topLeft,
-          child: OverflowBar(
-            key: const Key('catalog-length-difficulty-chips'),
-            alignment: MainAxisAlignment.start,
-            overflowAlignment: OverflowBarAlignment.start,
-            overflowSpacing: 8,
-            spacing: 0,
-            children: [
-              CatalogLengthChipRow(
-                filter: filter,
-                strings: strings,
-                onChanged: onChanged,
-              ),
-              const _ChipGroupGap(),
-              CatalogDifficultyChipRow(
-                filter: filter,
-                strings: strings,
-                onChanged: onChanged,
-              ),
-            ],
-          ),
+        Column(
+          key: const Key('catalog-length-difficulty-chips'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CatalogLengthChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
+            ),
+            const SizedBox(height: 8),
+            CatalogDifficultyChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
+            ),
+          ],
         ),
       ],
     );
@@ -223,29 +217,21 @@ class CatalogLengthChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
       key: const Key('catalog-length-chips'),
-      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        for (var i = 0; i < CatalogLengthBand.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+        for (final band in CatalogLengthBand.values)
           CatalogFilterChip(
-            key: Key(
-              'catalog-filter-length-${CatalogLengthBand.values[i].name}',
-            ),
-            selected: filter.lengthBands.contains(CatalogLengthBand.values[i]),
-            label: _lengthLabel(strings, CatalogLengthBand.values[i]),
+            key: Key('catalog-filter-length-${band.name}'),
+            selected: filter.lengthBands.contains(band),
+            label: _lengthLabel(strings, band),
             onShell: true,
             onTap: () => onChanged(
-              filter.copyWith(
-                lengthBands: _toggle(
-                  filter.lengthBands,
-                  CatalogLengthBand.values[i],
-                ),
-              ),
+              filter.copyWith(lengthBands: _toggle(filter.lengthBands, band)),
             ),
           ),
-        ],
       ],
     );
   }
@@ -265,29 +251,23 @@ class CatalogDifficultyChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
       key: const Key('catalog-difficulty-chips'),
-      mainAxisSize: MainAxisSize.min,
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+        for (final difficulty in CatalogDifficulty.values)
           CatalogFilterChip(
-            key: Key(
-              'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
-            ),
-            selected: filter.difficulties.contains(CatalogDifficulty.values[i]),
-            label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
+            key: Key('catalog-filter-difficulty-${difficulty.name}'),
+            selected: filter.difficulties.contains(difficulty),
+            label: _difficultyLabel(strings, difficulty),
             onShell: true,
             onTap: () => onChanged(
               filter.copyWith(
-                difficulties: _toggle(
-                  filter.difficulties,
-                  CatalogDifficulty.values[i],
-                ),
+                difficulties: _toggle(filter.difficulties, difficulty),
               ),
             ),
           ),
-        ],
       ],
     );
   }

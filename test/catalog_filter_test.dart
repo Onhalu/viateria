@@ -825,7 +825,7 @@ void main() {
     expect(lengthRect.top, greaterThan(priceRect.bottom - 0.5));
     expect(difficultyRect.top, greaterThan(priceRect.bottom - 0.5));
     expect(lengthRect.top, greaterThan(chipsRect.bottom - 0.5));
-    expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
+    expect(difficultyRect.top, greaterThan(lengthRect.bottom - 0.5));
     expect(heroRect.top, greaterThan(lengthRect.bottom));
     expect(heroRect.top, greaterThan(difficultyRect.bottom));
     expect(heroRect.width / heroRect.height, closeTo(16 / 9, 0.08));
@@ -862,7 +862,7 @@ void main() {
   });
 
   testWidgets(
-    'length and difficulty sit under price in the main filter, not the results list',
+    'length and difficulty sit under price in the welcome panel, not the results list',
     (tester) async {
       await _pumpCatalog(tester);
       expect(
@@ -911,7 +911,7 @@ void main() {
   );
 
   testWidgets(
-    'narrow filter row wraps difficulty under length, still under price',
+    'narrow panel stacks difficulty under length, still under price',
     (tester) async {
       tester.view.physicalSize = const Size(320, 2400);
       tester.view.devicePixelRatio = 1;
