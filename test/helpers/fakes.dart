@@ -110,6 +110,24 @@ class MemoryCatalog implements CatalogRepository {
   Future<List<Challenge>> fetchPublishedChallenges() async =>
       challenges.where((c) => isPubliclyVisible(c.status)).toList();
 
+  @override
+  Future<List<ChallengeDetail>> fetchPublishedDetails() async {
+    final published = await fetchPublishedChallenges();
+    return [for (final challenge in published) _detailFor(challenge)];
+  }
+
+  ChallengeDetail _detailFor(Challenge challenge) {
+    for (final detail in details) {
+      if (detail.challenge.id == challenge.id) {
+        return ChallengeDetail(
+          challenge: challenge,
+          waypoints: detail.waypoints,
+        );
+      }
+    }
+    return ChallengeDetail(challenge: challenge, waypoints: const []);
+  }
+
   Object? fetchChallengeError;
 
   @override

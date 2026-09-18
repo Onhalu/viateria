@@ -157,6 +157,20 @@ class SupabaseCatalogRepository implements CatalogRepository {
   }
 
   @override
+  Future<List<ChallengeDetail>> fetchPublishedDetails() async {
+    final rows = await _client
+        .from('challenges')
+        .select('*, challenge_i18n(*), waypoints(*, waypoint_i18n(*))')
+        .eq('status', 'published')
+        .order('created_at');
+    return (rows as List)
+        .whereType<Map<String, dynamic>>()
+        .map(_detailFromRow)
+        .where((detail) => isPubliclyVisible(detail.challenge.status))
+        .toList();
+  }
+
+  @override
   Future<ChallengeDetail> fetchChallenge(String id) async {
     late final Map<String, dynamic> map;
     try {
@@ -173,6 +187,10 @@ class SupabaseCatalogRepository implements CatalogRepository {
       }
       rethrow;
     }
+    return _detailFromRow(map);
+  }
+
+  ChallengeDetail _detailFromRow(Map<String, dynamic> map) {
     final challenge = challengeFromRow(map);
     final waypointRows = (map['waypoints'] as List?) ?? const [];
     final waypoints = waypointRows

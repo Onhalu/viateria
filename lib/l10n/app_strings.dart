@@ -18,6 +18,12 @@ class AppStrings {
     'catalogClearFilters',
     'catalogNoMatches',
     'catalogNoMatchesHint',
+    'catalogFeatured',
+    'catalogRegions',
+    'catalogDurationShort',
+    'catalogDurationHalfDay',
+    'catalogDurationFullDay',
+    'durationHoursFormat',
     'signIn',
     'signUp',
     'email',
@@ -179,6 +185,11 @@ class AppStrings {
   String get catalogClearFilters => t('catalogClearFilters');
   String get catalogNoMatches => t('catalogNoMatches');
   String get catalogNoMatchesHint => t('catalogNoMatchesHint');
+  String get catalogFeatured => t('catalogFeatured');
+  String get catalogRegions => t('catalogRegions');
+  String get catalogDurationShort => t('catalogDurationShort');
+  String get catalogDurationHalfDay => t('catalogDurationHalfDay');
+  String get catalogDurationFullDay => t('catalogDurationFullDay');
   String get signIn => t('signIn');
   String get signUp => t('signUp');
   String get email => t('email');
@@ -345,6 +356,14 @@ class AppStrings {
     return t('distanceKmFormat').replaceFirst('{n}', n);
   }
 
+  /// Whole hours for catalog cards (`2 h`). Sub-hour routes still show `1 h`.
+  String formatCatalogHours(Duration duration) {
+    final minutes = duration.inMinutes;
+    final hours = minutes <= 0 ? 1 : (minutes / 60).round();
+    final n = hours < 1 ? 1 : hours;
+    return t('durationHoursFormat').replaceFirst('{n}', '$n');
+  }
+
   static const _tables = <String, Map<String, String>>{
     'en': {
       'appName': 'VANDERY',
@@ -358,6 +377,12 @@ class AppStrings {
       'catalogClearFilters': 'Clear filters',
       'catalogNoMatches': 'No matches',
       'catalogNoMatchesHint': 'Try different filters or search.',
+      'catalogFeatured': 'Featured',
+      'catalogRegions': 'Regions',
+      'catalogDurationShort': 'Short',
+      'catalogDurationHalfDay': 'Half-day',
+      'catalogDurationFullDay': 'Full day',
+      'durationHoursFormat': '{n} h',
       'signIn': 'Sign in',
       'signUp': 'Create account',
       'email': 'Email',
@@ -526,6 +551,12 @@ class AppStrings {
       'catalogClearFilters': 'Zrušit filtry',
       'catalogNoMatches': 'Nic nesedí',
       'catalogNoMatchesHint': 'Uprav filtry nebo hledaný text.',
+      'catalogFeatured': 'Vybrané',
+      'catalogRegions': 'Regiony',
+      'catalogDurationShort': 'Krátké',
+      'catalogDurationHalfDay': 'Půlden',
+      'catalogDurationFullDay': 'Celodenní',
+      'durationHoursFormat': '{n} h',
       'signIn': 'Přihlásit se',
       'signUp': 'Vytvořit účet',
       'email': 'E-mail',
@@ -693,6 +724,12 @@ class AppStrings {
       'catalogClearFilters': 'Filter zurücksetzen',
       'catalogNoMatches': 'Keine Treffer',
       'catalogNoMatchesHint': 'Andere Filter oder Suche versuchen.',
+      'catalogFeatured': 'Ausgewählt',
+      'catalogRegions': 'Regionen',
+      'catalogDurationShort': 'Kurz',
+      'catalogDurationHalfDay': 'Halbtag',
+      'catalogDurationFullDay': 'Ganztag',
+      'durationHoursFormat': '{n} h',
       'signIn': 'Anmelden',
       'signUp': 'Konto erstellen',
       'email': 'E-Mail',

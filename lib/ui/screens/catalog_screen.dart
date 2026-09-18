@@ -7,7 +7,9 @@ import '../../domain/catalog_query.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../navigation.dart';
+import '../widgets/app_shell.dart';
 import '../widgets/catalog_cards.dart';
+import '../widgets/catalog_filters.dart';
 import '../widgets/catalog_welcome_header.dart';
 import '../widgets/empty_state.dart';
 
@@ -37,9 +39,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<_CatalogData> _load() async {
     final services = context.read<AppServices>();
-    final challenges = await services.catalog.fetchPublishedChallenges();
+    final details = await services.catalog.fetchPublishedDetails();
     final promos = await services.catalog.fetchPublishedPromos();
-    return _CatalogData(challenges: challenges, promos: promos);
+    return _CatalogData(details: details, promos: promos);
   }
 
   Future<void> _reload() async {
@@ -63,10 +65,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       body: Column(
         children: [
-          CatalogWelcomeHeader(
-            search: _search,
-            filter: _filter,
-            onFilterChanged: _applyFilter,
+          const CatalogWelcomeHeader(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppShell.horizontalInset,
+              0,
+              AppShell.horizontalInset,
+              8,
+            ),
+            child: CatalogSearchField(
+              controller: _search,
+              hintText: strings.catalogSearchHint,
+              onChanged: (value) =>
+                  _applyFilter(_filter.copyWith(query: value)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppShell.horizontalInset,
+              0,
+              AppShell.horizontalInset,
+              8,
+            ),
+            child: CatalogFilterChipRow(
+              filter: _filter,
+              strings: strings,
+              onChanged: _applyFilter,
+            ),
           ),
           Expanded(
             child: SafeArea(
@@ -93,19 +118,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     );
                   }
                   final data = snapshot.data!;
+                  final challenges = [
+                    for (final detail in data.details) detail.challenge,
+                  ];
+                  final routeStats = catalogRouteStatsByChallenge(data.details);
                   final visible = filterCatalogChallenges(
-                    data.challenges,
+                    challenges,
                     _filter,
+                    routeStats: routeStats,
                   );
                   final noMatches =
-                      data.challenges.isNotEmpty &&
+                      challenges.isNotEmpty &&
                       visible.isEmpty &&
                       _filter.isActive;
-                  final cmsEmpty =
-                      data.challenges.isEmpty && data.promos.isEmpty;
+                  final cmsEmpty = challenges.isEmpty && data.promos.isEmpty;
                   final promos = !noMatches && _filter.showPromos
                       ? data.promos
                       : const <PromoStripe>[];
+                  final showDuration = routeStats.isNotEmpty;
 
                   return RefreshIndicator(
                     onRefresh: _reload,
@@ -147,14 +177,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 ),
                                 const SizedBox(height: 16),
                               ],
-                              for (final challenge in visible) ...[
-                                ChallengeCard(
-                                  challenge: challenge,
-                                  onTap: () =>
-                                      openChallenge(context, challenge.id),
-                                ),
+                              CatalogHeroCarousel(
+                                challenges: visible,
+                                routeStats: routeStats,
+                                onOpen: (challenge) =>
+                                    openChallenge(context, challenge.id),
+                              ),
+                              if (showDuration) ...[
                                 const SizedBox(height: 16),
+                                CatalogDurationChipRow(
+                                  filter: _filter,
+                                  strings: strings,
+                                  onChanged: _applyFilter,
+                                ),
                               ],
+                              const SizedBox(height: 16),
+                              CatalogFeaturedSection(
+                                challenges: visible,
+                                routeStats: routeStats,
+                                onOpen: (challenge) =>
+                                    openChallenge(context, challenge.id),
+                              ),
+                              const SizedBox(height: 16),
+                              CatalogRegionsSection(
+                                filter: _filter,
+                                strings: strings,
+                                onChanged: _applyFilter,
+                              ),
                             ],
                           ),
                   );
@@ -181,8 +230,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
 }
 
 class _CatalogData {
-  const _CatalogData({required this.challenges, required this.promos});
+  const _CatalogData({required this.details, required this.promos});
 
-  final List<Challenge> challenges;
+  final List<ChallengeDetail> details;
   final List<PromoStripe> promos;
 }

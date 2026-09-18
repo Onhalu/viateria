@@ -58,6 +58,10 @@ class ChallengeMissing implements Exception {
 
 abstract class CatalogRepository {
   Future<List<Challenge>> fetchPublishedChallenges();
+
+  /// Published challenges with waypoints, for catalog route stats.
+  Future<List<ChallengeDetail>> fetchPublishedDetails();
+
   Future<ChallengeDetail> fetchChallenge(String id);
   Future<List<PromoStripe>> fetchPublishedPromos({DateTime? now});
 }

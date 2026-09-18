@@ -254,6 +254,28 @@ void main() {
       );
       expect(const CatalogFilter(query: '  hike ').showPromos, isFalse);
     });
+
+    test('duration chips filter by waypoint-derived hike time', () {
+      final open = sampleOpenChallenge();
+      final stats = catalogRouteStatsByChallenge([open]);
+      expect(stats[open.challenge.id]?.bucket, CatalogDurationBucket.short);
+      expect(
+        filterCatalogChallenges(
+          [open.challenge],
+          CatalogFilter(durationBuckets: {CatalogDurationBucket.short}),
+          routeStats: stats,
+        ),
+        [open.challenge],
+      );
+      expect(
+        filterCatalogChallenges(
+          [open.challenge],
+          CatalogFilter(durationBuckets: {CatalogDurationBucket.fullDay}),
+          routeStats: stats,
+        ),
+        isEmpty,
+      );
+    });
   });
 
   group('country_code mapping', () {
@@ -320,6 +342,52 @@ void main() {
     });
   });
 
+  group('waypoint-derived catalog route stats', () {
+    test('omits stats when there are fewer than two waypoints', () {
+      expect(catalogRouteStatsFromWaypoints(const []), isNull);
+      expect(
+        catalogRouteStatsFromWaypoints([
+          Waypoint(
+            id: 'only',
+            challengeId: 'c',
+            sortOrder: 0,
+            lat: 50,
+            lng: 14,
+            elevationM: 200,
+            translations: const [],
+          ),
+        ]),
+        isNull,
+      );
+    });
+
+    test('uses RoutePlanner hike distance and time from waypoints', () {
+      final stats = catalogRouteStatsFromWaypoints(
+        sampleOpenChallenge().waypoints,
+      );
+      expect(stats, isNotNull);
+      expect(stats!.distanceKm, greaterThan(1));
+      expect(stats.distanceKm, lessThan(3));
+      expect(stats.estimatedDuration, isNotNull);
+      expect(stats.bucket, CatalogDurationBucket.short);
+    });
+
+    test('classifies 3h as half-day and 6h as full day', () {
+      expect(
+        catalogDurationBucketFor(const Duration(hours: 2, minutes: 59)),
+        CatalogDurationBucket.short,
+      );
+      expect(
+        catalogDurationBucketFor(const Duration(hours: 3)),
+        CatalogDurationBucket.halfDay,
+      );
+      expect(
+        catalogDurationBucketFor(const Duration(hours: 6)),
+        CatalogDurationBucket.fullDay,
+      );
+    });
+  });
+
   test('SVG flag assets exist for CZ SK AT DE PL', () {
     for (final code in catalogCountryCodes) {
       final path = 'assets/flags/${code.toLowerCase()}.svg';
@@ -358,8 +426,8 @@ void main() {
   testWidgets('catalog search filters title and description', (tester) async {
     await _pumpCatalog(tester);
     expect(find.text('Weekend hike'), findsOneWidget);
-    expect(find.text('Open trail'), findsOneWidget);
-    expect(find.text('Story trail'), findsOneWidget);
+    expect(find.text('Open trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
 
     await tester.enterText(
       find.byKey(const Key('catalog-search-field')),
@@ -367,7 +435,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Weekend hike'), findsNothing);
-    expect(find.text('Story trail'), findsOneWidget);
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
     expect(find.text('Open trail'), findsNothing);
   });
 
@@ -376,7 +444,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('catalog-filter-price-paid')));
     await tester.pumpAndSettle();
-    expect(find.text('Story trail'), findsOneWidget);
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
     expect(find.text('Open trail'), findsNothing);
     expect(find.text('Weekend hike'), findsOneWidget);
 
@@ -391,7 +459,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
     await tester.pumpAndSettle();
-    expect(find.text('Open trail'), findsOneWidget);
+    expect(find.text('Open trail'), findsAtLeastNWidgets(1));
     expect(find.text('Story trail'), findsNothing);
   });
 
@@ -410,8 +478,8 @@ void main() {
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Clear filters'));
     await tester.pumpAndSettle();
-    expect(find.text('Open trail'), findsOneWidget);
-    expect(find.text('Story trail'), findsOneWidget);
+    expect(find.text('Open trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
     expect(find.text('Weekend hike'), findsOneWidget);
     expect(find.byKey(const Key('catalog-no-matches')), findsNothing);
   });
@@ -429,8 +497,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('catalog-clear-filters')));
     await tester.pumpAndSettle();
-    expect(find.text('Open trail'), findsOneWidget);
-    expect(find.text('Story trail'), findsOneWidget);
+    expect(find.text('Open trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-clear-filters')), findsNothing);
   });
 
@@ -450,11 +518,11 @@ void main() {
   ) async {
     await _pumpCatalog(tester);
     expect(find.byType(CatalogFilterChipRow), findsOneWidget);
-    expect(find.byType(CountryFlag), findsNWidgets(5));
+    expect(find.byType(CountryFlag), findsNWidgets(10));
     expect(find.textContaining('🇨🇿'), findsNothing);
   });
 
-  testWidgets('search and chips sit inside the sage welcome panel', (
+  testWidgets('search and chips sit below the sage welcome panel', (
     tester,
   ) async {
     await _pumpCatalog(tester);
@@ -463,14 +531,14 @@ void main() {
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-search-field')),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
         matching: find.byKey(const Key('catalog-filter-chips')),
       ),
-      findsOneWidget,
+      findsNothing,
     );
 
     final header = tester.widget<Material>(
@@ -486,18 +554,10 @@ void main() {
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
     );
-    expect(searchRect.top, greaterThan(headerRect.top));
-    expect(searchRect.bottom, lessThan(headerRect.bottom));
+    expect(searchRect.top, greaterThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
-    expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
-    expect(
-      searchRect.left,
-      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
-    );
-    expect(
-      chipsRect.left,
-      headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
-    );
+    expect(searchRect.left, CatalogWelcomeHeader.horizontalInset);
+    expect(chipsRect.left, CatalogWelcomeHeader.horizontalInset);
     expect(
       tester
           .widget<TextField>(find.byKey(const Key('catalog-search-field')))
@@ -505,5 +565,89 @@ void main() {
           ?.fillColor,
       BrandColors.cream,
     );
+  });
+
+  testWidgets(
+    'discover sections follow chips: hero, duration, featured, regions',
+    (tester) async {
+      await _pumpCatalog(tester);
+      expect(find.byKey(const Key('catalog-hero-carousel')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-hero-open-1')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-hero-next')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-duration-chips')), findsOneWidget);
+      expect(find.text(AppStrings('en').catalogDurationShort), findsOneWidget);
+      expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
+      expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+      expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
+
+      final chipsRect = tester.getRect(
+        find.byKey(const Key('catalog-filter-chips')),
+      );
+      final heroRect = tester.getRect(
+        find.byKey(const Key('catalog-hero-carousel')),
+      );
+      final durationRect = tester.getRect(
+        find.byKey(const Key('catalog-duration-chips')),
+      );
+      final featuredRect = tester.getRect(
+        find.byKey(const Key('catalog-featured')),
+      );
+      final regionsRect = tester.getRect(
+        find.byKey(const Key('catalog-regions')),
+      );
+      expect(heroRect.top, greaterThan(chipsRect.bottom));
+      expect(heroRect.width / heroRect.height, closeTo(16 / 9, 0.08));
+      expect(durationRect.top, greaterThan(heroRect.bottom - 0.5));
+      expect(featuredRect.top, greaterThan(durationRect.bottom - 0.5));
+      expect(regionsRect.top, greaterThan(featuredRect.bottom - 0.5));
+    },
+  );
+
+  testWidgets('duration section is omitted without waypoint route data', (
+    tester,
+  ) async {
+    await _pumpCatalog(
+      tester,
+      challenges: [
+        _challenge(id: 'solo', title: 'No route yet', countryCode: 'CZ'),
+      ],
+      promos: const [],
+    );
+    expect(find.text('No route yet'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('catalog-hero-solo')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-duration-chips')), findsNothing);
+    expect(find.text(AppStrings('en').catalogDurationShort), findsNothing);
+    expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
+  });
+
+  testWidgets('featured title is localized', (tester) async {
+    await _pumpCatalog(tester, locale: 'cs');
+    expect(find.text('Vybrané'), findsOneWidget);
+    expect(find.text('Krátké'), findsOneWidget);
+    await _pumpCatalog(tester, locale: 'de');
+    expect(find.text('Ausgewählt'), findsOneWidget);
+    expect(find.text('Kurz'), findsOneWidget);
+  });
+
+  testWidgets('regions section uses the same country_code filter', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('catalog-regions-CZ')),
+      400,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('catalog-results')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('catalog-regions-CZ')));
+    await tester.pumpAndSettle();
+    expect(find.text('Open trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Story trail'), findsNothing);
+    final filterChip = tester.widget<CatalogFilterChip>(
+      find.byKey(const Key('catalog-filter-region-CZ')),
+    );
+    expect(filterChip.selected, isTrue);
   });
 }

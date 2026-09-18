@@ -103,13 +103,13 @@ void main() {
         400,
         scrollable: catalogResultsScrollable(),
       );
-      expect(find.text('Open trail'), findsOneWidget);
+      expect(find.text('Open trail'), findsAtLeastNWidgets(1));
       await tester.scrollUntilVisible(
         find.text('Story trail'),
         400,
         scrollable: catalogResultsScrollable(),
       );
-      expect(find.text('Story trail'), findsOneWidget);
+      expect(find.text('Story trail'), findsAtLeastNWidgets(1));
       expect(find.text('Hidden draft'), findsNothing);
     },
   );

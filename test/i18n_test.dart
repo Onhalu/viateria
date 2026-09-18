@@ -34,4 +34,24 @@ void main() {
     expect(AppStrings('en').welcomeNameFallback, 'traveler');
     expect(AppStrings('de').welcomeNameFallback, 'Wanderer');
   });
+
+  test('catalog discover copy is localized', () {
+    expect(AppStrings('cs').catalogFeatured, 'Vybrané');
+    expect(AppStrings('en').catalogFeatured, 'Featured');
+    expect(AppStrings('de').catalogFeatured, 'Ausgewählt');
+    expect(AppStrings('cs').catalogDurationShort, 'Krátké');
+    expect(AppStrings('en').catalogDurationShort, 'Short');
+    expect(AppStrings('de').catalogDurationShort, 'Kurz');
+    expect(AppStrings('cs').catalogDurationHalfDay, 'Půlden');
+    expect(AppStrings('en').catalogDurationHalfDay, 'Half-day');
+    expect(AppStrings('de').catalogDurationHalfDay, 'Halbtag');
+    expect(AppStrings('cs').catalogDurationFullDay, 'Celodenní');
+    expect(AppStrings('en').catalogDurationFullDay, 'Full day');
+    expect(AppStrings('de').catalogDurationFullDay, 'Ganztag');
+    expect(
+      AppStrings('en').formatCatalogHours(const Duration(hours: 2)),
+      '2 h',
+    );
+    expect(AppStrings('cs').formatDistanceKm(12.0), '12 km');
+  });
 }

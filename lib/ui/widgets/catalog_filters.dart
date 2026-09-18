@@ -156,6 +156,120 @@ class CatalogFilterChipRow extends StatelessWidget {
   }
 }
 
+class CatalogDurationChipRow extends StatelessWidget {
+  const CatalogDurationChipRow({
+    super.key,
+    required this.filter,
+    required this.strings,
+    required this.onChanged,
+  });
+
+  final CatalogFilter filter;
+  final AppStrings strings;
+  final ValueChanged<CatalogFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const Key('catalog-duration-chips'),
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        children: [
+          for (var i = 0; i < CatalogDurationBucket.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            CatalogFilterChip(
+              key: Key(
+                'catalog-filter-duration-${CatalogDurationBucket.values[i].name}',
+              ),
+              selected: filter.durationBuckets.contains(
+                CatalogDurationBucket.values[i],
+              ),
+              label: _durationLabel(strings, CatalogDurationBucket.values[i]),
+              onTap: () => onChanged(
+                filter.copyWith(
+                  durationBuckets: _toggle(
+                    filter.durationBuckets,
+                    CatalogDurationBucket.values[i],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class CatalogRegionsSection extends StatelessWidget {
+  const CatalogRegionsSection({
+    super.key,
+    required this.filter,
+    required this.strings,
+    required this.onChanged,
+  });
+
+  final CatalogFilter filter;
+  final AppStrings strings;
+  final ValueChanged<CatalogFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const Key('catalog-regions'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.catalogRegions,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: BrandColors.forest,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            children: [
+              for (var i = 0; i < catalogCountryCodes.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                CatalogFilterChip(
+                  key: Key('catalog-regions-${catalogCountryCodes[i]}'),
+                  selected: filter.countryCodes.contains(
+                    catalogCountryCodes[i],
+                  ),
+                  semanticLabel: catalogCountryCodes[i],
+                  flagCode: catalogCountryCodes[i],
+                  onTap: () => onChanged(
+                    filter.copyWith(
+                      countryCodes: _toggle(
+                        filter.countryCodes,
+                        catalogCountryCodes[i],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _durationLabel(AppStrings strings, CatalogDurationBucket bucket) {
+  return switch (bucket) {
+    CatalogDurationBucket.short => strings.catalogDurationShort,
+    CatalogDurationBucket.halfDay => strings.catalogDurationHalfDay,
+    CatalogDurationBucket.fullDay => strings.catalogDurationFullDay,
+  };
+}
+
 class CatalogFilterChip extends StatelessWidget {
   const CatalogFilterChip({
     super.key,
