@@ -68,6 +68,13 @@ abstract class CatalogRepository {
 
 abstract class ProgressRepository {
   Future<ChallengeProgress?> fetchProgress(String challengeId);
+
+  /// Completed runs for the signed-in user. Empty when signed out.
+  ///
+  /// Reads `challenge_progress` with `user_id = auth.uid()` so existing
+  /// RLS (`own progress readable`) still applies — no extra policy.
+  Future<List<ChallengeProgress>> fetchCompleted();
+
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,
     required String waypointId,

@@ -271,6 +271,28 @@ class SupabaseProgressRepository implements ProgressRepository {
   }
 
   @override
+  Future<List<ChallengeProgress>> fetchCompleted() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return const [];
+    final rows = await _client
+        .from('challenge_progress')
+        .select('challenge_id, status, completed_at')
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+    return [
+      for (final row in (rows as List).whereType<Map<String, dynamic>>())
+        ChallengeProgress(
+          challengeId: row['challenge_id'] as String,
+          status: ChallengeRunStatus.completed,
+          completedWaypointIds: const {},
+          completedAt: row['completed_at'] == null
+              ? null
+              : DateTime.parse(row['completed_at'] as String),
+        ),
+    ];
+  }
+
+  @override
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,
     required String waypointId,

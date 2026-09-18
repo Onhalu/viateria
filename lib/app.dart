@@ -98,6 +98,14 @@ class _ViateriaAppState extends State<ViateriaApp> {
                 GoRoute(
                   path: '/profile',
                   builder: (context, state) => const ProfileScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'challenge/:id',
+                      builder: (context, state) => ChallengeScreen(
+                        challengeId: state.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

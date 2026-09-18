@@ -766,6 +766,9 @@ void main() {
     );
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
     expect(find.byType(Badge), findsNothing);
-    expect(find.text(strings.language), findsOneWidget);
+    expect(
+      find.text(strings.language, skipOffstage: false),
+      findsOneWidget,
+    );
   });
 }

@@ -58,4 +58,34 @@ void main() {
     expect(AppStrings('en').catalogDifficultyHard, 'Hard');
     expect(AppStrings('de').catalogDifficultyHard, 'Anspruchsvoll');
   });
+
+  test('profile stats copy is localized', () {
+    expect(AppStrings('cs').profileCatCity, 'Město');
+    expect(AppStrings('en').profileCatCity, 'City');
+    expect(AppStrings('de').profileCatCity, 'Stadt');
+    expect(AppStrings('cs').profileCatNature, 'Příroda');
+    expect(AppStrings('en').profileCatNature, 'Nature');
+    expect(AppStrings('de').profileCatNature, 'Natur');
+    expect(AppStrings('cs').profileCatTechnical, 'Technická');
+    expect(AppStrings('en').profileCatTechnical, 'Technical');
+    expect(AppStrings('de').profileCatTechnical, 'Technisch');
+    expect(AppStrings('cs').profileCatHistorical, 'Historická');
+    expect(AppStrings('en').profileCatHistorical, 'Historical');
+    expect(AppStrings('de').profileCatHistorical, 'Historisch');
+    expect(AppStrings('cs').completedChallenges, 'Dokončené výzvy');
+    expect(AppStrings('en').completedChallenges, 'Completed challenges');
+    expect(AppStrings('de').completedChallenges, 'Abgeschlossene Challenges');
+    expect(
+      AppStrings('cs').completedChallengesEmpty,
+      'Zatím žádná dokončená výzva.',
+    );
+    expect(
+      AppStrings('en').completedChallengesEmpty,
+      'No completed challenges yet.',
+    );
+    expect(
+      AppStrings('de').completedChallengesEmpty,
+      'Noch keine abgeschlossene Challenge.',
+    );
+  });
 }

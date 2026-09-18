@@ -173,6 +173,13 @@ class AppStrings {
     'paymentLeaveConfirm',
     'paymentLeave',
     'paymentStay',
+    'visitedPlaces',
+    'profileCatCity',
+    'profileCatNature',
+    'profileCatTechnical',
+    'profileCatHistorical',
+    'completedChallenges',
+    'completedChallengesEmpty',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -337,6 +344,13 @@ class AppStrings {
   String get paymentLeaveConfirm => t('paymentLeaveConfirm');
   String get paymentLeave => t('paymentLeave');
   String get paymentStay => t('paymentStay');
+  String get visitedPlaces => t('visitedPlaces');
+  String get profileCatCity => t('profileCatCity');
+  String get profileCatNature => t('profileCatNature');
+  String get profileCatTechnical => t('profileCatTechnical');
+  String get profileCatHistorical => t('profileCatHistorical');
+  String get completedChallenges => t('completedChallenges');
+  String get completedChallengesEmpty => t('completedChallengesEmpty');
 
   String difficultyLabel(String name) => t(name);
 
@@ -537,6 +551,13 @@ class AppStrings {
       'paymentLeaveConfirm': 'Payment is still running. Leave anyway?',
       'paymentLeave': 'Leave',
       'paymentStay': 'Stay',
+      'visitedPlaces': 'Visited places',
+      'profileCatCity': 'City',
+      'profileCatNature': 'Nature',
+      'profileCatTechnical': 'Technical',
+      'profileCatHistorical': 'Historical',
+      'completedChallenges': 'Completed challenges',
+      'completedChallengesEmpty': 'No completed challenges yet.',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -712,6 +733,13 @@ class AppStrings {
       'paymentLeaveConfirm': 'Platba ještě běží. Opravdu odejít?',
       'paymentLeave': 'Odejít',
       'paymentStay': 'Zůstat',
+      'visitedPlaces': 'Navštívená místa',
+      'profileCatCity': 'Město',
+      'profileCatNature': 'Příroda',
+      'profileCatTechnical': 'Technická',
+      'profileCatHistorical': 'Historická',
+      'completedChallenges': 'Dokončené výzvy',
+      'completedChallengesEmpty': 'Zatím žádná dokončená výzva.',
     },
     'de': {
       'appName': 'VANDERY',
@@ -886,6 +914,13 @@ class AppStrings {
       'paymentLeaveConfirm': 'Die Zahlung läuft noch. Wirklich verlassen?',
       'paymentLeave': 'Verlassen',
       'paymentStay': 'Bleiben',
+      'visitedPlaces': 'Besuchte Orte',
+      'profileCatCity': 'Stadt',
+      'profileCatNature': 'Natur',
+      'profileCatTechnical': 'Technisch',
+      'profileCatHistorical': 'Historisch',
+      'completedChallenges': 'Abgeschlossene Challenges',
+      'completedChallengesEmpty': 'Noch keine abgeschlossene Challenge.',
     },
   };
 }
