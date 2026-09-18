@@ -73,16 +73,15 @@ cp web/.htaccess build/web/.htaccess
 
 ### 3. Apache `.htaccess` (WEDOS)
 
-Apache must serve `index.html` for unknown paths (Flutter web SPA). `web/.htaccess` is copied into `build/web` by CI. If an FTP client skips dotfiles, create it on the server:
+Apache must serve `index.html` for unknown paths (Flutter web SPA) **and** override WEDOS's default `Cache-Control: max-age=259200` (3 days). Without the cache rules, browsers keep a stale `main.dart.js` after FTP deploy.
 
-```
-RewriteEngine On
-RewriteBase /
-RewriteRule ^index\.html$ - [L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
-```
+`web/.htaccess` is copied into `build/web` by CI. If an FTP client skips dotfiles, upload that file to the domain root. Header rules (`Header always set` replaces the WEDOS vhost default; `Expires` is unset on revalidate files so it cannot linger at +3 days):
+
+| Files | `Cache-Control` | Why |
+| --- | --- | --- |
+| `index.html`, `flutter_bootstrap.js`, `flutter_service_worker.js`, `.last_build_id` | `no-cache, must-revalidate` | Entrypoint / loader / SW / build id must be revalidated on every visit so a new release is picked up. |
+| `main.dart.js`, `flutter.js` (and deferred `main.dart.js_N.part.js`) | `max-age=0, must-revalidate` | These filenames are **not** content-hashed; a multi-day cache serves yesterday’s bundle. |
+| canvaskit, icons, fonts, wasm, images | `public, max-age=31536000, immutable` | Static / hashed assets; long cache is fine. |
 
 ### Map style (`MAP_STYLE_URL`)
 
