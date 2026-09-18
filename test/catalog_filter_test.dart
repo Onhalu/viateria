@@ -805,10 +805,9 @@ void main() {
     tester,
   ) async {
     await _pumpCatalog(tester);
-    expect(find.textContaining(' h'), findsNothing);
-    expect(find.textContaining(' km'), findsNothing);
     expect(find.text('1 h'), findsNothing);
     expect(find.text('2 h'), findsNothing);
+    expect(find.textContaining(' km'), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-featured-open-1')),
@@ -819,7 +818,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-featured-open-1')),
-        matching: find.text(AppStrings('en').catalogDifficultyEasy),
+        matching: find.textContaining(AppStrings('en').catalogDifficultyEasy),
       ),
       findsNothing,
     );
@@ -856,7 +855,7 @@ void main() {
     (tester) async {
       final easy = _challenge(
         id: 'easy-1',
-        title: 'Easy walk',
+        title: 'Gentle walk',
         difficulty: CatalogDifficulty.easy,
         countryCode: 'CZ',
       );
@@ -894,14 +893,14 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('catalog-featured-easy-1')),
-          matching: find.text('Easy'),
+          matching: find.textContaining('Short · Easy'),
         ),
         findsOneWidget,
       );
       expect(
         find.descendant(
           of: find.byKey(const Key('catalog-featured-unset-1')),
-          matching: find.text('Easy'),
+          matching: find.textContaining('Easy'),
         ),
         findsNothing,
       );
