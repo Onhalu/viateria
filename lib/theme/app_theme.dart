@@ -111,22 +111,35 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: BrandColors.cream,
-        indicatorColor: BrandColors.sage,
+        backgroundColor: BrandColors.sage,
+        indicatorColor: BrandColors.cream.withValues(alpha: 0.22),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return BrandColors.cream.withValues(alpha: 0.08);
+          }
+          return Colors.transparent;
+        }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? BrandColors.forest : BrandColors.sage,
+            color: selected
+                ? BrandColors.cream
+                : BrandColors.forest.withValues(alpha: 0.75),
           );
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
-            color: selected ? BrandColors.forest : BrandColors.bark,
+            color: selected
+                ? BrandColors.cream
+                : BrandColors.forest.withValues(alpha: 0.75),
             fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           );
         }),
       ),

@@ -11,9 +11,11 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/last_challenge_screen.dart';
+import 'package:viateria/ui/screens/profile_screen.dart';
 import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
+import 'package:viateria/ui/widgets/catalog_welcome_header.dart';
 
 import 'helpers/fakes.dart';
 
@@ -23,6 +25,7 @@ AppServices buildServices({
   List<ChallengeDetail>? details,
   MemoryCatalog? catalog,
   MemoryProgress? progress,
+  Profile? user,
   bool configured = true,
 }) {
   final open = sampleOpenChallenge();
@@ -47,12 +50,14 @@ AppServices buildServices({
       stripePublishableKey: configured ? 'pk_test' : '',
     ),
     auth: MemoryAuth(
-      user: const Profile(
-        id: 'user-1',
-        locale: 'en',
-        displayName: 'Ada',
-        email: 'ada@example.com',
-      ),
+      user:
+          user ??
+          const Profile(
+            id: 'user-1',
+            locale: 'en',
+            displayName: 'Ada',
+            email: 'ada@example.com',
+          ),
     ),
     catalog:
         catalog ??
@@ -120,7 +125,7 @@ void main() {
 
     final nav = find.byKey(const Key('app-bottom-nav'));
     expect(nav, findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav-shell')), findsOneWidget);
 
     final strings = AppStrings('en');
     expect(find.text(strings.catalogTitle), findsOneWidget);
@@ -134,54 +139,56 @@ void main() {
     expect(find.text('Weekend hike'), findsOneWidget);
 
     final navRect = tester.getRect(nav);
-    expect(navRect.left, greaterThan(0));
-    expect(navRect.right, lessThan(screenSize.width));
-    expect(navRect.bottom, lessThan(screenSize.height));
+    expect(navRect.left, 0);
+    expect(navRect.right, screenSize.width);
 
     final shell = tester.widget<Material>(
       find.byKey(const Key('app-bottom-nav-shell')),
     );
-    expect(shell.clipBehavior, Clip.antiAlias);
-    expect(shell.color, BrandColors.cream);
-    expect(
-      shell.shape,
-      RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppShell.barRadius),
-      ),
+    expect(shell.color, BrandColors.sage);
+    final shellRect = tester.getRect(
+      find.byKey(const Key('app-bottom-nav-shell')),
     );
+    expect(shellRect.left, 0);
+    expect(shellRect.right, screenSize.width);
+    expect(shellRect.bottom, screenSize.height);
   });
 
-  testWidgets(
-    'bottom nav is inset from the home indicator and rounded on the sides',
-    (tester) async {
-      const homeIndicator = 34.0;
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
-      tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-        tester.view.resetPadding();
-        tester.view.resetViewPadding();
-      });
+  testWidgets('bottom nav is full-width sage including the home indicator', (
+    tester,
+  ) async {
+    const homeIndicator = 34.0;
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
+    tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPadding();
+      tester.view.resetViewPadding();
+    });
 
-      await tester.pumpWidget(wrapApp(buildServices()));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
 
-      final navRect = tester.getRect(find.byKey(const Key('app-bottom-nav')));
-      final screenSize = tester.getSize(find.byType(Scaffold).first);
-      expect(navRect.left, AppShell.horizontalInset);
-      expect(navRect.right, screenSize.width - AppShell.horizontalInset);
-      expect(
-        navRect.bottom,
-        lessThanOrEqualTo(
-          screenSize.height - homeIndicator - AppShell.bottomInset + 0.5,
-        ),
-      );
-      expect(navRect.bottom, lessThan(screenSize.height - homeIndicator));
-    },
-  );
+    final screenSize = tester.getSize(find.byType(Scaffold).first);
+    final shellRect = tester.getRect(
+      find.byKey(const Key('app-bottom-nav-shell')),
+    );
+    expect(shellRect.left, 0);
+    expect(shellRect.right, screenSize.width);
+    expect(shellRect.bottom, screenSize.height);
+
+    final navRect = tester.getRect(find.byKey(const Key('app-bottom-nav')));
+    expect(navRect.left, 0);
+    expect(navRect.right, screenSize.width);
+    expect(
+      navRect.bottom,
+      lessThanOrEqualTo(screenSize.height - homeIndicator + 0.5),
+    );
+    expect(navRect.bottom, lessThan(screenSize.height));
+  });
 
   testWidgets('last-challenge tab shows empty state when none opened', (
     tester,
@@ -196,7 +203,7 @@ void main() {
     expect(find.byKey(const Key('last-challenge-empty')), findsOneWidget);
     expect(find.text(strings.lastChallengeEmpty), findsOneWidget);
     expect(find.text(strings.lastChallengeEmptyHint), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
   testWidgets('opening a catalog challenge updates last-opened tab', (
@@ -228,7 +235,6 @@ void main() {
     expect(find.text('Visit any stop'), findsWidgets);
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -239,7 +245,7 @@ void main() {
 
     expect(find.text('Open trail'), findsWidgets);
     expect(find.text('Visit any stop'), findsWidgets);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
   testWidgets('map tab shows places search, filters and list toggle', (
@@ -259,7 +265,7 @@ void main() {
     expect(find.byKey(const Key('map-view-toggle')), findsOneWidget);
     expect(find.byKey(const Key('map-poi-count')), findsOneWidget);
     expect(find.byKey(const Key('map-locate-fab')), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
   testWidgets('profile tab shows identity and sign out', (tester) async {
@@ -270,11 +276,17 @@ void main() {
     await tester.tap(find.text(strings.navProfile));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ada'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ProfileScreen),
+        matching: find.text('Ada'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('ada@example.com'), findsOneWidget);
     expect(find.text(strings.signOut), findsOneWidget);
     expect(find.text(strings.language), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
   testWidgets(
@@ -357,11 +369,11 @@ void main() {
 
     expect(find.byKey(const Key('map-load-error')), findsNothing);
     expect(find.byKey(const Key('map-search-field')), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
   testWidgets(
-    'bottom nav colors are cream bar, sage indicator, forest selected',
+    'bottom nav is sage with cream selected pill and forest unselected',
     (tester) async {
       await tester.pumpWidget(wrapApp(buildServices()));
       await tester.pumpAndSettle();
@@ -369,31 +381,43 @@ void main() {
       final shell = tester.widget<Material>(
         find.byKey(const Key('app-bottom-nav-shell')),
       );
-      expect(shell.color, BrandColors.cream);
+      expect(shell.color, BrandColors.sage);
 
-      final nav = tester.widget<NavigationBar>(
-        find.byKey(const Key('app-bottom-nav')),
+      final pillSize = tester.getSize(
+        find.byKey(const Key('sage-nav-indicator')),
       );
-      expect(nav.backgroundColor, Colors.transparent);
-      expect(nav.indicatorColor, BrandColors.sage);
+      expect(pillSize.width, AppShell.indicatorSize.width);
+      expect(pillSize.height, AppShell.indicatorSize.height);
 
-      final selectedIcon = tester.element(find.byIcon(Icons.explore));
-      expect(IconTheme.of(selectedIcon).color, BrandColors.forest);
-
-      final unselectedIcon = tester.element(find.byIcon(Icons.flag_outlined));
-      expect(IconTheme.of(unselectedIcon).color, BrandColors.sage);
-
-      final theme = Theme.of(tester.element(find.byType(NavigationBar)));
+      final pill = tester.widget<Container>(
+        find.byKey(const Key('sage-nav-indicator')),
+      );
+      final decoration = pill.decoration! as BoxDecoration;
+      expect(decoration.color, AppShell.selectedPill);
       expect(
-        theme.navigationBarTheme.labelTextStyle?.resolve({
-          WidgetState.selected,
-        })?.color,
-        BrandColors.forest,
+        decoration.borderRadius,
+        BorderRadius.circular(AppShell.indicatorRadius),
+      );
+
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.explore)).color,
+        BrandColors.cream,
       );
       expect(
-        theme.navigationBarTheme.labelTextStyle?.resolve({})?.color,
-        BrandColors.bark,
+        tester.widget<Icon>(find.byIcon(Icons.flag_outlined)).color,
+        AppShell.unselectedForeground,
       );
+
+      final selectedLabel = tester.widget<Text>(
+        find.text(AppStrings('en').catalogTitle),
+      );
+      expect(selectedLabel.style?.color, BrandColors.cream);
+      expect(selectedLabel.style?.fontWeight, FontWeight.w600);
+
+      final unselectedLabel = tester.widget<Text>(
+        find.text(AppStrings('en').navLastChallenge),
+      );
+      expect(unselectedLabel.style?.color, AppShell.unselectedForeground);
     },
   );
 
@@ -445,5 +469,121 @@ void main() {
     expect(find.byKey(const Key('catalog-results')), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+  });
+
+  testWidgets('catalog welcome header greets the signed-in display name', (
+    tester,
+  ) async {
+    final strings = AppStrings('en');
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+    expect(find.text(strings.welcomeBack), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-name')), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('catalog-welcome-name'))).data,
+      'Ada',
+    );
+    expect(find.byType(Badge), findsNothing);
+    expect(find.byKey(const Key('catalog-search-field')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-filter-chips')), findsOneWidget);
+
+    final header = tester.widget<ColoredBox>(
+      find.byKey(const Key('catalog-welcome-header')),
+    );
+    expect(header.color, BrandColors.sage);
+
+    expect(
+      tester.getSize(find.byKey(const Key('catalog-welcome-avatar'))),
+      const Size(
+        CatalogWelcomeHeader.avatarSize,
+        CatalogWelcomeHeader.avatarSize,
+      ),
+    );
+
+    final greeting = tester.widget<Text>(
+      find.byKey(const Key('catalog-welcome-greeting')),
+    );
+    expect(greeting.style?.color, BrandColors.cream.withValues(alpha: 0.85));
+    final name = tester.widget<Text>(
+      find.byKey(const Key('catalog-welcome-name')),
+    );
+    expect(name.style?.color, BrandColors.cream);
+    expect(name.style?.fontWeight, FontWeight.w700);
+
+    final headerRect = tester.getRect(
+      find.byKey(const Key('catalog-welcome-header')),
+    );
+    expect(headerRect.left, 0);
+    expect(headerRect.top, 0);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('catalog-search-field'))).dy,
+      greaterThan(headerRect.bottom),
+    );
+  });
+
+  testWidgets(
+    'catalog welcome header falls back when display name is missing',
+    (tester) async {
+      await tester.pumpWidget(
+        wrapApp(
+          buildServices(
+            user: const Profile(
+              id: 'user-1',
+              locale: 'en',
+              email: 'ada@example.com',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.byKey(const Key('catalog-welcome-name'))).data,
+        AppStrings('en').welcomeNameFallback,
+      );
+    },
+  );
+
+  testWidgets('catalog welcome header copy is Czech by locale', (tester) async {
+    await tester.pumpWidget(
+      wrapApp(buildServices(), locale: LocaleController(initial: 'cs')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings('cs').welcomeBack), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('catalog-welcome-name'))).data,
+      'Ada',
+    );
+  });
+
+  testWidgets('catalog welcome map and profile buttons switch tabs', (
+    tester,
+  ) async {
+    final strings = AppStrings('en');
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-map')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+
+    await tester.tap(find.text(strings.catalogTitle));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-profile')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(ProfileScreen),
+        matching: find.text('Ada'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+    expect(find.byType(Badge), findsNothing);
   });
 }

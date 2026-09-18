@@ -68,27 +68,36 @@ void main() {
     expect(theme.scaffoldBackgroundColor, BrandColors.cream);
     expect(theme.appBarTheme.backgroundColor, BrandColors.cream);
     expect(theme.appBarTheme.foregroundColor, BrandColors.forest);
-    expect(theme.navigationBarTheme.backgroundColor, BrandColors.cream);
-    expect(theme.navigationBarTheme.indicatorColor, BrandColors.sage);
+    expect(theme.navigationBarTheme.backgroundColor, BrandColors.sage);
+    expect(
+      theme.navigationBarTheme.indicatorColor,
+      BrandColors.cream.withValues(alpha: 0.22),
+    );
     expect(
       theme.navigationBarTheme.iconTheme?.resolve({
         WidgetState.selected,
       })?.color,
-      BrandColors.forest,
+      BrandColors.cream,
     );
     expect(
       theme.navigationBarTheme.iconTheme?.resolve({})?.color,
-      BrandColors.sage,
+      BrandColors.forest.withValues(alpha: 0.75),
     );
     expect(
       theme.navigationBarTheme.labelTextStyle?.resolve({
         WidgetState.selected,
       })?.color,
-      BrandColors.forest,
+      BrandColors.cream,
+    );
+    expect(
+      theme.navigationBarTheme.labelTextStyle?.resolve({
+        WidgetState.selected,
+      })?.fontWeight,
+      FontWeight.w600,
     );
     expect(
       theme.navigationBarTheme.labelTextStyle?.resolve({})?.color,
-      BrandColors.bark,
+      BrandColors.forest.withValues(alpha: 0.75),
     );
     expect(
       theme.filledButtonTheme.style?.backgroundColor?.resolve({}),

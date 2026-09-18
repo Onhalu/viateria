@@ -7,7 +7,11 @@ void main() {
       final table = AppStrings(locale);
       for (final key in AppStrings.keys) {
         expect(table.t(key), isNotEmpty, reason: '$locale missing $key');
-        expect(table.t(key), isNot(equals(key)), reason: '$locale fallback $key');
+        expect(
+          table.t(key),
+          isNot(equals(key)),
+          reason: '$locale fallback $key',
+        );
       }
     }
   });
@@ -20,5 +24,14 @@ void main() {
     for (final locale in AppStrings.supported) {
       expect(AppStrings(locale).appName, 'VANDERY');
     }
+  });
+
+  test('welcome header copy is localized', () {
+    expect(AppStrings('cs').welcomeBack, 'Vítej zpět');
+    expect(AppStrings('en').welcomeBack, 'Welcome back');
+    expect(AppStrings('de').welcomeBack, 'Willkommen zurück');
+    expect(AppStrings('cs').welcomeNameFallback, 'cestovateli');
+    expect(AppStrings('en').welcomeNameFallback, 'traveler');
+    expect(AppStrings('de').welcomeNameFallback, 'Wanderer');
   });
 }
