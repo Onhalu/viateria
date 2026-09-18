@@ -645,18 +645,10 @@ void main() {
       );
       expect(headerRect.top, statusBar + CatalogWelcomeHeader.topGap);
       expect(headerRect.top, greaterThan(statusBar));
-
-      final catalogScaffold = tester.widget<Scaffold>(
-        find.ancestor(
-          of: find.byKey(const Key('catalog-welcome-header')),
-          matching: find.byType(Scaffold),
-        ),
-      );
       expect(
-        catalogScaffold.backgroundColor ??
-            Theme.of(
-              tester.element(find.byKey(const Key('catalog-welcome-header'))),
-            ).scaffoldBackgroundColor,
+        Theme.of(
+          tester.element(find.byKey(const Key('catalog-welcome-header'))),
+        ).scaffoldBackgroundColor,
         BrandColors.cream,
       );
     },
