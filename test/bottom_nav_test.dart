@@ -14,6 +14,7 @@ import 'package:viateria/ui/screens/last_challenge_screen.dart';
 import 'package:viateria/ui/screens/profile_screen.dart';
 import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/theme/brand_colors.dart';
+import 'package:viateria/ui/widgets/catalog_filters.dart';
 import 'package:viateria/ui/widgets/catalog_welcome_header.dart';
 
 import 'helpers/catalog_finders.dart';
@@ -636,6 +637,13 @@ void main() {
     expect(searchRect.bottom, lessThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
+    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    expect(
+      headerRect.height,
+      lessThanOrEqualTo(
+        screenSize.height * CatalogWelcomeHeader.maxViewportFraction,
+      ),
+    );
     expect(
       searchRect.left,
       headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
