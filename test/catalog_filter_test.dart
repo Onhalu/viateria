@@ -97,11 +97,12 @@ Widget _wrap(Widget child, AppServices services, {String locale = 'en'}) {
 Future<void> _pumpCatalog(
   WidgetTester tester, {
   String locale = 'en',
+  Size viewSize = const Size(800, 2400),
   List<Challenge>? challenges,
   List<ChallengeDetail>? details,
   List<PromoStripe>? promos,
 }) async {
-  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.physicalSize = viewSize;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   await tester.pumpWidget(
@@ -112,6 +113,15 @@ Future<void> _pumpCatalog(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+Future<void> _revealChip(WidgetTester tester, Key key) async {
+  await tester.ensureVisible(find.byKey(key));
+  await tester.pumpAndSettle();
+}
+
+void _expectSameChipStrip(Rect a, Rect b) {
+  expect((a.center.dy - b.center.dy).abs(), lessThan(1.5));
 }
 
 void main() {
@@ -713,6 +723,7 @@ void main() {
     expect(searchRect.bottom, lessThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
+    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
     expect(
       searchRect.left,
       headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
@@ -744,6 +755,7 @@ void main() {
     );
     expect(unselectedLabel.style?.color, BrandColors.cream);
     expect(unselectedLabel.style?.fontWeight, FontWeight.w600);
+    expect(unselectedLabel.style?.fontSize, CatalogFilterChip.fontSize);
 
     await tester.tap(find.byKey(const Key('catalog-filter-price-free')));
     await tester.pumpAndSettle();
@@ -822,10 +834,14 @@ void main() {
     final regionsRect = tester.getRect(
       find.byKey(const Key('catalog-regions')),
     );
-    expect(lengthRect.top, greaterThan(priceRect.bottom - 0.5));
-    expect(difficultyRect.top, greaterThan(priceRect.bottom - 0.5));
-    expect(lengthRect.top, greaterThan(chipsRect.bottom - 0.5));
-    expect(difficultyRect.top, greaterThan(lengthRect.bottom - 0.5));
+    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    _expectSameChipStrip(priceRect, lengthRect);
+    _expectSameChipStrip(lengthRect, difficultyRect);
+    expect(lengthRect.left, greaterThan(priceRect.right - 0.5));
+    expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
+    expect(lengthRect.top, greaterThanOrEqualTo(chipsRect.top - 0.5));
+    expect(difficultyRect.bottom, lessThanOrEqualTo(chipsRect.bottom + 0.5));
+    expect(heroRect.top, greaterThan(chipsRect.bottom));
     expect(heroRect.top, greaterThan(lengthRect.bottom));
     expect(heroRect.top, greaterThan(difficultyRect.bottom));
     expect(heroRect.width / heroRect.height, closeTo(16 / 9, 0.08));
@@ -862,7 +878,7 @@ void main() {
   });
 
   testWidgets(
-    'length and difficulty sit under price in the welcome panel, not the results list',
+    'length and difficulty sit beside price in the welcome panel, not the results list',
     (tester) async {
       await _pumpCatalog(tester);
       expect(
@@ -895,6 +911,20 @@ void main() {
       );
       expect(
         find.descendant(
+          of: find.byKey(const Key('catalog-filter-chips')),
+          matching: find.byKey(const Key('catalog-length-chips')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalog-filter-chips')),
+          matching: find.byKey(const Key('catalog-difficulty-chips')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
           of: find.byKey(const Key('catalog-results')),
           matching: find.byKey(const Key('catalog-length-chips')),
         ),
@@ -910,33 +940,68 @@ void main() {
     },
   );
 
-  testWidgets(
-    'narrow panel stacks difficulty under length, still under price',
-    (tester) async {
-      tester.view.physicalSize = const Size(320, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      await tester.pumpWidget(
-        _wrap(const CatalogScreen(), _services(), locale: 'en'),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('narrow panel keeps every filter group on one horizontal strip', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      _wrap(const CatalogScreen(), _services(), locale: 'en'),
+    );
+    await tester.pumpAndSettle();
 
-      final priceRect = tester.getRect(
-        find.byKey(const Key('catalog-filter-price-free')),
+    final priceRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-price-free')),
+    );
+    final chipsRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-chips')),
+    );
+    final lengthRect = tester.getRect(
+      find.byKey(const Key('catalog-length-chips')),
+    );
+    final difficultyRect = tester.getRect(
+      find.byKey(const Key('catalog-difficulty-chips')),
+    );
+    final heroRect = tester.getRect(
+      find.byKey(const Key('catalog-hero-carousel')),
+    );
+    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    _expectSameChipStrip(priceRect, lengthRect);
+    _expectSameChipStrip(lengthRect, difficultyRect);
+    expect(lengthRect.left, greaterThan(priceRect.right - 0.5));
+    expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
+    expect(heroRect.top, greaterThan(chipsRect.bottom));
+  });
+
+  testWidgets(
+    'welcome panel stays within a third of a typical phone viewport',
+    (tester) async {
+      const viewport = Size(
+        390,
+        CatalogWelcomeHeader.typicalPhoneViewportHeight,
       );
-      final lengthRect = tester.getRect(
-        find.byKey(const Key('catalog-length-chips')),
+      await _pumpCatalog(tester, viewSize: viewport);
+
+      final headerRect = tester.getRect(
+        find.byKey(const Key('catalog-welcome-header')),
       );
-      final difficultyRect = tester.getRect(
-        find.byKey(const Key('catalog-difficulty-chips')),
+      final welcomeSize = tester.getSize(find.byType(CatalogWelcomeHeader));
+      final chipsRect = tester.getRect(
+        find.byKey(const Key('catalog-filter-chips')),
       );
-      final heroRect = tester.getRect(
-        find.byKey(const Key('catalog-hero-carousel')),
+      final maxHeight =
+          viewport.height * CatalogWelcomeHeader.maxViewportFraction;
+
+      expect(headerRect.height, lessThanOrEqualTo(maxHeight));
+      expect(welcomeSize.height, lessThanOrEqualTo(maxHeight));
+      expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+      expect(
+        tester
+            .getSize(find.byKey(const Key('catalog-filter-price-free')))
+            .height,
+        closeTo(CatalogFilterChip.height, 0.5),
       );
-      expect(lengthRect.top, greaterThan(priceRect.bottom - 0.5));
-      expect(difficultyRect.top, greaterThan(lengthRect.bottom - 0.5));
-      expect(difficultyRect.top, greaterThan(priceRect.bottom - 0.5));
-      expect(heroRect.top, greaterThan(difficultyRect.bottom));
     },
   );
 
@@ -1022,6 +1087,7 @@ void main() {
     tester,
   ) async {
     await _pumpCatalog(tester);
+    await _revealChip(tester, const Key('catalog-filter-length-long'));
     await tester.tap(find.byKey(const Key('catalog-filter-length-long')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-no-matches')), findsOneWidget);
@@ -1094,6 +1160,7 @@ void main() {
         findsNothing,
       );
 
+      await _revealChip(tester, const Key('catalog-filter-difficulty-easy'));
       await tester.tap(find.byKey(const Key('catalog-filter-difficulty-easy')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('catalog-featured-easy-1')), findsOneWidget);

@@ -22,18 +22,23 @@ class CatalogWelcomeHeader extends StatelessWidget {
   final CatalogFilter filter;
   final ValueChanged<CatalogFilter> onFilterChanged;
 
-  static const avatarSize = 40.0;
-  static const actionSize = 40.0;
+  static const avatarSize = 36.0;
+  static const actionSize = 36.0;
   static const horizontalInset = AppShell.horizontalInset;
   static const topGap = AppShell.topInset;
   static const barRadius = AppShell.barRadius;
-  static const innerHorizontalPadding = 16.0;
+  static const innerHorizontalPadding = 14.0;
   static const innerPadding = EdgeInsets.fromLTRB(
     innerHorizontalPadding,
-    10,
+    8,
     innerHorizontalPadding,
-    12,
+    8,
   );
+
+  /// Greeting + search + one chip strip. Keep the painted panel under
+  /// ~1/3 of a typical phone viewport (800 logical px → 267).
+  static const typicalPhoneViewportHeight = 800.0;
+  static const maxViewportFraction = 1 / 3;
 
   static ButtonStyle get actionStyle => IconButton.styleFrom(
     foregroundColor: BrandColors.cream,
@@ -101,7 +106,7 @@ class CatalogWelcomeHeader extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,8 +117,8 @@ class CatalogWelcomeHeader extends StatelessWidget {
                             key: const Key('catalog-welcome-greeting'),
                             style: const TextStyle(
                               color: BrandColors.cream,
-                              fontSize: 13,
-                              height: 1.2,
+                              fontSize: 12,
+                              height: 1.15,
                             ),
                           ),
                           Text(
@@ -123,9 +128,9 @@ class CatalogWelcomeHeader extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: BrandColors.cream,
-                              fontSize: 17,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              height: 1.25,
+                              height: 1.2,
                             ),
                           ),
                         ],
@@ -142,14 +147,14 @@ class CatalogWelcomeHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 CatalogSearchField(
                   controller: search,
                   hintText: strings.catalogSearchHint,
                   onChanged: (value) =>
                       onFilterChanged(filter.copyWith(query: value)),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 CatalogFilterChipRow(
                   filter: filter,
                   strings: strings,
@@ -247,7 +252,7 @@ class _RoundHeaderButton extends StatelessWidget {
       tooltip: tooltip,
       onPressed: onPressed,
       style: CatalogWelcomeHeader.actionStyle,
-      icon: Icon(icon, size: 22, color: BrandColors.cream),
+      icon: Icon(icon, size: 20, color: BrandColors.cream),
     );
   }
 }
