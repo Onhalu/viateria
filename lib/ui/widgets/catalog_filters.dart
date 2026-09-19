@@ -79,86 +79,145 @@ class CatalogFilterChipRow extends StatelessWidget {
   final AppStrings strings;
   final ValueChanged<CatalogFilter> onChanged;
 
+  /// Compact gap between the primary chip row and length/difficulty.
+  static const rowGap = 6.0;
+
+  /// Two 28px chip rows plus [rowGap]. Used by welcome-panel height tests.
+  static const areaHeight = CatalogFilterChip.height * 2 + rowGap;
+
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: CatalogFilterChip.height,
-      child: SingleChildScrollView(
-        key: const Key('catalog-filter-chips'),
-        scrollDirection: Axis.horizontal,
-        primary: false,
-        child: Row(
-          children: [
-            CatalogFilterChip(
-              key: const Key('catalog-filter-price-free'),
-              selected: filter.pricingTypes.contains(PricingType.free),
-              label: strings.free,
-              onShell: true,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  pricingTypes: _toggle(filter.pricingTypes, PricingType.free),
-                ),
-              ),
-            ),
-            const SizedBox(width: CatalogFilterChip.gap),
-            CatalogFilterChip(
-              key: const Key('catalog-filter-price-paid'),
-              selected: filter.pricingTypes.contains(PricingType.paid),
-              label: strings.paid,
-              onShell: true,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  pricingTypes: _toggle(filter.pricingTypes, PricingType.paid),
-                ),
-              ),
-            ),
-            const _ChipGroupGap(),
-            CatalogFilterChip(
-              key: const Key('catalog-filter-mode-open'),
-              selected: filter.accessModes.contains(AccessMode.open),
-              label: strings.catalogFilterOpen,
-              onShell: true,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  accessModes: _toggle(filter.accessModes, AccessMode.open),
-                ),
-              ),
-            ),
-            const SizedBox(width: CatalogFilterChip.gap),
-            CatalogFilterChip(
-              key: const Key('catalog-filter-mode-story'),
-              selected: filter.accessModes.contains(AccessMode.story),
-              label: strings.catalogFilterStory,
-              onShell: true,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  accessModes: _toggle(filter.accessModes, AccessMode.story),
-                ),
-              ),
-            ),
-            const _ChipGroupGap(),
-            for (var i = 0; i < catalogCountryCodes.length; i++) ...[
-              if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
-              CatalogFilterChip(
-                key: Key('catalog-filter-region-${catalogCountryCodes[i]}'),
-                selected: filter.countryCodes.contains(catalogCountryCodes[i]),
-                semanticLabel: catalogCountryCodes[i],
-                flagCode: catalogCountryCodes[i],
-                onShell: true,
-                onTap: () => onChanged(
-                  filter.copyWith(
-                    countryCodes: _toggle(
-                      filter.countryCodes,
-                      catalogCountryCodes[i],
+    return Column(
+      key: const Key('catalog-filter-chips'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: CatalogFilterChip.height,
+          child: SingleChildScrollView(
+            key: const Key('catalog-filter-primary-chips'),
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: Row(
+              children: [
+                CatalogFilterChip(
+                  key: const Key('catalog-filter-price-free'),
+                  selected: filter.pricingTypes.contains(PricingType.free),
+                  label: strings.free,
+                  onShell: true,
+                  onTap: () => onChanged(
+                    filter.copyWith(
+                      pricingTypes: _toggle(
+                        filter.pricingTypes,
+                        PricingType.free,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-            const _ChipGroupGap(),
-            Row(
-              key: const Key('catalog-length-difficulty-chips'),
-              mainAxisSize: MainAxisSize.min,
+                const SizedBox(width: CatalogFilterChip.gap),
+                CatalogFilterChip(
+                  key: const Key('catalog-filter-price-paid'),
+                  selected: filter.pricingTypes.contains(PricingType.paid),
+                  label: strings.paid,
+                  onShell: true,
+                  onTap: () => onChanged(
+                    filter.copyWith(
+                      pricingTypes: _toggle(
+                        filter.pricingTypes,
+                        PricingType.paid,
+                      ),
+                    ),
+                  ),
+                ),
+                const _ChipGroupGap(),
+                CatalogFilterChip(
+                  key: const Key('catalog-filter-mode-open'),
+                  selected: filter.accessModes.contains(AccessMode.open),
+                  label: strings.catalogFilterOpen,
+                  onShell: true,
+                  onTap: () => onChanged(
+                    filter.copyWith(
+                      accessModes: _toggle(filter.accessModes, AccessMode.open),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: CatalogFilterChip.gap),
+                CatalogFilterChip(
+                  key: const Key('catalog-filter-mode-story'),
+                  selected: filter.accessModes.contains(AccessMode.story),
+                  label: strings.catalogFilterStory,
+                  onShell: true,
+                  onTap: () => onChanged(
+                    filter.copyWith(
+                      accessModes: _toggle(
+                        filter.accessModes,
+                        AccessMode.story,
+                      ),
+                    ),
+                  ),
+                ),
+                const _ChipGroupGap(),
+                for (var i = 0; i < catalogCountryCodes.length; i++) ...[
+                  if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+                  CatalogFilterChip(
+                    key: Key(
+                      'catalog-filter-region-${catalogCountryCodes[i]}',
+                    ),
+                    selected: filter.countryCodes.contains(
+                      catalogCountryCodes[i],
+                    ),
+                    semanticLabel: catalogCountryCodes[i],
+                    flagCode: catalogCountryCodes[i],
+                    onShell: true,
+                    onTap: () => onChanged(
+                      filter.copyWith(
+                        countryCodes: _toggle(
+                          filter.countryCodes,
+                          catalogCountryCodes[i],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (filter.isActive) ...[
+                  const SizedBox(width: 12),
+                  Center(
+                    child: TextButton(
+                      key: const Key('catalog-clear-filters'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: BrandColors.cream,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, CatalogFilterChip.height),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () {
+                        onChanged(filter.cleared());
+                      },
+                      child: Text(
+                        strings.catalogClearFilters,
+                        style: const TextStyle(
+                          color: BrandColors.cream,
+                          fontSize: CatalogFilterChip.fontSize,
+                          decoration: TextDecoration.underline,
+                          decorationColor: BrandColors.cream,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: rowGap),
+        SizedBox(
+          height: CatalogFilterChip.height,
+          child: SingleChildScrollView(
+            key: const Key('catalog-length-difficulty-chips'),
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            child: Row(
               children: [
                 CatalogLengthChipRow(
                   filter: filter,
@@ -173,36 +232,9 @@ class CatalogFilterChipRow extends StatelessWidget {
                 ),
               ],
             ),
-            if (filter.isActive) ...[
-              const SizedBox(width: 12),
-              Center(
-                child: TextButton(
-                  key: const Key('catalog-clear-filters'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: BrandColors.cream,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: const Size(0, CatalogFilterChip.height),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: () {
-                    onChanged(filter.cleared());
-                  },
-                  child: Text(
-                    strings.catalogClearFilters,
-                    style: const TextStyle(
-                      color: BrandColors.cream,
-                      fontSize: CatalogFilterChip.fontSize,
-                      decoration: TextDecoration.underline,
-                      decorationColor: BrandColors.cream,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

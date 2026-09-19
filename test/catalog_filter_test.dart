@@ -124,6 +124,41 @@ void _expectSameChipStrip(Rect a, Rect b) {
   expect((a.center.dy - b.center.dy).abs(), lessThan(1.5));
 }
 
+void _expectLengthDifficultyUnderRegions(WidgetTester tester) {
+  final priceRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-price-free')),
+  );
+  final regionRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-region-CZ')),
+  );
+  final lengthRect = tester.getRect(
+    find.byKey(const Key('catalog-length-chips')),
+  );
+  final difficultyRect = tester.getRect(
+    find.byKey(const Key('catalog-difficulty-chips')),
+  );
+  final chipsRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-chips')),
+  );
+  final bottomRowRect = tester.getRect(
+    find.byKey(const Key('catalog-length-difficulty-chips')),
+  );
+
+  expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
+  expect(bottomRowRect.height, closeTo(CatalogFilterChip.height, 0.5));
+  _expectSameChipStrip(priceRect, regionRect);
+  _expectSameChipStrip(lengthRect, difficultyRect);
+  expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
+  expect(lengthRect.top, greaterThan(priceRect.bottom - 0.5));
+  expect(lengthRect.top, greaterThan(regionRect.bottom - 0.5));
+  expect(bottomRowRect.top, greaterThan(priceRect.bottom - 0.5));
+  expect(bottomRowRect.top, greaterThan(regionRect.bottom - 0.5));
+  expect(lengthRect.top, greaterThanOrEqualTo(bottomRowRect.top - 0.5));
+  expect(difficultyRect.bottom, lessThanOrEqualTo(bottomRowRect.bottom + 0.5));
+  expect(chipsRect.top, lessThanOrEqualTo(priceRect.top + 0.5));
+  expect(chipsRect.bottom, greaterThanOrEqualTo(difficultyRect.bottom - 0.5));
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -619,7 +654,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-clear-filters')), findsOneWidget);
     await tester.fling(
-      find.byKey(const Key('catalog-filter-chips')),
+      find.byKey(const Key('catalog-filter-primary-chips')),
       const Offset(-400, 0),
       1000,
     );
@@ -723,7 +758,8 @@ void main() {
     expect(searchRect.bottom, lessThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
-    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
+    _expectLengthDifficultyUnderRegions(tester);
     expect(
       searchRect.left,
       headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
@@ -813,9 +849,6 @@ void main() {
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
 
-    final priceRect = tester.getRect(
-      find.byKey(const Key('catalog-filter-price-free')),
-    );
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
     );
@@ -834,13 +867,7 @@ void main() {
     final regionsRect = tester.getRect(
       find.byKey(const Key('catalog-regions')),
     );
-    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
-    _expectSameChipStrip(priceRect, lengthRect);
-    _expectSameChipStrip(lengthRect, difficultyRect);
-    expect(lengthRect.left, greaterThan(priceRect.right - 0.5));
-    expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
-    expect(lengthRect.top, greaterThanOrEqualTo(chipsRect.top - 0.5));
-    expect(difficultyRect.bottom, lessThanOrEqualTo(chipsRect.bottom + 0.5));
+    _expectLengthDifficultyUnderRegions(tester);
     expect(heroRect.top, greaterThan(chipsRect.bottom));
     expect(heroRect.top, greaterThan(lengthRect.bottom));
     expect(heroRect.top, greaterThan(difficultyRect.bottom));
@@ -878,7 +905,7 @@ void main() {
   });
 
   testWidgets(
-    'length and difficulty sit beside price in the welcome panel, not the results list',
+    'length and difficulty sit under regions in the welcome panel, not the results list',
     (tester) async {
       await _pumpCatalog(tester);
       expect(
@@ -925,6 +952,21 @@ void main() {
       );
       expect(
         find.descendant(
+          of: find.byKey(const Key('catalog-filter-primary-chips')),
+          matching: find.byKey(const Key('catalog-length-chips')),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('catalog-length-difficulty-chips')),
+          matching: find.byKey(const Key('catalog-length-chips')),
+        ),
+        findsOneWidget,
+      );
+      _expectLengthDifficultyUnderRegions(tester);
+      expect(
+        find.descendant(
           of: find.byKey(const Key('catalog-results')),
           matching: find.byKey(const Key('catalog-length-chips')),
         ),
@@ -940,7 +982,7 @@ void main() {
     },
   );
 
-  testWidgets('narrow panel keeps every filter group on one horizontal strip', (
+  testWidgets('narrow panel keeps length and difficulty under regions', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(320, 2400);
@@ -951,26 +993,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final priceRect = tester.getRect(
-      find.byKey(const Key('catalog-filter-price-free')),
-    );
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
-    );
-    final lengthRect = tester.getRect(
-      find.byKey(const Key('catalog-length-chips')),
-    );
-    final difficultyRect = tester.getRect(
-      find.byKey(const Key('catalog-difficulty-chips')),
     );
     final heroRect = tester.getRect(
       find.byKey(const Key('catalog-hero-carousel')),
     );
-    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
-    _expectSameChipStrip(priceRect, lengthRect);
-    _expectSameChipStrip(lengthRect, difficultyRect);
-    expect(lengthRect.left, greaterThan(priceRect.right - 0.5));
-    expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
+    _expectLengthDifficultyUnderRegions(tester);
     expect(heroRect.top, greaterThan(chipsRect.bottom));
   });
 
@@ -995,13 +1024,18 @@ void main() {
 
       expect(headerRect.height, lessThanOrEqualTo(maxHeight));
       expect(welcomeSize.height, lessThanOrEqualTo(maxHeight));
-      expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+      expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
       expect(
         tester
             .getSize(find.byKey(const Key('catalog-filter-price-free')))
             .height,
         closeTo(CatalogFilterChip.height, 0.5),
       );
+      expect(
+        tester.getSize(find.byKey(const Key('catalog-length-chips'))).height,
+        closeTo(CatalogFilterChip.height, 0.5),
+      );
+      _expectLengthDifficultyUnderRegions(tester);
     },
   );
 
@@ -1094,7 +1128,7 @@ void main() {
     expect(find.byKey(const Key('catalog-featured-open-1')), findsNothing);
 
     await tester.fling(
-      find.byKey(const Key('catalog-filter-chips')),
+      find.byKey(const Key('catalog-filter-primary-chips')),
       const Offset(-400, 0),
       1000,
     );
@@ -1169,7 +1203,7 @@ void main() {
       expect(find.text('No grade'), findsAtLeastNWidgets(1));
 
       await tester.fling(
-        find.byKey(const Key('catalog-filter-chips')),
+        find.byKey(const Key('catalog-filter-primary-chips')),
         const Offset(-400, 0),
         1000,
       );

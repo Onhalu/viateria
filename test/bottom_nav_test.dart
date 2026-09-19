@@ -637,7 +637,15 @@ void main() {
     expect(searchRect.bottom, lessThan(headerRect.bottom));
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
-    expect(chipsRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
+    final lengthRect = tester.getRect(
+      find.byKey(const Key('catalog-length-chips')),
+    );
+    final regionRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-region-CZ')),
+    );
+    expect(lengthRect.top, greaterThan(regionRect.bottom - 0.5));
+    expect(lengthRect.height, closeTo(CatalogFilterChip.height, 0.5));
     expect(
       headerRect.height,
       lessThanOrEqualTo(
