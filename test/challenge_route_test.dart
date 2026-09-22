@@ -463,4 +463,42 @@ void main() {
       expect(tester.getSize(map).height, 280);
     },
   );
+
+  testWidgets('waypoint list leads with category icons, not numbers', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(wrapScreen(buildServices()));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircleAvatar), findsNothing);
+    expect(find.text('1'), findsNothing);
+    expect(find.text('2'), findsNothing);
+
+    final start = tester.widget<Image>(
+      find.byKey(const Key('waypoint-category-ow-1')),
+    );
+    expect(
+      (start.image as AssetImage).assetName,
+      'assets/map/icons/city@2x.png',
+    );
+    expect(start.width, MapChromeSizes.listRowIcon);
+    expect(start.height, MapChromeSizes.listRowIcon);
+
+    final ridge = tester.widget<Image>(
+      find.byKey(const Key('waypoint-category-ow-2')),
+    );
+    expect(
+      (ridge.image as AssetImage).assetName,
+      'assets/map/icons/nature@2x.png',
+    );
+
+    expect(find.widgetWithText(FilledButton, strings.verify), findsNWidgets(2));
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.byIcon(Icons.lock_outline), findsNothing);
+  });
 }

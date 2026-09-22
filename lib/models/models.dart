@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
+import '../map/place_category.dart';
 import 'enums.dart';
 
 export 'enums.dart';
@@ -157,6 +158,7 @@ class Waypoint {
     required this.lng,
     required this.elevationM,
     required this.translations,
+    this.category = PlaceCategory.historical,
     this.verifyMethod = VerifyMethod.photo,
   });
 
@@ -167,6 +169,10 @@ class Waypoint {
   final double lng;
   final double elevationM;
   final List<LocalizedText> translations;
+
+  /// Map category used for the waypoint-list icon. Wire values come from
+  /// `waypoints.category` via [PlaceCategory.fromWire].
+  final PlaceCategory category;
   final VerifyMethod verifyMethod;
 
   LatLng get latLng => LatLng(lat, lng);

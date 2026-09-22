@@ -14,10 +14,10 @@ import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
-import '../../theme/brand_colors.dart';
 import '../widgets/challenge_map.dart';
 import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/map_chrome.dart';
 import '../widgets/route_planner_panel.dart';
 import 'payment_checkout_screen.dart';
 
@@ -704,7 +704,19 @@ class _WaypointTile extends StatelessWidget {
       color: selected ? Theme.of(context).colorScheme.secondaryContainer : null,
       child: ListTile(
         onTap: onSelect,
-        leading: CircleAvatar(child: Text('${waypoint.sortOrder + 1}')),
+        leading: ColorFiltered(
+          colorFilter: const ColorFilter.mode(
+            BrandColors.forest,
+            BlendMode.srcIn,
+          ),
+          child: Image.asset(
+            'assets/map/icons/${waypoint.category.iconName}@2x.png',
+            key: Key('waypoint-category-${waypoint.id}'),
+            width: MapChromeSizes.listRowIcon,
+            height: MapChromeSizes.listRowIcon,
+            filterQuality: FilterQuality.medium,
+          ),
+        ),
         title: Text(copy.title),
         subtitle: Text(
           completed

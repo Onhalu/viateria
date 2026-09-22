@@ -1,4 +1,5 @@
 import '../domain/catalog_query.dart';
+import '../map/place_category.dart';
 import '../models/models.dart';
 
 List<LocalizedText> i18nFromRows(
@@ -65,6 +66,9 @@ Waypoint waypointFromRow(Map<String, dynamic> row) {
     lat: (row['lat'] as num).toDouble(),
     lng: (row['lng'] as num).toDouble(),
     elevationM: (row['elevation_m'] as num?)?.toDouble() ?? 0,
+    category: PlaceCategory.fromWire(
+      row['category'] as String? ?? 'historical',
+    ),
     translations: i18nFromRows(row['waypoint_i18n']),
   );
 }
