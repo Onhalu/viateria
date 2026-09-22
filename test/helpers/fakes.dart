@@ -7,6 +7,7 @@ import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/photo_verify.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/domain/unlock_rules.dart';
+import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
 
 class MemoryAuth implements AuthRepository {
@@ -356,6 +357,7 @@ ChallengeDetail sampleOpenChallenge() {
       lat: 50.08,
       lng: 14.42,
       elevationM: 200,
+      category: PlaceCategory.city,
       translations: [LocalizedText(locale: 'en', title: 'Start')],
     ),
     const Waypoint(
@@ -365,6 +367,7 @@ ChallengeDetail sampleOpenChallenge() {
       lat: 50.09,
       lng: 14.43,
       elevationM: 280,
+      category: PlaceCategory.nature,
       translations: [LocalizedText(locale: 'en', title: 'Ridge')],
     ),
   ];
