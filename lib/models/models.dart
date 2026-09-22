@@ -242,6 +242,24 @@ class ChallengeProgress {
   bool get isCompleted => status == ChallengeRunStatus.completed;
 }
 
+/// One `waypoint_progress` photo row for a challenge waypoint.
+///
+/// [photoPath] is the object key in the `waypoint-photos` bucket. The gallery
+/// query does not filter by user, so rows may belong to someone else.
+class ChallengeWaypointPhoto {
+  const ChallengeWaypointPhoto({
+    required this.challengeId,
+    required this.waypointId,
+    required this.photoPath,
+    required this.completedAt,
+  });
+
+  final String challengeId;
+  final String waypointId;
+  final String photoPath;
+  final DateTime completedAt;
+}
+
 class Purchase {
   const Purchase({
     required this.challengeId,

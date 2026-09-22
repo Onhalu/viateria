@@ -80,6 +80,12 @@ abstract class ProgressRepository {
     required String waypointId,
     required String photoPath,
   });
+
+  /// Verification photos for every user on [challengeId].
+  ///
+  /// Does not filter by the signed-in user. Blank paths and GPS sentinel
+  /// paths are omitted. Empty when signed out.
+  Future<List<ChallengeWaypointPhoto>> fetchChallengePhotos(String challengeId);
 }
 
 abstract class PurchaseRepository {
@@ -99,4 +105,10 @@ abstract class PhotoStorage {
     required Uint8List bytes,
     required String mimeType,
   });
+
+  /// Signed HTTPS URLs for private `waypoint-photos` objects.
+  ///
+  /// Same bucket and auth client as [uploadWaypointPhoto]. Blank paths and
+  /// GPS sentinels are ignored. Missing objects are omitted.
+  Future<Map<String, String>> signedUrlsForPhotos(List<String> photoPaths);
 }
