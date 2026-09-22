@@ -67,15 +67,15 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 
   Future<_ChallengePageData> _load() async {
     final services = context.read<AppServices>();
-    final detailFuture = services.catalog.fetchChallenge(widget.challengeId);
-    final progressFuture = services.progress.fetchProgress(widget.challengeId);
-    final purchaseFuture = services.purchases.fetchPurchase(widget.challengeId);
-    final galleryFuture = _loadGallery(services);
+    final detail = await services.catalog.fetchChallenge(widget.challengeId);
+    final progress = await services.progress.fetchProgress(widget.challengeId);
+    final purchase = await services.purchases.fetchPurchase(widget.challengeId);
+    final photos = await _loadGallery(services);
     return _ChallengePageData(
-      detail: await detailFuture,
-      progress: await progressFuture,
-      purchase: await purchaseFuture,
-      photos: await galleryFuture,
+      detail: detail,
+      progress: progress,
+      purchase: purchase,
+      photos: photos,
     );
   }
 

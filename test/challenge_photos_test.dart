@@ -218,10 +218,7 @@ void main() {
     await tester.pumpWidget(wrapChallenge(buildPhotoServices(), locale: 'cs'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('challenge-photos-title')),
-      400,
-    );
+    await tester.ensureVisible(find.byKey(const Key('challenge-photos-title')));
     expect(find.text(strings.challengePhotosTitle), findsOneWidget);
     expect(find.text(strings.challengePhotosEmpty), findsOneWidget);
     expect(find.byKey(const Key('challenge-photo-tile-0')), findsNothing);
@@ -256,10 +253,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('challenge-photo-tile-2')),
-      400,
-    );
+    await tester.ensureVisible(find.byKey(const Key('challenge-photo-tile-2')));
 
     expect(find.byKey(const Key('challenge-photo-tile-0')), findsOneWidget);
     expect(find.byKey(const Key('challenge-photo-tile-1')), findsOneWidget);
