@@ -7,6 +7,7 @@ import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
 import '../../data/repositories.dart';
 import '../../data/route_services.dart';
+import '../../domain/challenge_photos.dart';
 import '../../domain/challenge_reward.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/unlock_rules.dart';
@@ -15,6 +16,7 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../widgets/challenge_map.dart';
+import '../widgets/challenge_photos_section.dart';
 import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/map_chrome.dart';
@@ -68,11 +70,24 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     final detail = await services.catalog.fetchChallenge(widget.challengeId);
     final progress = await services.progress.fetchProgress(widget.challengeId);
     final purchase = await services.purchases.fetchPurchase(widget.challengeId);
+    final photos = await _loadGallery(services);
     return _ChallengePageData(
       detail: detail,
       progress: progress,
       purchase: purchase,
+      photos: photos,
     );
+  }
+
+  Future<List<ChallengeGalleryPhoto>> _loadGallery(AppServices services) async {
+    final rows = await services.progress.fetchChallengePhotos(
+      widget.challengeId,
+    );
+    if (rows.isEmpty) return const [];
+    final urls = await services.photos.signedUrlsForPhotos([
+      for (final row in rows) row.photoPath,
+    ]);
+    return resolveChallengePhotoGallery(rows: rows, urls: urls);
   }
 
   Future<void> _reload() async {
@@ -336,140 +351,167 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
           purchase: data.purchase,
           productVariant: challenge.rewardVariant,
         );
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              copy.title,
-              key: const Key('challenge-title'),
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            ChallengeMap(
-              waypoints: waypoints,
-              selectedWaypointId: destination?.id,
-              start: _start?.latLng,
-              hikeLine: _routes?.hikeLine ?? const <LatLng>[],
-              bikeLine: _routes?.bikeLine ?? const <LatLng>[],
-              onWaypointTap: _setDestination,
-              navigating: _navigating,
-              navigationBanner: _navigating == null
-                  ? null
-                  : _NavigationBanner(
-                      title: _navigating == TravelMode.bike
-                          ? strings.routeNavigatingBike
-                          : strings.routeNavigatingWalk,
-                      endLabel: strings.routeEndNavigation,
-                      onEnd: _endNavigation,
+        final gallery = data.photos;
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  Text(
+                    copy.title,
+                    key: const Key('challenge-title'),
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 12),
+                  ChallengeMap(
+                    waypoints: waypoints,
+                    selectedWaypointId: destination?.id,
+                    start: _start?.latLng,
+                    hikeLine: _routes?.hikeLine ?? const <LatLng>[],
+                    bikeLine: _routes?.bikeLine ?? const <LatLng>[],
+                    onWaypointTap: _setDestination,
+                    navigating: _navigating,
+                    navigationBanner: _navigating == null
+                        ? null
+                        : _NavigationBanner(
+                            title: _navigating == TravelMode.bike
+                                ? strings.routeNavigatingBike
+                                : strings.routeNavigatingWalk,
+                            endLabel: strings.routeEndNavigation,
+                            onEnd: _endNavigation,
+                          ),
+                    actions: [
+                      if (_navigating == null && _routes?.hike != null)
+                        _MapOsmAction(
+                          key: const Key('route-map-navigate-hike'),
+                          icon: Icons.hiking,
+                          label: strings.routeNavigate,
+                          tooltip: strings.routeWalking,
+                          onPressed: () => _startNavigation(TravelMode.hike),
+                        ),
+                      if (_navigating == null && _routes?.bike != null)
+                        _MapOsmAction(
+                          key: const Key('route-map-navigate-bike'),
+                          icon: Icons.directions_bike,
+                          label: strings.routeNavigate,
+                          tooltip: strings.routeCycling,
+                          onPressed: () => _startNavigation(TravelMode.bike),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  RoutePlannerPanel(
+                    strings: strings,
+                    locale: locale,
+                    waypoints: waypoints,
+                    startController: _startController,
+                    onStartSubmitted: _submitStartText,
+                    onUseGps: _useGps,
+                    onStartPlacePicked: (place) =>
+                        _pickStartPlace(place, locale),
+                    onCustomPlaceChosen: _chooseCustomStart,
+                    showCustomStartField: _enteringCustomStart,
+                    destination: destination,
+                    onDestinationChanged: _setDestination,
+                    loading: _routing,
+                    startLabel: _start?.label,
+                    errorMessage: _routeError,
+                    hike: _routes?.hike,
+                    bike: _routes?.bike,
+                    onRetry: _refreshRoutes,
+                    navigating: _navigating,
+                    onStartNavigation: _startNavigation,
+                    onEndNavigation: _endNavigation,
+                  ),
+                  if (copy.description.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(copy.description, key: const Key('challenge-info')),
+                  ],
+                  if (!hasAccess) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      strings.challengeLockedPaid,
+                      key: const Key('challenge-unlock-cta'),
                     ),
-              actions: [
-                if (_navigating == null && _routes?.hike != null)
-                  _MapOsmAction(
-                    key: const Key('route-map-navigate-hike'),
-                    icon: Icons.hiking,
-                    label: strings.routeNavigate,
-                    tooltip: strings.routeWalking,
-                    onPressed: () => _startNavigation(TravelMode.hike),
+                    const SizedBox(height: 8),
+                    _ChallengePayCtas(
+                      strings: strings,
+                      challenge: challenge,
+                      onPay: _unlockPaid,
+                    ),
+                    if (data.purchase?.status == PurchaseStatus.pending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(strings.purchasePending),
+                      ),
+                  ],
+                  const SizedBox(height: 16),
+                  Text(
+                    strings.waypoints,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                if (_navigating == null && _routes?.bike != null)
-                  _MapOsmAction(
-                    key: const Key('route-map-navigate-bike'),
-                    icon: Icons.directions_bike,
-                    label: strings.routeNavigate,
-                    tooltip: strings.routeCycling,
-                    onPressed: () => _startNavigation(TravelMode.bike),
+                  const SizedBox(height: 8),
+                  for (var i = 0; i < waypoints.length; i++)
+                    _WaypointTile(
+                      waypoint: waypoints[i],
+                      locale: locale,
+                      selected: waypoints[i].id == destination?.id,
+                      unlocked: _rules.isWaypointUnlocked(
+                        mode: challenge.accessMode,
+                        hasAccess: hasAccess,
+                        waypointIndex: i,
+                        completedIndexes: {
+                          for (var j = 0; j < waypoints.length; j++)
+                            if (completed.contains(waypoints[j].id)) j,
+                        },
+                      ),
+                      completed: completed.contains(waypoints[i].id),
+                      strings: strings,
+                      onSelect: () => _setDestination(waypoints[i]),
+                      onVerify: () => context.push(
+                        '/verify/${challenge.id}/${waypoints[i].id}',
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  ChallengeDeadlineBanner(
+                    strings: strings,
+                    locale: locale,
+                    paid: purchasePaid,
+                    completeBy: completeBy,
                   ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            RoutePlannerPanel(
-              strings: strings,
-              locale: locale,
-              waypoints: waypoints,
-              startController: _startController,
-              onStartSubmitted: _submitStartText,
-              onUseGps: _useGps,
-              onStartPlacePicked: (place) => _pickStartPlace(place, locale),
-              onCustomPlaceChosen: _chooseCustomStart,
-              showCustomStartField: _enteringCustomStart,
-              destination: destination,
-              onDestinationChanged: _setDestination,
-              loading: _routing,
-              startLabel: _start?.label,
-              errorMessage: _routeError,
-              hike: _routes?.hike,
-              bike: _routes?.bike,
-              onRetry: _refreshRoutes,
-              navigating: _navigating,
-              onStartNavigation: _startNavigation,
-              onEndNavigation: _endNavigation,
-            ),
-            if (copy.description.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(copy.description, key: const Key('challenge-info')),
-            ],
-            if (!hasAccess) ...[
-              const SizedBox(height: 16),
-              Text(
-                strings.challengeLockedPaid,
-                key: const Key('challenge-unlock-cta'),
+                  const SizedBox(height: 16),
+                  ChallengeRewardSection(
+                    strings: strings,
+                    unlocked: rewardUnlocked,
+                    paid: purchasePaid,
+                    variant: rewardVariant,
+                    onSaveDiploma: rewardUnlocked
+                        ? () => context.push(
+                            '/diploma/${challenge.id}',
+                            extra: data,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  ChallengePhotosHeader(title: strings.challengePhotosTitle),
+                  if (gallery.isEmpty) ...[
+                    const SizedBox(height: 10),
+                    ChallengePhotosEmpty(message: strings.challengePhotosEmpty),
+                    const SizedBox(height: 16),
+                  ],
+                ]),
               ),
-              const SizedBox(height: 8),
-              _ChallengePayCtas(
-                strings: strings,
-                challenge: challenge,
-                onPay: _unlockPaid,
-              ),
-              if (data.purchase?.status == PurchaseStatus.pending)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(strings.purchasePending),
+            ),
+            if (gallery.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                sliver: ChallengePhotoMosaicSliver(
+                  photos: gallery,
+                  waypoints: waypoints,
                 ),
-            ],
-            const SizedBox(height: 16),
-            Text(
-              strings.waypoints,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            for (var i = 0; i < waypoints.length; i++)
-              _WaypointTile(
-                waypoint: waypoints[i],
-                locale: locale,
-                selected: waypoints[i].id == destination?.id,
-                unlocked: _rules.isWaypointUnlocked(
-                  mode: challenge.accessMode,
-                  hasAccess: hasAccess,
-                  waypointIndex: i,
-                  completedIndexes: {
-                    for (var j = 0; j < waypoints.length; j++)
-                      if (completed.contains(waypoints[j].id)) j,
-                  },
-                ),
-                completed: completed.contains(waypoints[i].id),
-                strings: strings,
-                onSelect: () => _setDestination(waypoints[i]),
-                onVerify: () =>
-                    context.push('/verify/${challenge.id}/${waypoints[i].id}'),
               ),
-            const SizedBox(height: 16),
-            ChallengeDeadlineBanner(
-              strings: strings,
-              locale: locale,
-              paid: purchasePaid,
-              completeBy: completeBy,
-            ),
-            const SizedBox(height: 16),
-            ChallengeRewardSection(
-              strings: strings,
-              unlocked: rewardUnlocked,
-              paid: purchasePaid,
-              variant: rewardVariant,
-              onSaveDiploma: rewardUnlocked
-                  ? () => context.push('/diploma/${challenge.id}', extra: data)
-                  : null,
-            ),
           ],
         );
       },
@@ -740,11 +782,13 @@ class ChallengePageData {
     required this.detail,
     required this.progress,
     required this.purchase,
+    this.photos = const [],
   });
 
   final ChallengeDetail detail;
   final ChallengeProgress? progress;
   final Purchase? purchase;
+  final List<ChallengeGalleryPhoto> photos;
 }
 
 typedef _ChallengePageData = ChallengePageData;

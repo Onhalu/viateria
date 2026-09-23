@@ -88,4 +88,22 @@ void main() {
       'Noch keine abgeschlossene Challenge.',
     );
   });
+
+  test('challenge photo gallery copy is localized', () {
+    expect(AppStrings('cs').challengePhotosTitle, 'Fotky z výzvy');
+    expect(AppStrings('en').challengePhotosTitle, 'Challenge photos');
+    expect(AppStrings('de').challengePhotosTitle, 'Challenge-Fotos');
+    expect(
+      AppStrings('cs').challengePhotosEmpty,
+      'Zatím žádná fotka. Ověř místo jako první.',
+    );
+    expect(
+      AppStrings('en').challengePhotosEmpty,
+      'No photos yet. Be the first to verify a place.',
+    );
+    expect(
+      AppStrings('de').challengePhotosEmpty,
+      'Noch keine Fotos. Sei der Erste.',
+    );
+  });
 }

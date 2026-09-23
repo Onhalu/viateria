@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:latlong2/latlong.dart';
 import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/route_services.dart';
+import 'package:viateria/domain/challenge_photos.dart';
 import 'package:viateria/domain/photo_verify.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/domain/unlock_rules.dart';
@@ -152,6 +153,7 @@ class MemoryProgress implements ProgressRepository {
   MemoryProgress({this.details = const []});
 
   final List<ChallengeDetail> details;
+  final List<ChallengeWaypointPhoto> photos = [];
   final Map<String, Set<String>> completed = {};
   final Map<String, ChallengeRunStatus> statuses = {};
   Object? fetchProgressError;
@@ -221,6 +223,29 @@ class MemoryProgress implements ProgressRepository {
       statuses[challengeId] = ChallengeRunStatus.inProgress;
     }
     return (await fetchProgress(challengeId))!;
+  }
+
+  @override
+  Future<List<ChallengeWaypointPhoto>> fetchChallengePhotos(
+    String challengeId,
+  ) async {
+    final rows =
+        [
+          for (final row in photos)
+            if (row.challengeId == challengeId &&
+                displayablePhotoPath(row.photoPath) != null)
+              ChallengeWaypointPhoto(
+                challengeId: row.challengeId,
+                waypointId: row.waypointId,
+                photoPath: displayablePhotoPath(row.photoPath)!,
+                completedAt: row.completedAt,
+              ),
+        ]..sort((a, b) {
+          final byTime = b.completedAt.compareTo(a.completedAt);
+          if (byTime != 0) return byTime;
+          return a.waypointId.compareTo(b.waypointId);
+        });
+    return rows;
   }
 }
 
@@ -302,6 +327,7 @@ String fapiCheckoutUrlFor(RewardVariant variant) => switch (variant) {
 
 class MemoryPhotos implements PhotoStorage {
   final List<String> uploaded = [];
+  final List<List<String>> signedPhotoCalls = [];
 
   @override
   Future<String> uploadWaypointPhoto({
@@ -315,6 +341,21 @@ class MemoryPhotos implements PhotoStorage {
     final path = '$userId/$challengeId/$waypointId/photo.jpg';
     uploaded.add(path);
     return path;
+  }
+
+  @override
+  Future<Map<String, String>> signedUrlsForPhotos(
+    List<String> photoPaths,
+  ) async {
+    signedPhotoCalls.add(List<String>.from(photoPaths));
+    final urls = <String, String>{};
+    for (final path in photoPaths) {
+      final displayable = displayablePhotoPath(path);
+      if (displayable == null) continue;
+      urls[displayable] =
+          'https://photos.test/${Uri.encodeComponent(displayable)}';
+    }
+    return urls;
   }
 }
 

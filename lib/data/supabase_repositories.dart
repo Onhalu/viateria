@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../domain/challenge_photos.dart';
 import '../models/models.dart';
 import 'challenge_mapping.dart';
 import 'repositories.dart';
@@ -304,6 +306,41 @@ class SupabaseProgressRepository implements ProgressRepository {
     );
     return (await fetchProgress(challengeId))!;
   }
+
+  @override
+  Future<List<ChallengeWaypointPhoto>> fetchChallengePhotos(
+    String challengeId,
+  ) async {
+    // Signed-out clients cannot read the view. When a session exists, the
+    // query is not scoped to auth.uid() — the gallery is every user's photos.
+    if (_client.auth.currentUser == null) return const [];
+    final rows = await _client
+        .from('challenge_waypoint_photos')
+        .select('challenge_id, waypoint_id, photo_path, completed_at')
+        .eq('challenge_id', challengeId)
+        .not('photo_path', 'is', null)
+        .order('completed_at', ascending: false)
+        .order('waypoint_id');
+    final photos = <ChallengeWaypointPhoto>[];
+    for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+      final path = displayablePhotoPath(row['photo_path'] as String?);
+      if (path == null) continue;
+      photos.add(
+        ChallengeWaypointPhoto(
+          challengeId: row['challenge_id'] as String? ?? challengeId,
+          waypointId: row['waypoint_id'] as String,
+          photoPath: path,
+          completedAt: DateTime.parse(row['completed_at'] as String),
+        ),
+      );
+    }
+    photos.sort((a, b) {
+      final byTime = b.completedAt.compareTo(a.completedAt);
+      if (byTime != 0) return byTime;
+      return a.waypointId.compareTo(b.waypointId);
+    });
+    return photos;
+  }
 }
 
 class SupabasePurchaseRepository implements PurchaseRepository {
@@ -365,6 +402,10 @@ class SupabasePhotoStorage implements PhotoStorage {
   final SupabaseClient _client;
   static const bucket = 'waypoint-photos';
 
+  /// One hour. Image.network caches decoded frames for the screen session.
+  static const signedUrlTtlSeconds = 3600;
+  static const _signedUrlBatch = 100;
+
   @override
   Future<String> uploadWaypointPhoto({
     required String userId,
@@ -383,5 +424,32 @@ class SupabasePhotoStorage implements PhotoStorage {
           fileOptions: FileOptions(contentType: mimeType, upsert: false),
         );
     return path;
+  }
+
+  @override
+  Future<Map<String, String>> signedUrlsForPhotos(
+    List<String> photoPaths,
+  ) async {
+    final unique = <String>[];
+    final seen = <String>{};
+    for (final raw in photoPaths) {
+      final path = displayablePhotoPath(raw);
+      if (path == null) continue;
+      if (seen.add(path)) unique.add(path);
+    }
+    if (unique.isEmpty) return const {};
+    final urls = <String, String>{};
+    for (var i = 0; i < unique.length; i += _signedUrlBatch) {
+      final end = math.min(i + _signedUrlBatch, unique.length);
+      final results = await _client.storage
+          .from(bucket)
+          .createSignedUrlsResult(unique.sublist(i, end), signedUrlTtlSeconds);
+      for (final result in results) {
+        if (result is SignedUrlSuccess && result.signedUrl.isNotEmpty) {
+          urls[result.path] = result.signedUrl;
+        }
+      }
+    }
+    return urls;
   }
 }

@@ -180,6 +180,8 @@ class AppStrings {
     'profileCatHistorical',
     'completedChallenges',
     'completedChallengesEmpty',
+    'challengePhotosTitle',
+    'challengePhotosEmpty',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -351,6 +353,8 @@ class AppStrings {
   String get profileCatHistorical => t('profileCatHistorical');
   String get completedChallenges => t('completedChallenges');
   String get completedChallengesEmpty => t('completedChallengesEmpty');
+  String get challengePhotosTitle => t('challengePhotosTitle');
+  String get challengePhotosEmpty => t('challengePhotosEmpty');
 
   String difficultyLabel(String name) => t(name);
 
@@ -558,6 +562,8 @@ class AppStrings {
       'profileCatHistorical': 'Historical',
       'completedChallenges': 'Completed challenges',
       'completedChallengesEmpty': 'No completed challenges yet.',
+      'challengePhotosTitle': 'Challenge photos',
+      'challengePhotosEmpty': 'No photos yet. Be the first to verify a place.',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -740,6 +746,8 @@ class AppStrings {
       'profileCatHistorical': 'Historická',
       'completedChallenges': 'Dokončené výzvy',
       'completedChallengesEmpty': 'Zatím žádná dokončená výzva.',
+      'challengePhotosTitle': 'Fotky z výzvy',
+      'challengePhotosEmpty': 'Zatím žádná fotka. Ověř místo jako první.',
     },
     'de': {
       'appName': 'VANDERY',
@@ -921,6 +929,8 @@ class AppStrings {
       'profileCatHistorical': 'Historisch',
       'completedChallenges': 'Abgeschlossene Challenges',
       'completedChallengesEmpty': 'Noch keine abgeschlossene Challenge.',
+      'challengePhotosTitle': 'Challenge-Fotos',
+      'challengePhotosEmpty': 'Noch keine Fotos. Sei der Erste.',
     },
   };
 }

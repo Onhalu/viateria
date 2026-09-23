@@ -74,6 +74,11 @@ class UnconfiguredProgress implements ProgressRepository {
   }) {
     throw StateError('Supabase is not configured');
   }
+
+  @override
+  Future<List<ChallengeWaypointPhoto>> fetchChallengePhotos(
+    String challengeId,
+  ) async => const [];
 }
 
 class UnconfiguredPurchases implements PurchaseRepository {
@@ -101,6 +106,14 @@ class UnconfiguredPhotos implements PhotoStorage {
     required Uint8List bytes,
     required String mimeType,
   }) {
+    throw StateError('Supabase is not configured');
+  }
+
+  @override
+  Future<Map<String, String>> signedUrlsForPhotos(
+    List<String> photoPaths,
+  ) async {
+    if (photoPaths.isEmpty) return const {};
     throw StateError('Supabase is not configured');
   }
 }
