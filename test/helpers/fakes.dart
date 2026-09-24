@@ -12,11 +12,19 @@ import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
 
 class MemoryAuth implements AuthRepository {
-  MemoryAuth({this._user, this.sessionOnSignUp = true});
+  MemoryAuth({
+    this._user,
+    this.sessionOnSignUp = true,
+    this.unavailableProviders = false,
+  });
 
   Profile? _user;
   final bool sessionOnSignUp;
+  final bool unavailableProviders;
+  final providers = <AuthProvider>[];
+  final magicLinks = <String>[];
   final _controller = StreamController<Profile?>.broadcast();
+  final _failures = StreamController<Object>.broadcast();
 
   @override
   Stream<Profile?> authState() => _controller.stream;
@@ -71,6 +79,29 @@ class MemoryAuth implements AuthRepository {
     }
     return signIn(email: email, password: 'verified');
   }
+
+  @override
+  Future<void> sendMagicLink({required String email}) async {
+    magicLinks.add(email);
+  }
+
+  @override
+  Future<void> signInWithProvider(AuthProvider provider) async {
+    providers.add(provider);
+    if (unavailableProviders) throw AuthProviderUnavailable(provider);
+    _user = Profile(
+      id: _user?.id ?? 'user-1',
+      email: _user?.email ?? 'ada@example.com',
+      displayName: _user?.displayName ?? 'Ada',
+      locale: 'cs',
+    );
+    _controller.add(_user);
+  }
+
+  @override
+  Stream<Object> authFailures() => _failures.stream;
+
+  void emitFailure(Object error) => _failures.add(error);
 
   @override
   Future<void> signOut() async {

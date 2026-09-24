@@ -41,6 +41,10 @@ class _ViateriaAppState extends State<ViateriaApp> {
         if (!services.config.isSupabaseConfigured) {
           return state.matchedLocation == '/setup' ? null : '/setup';
         }
+        // Catalog RLS is `authenticated` only, and this shell already
+        // required a session. Map rows in public.places are anon-readable,
+        // but the map lives here, so signed-out browsing stays on /auth.
+        // Verify, purchases, profile, and photo upload use auth.uid().
         final signedIn = services.auth.currentUser != null;
         final onAuth = state.matchedLocation == '/auth';
         if (!signedIn && !onAuth) return '/auth';

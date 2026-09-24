@@ -84,6 +84,15 @@ class AppStrings {
     'otpCode',
     'verifyOtp',
     'enterAfterConfirm',
+    'continueWithGoogle',
+    'continueWithApple',
+    'sendMagicLink',
+    'authOrDivider',
+    'magicLinkSentTitle',
+    'magicLinkSentBody',
+    'authProviderUnavailable',
+    'authProviderUnavailableGeneric',
+    'authBrowserFailed',
     'navLastChallenge',
     'navMap',
     'navProfile',
@@ -266,6 +275,17 @@ class AppStrings {
   String get otpCode => t('otpCode');
   String get verifyOtp => t('verifyOtp');
   String get enterAfterConfirm => t('enterAfterConfirm');
+  String get continueWithGoogle => t('continueWithGoogle');
+  String get continueWithApple => t('continueWithApple');
+  String get sendMagicLink => t('sendMagicLink');
+  String get authOrDivider => t('authOrDivider');
+  String get magicLinkSentTitle => t('magicLinkSentTitle');
+  String get magicLinkSentBody => t('magicLinkSentBody');
+  String authProviderUnavailable(String provider) =>
+      t('authProviderUnavailable').replaceAll('{provider}', provider);
+  String get authProviderUnavailableGeneric =>
+      t('authProviderUnavailableGeneric');
+  String get authBrowserFailed => t('authBrowserFailed');
   String get navLastChallenge => t('navLastChallenge');
   String get navMap => t('navMap');
   String get navProfile => t('navProfile');
@@ -477,6 +497,18 @@ class AppStrings {
       'otpCode': '6-digit code',
       'verifyOtp': 'Verify code',
       'enterAfterConfirm': "I've confirmed — enter the app",
+      'continueWithGoogle': 'Continue with Google',
+      'continueWithApple': 'Continue with Apple',
+      'sendMagicLink': 'Email me a sign-in link',
+      'authOrDivider': 'or',
+      'magicLinkSentTitle': 'Check your email',
+      'magicLinkSentBody':
+          'Open the link in the email, or enter the code here.',
+      'authProviderUnavailable':
+          'Sign-in with {provider} is not switched on yet. Use email.',
+      'authProviderUnavailableGeneric':
+          'That sign-in method is not switched on yet. Use email.',
+      'authBrowserFailed': 'Could not open sign-in. Please try again.',
       'navLastChallenge': 'Last challenge',
       'navMap': 'Map',
       'navProfile': 'Profile',
@@ -666,6 +698,18 @@ class AppStrings {
       'otpCode': '6místný kód',
       'verifyOtp': 'Potvrdit kód',
       'enterAfterConfirm': 'E-mail jsem potvrdil(a) — vstoupit',
+      'continueWithGoogle': 'Pokračovat přes Google',
+      'continueWithApple': 'Pokračovat přes Apple',
+      'sendMagicLink': 'Poslat přihlašovací odkaz',
+      'authOrDivider': 'nebo',
+      'magicLinkSentTitle': 'Zkontrolujte e-mail',
+      'magicLinkSentBody':
+          'Otevřete odkaz v e-mailu, nebo sem zadejte kód.',
+      'authProviderUnavailable':
+          'Přihlášení přes {provider} zatím není zapnuté. Použijte e-mail.',
+      'authProviderUnavailableGeneric':
+          'Tento způsob přihlášení zatím není zapnutý. Použijte e-mail.',
+      'authBrowserFailed': 'Přihlášení se nepodařilo otevřít. Zkuste to znovu.',
       'navLastChallenge': 'Poslední výzva',
       'navMap': 'Mapa',
       'navProfile': 'Profil',
@@ -855,6 +899,19 @@ class AppStrings {
       'otpCode': '6-stelliger Code',
       'verifyOtp': 'Code bestätigen',
       'enterAfterConfirm': 'Bestätigt — App öffnen',
+      'continueWithGoogle': 'Weiter mit Google',
+      'continueWithApple': 'Weiter mit Apple',
+      'sendMagicLink': 'Anmeldelink per E-Mail',
+      'authOrDivider': 'oder',
+      'magicLinkSentTitle': 'E-Mail prüfen',
+      'magicLinkSentBody':
+          'Öffnen Sie den Link in der E-Mail, oder geben Sie den Code hier ein.',
+      'authProviderUnavailable':
+          'Anmeldung mit {provider} ist noch nicht aktiv. Nutzen Sie E-Mail.',
+      'authProviderUnavailableGeneric':
+          'Diese Anmeldung ist noch nicht aktiv. Nutzen Sie E-Mail.',
+      'authBrowserFailed':
+          'Die Anmeldung konnte nicht geöffnet werden. Bitte erneut versuchen.',
       'navLastChallenge': 'Letzte Challenge',
       'navMap': 'Karte',
       'navProfile': 'Profil',

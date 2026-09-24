@@ -12,6 +12,32 @@ class AuthFailure implements Exception {
   String toString() => message;
 }
 
+/// Google or Apple, both via `signInWithOAuth` on the same Supabase client.
+enum AuthProvider {
+  google,
+  apple;
+
+  String get label => switch (this) {
+    AuthProvider.google => 'Google',
+    AuthProvider.apple => 'Apple',
+  };
+}
+
+/// The provider is switched off in the Supabase dashboard.
+///
+/// [provider] is null when the failure comes back on the redirect URL and
+/// the app no longer knows which button was pressed.
+class AuthProviderUnavailable implements Exception {
+  const AuthProviderUnavailable([this.provider]);
+
+  final AuthProvider? provider;
+}
+
+/// The system browser did not open, so the OAuth page never started.
+class AuthBrowserLaunchFailed implements Exception {
+  const AuthBrowserLaunchFailed();
+}
+
 /// Outcome of [AuthRepository.signUp].
 ///
 /// When email confirmation is on, Supabase returns a user but no session.
@@ -35,12 +61,24 @@ abstract class AuthRepository {
     String? displayName,
   });
 
-  /// Confirm signup (or email OTP) with the 6-digit code from the mail.
+  /// Confirm signup, email OTP, or a magic-link code.
   /// Creates a session so the existing auth redirect can enter the app.
   Future<Profile> verifyEmailOtp({
     required String email,
     required String token,
   });
+
+  /// Email magic link. The session arrives later, from the link or from
+  /// [verifyEmailOtp], on the same `auth.uid()` as password sign-in.
+  Future<void> sendMagicLink({required String email});
+
+  /// Opens Google or Apple. The session arrives on [authState] after the
+  /// redirect; this method only starts the browser flow.
+  Future<void> signInWithProvider(AuthProvider provider);
+
+  /// Deep-link or provider failures that are not thrown to the button.
+  /// [authState] itself does not emit errors.
+  Stream<Object> authFailures();
 
   Future<void> signOut();
   Future<void> updateLocale(String locale);

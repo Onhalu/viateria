@@ -1,39 +1,73 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../config/auth_redirect.dart';
 import '../domain/challenge_photos.dart';
 import '../models/models.dart';
+import 'auth_identity.dart';
 import 'challenge_mapping.dart';
 import 'repositories.dart';
 
 class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this._client);
+  SupabaseAuthRepository(this._client) {
+    _authSubscription = _client.auth.onAuthStateChange.listen(
+      (event) {
+        if (_profiles.isClosed) return;
+        _profiles.add(_mapUser(event.session?.user));
+      },
+      onError: (Object error, StackTrace stack) {
+        final failure = _failureFrom(error);
+        if (failure != null && !_failures.isClosed) {
+          _failures.add(failure);
+        }
+      },
+    );
+  }
 
   final SupabaseClient _client;
+  final _profiles = StreamController<Profile?>.broadcast();
+  final _failures = StreamController<Object>.broadcast();
+  late final StreamSubscription<AuthState> _authSubscription;
 
   Profile? _mapUser(User? user) {
     if (user == null) return null;
-    final meta = user.userMetadata ?? {};
+    final meta = user.userMetadata;
     return Profile(
       id: user.id,
       email: user.email,
-      displayName: meta['display_name'] as String?,
-      locale: (meta['locale'] as String?) ?? 'cs',
+      displayName: displayNameFromMetadata(meta),
+      locale: localeFromMetadata(meta),
     );
+  }
+
+  Object? _failureFrom(Object error) {
+    if (error is AuthProviderUnavailable || error is AuthBrowserLaunchFailed) {
+      return error;
+    }
+    if (error is AuthException) {
+      if (authProviderDisabled(code: error.code, message: error.message)) {
+        return const AuthProviderUnavailable();
+      }
+      if (error.message.isNotEmpty) return AuthFailure(error.message);
+    }
+    if (error is AuthFailure) return error;
+    return null;
   }
 
   @override
   Profile? get currentUser => _mapUser(_client.auth.currentUser);
 
   @override
-  Stream<Profile?> authState() {
-    return _client.auth.onAuthStateChange.map(
-      (event) => _mapUser(event.session?.user),
-    );
-  }
+  Stream<Profile?> authState() => _profiles.stream;
+
+  @override
+  Stream<Object> authFailures() => _failures.stream;
 
   Never _rethrowAuth(Object error, StackTrace stack) {
     if (error is AuthException && error.message.isNotEmpty) {
@@ -101,7 +135,7 @@ class SupabaseAuthRepository implements AuthRepository {
     required String token,
   }) async {
     AuthException? lastAuth;
-    for (final type in [OtpType.signup, OtpType.email]) {
+    for (final type in [OtpType.magiclink, OtpType.signup, OtpType.email]) {
       try {
         final result = await _client.auth.verifyOTP(
           email: email,
@@ -121,6 +155,56 @@ class SupabaseAuthRepository implements AuthRepository {
       throw AuthFailure(lastAuth.message);
     }
     throw const AuthFailure('Could not verify the email code');
+  }
+
+  @override
+  Future<void> sendMagicLink({required String email}) async {
+    try {
+      await _client.auth.signInWithOtp(
+        email: email,
+        emailRedirectTo: AuthRedirect.forCurrentPlatform(),
+        shouldCreateUser: true,
+      );
+    } catch (error, stack) {
+      _rethrowAuth(error, stack);
+    }
+  }
+
+  @override
+  Future<void> signInWithProvider(AuthProvider provider) async {
+    try {
+      final launched = await _client.auth.signInWithOAuth(
+        switch (provider) {
+          AuthProvider.google => OAuthProvider.google,
+          AuthProvider.apple => OAuthProvider.apple,
+        },
+        redirectTo: AuthRedirect.forCurrentPlatform(),
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+        scopes: provider == AuthProvider.apple ? 'name email' : null,
+      );
+      if (!launched) throw const AuthBrowserLaunchFailed();
+    } on AuthProviderUnavailable {
+      rethrow;
+    } on AuthBrowserLaunchFailed {
+      rethrow;
+    } on AuthException catch (error, stack) {
+      if (authProviderDisabled(code: error.code, message: error.message)) {
+        Error.throwWithStackTrace(AuthProviderUnavailable(provider), stack);
+      }
+      _rethrowAuth(error, stack);
+    } on PlatformException catch (_, stack) {
+      Error.throwWithStackTrace(const AuthBrowserLaunchFailed(), stack);
+    }
+  }
+
+  /// Cancels the auth listener. The running app keeps the repository for
+  /// the process lifetime; tests can call this.
+  Future<void> dispose() async {
+    await _authSubscription.cancel();
+    await _profiles.close();
+    await _failures.close();
   }
 
   @override

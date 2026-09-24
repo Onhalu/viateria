@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import '../domain/photo_verify.dart';
@@ -37,6 +38,19 @@ class UnconfiguredAuth implements AuthRepository {
   }) {
     throw StateError('Supabase is not configured');
   }
+
+  @override
+  Future<void> sendMagicLink({required String email}) {
+    throw StateError('Supabase is not configured');
+  }
+
+  @override
+  Future<void> signInWithProvider(AuthProvider provider) {
+    throw StateError('Supabase is not configured');
+  }
+
+  @override
+  Stream<Object> authFailures() => const Stream<Object>.empty();
 
   @override
   Future<void> updateLocale(String locale) async {}

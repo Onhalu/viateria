@@ -119,6 +119,27 @@ Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, optional `FAPI_WEBHOO
 
 Storage bucket: `waypoint-photos` (`{user_id}/{challenge_id}/{waypoint_id}/{uuid}.jpg`).
 
+### Auth
+
+One Supabase client (`Supabase.initialize` in `lib/main.dart`). `auth.uid()` is the user for `profiles`, `purchases`, `challenge_progress`, `waypoint_progress`, and photo uploads. The app does not call anonymous sign-in, and it never ships the `service_role` key.
+
+There is no legacy anonymous user to merge. Visited map places and the last-opened challenge were device-local (`SharedPreferences`). The first signed-in account adopts that snapshot; each later account on the same device keeps its own copy, keyed by `auth.uid()`.
+
+**Signed out.** The router sends every shell route to `/auth`. That gate was already there: published challenges, waypoints, and promos are `authenticated`-only in RLS, so the catalog cannot load without a session. `public.places` is readable by `anon`, but the map UI lives inside the signed-in shell, so it is not browsed while signed out. Verify, purchases, and profile stay on `auth.uid()`.
+
+**Signed in.** Email + password, email magic link (or the 6-digit code), Google, and Apple all create the same kind of session. Logout is on the profile screen. If Google or Apple is not enabled in the Supabase dashboard yet, that button shows a clear error and email sign-in still works.
+
+OAuth uses PKCE (`FlutterAuthClientOptions.authFlowType`, the supabase_flutter 2.17 default). The SDK's deep-link observer exchanges the `code`; the app does not call `getSessionFromUrl` itself.
+
+| Platform | `redirectTo` the app sends |
+| --- | --- |
+| iOS and Android | `com.viateria.viateria://login-callback` |
+| Web | Current origin, query and fragment stripped. Production: `https://viateria.limitlessdreams.cz/` |
+
+Google Cloud and Apple Developer do **not** get the app deep link. They get Supabase's provider callback: `https://yzmbxxgesnbsqygzgdky.supabase.co/auth/v1/callback`.
+
+Dashboard checklist (providers, redirect URLs, Google web client, Apple Services ID) is in the pull request for this change. Apply `supabase/migrations/0010_oauth_profile_name.sql` so a Google or Apple name is copied onto `profiles.display_name` at signup. That column is display-only; RLS is unchanged.
+
 ### FAPI
 
 1. Create two sales forms in FAPI (digital diploma, medal + diploma). Do not invent URLs in the repo — paste each public form-page URL into `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` when ready. A null/empty URL disables that pay CTA.

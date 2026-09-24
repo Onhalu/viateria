@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -7,8 +9,9 @@ import '../../data/repositories.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../theme/brand_assets.dart';
+import '../../theme/brand_colors.dart';
 
-enum _AuthStep { signIn, register, confirmEmail }
+enum _AuthStep { signIn, register, confirmEmail, magicLink }
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -25,9 +28,26 @@ class _AuthScreenState extends State<AuthScreen> {
   _AuthStep _step = _AuthStep.signIn;
   bool _busy = false;
   String? _error;
+  StreamSubscription<Object>? _authFailures;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _authFailures ??= context.read<AppServices>().auth.authFailures().listen((
+      error,
+    ) {
+      if (!mounted) return;
+      final strings = context.read<LocaleController>().strings;
+      setState(() {
+        _busy = false;
+        _error = _messageFor(error, strings);
+      });
+    });
+  }
 
   @override
   void dispose() {
+    unawaited(_authFailures?.cancel());
     _email.dispose();
     _password.dispose();
     _name.dispose();
@@ -43,11 +63,15 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
-  String _messageFor(Object error, String fallback) {
-    if (error is AuthFailure && error.message.isNotEmpty) {
-      return error.message;
+  String _messageFor(Object error, AppStrings strings) {
+    if (error is AuthProviderUnavailable) {
+      final provider = error.provider;
+      if (provider == null) return strings.authProviderUnavailableGeneric;
+      return strings.authProviderUnavailable(provider.label);
     }
-    return fallback;
+    if (error is AuthBrowserLaunchFailed) return strings.authBrowserFailed;
+    if (error is AuthFailure && error.message.isNotEmpty) return error.message;
+    return strings.errorGeneric;
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -60,7 +84,7 @@ class _AuthScreenState extends State<AuthScreen> {
       await action();
     } catch (error) {
       if (mounted) {
-        setState(() => _error = _messageFor(error, strings.errorGeneric));
+        setState(() => _error = _messageFor(error, strings));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -71,7 +95,9 @@ class _AuthScreenState extends State<AuthScreen> {
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = context.read<LocaleController>().strings.errorGeneric);
+      setState(
+        () => _error = context.read<LocaleController>().strings.errorGeneric,
+      );
       return;
     }
     await _run(() async {
@@ -132,6 +158,30 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
+  Future<void> _sendMagicLink() async {
+    final strings = context.read<LocaleController>().strings;
+    final email = _email.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _error = strings.errorGeneric);
+      return;
+    }
+    await _run(() async {
+      await context.read<AppServices>().auth.sendMagicLink(email: email);
+      if (!mounted) return;
+      _otp.clear();
+      setState(() {
+        _step = _AuthStep.magicLink;
+        _error = null;
+      });
+    });
+  }
+
+  Future<void> _oauth(AuthProvider provider) async {
+    await _run(() async {
+      await context.read<AppServices>().auth.signInWithProvider(provider);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
@@ -147,9 +197,12 @@ class _AuthScreenState extends State<AuthScreen> {
             if (_step != _AuthStep.signIn) ...[
               const SizedBox(height: 8),
               Text(
-                _step == _AuthStep.register
-                    ? strings.registerTitle
-                    : strings.confirmEmailTitle,
+                switch (_step) {
+                  _AuthStep.register => strings.registerTitle,
+                  _AuthStep.confirmEmail => strings.confirmEmailTitle,
+                  _AuthStep.magicLink => strings.magicLinkSentTitle,
+                  _AuthStep.signIn => '',
+                },
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
@@ -160,6 +213,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 12),
               Text(
                 _error!,
+                key: const Key('auth-error'),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
@@ -233,6 +287,21 @@ class _AuthScreenState extends State<AuthScreen> {
             onSubmitted: (_) => _verifyOtp(),
           ),
         ];
+      case _AuthStep.magicLink:
+        return [
+          Text(strings.magicLinkSentBody),
+          const SizedBox(height: 16),
+          TextField(
+            key: const Key('auth-otp'),
+            controller: _otp,
+            decoration: InputDecoration(labelText: strings.otpCode),
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            maxLength: 8,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onSubmitted: (_) => _verifyOtp(),
+          ),
+        ];
     }
   }
 
@@ -244,6 +313,12 @@ class _AuthScreenState extends State<AuthScreen> {
             onPressed: _busy ? null : _signIn,
             child: _busyChild(strings.signIn),
           ),
+          TextButton(
+            key: const Key('auth-magic-link'),
+            onPressed: _busy ? null : _sendMagicLink,
+            child: Text(strings.sendMagicLink),
+          ),
+          ..._providers(strings),
           TextButton(
             key: const Key('auth-open-register'),
             onPressed: _busy ? null : () => _goTo(_AuthStep.register),
@@ -257,6 +332,7 @@ class _AuthScreenState extends State<AuthScreen> {
             onPressed: _busy ? null : _register,
             child: _busyChild(strings.signUp),
           ),
+          ..._providers(strings),
           TextButton(
             key: const Key('auth-back-sign-in'),
             onPressed: _busy ? null : () => _goTo(_AuthStep.signIn),
@@ -281,7 +357,51 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Text(strings.backToSignIn),
           ),
         ];
+      case _AuthStep.magicLink:
+        return [
+          FilledButton(
+            key: const Key('auth-verify-otp'),
+            onPressed: _busy ? null : _verifyOtp,
+            child: _busyChild(strings.verifyOtp),
+          ),
+          TextButton(
+            onPressed: _busy ? null : () => _goTo(_AuthStep.signIn),
+            child: Text(strings.backToSignIn),
+          ),
+        ];
     }
+  }
+
+  List<Widget> _providers(AppStrings strings) {
+    return [
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          const Expanded(child: Divider(color: BrandColors.beige)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              strings.authOrDivider,
+              style: const TextStyle(color: BrandColors.bark),
+            ),
+          ),
+          const Expanded(child: Divider(color: BrandColors.beige)),
+        ],
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton(
+        key: const Key('auth-google'),
+        onPressed: _busy ? null : () => _oauth(AuthProvider.google),
+        child: Text(strings.continueWithGoogle),
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        key: const Key('auth-apple'),
+        onPressed: _busy ? null : () => _oauth(AuthProvider.apple),
+        icon: const Icon(Icons.apple),
+        label: Text(strings.continueWithApple),
+      ),
+    ];
   }
 
   Widget _busyChild(String label) {

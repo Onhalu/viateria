@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/unconfigured.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
@@ -102,5 +103,93 @@ void main() {
     expect(find.byKey(const Key('auth-display-name')), findsNothing);
     expect(find.text(strings.signIn), findsOneWidget);
     expect(find.text(strings.registerAction), findsOneWidget);
+  });
+
+  testWidgets('sign-in offers email, magic link, Google, and Apple', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    final auth = MemoryAuth();
+    await tester.pumpWidget(wrapAuth(auth: auth));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('auth-google')), findsOneWidget);
+    expect(find.byKey(const Key('auth-apple')), findsOneWidget);
+    expect(find.byIcon(Icons.apple), findsOneWidget);
+    expect(find.text(strings.continueWithGoogle), findsOneWidget);
+    expect(find.text(strings.continueWithApple), findsOneWidget);
+    expect(find.text(strings.sendMagicLink), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('auth-google')));
+    await tester.pumpAndSettle();
+    expect(auth.providers, [AuthProvider.google]);
+    expect(find.byKey(const Key('auth-error')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('auth-apple')));
+    await tester.pumpAndSettle();
+    expect(auth.providers, [AuthProvider.google, AuthProvider.apple]);
+  });
+
+  testWidgets('register offers Google and Apple on the same session API', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    await tester.pumpWidget(wrapAuth());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('auth-open-register')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.continueWithGoogle), findsOneWidget);
+    expect(find.text(strings.continueWithApple), findsOneWidget);
+    expect(find.byIcon(Icons.apple), findsOneWidget);
+  });
+
+  testWidgets('disabled Google provider shows a clear Czech error', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    await tester.pumpWidget(
+      wrapAuth(auth: MemoryAuth(unavailableProviders: true)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('auth-google')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(strings.authProviderUnavailable('Google')),
+      findsOneWidget,
+    );
+    expect(find.text(strings.errorGeneric), findsNothing);
+    expect(find.byKey(const Key('auth-email')), findsOneWidget);
+  });
+
+  testWidgets('magic link asks the user to check email', (tester) async {
+    final strings = AppStrings('cs');
+    final auth = MemoryAuth();
+    await tester.pumpWidget(wrapAuth(auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('auth-email')), 'ada@example.com');
+    await tester.tap(find.byKey(const Key('auth-magic-link')));
+    await tester.pumpAndSettle();
+
+    expect(auth.magicLinks, ['ada@example.com']);
+    expect(find.text(strings.magicLinkSentTitle), findsOneWidget);
+    expect(find.text(strings.magicLinkSentBody), findsOneWidget);
+    expect(find.byKey(const Key('auth-otp')), findsOneWidget);
+    expect(find.text(strings.errorGeneric), findsNothing);
+  });
+
+  testWidgets('oauth callback failure is shown without a crash', (tester) async {
+    final strings = AppStrings('cs');
+    final auth = MemoryAuth();
+    await tester.pumpWidget(wrapAuth(auth: auth));
+    await tester.pumpAndSettle();
+
+    auth.emitFailure(const AuthProviderUnavailable());
+    await tester.pump();
+
+    expect(find.text(strings.authProviderUnavailableGeneric), findsOneWidget);
   });
 }

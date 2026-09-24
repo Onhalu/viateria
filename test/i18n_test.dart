@@ -102,6 +102,23 @@ void main() {
     expect(AppStrings('de').showMore, 'Mehr');
   });
 
+  test('auth provider copy names Google and Apple', () {
+    expect(
+      AppStrings('cs').authProviderUnavailable('Google'),
+      'Přihlášení přes Google zatím není zapnuté. Použijte e-mail.',
+    );
+    expect(
+      AppStrings('cs').continueWithApple,
+      'Pokračovat přes Apple',
+    );
+    expect(AppStrings('en').sendMagicLink, 'Email me a sign-in link');
+    expect(AppStrings('de').authOrDivider, 'oder');
+    expect(
+      AppStrings('cs').authProviderUnavailableGeneric,
+      'Tento způsob přihlášení zatím není zapnutý. Použijte e-mail.',
+    );
+  });
+
   test('challenge photo gallery copy is localized', () {
     expect(AppStrings('cs').challengePhotosTitle, 'Fotky z výzvy');
     expect(AppStrings('en').challengePhotosTitle, 'Challenge photos');
