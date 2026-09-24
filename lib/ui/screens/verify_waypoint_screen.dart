@@ -15,6 +15,7 @@ import '../../l10n/locale_controller.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
 import '../../map/place_query.dart';
+import '../widgets/place_presentation.dart';
 
 class VerifyWaypointScreen extends StatefulWidget {
   const VerifyWaypointScreen({
@@ -284,11 +285,15 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     await services.verifiedPlaces.addAll(ids);
   }
 
+  Place? get _shownPlace => widget.place ?? _catalogPlace;
+
   String? get _placeDescription {
-    final text = (widget.place ?? _catalogPlace)?.description?.trim();
+    final text = _shownPlace?.description?.trim();
     if (text == null || text.isEmpty) return null;
     return text;
   }
+
+  double? get _placeElevation => _shownPlace?.elevationM;
 
   @override
   Widget build(BuildContext context) {
@@ -300,10 +305,21 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_placeElevation != null) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: PlaceMetaChip(
+                  key: const Key('verify-place-elevation'),
+                  label: strings.formatElevationM(_placeElevation!),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             if (_placeDescription != null) ...[
-              Text(
-                _placeDescription!,
-                key: const Key('verify-place-description'),
+              PlaceDescriptionText(
+                text: _placeDescription!,
+                textKey: const Key('verify-place-description'),
+                maxLines: 3,
               ),
               const SizedBox(height: 12),
             ],

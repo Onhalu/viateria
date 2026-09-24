@@ -184,6 +184,8 @@ class AppStrings {
     'completedChallengesEmpty',
     'challengePhotosTitle',
     'challengePhotosEmpty',
+    'showMore',
+    'showLess',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -359,6 +361,8 @@ class AppStrings {
   String get completedChallengesEmpty => t('completedChallengesEmpty');
   String get challengePhotosTitle => t('challengePhotosTitle');
   String get challengePhotosEmpty => t('challengePhotosEmpty');
+  String get showMore => t('showMore');
+  String get showLess => t('showLess');
 
   String difficultyLabel(String name) => t(name);
 
@@ -372,6 +376,17 @@ class AppStrings {
   }
 
   String monumentCount(int n) => '$n ${monumentNoun(n)}';
+
+  /// Metres from `places.elevation_m`, with a space before `m`.
+  /// Whole numbers drop the fraction. Czech and German use a decimal comma.
+  String formatElevationM(double meters) {
+    final rounded = meters.round();
+    final whole = (meters - rounded).abs() < 0.05;
+    final raw = whole ? '$rounded' : meters.toStringAsFixed(1);
+    final useComma = locale == 'cs' || locale == 'de';
+    final n = useComma ? raw.replaceAll('.', ',') : raw;
+    return '$n m';
+  }
 
   String formatDistanceKm(double km) {
     final useComma = locale == 'cs' || locale == 'de';
@@ -570,6 +585,8 @@ class AppStrings {
       'completedChallengesEmpty': 'No completed challenges yet.',
       'challengePhotosTitle': 'Challenge photos',
       'challengePhotosEmpty': 'No photos yet. Be the first to verify a place.',
+      'showMore': 'More',
+      'showLess': 'Less',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -756,6 +773,8 @@ class AppStrings {
       'completedChallengesEmpty': 'Zatím žádná dokončená výzva.',
       'challengePhotosTitle': 'Fotky z výzvy',
       'challengePhotosEmpty': 'Zatím žádná fotka. Ověř místo jako první.',
+      'showMore': 'Více',
+      'showLess': 'Méně',
     },
     'de': {
       'appName': 'VANDERY',
@@ -941,6 +960,8 @@ class AppStrings {
       'completedChallengesEmpty': 'Noch keine abgeschlossene Challenge.',
       'challengePhotosTitle': 'Challenge-Fotos',
       'challengePhotosEmpty': 'Noch keine Fotos. Sei der Erste.',
+      'showMore': 'Mehr',
+      'showLess': 'Weniger',
     },
   };
 }

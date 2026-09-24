@@ -5,6 +5,7 @@ import '../../map/place.dart';
 import '../../map/place_category.dart';
 import '../../map/place_query.dart';
 import 'map_chrome.dart';
+import 'place_presentation.dart';
 
 class MapFilterSelection {
   const MapFilterSelection({
@@ -219,30 +220,37 @@ class PlaceDetailSheet extends StatelessWidget {
               style: TextStyle(
                 color: MapPalette.forest,
                 fontSize: titleSize,
+                height: 1.25,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              strings.t(place.category.l10nKey),
-              style: const TextStyle(color: MapPalette.bark, fontSize: 14),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                PlaceMetaChip(label: strings.t(place.category.l10nKey)),
+                if (place.elevationM != null)
+                  PlaceMetaChip(
+                    key: const Key('map-poi-sheet-elevation'),
+                    label: strings.formatElevationM(place.elevationM!),
+                  ),
+                if (km != null)
+                  PlaceMetaChip(label: strings.formatDistanceKm(km)),
+              ],
             ),
             if (place.description != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                place.description!,
-                key: const Key('map-poi-sheet-description'),
-                style: const TextStyle(color: MapPalette.bark, fontSize: 13),
+              const SizedBox(height: 8),
+              PlaceDescriptionText(
+                text: place.description!,
+                textKey: const Key('map-poi-sheet-description'),
+                toggleKey: const Key('map-poi-sheet-description-toggle'),
+                maxLines: 4,
+                moreLabel: strings.showMore,
+                lessLabel: strings.showLess,
               ),
             ],
-            if (km != null) ...[
-              const SizedBox(height: 2),
-              Text(
-                strings.formatDistanceKm(km),
-                style: const TextStyle(color: MapPalette.bark, fontSize: 13),
-              ),
-            ],
-            SizedBox(height: compact ? 12 : 20),
+            SizedBox(height: compact ? 12 : 16),
             Row(
               children: [
                 Expanded(
@@ -319,55 +327,89 @@ class PlaceListPanel extends StatelessWidget {
                 final km = userLocation == null
                     ? null
                     : distanceKm(userLocation!, place.location);
-                return ListTile(
-                  key: Key('map-poi-list-${place.id}'),
-                  dense: compact,
-                  minVerticalPadding: compact ? 8 : 14,
-                  leading: ColorFiltered(
-                    colorFilter: const ColorFilter.mode(
-                      MapPalette.forest,
-                      BlendMode.srcIn,
-                    ),
-                    child: Image.asset(
-                      'assets/map/icons/${place.iconName}@2x.png',
-                      width: MapChromeSizes.listRowIcon,
-                      height: MapChromeSizes.listRowIcon,
-                      filterQuality: FilterQuality.medium,
-                    ),
-                  ),
-                  title: Text(
-                    place.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: MapPalette.forest,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        [
-                          strings.t(place.category.l10nKey),
-                          if (km != null) strings.formatDistanceKm(km),
-                        ].join(' · '),
-                        style: const TextStyle(color: MapPalette.bark),
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: Key('map-poi-list-${place.id}'),
+                    onTap: () => onSelect(place),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        compact ? 8 : 12,
+                        12,
+                        compact ? 8 : 12,
                       ),
-                      if (place.description != null)
-                        Text(
-                          place.description!,
-                          key: Key('map-poi-list-description-${place.id}'),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: MapPalette.bark),
-                        ),
-                    ],
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          PlaceCategoryIcon(iconName: place.iconName),
+                          const SizedBox(width: PlaceRowMetrics.titleGap),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                top: PlaceRowMetrics.titleNudge,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    place.name,
+                                    style: PlaceRowMetrics.titleStyle,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      PlaceMetaChip(
+                                        label: strings.t(
+                                          place.category.l10nKey,
+                                        ),
+                                      ),
+                                      if (place.elevationM != null)
+                                        PlaceMetaChip(
+                                          key: Key(
+                                            'map-poi-list-elevation-${place.id}',
+                                          ),
+                                          label: strings.formatElevationM(
+                                            place.elevationM!,
+                                          ),
+                                        ),
+                                      if (km != null)
+                                        PlaceMetaChip(
+                                          label: strings.formatDistanceKm(km),
+                                        ),
+                                    ],
+                                  ),
+                                  if (place.description != null) ...[
+                                    const SizedBox(height: 4),
+                                    PlaceDescriptionText(
+                                      text: place.description!,
+                                      textKey: Key(
+                                        'map-poi-list-description-${place.id}',
+                                      ),
+                                      maxLines: 3,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Padding(
+                            padding: EdgeInsets.only(
+                              top: PlaceRowMetrics.titleNudge,
+                            ),
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: MapPalette.bark,
+                              size: 24,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: MapPalette.bark,
-                    size: MapChromeSizes.listRowIcon,
-                  ),
-                  onTap: () => onSelect(place),
                 );
               },
             ),

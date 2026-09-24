@@ -22,6 +22,7 @@ import '../widgets/challenge_photos_section.dart';
 import '../widgets/challenge_reward_section.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/map_chrome.dart';
+import '../widgets/place_presentation.dart';
 import '../widgets/route_planner_panel.dart';
 import 'payment_checkout_screen.dart';
 
@@ -89,12 +90,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     placesFuture.then(
       (places) {
         if (!mounted) return;
-        _catalogPlaces = places;
+        setState(() => _catalogPlaces = places);
         if (_start != null) _refreshRoutes();
       },
       onError: (_, _) {
         if (!mounted) return;
-        _catalogPlaces ??= const [];
+        if (_catalogPlaces != null) return;
+        setState(() => _catalogPlaces = const []);
       },
     );
   }
@@ -147,6 +149,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       if (waypoint.id == _destinationId) return waypoint;
     }
     return waypoints.first;
+  }
+
+  double? _catalogElevationAt(double lat, double lng) {
+    final places = _catalogPlaces;
+    if (places == null) return null;
+    return catalogPlaceAt(places, lat, lng)?.elevationM;
   }
 
   /// Uses `places.elevation_m` when a catalog row shares this coordinate.
@@ -452,6 +460,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     onDestinationChanged: _setDestination,
                     loading: _routing,
                     startLabel: _start?.label,
+                    startElevationM: _start == null
+                        ? null
+                        : _catalogElevationAt(_start!.lat, _start!.lng),
+                    destinationElevationM: destination == null
+                        ? null
+                        : _catalogElevationAt(destination.lat, destination.lng),
                     errorMessage: _routeError,
                     hike: _routes?.hike,
                     bike: _routes?.bike,
@@ -777,36 +791,76 @@ class _WaypointTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = waypoint.copyFor(locale);
+    final subtitle = completed
+        ? strings.verified
+        : unlocked
+        ? (copy.hint ?? copy.description)
+        : strings.storyLockedHint;
     return Card(
       color: selected ? Theme.of(context).colorScheme.secondaryContainer : null,
-      child: ListTile(
+      child: InkWell(
         onTap: onSelect,
-        leading: ColorFiltered(
-          colorFilter: const ColorFilter.mode(
-            BrandColors.forest,
-            BlendMode.srcIn,
-          ),
-          child: Image.asset(
-            'assets/map/icons/${waypoint.category.iconName}@2x.png',
-            key: Key('waypoint-category-${waypoint.id}'),
-            width: MapChromeSizes.listRowIcon,
-            height: MapChromeSizes.listRowIcon,
-            filterQuality: FilterQuality.medium,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PlaceCategoryIcon(
+                iconName: waypoint.category.iconName,
+                iconKey: Key('waypoint-category-${waypoint.id}'),
+                semanticLabel: strings.t(waypoint.category.l10nKey),
+              ),
+              const SizedBox(width: PlaceRowMetrics.titleGap),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: PlaceRowMetrics.titleNudge,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(copy.title, style: PlaceRowMetrics.titleStyle),
+                      if (subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BrandColors.bark,
+                            fontSize: 13,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: PlaceRowMetrics.titleNudge),
+                child: completed
+                    ? const Icon(Icons.check_circle, color: BrandColors.success)
+                    : unlocked
+                    ? FilledButton(
+                        onPressed: onVerify,
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(0, 40),
+                        ),
+                        child: Text(strings.verify),
+                      )
+                    : const Icon(Icons.lock_outline),
+              ),
+            ],
           ),
         ),
-        title: Text(copy.title),
-        subtitle: Text(
-          completed
-              ? strings.verified
-              : unlocked
-              ? (copy.hint ?? copy.description)
-              : strings.storyLockedHint,
-        ),
-        trailing: completed
-            ? const Icon(Icons.check_circle, color: BrandColors.success)
-            : unlocked
-            ? FilledButton(onPressed: onVerify, child: Text(strings.verify))
-            : const Icon(Icons.lock_outline),
       ),
     );
   }

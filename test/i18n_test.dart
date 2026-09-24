@@ -89,6 +89,19 @@ void main() {
     );
   });
 
+  test('elevation metres keep a space and a locale decimal mark', () {
+    expect(AppStrings('cs').formatElevationM(365), '365 m');
+    expect(AppStrings('en').formatElevationM(365), '365 m');
+    expect(AppStrings('de').formatElevationM(12), '12 m');
+    expect(AppStrings('cs').formatElevationM(412.5), '412,5 m');
+    expect(AppStrings('de').formatElevationM(412.5), '412,5 m');
+    expect(AppStrings('en').formatElevationM(412.5), '412.5 m');
+    expect(AppStrings('cs').showMore, 'Více');
+    expect(AppStrings('cs').showLess, 'Méně');
+    expect(AppStrings('en').showMore, 'More');
+    expect(AppStrings('de').showMore, 'Mehr');
+  });
+
   test('challenge photo gallery copy is localized', () {
     expect(AppStrings('cs').challengePhotosTitle, 'Fotky z výzvy');
     expect(AppStrings('en').challengePhotosTitle, 'Challenge photos');
