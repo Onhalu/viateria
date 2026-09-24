@@ -11,7 +11,9 @@ import 'package:viateria/data/verified_places.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
+import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/verify_waypoint_screen.dart';
 
@@ -107,6 +109,32 @@ void main() {
 
     expect(find.byKey(const Key('home')), findsOneWidget);
     expect(verified.contains('karlstejn'), isTrue);
+  });
+
+  testWidgets('verify sheet shows the catalog description', (tester) async {
+    const place = Place(
+      id: 'roda',
+      name: 'Rodrigova skála',
+      category: PlaceCategory.nature,
+      location: GeoPoint(49.667, 15.321),
+      description: 'Název skály připomíná Foglara.',
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'cs'),
+          ),
+          Provider.value(value: _services()),
+        ],
+        child: const MaterialApp(
+          home: VerifyWaypointScreen(placeId: 'roda', place: place),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('verify-place-description')), findsOneWidget);
+    expect(find.text(place.description!), findsOneWidget);
   });
 
   testWidgets('GPS outside radius falls back to live photo', (tester) async {

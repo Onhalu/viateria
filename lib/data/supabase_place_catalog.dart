@@ -55,7 +55,7 @@ Future<List<dynamic>> _fetchPlacesPage(
 ) async {
   final rows = await client
       .from('places')
-      .select('id, name, category, lat, lng')
+      .select('id, name, category, lat, lng, description, elevation_m')
       .order('id')
       .range(offset, offset + pageSize - 1);
   return rows;
@@ -78,8 +78,8 @@ Place? placeFromRow(Object? raw) {
   final id = row['id']?.toString().trim() ?? '';
   final name = row['name']?.toString().trim() ?? '';
   if (id.isEmpty || name.isEmpty) return null;
-  final latitude = _asDouble(row['lat']);
-  final longitude = _asDouble(row['lng']);
+  final latitude = optionalPlaceElevation(row['lat']);
+  final longitude = optionalPlaceElevation(row['lng']);
   if (latitude == null || longitude == null) return null;
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
     return null;
@@ -89,13 +89,9 @@ Place? placeFromRow(Object? raw) {
     name: name,
     category: PlaceCategory.fromWire(row['category']?.toString() ?? ''),
     location: GeoPoint(latitude, longitude),
+    description: optionalPlaceText(row['description']),
+    elevationM: optionalPlaceElevation(row['elevation_m']),
   );
-}
-
-double? _asDouble(Object? value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value.trim());
-  return null;
 }
 
 /// Production catalog: Supabase `public.places`, unless the asset flag is set

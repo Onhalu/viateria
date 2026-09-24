@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:latlong2/latlong.dart';
 
+import '../map/place.dart';
 import '../models/models.dart';
 
 class RouteEndpoint {
@@ -11,6 +12,7 @@ class RouteEndpoint {
     required this.label,
     this.elevationM,
     this.waypointId,
+    this.catalogElevation = false,
   });
 
   factory RouteEndpoint.fromWaypoint(Waypoint waypoint, String locale) {
@@ -23,11 +25,39 @@ class RouteEndpoint {
     );
   }
 
+  factory RouteEndpoint.fromPlace(Place place) {
+    return RouteEndpoint(
+      lat: place.location.latitude,
+      lng: place.location.longitude,
+      label: place.name,
+      elevationM: place.elevationM,
+      catalogElevation: place.elevationM != null,
+    );
+  }
+
   final double lat;
   final double lng;
   final String label;
   final double? elevationM;
   final String? waypointId;
+
+  /// True when [elevationM] comes from `public.places.elevation_m`.
+  /// Waypoint heights stay false so a stored 0 does not replace the path profile.
+  final bool catalogElevation;
+
+  /// Prefer a catalog height when [elevationM] is known. Null leaves this
+  /// endpoint on the existing elevation lookup.
+  RouteEndpoint withCatalogElevation(double? elevationM) {
+    if (elevationM == null) return this;
+    return RouteEndpoint(
+      lat: lat,
+      lng: lng,
+      label: label,
+      elevationM: elevationM,
+      waypointId: waypointId,
+      catalogElevation: true,
+    );
+  }
 
   LatLng get latLng => LatLng(lat, lng);
 

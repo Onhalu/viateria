@@ -4,6 +4,8 @@ import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/route_planner.dart';
+import 'package:viateria/map/place.dart';
+import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
 
 import 'helpers/fakes.dart';
@@ -256,6 +258,88 @@ void main() {
       throwsA(isA<RoutingFailure>()),
     );
   });
+
+  test(
+    'catalog elevation replaces path-end heights and is ignored when null',
+    () async {
+      final plain =
+          await DualRoutePlanner(
+            routing: MemoryRoutingClient(),
+            elevation: MemoryElevationLookup(),
+          ).plan(
+            start: const RouteEndpoint(lat: 50.08, lng: 14.42, label: 'A'),
+            end: const RouteEndpoint(
+              lat: 50.09,
+              lng: 14.43,
+              label: 'B',
+              elevationM: 5000,
+            ),
+          );
+      final catalogued =
+          await DualRoutePlanner(
+            routing: MemoryRoutingClient(),
+            elevation: MemoryElevationLookup(),
+          ).plan(
+            start: const RouteEndpoint(
+              lat: 50.08,
+              lng: 14.42,
+              label: 'A',
+              elevationM: 50,
+              catalogElevation: true,
+            ),
+            end: const RouteEndpoint(
+              lat: 50.09,
+              lng: 14.43,
+              label: 'B',
+              elevationM: 5000,
+              catalogElevation: true,
+            ),
+          );
+      expect(plain.hike!.elevationGainM, isNotNull);
+      expect(
+        catalogued.hike!.elevationGainM,
+        greaterThan(plain.hike!.elevationGainM!),
+      );
+      expect(
+        catalogued.bike!.elevationGainM,
+        greaterThan(plain.bike!.elevationGainM!),
+      );
+
+      final failed =
+          await DualRoutePlanner(
+            routing: MemoryRoutingClient(),
+            elevation: MemoryElevationLookup(fail: true),
+          ).plan(
+            start: RouteEndpoint.fromPlace(
+              const Place(
+                id: 'a',
+                name: 'A',
+                category: PlaceCategory.city,
+                location: GeoPoint(50.08, 14.42),
+                elevationM: 100,
+              ),
+            ),
+            end: RouteEndpoint.fromPlace(
+              const Place(
+                id: 'b',
+                name: 'B',
+                category: PlaceCategory.nature,
+                location: GeoPoint(50.09, 14.43),
+                elevationM: 400,
+              ),
+            ),
+          );
+      expect(failed.hike!.elevationGainM, isNull);
+      expect(
+        const RouteEndpoint(
+          lat: 1,
+          lng: 2,
+          label: 'x',
+        ).withCatalogElevation(null).catalogElevation,
+        isFalse,
+      );
+    },
+  );
 
   test('DualRoutePlanner is empty when start and end match', () async {
     const point = RouteEndpoint(lat: 50.08, lng: 14.42, label: 'A');

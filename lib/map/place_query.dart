@@ -260,6 +260,19 @@ List<Place> sortForList(List<Place> places, GeoPoint? userLocation) {
   return copy;
 }
 
+/// Catalog place at the exact same coordinate, for elevation only.
+///
+/// This is not challenge membership. [placeIdsInChallenge] still decides
+/// which places belong to a challenge.
+Place? catalogPlaceAt(Iterable<Place> places, double lat, double lng) {
+  for (final place in places) {
+    if (place.location.latitude == lat && place.location.longitude == lng) {
+      return place;
+    }
+  }
+  return null;
+}
+
 Map<String, dynamic> featureCollectionOf(
   Iterable<Place> places, {
   String? selectedId,

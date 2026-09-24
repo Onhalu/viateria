@@ -42,6 +42,8 @@ class Place {
     required this.name,
     required this.category,
     required this.location,
+    this.description,
+    this.elevationM,
   });
 
   final String id;
@@ -49,6 +51,13 @@ class Place {
   final PlaceCategory category;
   final GeoPoint location;
 
+  /// `public.places.description`. Null when the column is null or blank.
+  final String? description;
+
+  /// `public.places.elevation_m` in metres. Null when the column is null.
+  final double? elevationM;
+
+  /// Marker and list icon. Always [PlaceCategory.iconName] for [category].
   String get iconName => category.iconName;
 
   Map<String, dynamic> toFeature({
@@ -99,6 +108,8 @@ class Place {
         (coords[1] as num).toDouble(),
         (coords[0] as num).toDouble(),
       ),
+      description: optionalPlaceText(props['description']),
+      elevationM: optionalPlaceElevation(props['elevation_m']),
     );
   }
 
@@ -113,6 +124,24 @@ class Place {
     }
     return places;
   }
+}
+
+/// Blank descriptions are treated as missing.
+String? optionalPlaceText(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  if (text.isEmpty) return null;
+  return text;
+}
+
+/// Finite metres, or null when the value is missing or not a number.
+double? optionalPlaceElevation(Object? value) {
+  final parsed = switch (value) {
+    num number => number.toDouble(),
+    String text => double.tryParse(text.trim()),
+    _ => null,
+  };
+  if (parsed == null || parsed.isNaN || parsed.isInfinite) return null;
+  return parsed;
 }
 
 /// Tint state: verified > inChallenge > outside.

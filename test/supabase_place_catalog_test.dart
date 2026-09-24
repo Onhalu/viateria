@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/supabase_place_catalog.dart';
+import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/map/place_category.dart';
 
@@ -16,7 +17,8 @@ void main() {
         'category': 'nature',
         'lat': 49.6671092,
         'lng': 15.3209444,
-        'description': 'ignored by the Place model',
+        'description': '  Název skály připomíná Foglara.  ',
+        'elevation_m': 365,
         'region': 'cz',
         'place_type': 'zajímavost',
       },
@@ -26,6 +28,9 @@ void main() {
         'category': 'unknown-wire',
         'lat': '49.96',
         'lng': 16,
+        'description': '   ',
+        'elevation_m': null,
+        'place_type': 'rohledna',
       },
       {'id': '', 'name': 'Missing id', 'category': 'city', 'lat': 1, 'lng': 2},
       {
@@ -44,8 +49,42 @@ void main() {
     expect(places.first.category, PlaceCategory.nature);
     expect(places.first.location.latitude, 49.6671092);
     expect(places.first.location.longitude, 15.3209444);
+    expect(places.first.description, 'Název skály připomíná Foglara.');
+    expect(places.first.elevationM, 365);
+    expect(places.first.iconName, 'nature');
     expect(places.last.category, PlaceCategory.historical);
+    expect(places.last.iconName, 'historical');
+    expect(places.last.description, isNull);
+    expect(places.last.elevationM, isNull);
     expect(places.last.location.latitude, 49.96);
+  });
+
+  test('icons follow category only, including the historical fallback', () {
+    final mismatched = Place.fromFeature({
+      'type': 'Feature',
+      'properties': {
+        'id': 'x',
+        'name': 'X',
+        'category': 'technical',
+        'icon': 'city',
+        'place_type': 'hrad',
+      },
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [14.0, 50.0],
+      },
+    });
+    expect(mismatched, isNotNull);
+    expect(mismatched!.iconName, 'technical');
+    expect(mismatched.toFeature()['properties']['icon'], 'technical');
+
+    for (final category in PlaceCategory.values) {
+      expect(category.iconName, category.name);
+    }
+    expect(PlaceCategory.fromWire('').iconName, 'historical');
+    expect(PlaceCategory.fromWire('castle').iconName, 'historical');
+    expect(optionalPlaceElevation('558'), 558);
+    expect(optionalPlaceElevation(double.nan), isNull);
   });
 
   test('paging stops on a short page and dedupes ids', () async {

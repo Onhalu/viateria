@@ -395,13 +395,23 @@ class DualRoutePlanner {
       heights = null;
     }
     final osmPoints = [start.toWaypoint(), end.toWaypoint(sortOrder: 1)];
+    final hikeHeights = _catalogEnds(
+      heights?.sublist(0, hikeSamples.length),
+      start: start,
+      end: end,
+    );
+    final bikeHeights = _catalogEnds(
+      heights?.sublist(hikeSamples.length),
+      start: start,
+      end: end,
+    );
     return DualRoutePlan(
       hike: hikePath == null
           ? null
           : _summary(
               mode: TravelMode.hike,
               path: hikePath,
-              heights: heights?.sublist(0, hikeSamples.length),
+              heights: hikeHeights,
               osmPoints: osmPoints,
             ),
       bike: bikePath == null
@@ -409,7 +419,7 @@ class DualRoutePlanner {
           : _summary(
               mode: TravelMode.bike,
               path: bikePath,
-              heights: heights?.sublist(hikeSamples.length),
+              heights: bikeHeights,
               osmPoints: osmPoints,
             ),
       hikeLine: hikePath?.points ?? const [],
@@ -427,6 +437,18 @@ class DualRoutePlanner {
     } catch (_) {
       return null;
     }
+  }
+
+  List<double?>? _catalogEnds(
+    List<double?>? heights, {
+    required RouteEndpoint start,
+    required RouteEndpoint end,
+  }) {
+    return applyCatalogEndpointElevations(
+      heights,
+      startElevationM: start.catalogElevation ? start.elevationM : null,
+      endElevationM: end.catalogElevation ? end.elevationM : null,
+    );
   }
 
   RouteSummary _summary({
@@ -499,6 +521,23 @@ List<LatLng> sampleAlongRoute(List<LatLng> line, {int count = 40}) {
     );
   }
   return out;
+}
+
+/// Replaces the first and last sampled heights with catalog elevations when
+/// those ends are known. A null height is left to the existing profile.
+/// Does nothing when [heights] is null — a failed lookup is not replaced by
+/// the two endpoints alone.
+List<double?>? applyCatalogEndpointElevations(
+  List<double?>? heights, {
+  double? startElevationM,
+  double? endElevationM,
+}) {
+  if (heights == null || heights.isEmpty) return heights;
+  if (startElevationM == null && endElevationM == null) return heights;
+  final next = List<double?>.from(heights);
+  if (startElevationM != null) next[0] = startElevationM;
+  if (endElevationM != null) next[next.length - 1] = endElevationM;
+  return next;
 }
 
 /// Gain along sampled heights. Null if the series is unusable — never 0 from
