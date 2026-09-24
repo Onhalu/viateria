@@ -93,6 +93,19 @@ class AppStrings {
     'authProviderUnavailable',
     'authProviderUnavailableGeneric',
     'authBrowserFailed',
+    'forgotPassword',
+    'sendResetLink',
+    'forgotPasswordTitle',
+    'resetEmailSentTitle',
+    'resetEmailSentBody',
+    'setPasswordTitle',
+    'newPassword',
+    'confirmPassword',
+    'savePassword',
+    'passwordMismatch',
+    'passwordTooShort',
+    'showPassword',
+    'hidePassword',
     'navLastChallenge',
     'navMap',
     'navProfile',
@@ -286,6 +299,19 @@ class AppStrings {
   String get authProviderUnavailableGeneric =>
       t('authProviderUnavailableGeneric');
   String get authBrowserFailed => t('authBrowserFailed');
+  String get forgotPassword => t('forgotPassword');
+  String get sendResetLink => t('sendResetLink');
+  String get forgotPasswordTitle => t('forgotPasswordTitle');
+  String get resetEmailSentTitle => t('resetEmailSentTitle');
+  String get resetEmailSentBody => t('resetEmailSentBody');
+  String get setPasswordTitle => t('setPasswordTitle');
+  String get newPassword => t('newPassword');
+  String get confirmPassword => t('confirmPassword');
+  String get savePassword => t('savePassword');
+  String get passwordMismatch => t('passwordMismatch');
+  String get passwordTooShort => t('passwordTooShort');
+  String get showPassword => t('showPassword');
+  String get hidePassword => t('hidePassword');
   String get navLastChallenge => t('navLastChallenge');
   String get navMap => t('navMap');
   String get navProfile => t('navProfile');
@@ -509,6 +535,20 @@ class AppStrings {
       'authProviderUnavailableGeneric':
           'That sign-in method is not switched on yet. Use email.',
       'authBrowserFailed': 'Could not open sign-in. Please try again.',
+      'forgotPassword': 'Forgot password?',
+      'sendResetLink': 'Send link',
+      'forgotPasswordTitle': 'Forgot password',
+      'resetEmailSentTitle': 'Check your email',
+      'resetEmailSentBody':
+          'We sent a link to set a new password. Open it on this device.',
+      'setPasswordTitle': 'New password',
+      'newPassword': 'New password',
+      'confirmPassword': 'Password again',
+      'savePassword': 'Save password',
+      'passwordMismatch': 'Passwords do not match.',
+      'passwordTooShort': 'Password must be at least 6 characters.',
+      'showPassword': 'Show password',
+      'hidePassword': 'Hide password',
       'navLastChallenge': 'Last challenge',
       'navMap': 'Map',
       'navProfile': 'Profile',
@@ -709,6 +749,19 @@ class AppStrings {
       'authProviderUnavailableGeneric':
           'Tento způsob přihlášení zatím není zapnutý. Použijte e-mail.',
       'authBrowserFailed': 'Přihlášení se nepodařilo otevřít. Zkuste to znovu.',
+      'forgotPassword': 'Zapomenuté heslo?',
+      'sendResetLink': 'Poslat odkaz',
+      'forgotPasswordTitle': 'Zapomenuté heslo',
+      'resetEmailSentTitle': 'Zkontrolujte e-mail',
+      'resetEmailSentBody': 'Poslali jsme vám odkaz pro nastavení nového hesla. Otevřete ho na tomto zařízení.',
+      'setPasswordTitle': 'Nové heslo',
+      'newPassword': 'Nové heslo',
+      'confirmPassword': 'Heslo znovu',
+      'savePassword': 'Uložit heslo',
+      'passwordMismatch': 'Hesla se neshodují.',
+      'passwordTooShort': 'Heslo musí mít alespoň 6 znaků.',
+      'showPassword': 'Zobrazit heslo',
+      'hidePassword': 'Skrýt heslo',
       'navLastChallenge': 'Poslední výzva',
       'navMap': 'Mapa',
       'navProfile': 'Profil',
@@ -910,6 +963,19 @@ class AppStrings {
           'Diese Anmeldung ist noch nicht aktiv. Nutzen Sie E-Mail.',
       'authBrowserFailed':
           'Die Anmeldung konnte nicht geöffnet werden. Bitte erneut versuchen.',
+      'forgotPassword': 'Passwort vergessen?',
+      'sendResetLink': 'Link senden',
+      'forgotPasswordTitle': 'Passwort vergessen',
+      'resetEmailSentTitle': 'E-Mail prüfen',
+      'resetEmailSentBody': 'Wir haben einen Link zum Festlegen eines neuen Passworts gesendet. Öffnen Sie ihn auf diesem Gerät.',
+      'setPasswordTitle': 'Neues Passwort',
+      'newPassword': 'Neues Passwort',
+      'confirmPassword': 'Passwort wiederholen',
+      'savePassword': 'Passwort speichern',
+      'passwordMismatch': 'Die Passwörter stimmen nicht überein.',
+      'passwordTooShort': 'Das Passwort muss mindestens 6 Zeichen haben.',
+      'showPassword': 'Passwort anzeigen',
+      'hidePassword': 'Passwort verbergen',
       'navLastChallenge': 'Letzte Challenge',
       'navMap': 'Karte',
       'navProfile': 'Profil',

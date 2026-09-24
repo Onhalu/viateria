@@ -138,6 +138,8 @@ OAuth uses PKCE (`FlutterAuthClientOptions.authFlowType`, the supabase_flutter 2
 
 Google Cloud and Apple Developer do **not** get the app deep link. They get Supabase's provider callback: `https://yzmbxxgesnbsqygzgdky.supabase.co/auth/v1/callback`.
 
+**Forgot password.** Sign-in emails a reset link with `resetPasswordForEmail`. `redirectTo` is the same value as OAuth and magic link (the table above). Those URLs already belong in Supabase Auth → Additional Redirect URLs; recovery does not add another one. Opening the link starts a recovery session and the app stays on the new-password screen until `updateUser` saves the password.
+
 Dashboard checklist (providers, redirect URLs, Google web client, Apple Services ID) is in the pull request for this change. Apply `supabase/migrations/0010_oauth_profile_name.sql` so a Google or Apple name is copied onto `profiles.display_name` at signup. That column is display-only; RLS is unchanged.
 
 ### FAPI

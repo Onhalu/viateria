@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// OAuth and magic-link redirects for the single Supabase client.
+/// OAuth, magic-link, and password-reset redirects for the single Supabase client.
 ///
 /// Mobile uses a custom scheme. `supabase_flutter` (PKCE, the default)
 /// watches that URL via its deep-link observer and exchanges the `code`

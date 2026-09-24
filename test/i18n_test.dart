@@ -114,6 +114,10 @@ void main() {
       AppStrings('cs').authProviderUnavailableGeneric,
       'Tento způsob přihlášení zatím není zapnutý. Použijte e-mail.',
     );
+    expect(AppStrings('cs').forgotPassword, 'Zapomenuté heslo?');
+    expect(AppStrings('cs').resetEmailSentTitle, 'Zkontrolujte e-mail');
+    expect(AppStrings('cs').savePassword, 'Uložit heslo');
+    expect(AppStrings('cs').passwordMismatch, 'Hesla se neshodují.');
   });
 
   test('challenge photo gallery copy is localized', () {

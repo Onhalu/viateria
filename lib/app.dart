@@ -45,8 +45,13 @@ class _ViateriaAppState extends State<ViateriaApp> {
         // required a session. Map rows in public.places are anon-readable,
         // but the map lives here, so signed-out browsing stays on /auth.
         // Verify, purchases, profile, and photo upload use auth.uid().
+        // A password-recovery link also creates a session. Hold /auth until
+        // the new password is saved.
         final signedIn = services.auth.currentUser != null;
         final onAuth = state.matchedLocation == '/auth';
+        if (services.auth.pendingPasswordRecovery) {
+          return onAuth ? null : '/auth';
+        }
         if (!signedIn && !onAuth) return '/auth';
         if (signedIn && (onAuth || state.matchedLocation == '/setup')) {
           return '/';
@@ -172,5 +177,6 @@ class AppStringsLocales {
 class _AuthRefresh extends ChangeNotifier {
   _AuthRefresh(AppServices services) {
     services.auth.authState().listen((_) => notifyListeners());
+    services.auth.passwordRecovery().listen((_) => notifyListeners());
   }
 }

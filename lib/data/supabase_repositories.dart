@@ -17,6 +17,13 @@ class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository(this._client) {
     _authSubscription = _client.auth.onAuthStateChange.listen(
       (event) {
+        // Set the flag before the profile emit so a router refresh in the
+        // same turn still sees the recovery session.
+        if (event.event == AuthChangeEvent.passwordRecovery) {
+          _setPasswordRecovery(true);
+        } else if (event.event == AuthChangeEvent.signedOut) {
+          _setPasswordRecovery(false);
+        }
         if (_profiles.isClosed) return;
         _profiles.add(_mapUser(event.session?.user));
       },
@@ -32,7 +39,15 @@ class SupabaseAuthRepository implements AuthRepository {
   final SupabaseClient _client;
   final _profiles = StreamController<Profile?>.broadcast();
   final _failures = StreamController<Object>.broadcast();
+  final _recovery = StreamController<bool>.broadcast();
   late final StreamSubscription<AuthState> _authSubscription;
+  bool _pendingPasswordRecovery = false;
+
+  void _setPasswordRecovery(bool pending) {
+    if (_pendingPasswordRecovery == pending) return;
+    _pendingPasswordRecovery = pending;
+    if (!_recovery.isClosed) _recovery.add(pending);
+  }
 
   Profile? _mapUser(User? user) {
     if (user == null) return null;
@@ -67,6 +82,12 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Stream<Object> authFailures() => _failures.stream;
+
+  @override
+  bool get pendingPasswordRecovery => _pendingPasswordRecovery;
+
+  @override
+  Stream<bool> passwordRecovery() => _recovery.stream;
 
   Never _rethrowAuth(Object error, StackTrace stack) {
     if (error is AuthException && error.message.isNotEmpty) {
@@ -170,6 +191,28 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> sendPasswordReset({required String email}) async {
+    try {
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: AuthRedirect.forCurrentPlatform(),
+      );
+    } catch (error, stack) {
+      _rethrowAuth(error, stack);
+    }
+  }
+
+  @override
+  Future<void> updatePassword(String password) async {
+    try {
+      await _client.auth.updateUser(UserAttributes(password: password));
+      _setPasswordRecovery(false);
+    } catch (error, stack) {
+      _rethrowAuth(error, stack);
+    }
+  }
+
+  @override
   Future<void> signInWithProvider(AuthProvider provider) async {
     try {
       final launched = await _client.auth.signInWithOAuth(
@@ -204,6 +247,7 @@ class SupabaseAuthRepository implements AuthRepository {
     await _authSubscription.cancel();
     await _profiles.close();
     await _failures.close();
+    await _recovery.close();
   }
 
   @override

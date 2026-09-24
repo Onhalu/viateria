@@ -23,8 +23,12 @@ class MemoryAuth implements AuthRepository {
   final bool unavailableProviders;
   final providers = <AuthProvider>[];
   final magicLinks = <String>[];
+  final resetEmails = <String>[];
+  final updatedPasswords = <String>[];
   final _controller = StreamController<Profile?>.broadcast();
   final _failures = StreamController<Object>.broadcast();
+  final _recovery = StreamController<bool>.broadcast();
+  bool _pendingPasswordRecovery = false;
 
   @override
   Stream<Profile?> authState() => _controller.stream;
@@ -104,8 +108,46 @@ class MemoryAuth implements AuthRepository {
   void emitFailure(Object error) => _failures.add(error);
 
   @override
+  bool get pendingPasswordRecovery => _pendingPasswordRecovery;
+
+  @override
+  Stream<bool> passwordRecovery() => _recovery.stream;
+
+  /// Marks the current session as a password-recovery deep link.
+  void beginPasswordRecovery() {
+    _pendingPasswordRecovery = true;
+    _user ??= const Profile(
+      id: 'user-1',
+      email: 'ada@example.com',
+      locale: 'cs',
+    );
+    _recovery.add(true);
+    _controller.add(_user);
+  }
+
+  @override
+  Future<void> sendPasswordReset({required String email}) async {
+    resetEmails.add(email);
+  }
+
+  @override
+  Future<void> updatePassword(String password) async {
+    updatedPasswords.add(password);
+    _pendingPasswordRecovery = false;
+    _recovery.add(false);
+    _user ??= const Profile(
+      id: 'user-1',
+      email: 'ada@example.com',
+      locale: 'cs',
+    );
+    _controller.add(_user);
+  }
+
+  @override
   Future<void> signOut() async {
     _user = null;
+    _pendingPasswordRecovery = false;
+    _recovery.add(false);
     _controller.add(null);
   }
 

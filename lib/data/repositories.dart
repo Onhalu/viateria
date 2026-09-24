@@ -80,6 +80,22 @@ abstract class AuthRepository {
   /// [authState] itself does not emit errors.
   Stream<Object> authFailures();
 
+  /// True from a password-recovery session until [updatePassword] succeeds.
+  ///
+  /// A recovery link creates a real session, so the router must read this
+  /// and keep `/auth` open for the new-password step.
+  bool get pendingPasswordRecovery;
+
+  /// Emits `true` when a recovery session starts and `false` when it ends.
+  Stream<bool> passwordRecovery();
+
+  /// Emails a reset link. [redirectTo] matches OAuth and magic link
+  /// (`AuthRedirect.forCurrentPlatform`).
+  Future<void> sendPasswordReset({required String email});
+
+  /// Sets a new password on the current recovery session.
+  Future<void> updatePassword(String password);
+
   Future<void> signOut();
   Future<void> updateLocale(String locale);
 }

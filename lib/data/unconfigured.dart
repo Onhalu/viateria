@@ -53,6 +53,22 @@ class UnconfiguredAuth implements AuthRepository {
   Stream<Object> authFailures() => const Stream<Object>.empty();
 
   @override
+  bool get pendingPasswordRecovery => false;
+
+  @override
+  Stream<bool> passwordRecovery() => const Stream<bool>.empty();
+
+  @override
+  Future<void> sendPasswordReset({required String email}) {
+    throw StateError('Supabase is not configured');
+  }
+
+  @override
+  Future<void> updatePassword(String password) {
+    throw StateError('Supabase is not configured');
+  }
+
+  @override
   Future<void> updateLocale(String locale) async {}
 }
 
