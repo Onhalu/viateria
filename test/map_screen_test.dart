@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/data/verified_places.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/places_map_screen.dart';
@@ -39,10 +42,7 @@ AppServices _services({VerifiedPlacesStore? verifiedPlaces}) {
   );
 }
 
-Widget _mapApp({
-  MemoryPlaceCatalog? catalog,
-  VerifiedPlacesStore? verifiedPlaces,
-}) {
+Widget _mapApp({PlaceCatalog? catalog, VerifiedPlacesStore? verifiedPlaces}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -149,10 +149,45 @@ void main() {
     expect(find.text(strings.viewList), findsOneWidget);
     expect(find.text(strings.catalogLoadError), findsOneWidget);
     expect(find.text(strings.retry), findsOneWidget);
+    expect(find.byKey(const Key('map-places-empty')), findsNothing);
     expect(find.byKey(const Key('map-osm-attribution')), findsOneWidget);
     expect(find.byKey(const Key('map-locate-fab')), findsOneWidget);
     expect(find.byKey(const Key('map-zoom-in')), findsOneWidget);
     expect(find.byKey(const Key('map-zoom-out')), findsOneWidget);
+  });
+
+  testWidgets('empty catalog shows the empty state, not the error banner', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    await tester.pumpWidget(_mapApp(catalog: const MemoryPlaceCatalog([])));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('map-places-empty')), findsOneWidget);
+    expect(find.text(strings.placesEmpty), findsOneWidget);
+    expect(find.text(strings.catalogLoadError), findsNothing);
+    expect(find.text(strings.monumentCount(0)), findsOneWidget);
+  });
+
+  testWidgets('catalog load shows a loading label until places arrive', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    final gate = Completer<void>();
+    final catalog = _GatedPlaceCatalog(samplePlaces(), gate.future);
+    await tester.pumpWidget(_mapApp(catalog: catalog));
+    await tester.pump();
+
+    expect(find.byKey(const Key('map-catalog-loading')), findsOneWidget);
+    expect(find.text(strings.placesLoading), findsOneWidget);
+    expect(find.text(strings.monumentCount(3)), findsNothing);
+
+    gate.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('map-catalog-loading')), findsNothing);
+    expect(find.text(strings.monumentCount(3)), findsOneWidget);
   });
 
   testWidgets('Mapa tab chrome uses Batch A cream/forest sizes', (
@@ -404,4 +439,17 @@ void main() {
       findsNothing,
     );
   });
+}
+
+class _GatedPlaceCatalog implements PlaceCatalog {
+  _GatedPlaceCatalog(this.places, this.gate);
+
+  final List<Place> places;
+  final Future<void> gate;
+
+  @override
+  Future<List<Place>> fetchAll() async {
+    await gate;
+    return List<Place>.from(places);
+  }
 }

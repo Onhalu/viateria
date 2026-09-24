@@ -67,7 +67,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     super.initState();
     final services = context.read<AppServices>();
     _controller = PlacesMapController(
-      catalog: widget.catalog ?? const AssetPlaceCatalog(),
+      catalog: widget.catalog ?? services.places,
       deviceLocation: services.deviceLocation,
     );
     _controller.addListener(_onController);
@@ -258,6 +258,38 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                       ),
                     ],
                   ),
+                  if (_controller.loading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: MapGlass(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Text(
+                            strings.placesLoading,
+                            key: const Key('map-catalog-loading'),
+                            style: const TextStyle(color: MapPalette.forest),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (!_controller.loading &&
+                      !_controller.hasError &&
+                      _controller.all.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: MapGlass(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: Text(
+                            strings.placesEmpty,
+                            key: const Key('map-places-empty'),
+                            style: const TextStyle(color: MapPalette.forest),
+                          ),
+                        ),
+                      ),
+                    ),
                   if (_controller.hasError)
                     _Banner(
                       message: strings.catalogLoadError,

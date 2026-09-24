@@ -74,7 +74,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     }
     final placeId = widget.placeId;
     if (placeId == null) return null;
-    final catalog = widget.places ?? const AssetPlaceCatalog();
+    final catalog = widget.places ?? context.read<AppServices>().places;
     final places = await catalog.fetchAll();
     for (final place in places) {
       if (place.id == placeId) return place.location;
@@ -253,7 +253,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     if (widget.place != null) ids.add(widget.place!.id);
     if (widget.isChallengeStop && _target != null) {
       try {
-        final catalog = widget.places ?? const AssetPlaceCatalog();
+        final catalog = widget.places ?? services.places;
         final places = await catalog.fetchAll();
         ids.addAll(
           placeIdsInChallenge(

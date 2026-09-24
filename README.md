@@ -46,6 +46,7 @@ The compile-time names are the same as local `.env` / `String.fromEnvironment` i
 | `SUPABASE_ANON_KEY` | **Yes** | `AppConfig.fromEnvironment` |
 | `MAP_STYLE_URL` | No (falls back to OpenFreeMap Liberty) | `MapStyleConfig.styleUrlFromEnv` |
 | `STRIPE_PUBLISHABLE_KEY` | No (unused by pay CTAs) | `AppConfig.fromEnvironment` |
+| `USE_ASSET_PLACE_CATALOG` | No (default reads `public.places`) | `AppConfig.fromEnvironment` |
 
 ### 1. GitHub Actions secrets
 
@@ -98,13 +99,13 @@ flutter run --dart-define-from-file=.env
 
 **TODO before release:** set a production style URL. Do **not** use `https://tile.openstreetmap.org` as a raster CDN.
 
-Code: `lib/map/map_style_config.dart`. Mock památky (167 places) live in `assets/map/pois.geojson`.
+Code: `lib/map/map_style_config.dart`. Map places load from Supabase `public.places` (`SupabasePlaceCatalog`). `assets/map/pois.geojson` stays in the repo for tests and for an explicit `USE_ASSET_PLACE_CATALOG=true` dart-define; it is not the production default.
 
 ### Supabase
 
 Apply `supabase/migrations/0001_init.sql` (CLI: `supabase db push` or the SQL editor).
 
-Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `purchases`.
+Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `purchases`, `places`.
 
 Author content in the dashboard. Only `status = published` is visible. Publish translations for `cs`, `en`, and `de`.
 
