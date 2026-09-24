@@ -9,6 +9,9 @@ import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/map/place.dart';
+import 'package:viateria/map/place_catalog.dart';
+import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
@@ -22,6 +25,7 @@ AppServices buildServices({
   DeviceLocation? deviceLocation,
   ElevationLookup? elevation,
   ExternalUrlOpener? openUrl,
+  PlaceCatalog? places,
 }) {
   final open = sampleOpenChallenge();
   return AppServices(
@@ -53,6 +57,7 @@ AppServices buildServices({
     deviceLocation: deviceLocation ?? MemoryDeviceLocation(),
     elevation: elevation ?? MemoryElevationLookup(),
     openUrl: openUrl,
+    places: places,
   );
 }
 
@@ -500,5 +505,82 @@ void main() {
     expect(find.widgetWithText(FilledButton, strings.verify), findsNWidgets(2));
     expect(find.byIcon(Icons.check_circle), findsNothing);
     expect(find.byIcon(Icons.lock_outline), findsNothing);
+
+    final startRect = tester.getRect(
+      find.byKey(const Key('waypoint-category-ow-1')),
+    );
+    final startTitle = tester.getRect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.byKey(const Key('waypoint-category-ow-1')),
+              matching: find.byType(Row),
+            )
+            .first,
+        matching: find.text('Start'),
+      ),
+    );
+    expect(startTitle.left - startRect.right, closeTo(17, 1));
+    expect((startRect.center.dy - startTitle.center.dy).abs(), lessThan(1.5));
+
+    final ridgeRect = tester.getRect(
+      find.byKey(const Key('waypoint-category-ow-2')),
+    );
+    final ridgeTitle = tester.getRect(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.byKey(const Key('waypoint-category-ow-2')),
+              matching: find.byType(Row),
+            )
+            .first,
+        matching: find.text('Ridge'),
+      ),
+    );
+    expect(ridgeRect.width, startRect.width);
+    expect(ridgeRect.height, startRect.height);
+    expect((ridgeRect.center.dy - ridgeTitle.center.dy).abs(), lessThan(1.5));
+  });
+
+  testWidgets('planner ends show catalog elevation in metres', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final services = buildServices(
+      places: const MemoryPlaceCatalog([
+        Place(
+          id: 'start-hill',
+          name: 'Start hill',
+          category: PlaceCategory.city,
+          location: GeoPoint(50.08, 14.42),
+          elevationM: 365,
+        ),
+        Place(
+          id: 'ridge-hill',
+          name: 'Ridge hill',
+          category: PlaceCategory.nature,
+          location: GeoPoint(50.09, 14.43),
+          elevationM: 412.5,
+        ),
+      ]),
+    );
+    await tester.pumpWidget(wrapScreen(services));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('route-destination-elevation')),
+      findsOneWidget,
+    );
+    expect(find.text('365 m'), findsOneWidget);
+    expect(find.byKey(const Key('route-start-elevation')), findsNothing);
+
+    await openStartList(tester);
+    await tester.tap(find.byKey(const Key('route-start-place-ow-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('route-start-elevation')), findsOneWidget);
+    expect(find.text('412,5 m'), findsOneWidget);
+    expect(find.text('365 m'), findsOneWidget);
   });
 }

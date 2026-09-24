@@ -211,9 +211,19 @@ void main() {
     expect(find.text(described.description!), findsOneWidget);
     expect(find.text(strings.detailPlaceholder), findsNothing);
     expect(find.text(strings.t(PlaceCategory.nature.l10nKey)), findsOneWidget);
+    expect(find.byKey(const Key('map-poi-sheet-elevation')), findsOneWidget);
+    expect(find.text('365 m'), findsOneWidget);
+    final sheetDescription = tester.widget<Text>(
+      find.byKey(const Key('map-poi-sheet-description')),
+    );
+    expect(sheetDescription.maxLines, 4);
+    expect(sheetDescription.overflow, TextOverflow.ellipsis);
+    expect(sheetDescription.style?.color, BrandColors.bark);
+    expect(sheetDescription.style?.fontSize, 14);
 
     await pumpSheet(blank);
     expect(find.byKey(const Key('map-poi-sheet-description')), findsNothing);
+    expect(find.byKey(const Key('map-poi-sheet-elevation')), findsNothing);
     expect(find.text(strings.detailPlaceholder), findsNothing);
 
     await tester.pumpWidget(
@@ -236,6 +246,19 @@ void main() {
       find.byKey(const Key('map-poi-list-description-blank')),
       findsNothing,
     );
+    expect(
+      find.byKey(const Key('map-poi-list-elevation-roda')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('map-poi-list-elevation-blank')), findsNothing);
+    expect(find.text('365 m'), findsOneWidget);
+    final listDescription = tester.widget<Text>(
+      find.byKey(const Key('map-poi-list-description-roda')),
+    );
+    expect(listDescription.maxLines, 3);
+    expect(listDescription.style?.color, BrandColors.bark);
+    _expectIconAlignedWithTitle(tester, 'map-poi-list-roda', described.name);
+    _expectIconAlignedWithTitle(tester, 'map-poi-list-blank', blank.name);
     final icon = tester.widget<Image>(
       find.descendant(
         of: find.byKey(const Key('map-poi-list-roda')),
@@ -532,4 +555,20 @@ class _GatedPlaceCatalog implements PlaceCatalog {
     await gate;
     return List<Place>.from(places);
   }
+}
+
+void _expectIconAlignedWithTitle(
+  WidgetTester tester,
+  String rowKey,
+  String title,
+) {
+  final icon = tester.getRect(
+    find.descendant(of: find.byKey(Key(rowKey)), matching: find.byType(Image)),
+  );
+  final name = tester.getRect(find.text(title));
+  expect(icon.width, MapChromeSizes.listRowIcon);
+  expect(icon.height, MapChromeSizes.listRowIcon);
+  // 5px well inset around the 22px glyph, then a 12px gap to the title.
+  expect(name.left - icon.right, closeTo(17, 1));
+  expect((icon.center.dy - name.center.dy).abs(), lessThan(1.5));
 }

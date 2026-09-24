@@ -15,6 +15,7 @@ import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
+import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/verify_waypoint_screen.dart';
 
 import 'helpers/fakes.dart';
@@ -135,6 +136,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('verify-place-description')), findsOneWidget);
     expect(find.text(place.description!), findsOneWidget);
+    expect(find.byKey(const Key('verify-place-elevation')), findsNothing);
+    final description = tester.widget<Text>(
+      find.byKey(const Key('verify-place-description')),
+    );
+    expect(description.maxLines, 3);
+    expect(description.style?.color, BrandColors.bark);
   });
 
   testWidgets('GPS outside radius falls back to live photo', (tester) async {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/route_planner.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import 'place_presentation.dart';
 
 class RoutePlannerPanel extends StatefulWidget {
   const RoutePlannerPanel({
@@ -20,6 +21,8 @@ class RoutePlannerPanel extends StatefulWidget {
     required this.onDestinationChanged,
     required this.loading,
     this.startLabel,
+    this.startElevationM,
+    this.destinationElevationM,
     this.errorMessage,
     this.hike,
     this.bike,
@@ -42,6 +45,12 @@ class RoutePlannerPanel extends StatefulWidget {
   final ValueChanged<Waypoint> onDestinationChanged;
   final bool loading;
   final String? startLabel;
+
+  /// Catalog `elevation_m` for the chosen start, when a place shares its coordinates.
+  final double? startElevationM;
+
+  /// Catalog `elevation_m` for the destination, when a place shares its coordinates.
+  final double? destinationElevationM;
   final String? errorMessage;
   final RouteSummary? hike;
   final RouteSummary? bike;
@@ -84,10 +93,14 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                   ListTile(
                     key: const Key('route-start-picker'),
                     title: Text(strings.routeStart),
-                    subtitle: Text(
-                      widget.startLabel == null || widget.startLabel!.isEmpty
+                    subtitle: _StartSubtitle(
+                      label:
+                          widget.startLabel == null ||
+                              widget.startLabel!.isEmpty
                           ? strings.routeChoosePlace
                           : widget.startLabel!,
+                      elevationM: widget.startElevationM,
+                      strings: strings,
                     ),
                     trailing: Icon(
                       _listOpen ? Icons.expand_less : Icons.expand_more,
@@ -100,7 +113,11 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                       children: [
                         ListTile(
                           key: const Key('route-start-custom'),
-                          leading: const Icon(Icons.edit_location_alt_outlined),
+                          minLeadingWidth: PlaceRowMetrics.iconBox,
+                          horizontalTitleGap: PlaceRowMetrics.titleGap,
+                          leading: const _SheetIcon(
+                            Icons.edit_location_alt_outlined,
+                          ),
                           title: Text(strings.routeCustomPlace),
                           onTap: () {
                             _closeList();
@@ -109,7 +126,9 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                         ),
                         ListTile(
                           key: const Key('route-use-gps'),
-                          leading: const Icon(Icons.my_location),
+                          minLeadingWidth: PlaceRowMetrics.iconBox,
+                          horizontalTitleGap: PlaceRowMetrics.titleGap,
+                          leading: const _SheetIcon(Icons.my_location),
                           title: Text(strings.routeUseGps),
                           onTap: () {
                             _closeList();
@@ -130,10 +149,18 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
                         for (final waypoint in widget.waypoints)
                           ListTile(
                             key: Key('route-start-place-${waypoint.id}'),
-                            leading: CircleAvatar(
-                              child: Text('${waypoint.sortOrder + 1}'),
+                            minLeadingWidth: PlaceRowMetrics.iconBox,
+                            horizontalTitleGap: PlaceRowMetrics.titleGap,
+                            leading: PlaceCategoryIcon(
+                              iconName: waypoint.category.iconName,
+                              semanticLabel: strings.t(
+                                waypoint.category.l10nKey,
+                              ),
                             ),
-                            title: Text(waypoint.copyFor(widget.locale).title),
+                            title: Text(
+                              waypoint.copyFor(widget.locale).title,
+                              style: PlaceRowMetrics.titleStyle,
+                            ),
                             onTap: () {
                               _closeList();
                               widget.onStartPlacePicked(waypoint);
@@ -176,29 +203,46 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
             const SizedBox(height: 16),
             KeyedSubtree(
               key: const Key('route-destination-place'),
-              child: DropdownButtonFormField<String>(
-                key: ValueKey(widget.destination?.id ?? 'none'),
-                initialValue: widget.destination?.id,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: strings.routeDestination,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-                items: [
-                  for (final waypoint in widget.waypoints)
-                    DropdownMenuItem<String>(
-                      value: waypoint.id,
-                      child: Text(waypoint.copyFor(widget.locale).title),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(widget.destination?.id ?? 'none'),
+                    initialValue: widget.destination?.id,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: strings.routeDestination,
+                      border: const OutlineInputBorder(),
+                      isDense: true,
                     ),
+                    items: [
+                      for (final waypoint in widget.waypoints)
+                        DropdownMenuItem<String>(
+                          value: waypoint.id,
+                          child: Text(waypoint.copyFor(widget.locale).title),
+                        ),
+                    ],
+                    onChanged: (id) {
+                      if (id == null) return;
+                      final match = widget.waypoints.where((w) => w.id == id);
+                      if (match.isNotEmpty) {
+                        widget.onDestinationChanged(match.first);
+                      }
+                    },
+                  ),
+                  if (widget.destinationElevationM != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: PlaceMetaChip(
+                        key: const Key('route-destination-elevation'),
+                        label: strings.formatElevationM(
+                          widget.destinationElevationM!,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-                onChanged: (id) {
-                  if (id == null) return;
-                  final match = widget.waypoints.where((w) => w.id == id);
-                  if (match.isNotEmpty) {
-                    widget.onDestinationChanged(match.first);
-                  }
-                },
               ),
             ),
             const SizedBox(height: 16),
@@ -255,6 +299,51 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SheetIcon extends StatelessWidget {
+  const _SheetIcon(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: PlaceRowMetrics.iconBox,
+      height: PlaceRowMetrics.iconBox,
+      child: Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
+    );
+  }
+}
+
+class _StartSubtitle extends StatelessWidget {
+  const _StartSubtitle({
+    required this.label,
+    required this.elevationM,
+    required this.strings,
+  });
+
+  final String label;
+  final double? elevationM;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final showElevation =
+        elevationM != null && label != strings.routeChoosePlace;
+    if (!showElevation) return Text(label);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        const SizedBox(height: 4),
+        PlaceMetaChip(
+          key: const Key('route-start-elevation'),
+          label: strings.formatElevationM(elevationM!),
+        ),
+      ],
     );
   }
 }
