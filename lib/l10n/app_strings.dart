@@ -79,11 +79,33 @@ class AppStrings {
     'registerAction',
     'registerTitle',
     'backToSignIn',
+    'back',
     'confirmEmailTitle',
     'confirmEmailBody',
     'otpCode',
     'verifyOtp',
     'enterAfterConfirm',
+    'continueWithGoogle',
+    'continueWithApple',
+    'sendMagicLink',
+    'authOrDivider',
+    'magicLinkSentTitle',
+    'magicLinkSentBody',
+    'authProviderUnavailable',
+    'authProviderUnavailableGeneric',
+    'authBrowserFailed',
+    'forgotPassword',
+    'sendResetLink',
+    'forgotPasswordTitle',
+    'resetEmailSentBody',
+    'setPasswordTitle',
+    'newPassword',
+    'confirmPassword',
+    'savePassword',
+    'passwordMismatch',
+    'passwordTooShort',
+    'showPassword',
+    'hidePassword',
     'navLastChallenge',
     'navMap',
     'navProfile',
@@ -261,11 +283,35 @@ class AppStrings {
   String get registerAction => t('registerAction');
   String get registerTitle => t('registerTitle');
   String get backToSignIn => t('backToSignIn');
+  String get back => t('back');
   String get confirmEmailTitle => t('confirmEmailTitle');
   String get confirmEmailBody => t('confirmEmailBody');
   String get otpCode => t('otpCode');
   String get verifyOtp => t('verifyOtp');
   String get enterAfterConfirm => t('enterAfterConfirm');
+  String get continueWithGoogle => t('continueWithGoogle');
+  String get continueWithApple => t('continueWithApple');
+  String get sendMagicLink => t('sendMagicLink');
+  String get authOrDivider => t('authOrDivider');
+  String get magicLinkSentTitle => t('magicLinkSentTitle');
+  String get magicLinkSentBody => t('magicLinkSentBody');
+  String authProviderUnavailable(String provider) =>
+      t('authProviderUnavailable').replaceAll('{provider}', provider);
+  String get authProviderUnavailableGeneric =>
+      t('authProviderUnavailableGeneric');
+  String get authBrowserFailed => t('authBrowserFailed');
+  String get forgotPassword => t('forgotPassword');
+  String get sendResetLink => t('sendResetLink');
+  String get forgotPasswordTitle => t('forgotPasswordTitle');
+  String get resetEmailSentBody => t('resetEmailSentBody');
+  String get setPasswordTitle => t('setPasswordTitle');
+  String get newPassword => t('newPassword');
+  String get confirmPassword => t('confirmPassword');
+  String get savePassword => t('savePassword');
+  String get passwordMismatch => t('passwordMismatch');
+  String get passwordTooShort => t('passwordTooShort');
+  String get showPassword => t('showPassword');
+  String get hidePassword => t('hidePassword');
   String get navLastChallenge => t('navLastChallenge');
   String get navMap => t('navMap');
   String get navProfile => t('navProfile');
@@ -472,11 +518,36 @@ class AppStrings {
       'registerAction': 'Sign up',
       'registerTitle': 'Create account',
       'backToSignIn': 'Back to sign in',
+      'back': 'Back',
       'confirmEmailTitle': 'Confirm your email',
       'confirmEmailBody': 'Open the email we sent and enter the 6-digit code. After you confirm, you can enter the app.',
       'otpCode': '6-digit code',
       'verifyOtp': 'Verify code',
-      'enterAfterConfirm': "I've confirmed — enter the app",
+      'enterAfterConfirm': "I've already verified — sign in",
+      'continueWithGoogle': 'Continue with Google',
+      'continueWithApple': 'Continue with Apple',
+      'sendMagicLink': 'Send a link by email',
+      'authOrDivider': 'or',
+      'magicLinkSentTitle': 'Check your email',
+      'magicLinkSentBody':
+          'Open the link in the email, or enter the code here.',
+      'authProviderUnavailable':
+          'Sign-in with {provider} is not switched on yet. Use email.',
+      'authProviderUnavailableGeneric':
+          'That sign-in method is not switched on yet. Use email.',
+      'authBrowserFailed': 'Could not open sign-in. Please try again.',
+      'forgotPassword': 'Forgot password?',
+      'sendResetLink': 'Send reset link',
+      'forgotPasswordTitle': 'Forgot password',
+      'resetEmailSentBody': 'We sent a link to your email.',
+      'setPasswordTitle': 'New password',
+      'newPassword': 'New password',
+      'confirmPassword': 'Confirm',
+      'savePassword': 'Save',
+      'passwordMismatch': 'Passwords do not match.',
+      'passwordTooShort': 'Password must be at least 6 characters.',
+      'showPassword': 'Show password',
+      'hidePassword': 'Hide password',
       'navLastChallenge': 'Last challenge',
       'navMap': 'Map',
       'navProfile': 'Profile',
@@ -661,11 +732,35 @@ class AppStrings {
       'registerAction': 'Zaregistrovat se',
       'registerTitle': 'Registrace',
       'backToSignIn': 'Zpět k přihlášení',
+      'back': 'Zpět',
       'confirmEmailTitle': 'Potvrďte e-mail',
       'confirmEmailBody': 'Otevřete e-mail a zadejte 6místný kód. Až účet potvrdíte, můžete vstoupit do aplikace.',
       'otpCode': '6místný kód',
-      'verifyOtp': 'Potvrdit kód',
-      'enterAfterConfirm': 'E-mail jsem potvrdil(a) — vstoupit',
+      'verifyOtp': 'Ověřit kód',
+      'enterAfterConfirm': 'Už mám ověřeno — přihlásit',
+      'continueWithGoogle': 'Pokračovat přes Google',
+      'continueWithApple': 'Pokračovat přes Apple',
+      'sendMagicLink': 'Odeslat odkaz e-mailem',
+      'authOrDivider': 'nebo',
+      'magicLinkSentTitle': 'Zkontrolujte e-mail',
+      'magicLinkSentBody': 'Otevřete odkaz v e-mailu, nebo sem zadejte kód.',
+      'authProviderUnavailable':
+          'Přihlášení přes {provider} zatím není zapnuté. Použijte e-mail.',
+      'authProviderUnavailableGeneric':
+          'Tento způsob přihlášení zatím není zapnutý. Použijte e-mail.',
+      'authBrowserFailed': 'Přihlášení se nepodařilo otevřít. Zkuste to znovu.',
+      'forgotPassword': 'Zapomenuté heslo?',
+      'sendResetLink': 'Odeslat odkaz na reset',
+      'forgotPasswordTitle': 'Zapomenuté heslo',
+      'resetEmailSentBody': 'Odkaz jsme poslali na e-mail.',
+      'setPasswordTitle': 'Nové heslo',
+      'newPassword': 'Nové heslo',
+      'confirmPassword': 'Potvrzení',
+      'savePassword': 'Uložit',
+      'passwordMismatch': 'Hesla se neshodují.',
+      'passwordTooShort': 'Heslo musí mít alespoň 6 znaků.',
+      'showPassword': 'Zobrazit heslo',
+      'hidePassword': 'Skrýt heslo',
       'navLastChallenge': 'Poslední výzva',
       'navMap': 'Mapa',
       'navProfile': 'Profil',
@@ -850,11 +945,36 @@ class AppStrings {
       'registerAction': 'Registrieren',
       'registerTitle': 'Konto erstellen',
       'backToSignIn': 'Zurück zur Anmeldung',
+      'back': 'Zurück',
       'confirmEmailTitle': 'E-Mail bestätigen',
       'confirmEmailBody': 'Öffnen Sie die E-Mail und geben Sie den 6-stelligen Code ein. Nach der Bestätigung können Sie die App nutzen.',
       'otpCode': '6-stelliger Code',
-      'verifyOtp': 'Code bestätigen',
-      'enterAfterConfirm': 'Bestätigt — App öffnen',
+      'verifyOtp': 'Code prüfen',
+      'enterAfterConfirm': 'Schon bestätigt — anmelden',
+      'continueWithGoogle': 'Weiter mit Google',
+      'continueWithApple': 'Weiter mit Apple',
+      'sendMagicLink': 'Link per E-Mail senden',
+      'authOrDivider': 'oder',
+      'magicLinkSentTitle': 'E-Mail prüfen',
+      'magicLinkSentBody': 'Öffnen Sie den Link in der E-Mail, oder geben Sie den Code hier ein.',
+      'authProviderUnavailable':
+          'Anmeldung mit {provider} ist noch nicht aktiv. Nutzen Sie E-Mail.',
+      'authProviderUnavailableGeneric':
+          'Diese Anmeldung ist noch nicht aktiv. Nutzen Sie E-Mail.',
+      'authBrowserFailed':
+          'Die Anmeldung konnte nicht geöffnet werden. Bitte erneut versuchen.',
+      'forgotPassword': 'Passwort vergessen?',
+      'sendResetLink': 'Link zum Zurücksetzen senden',
+      'forgotPasswordTitle': 'Passwort vergessen',
+      'resetEmailSentBody': 'Wir haben einen Link an die E-Mail gesendet.',
+      'setPasswordTitle': 'Neues Passwort',
+      'newPassword': 'Neues Passwort',
+      'confirmPassword': 'Bestätigung',
+      'savePassword': 'Speichern',
+      'passwordMismatch': 'Die Passwörter stimmen nicht überein.',
+      'passwordTooShort': 'Das Passwort muss mindestens 6 Zeichen haben.',
+      'showPassword': 'Passwort anzeigen',
+      'hidePassword': 'Passwort verbergen',
       'navLastChallenge': 'Letzte Challenge',
       'navMap': 'Karte',
       'navProfile': 'Profil',

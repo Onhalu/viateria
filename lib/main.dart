@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,17 +21,21 @@ Future<void> main() async {
   final localeController = LocaleController();
   await localeController.load();
   final lastOpened = LastOpenedChallengeStore();
-  await lastOpened.load();
   final verifiedPlaces = VerifiedPlacesStore();
-  await verifiedPlaces.load();
 
   AppServices services;
   if (config.isSupabaseConfigured) {
     await Supabase.initialize(
       url: config.supabaseUrl,
       publishableKey: config.supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
     );
     final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    await verifiedPlaces.bindUser(userId);
+    await lastOpened.bindUser(userId);
     services = AppServices(
       config: config,
       auth: SupabaseAuthRepository(client),
@@ -41,7 +47,13 @@ Future<void> main() async {
       verifiedPlaces: verifiedPlaces,
       places: resolvePlaceCatalog(config: config, client: client),
     );
+    services.auth.authState().listen((profile) {
+      unawaited(verifiedPlaces.bindUser(profile?.id));
+      unawaited(lastOpened.bindUser(profile?.id));
+    });
   } else {
+    await lastOpened.load();
+    await verifiedPlaces.load();
     services = AppServices(
       config: config,
       auth: UnconfiguredAuth(),
