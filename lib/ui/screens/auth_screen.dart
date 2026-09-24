@@ -46,15 +46,92 @@ class _AuthScreenState extends State<AuthScreen> {
   StreamSubscription<Object>? _authFailures;
   StreamSubscription<bool>? _recoverySub;
 
-  static final ButtonStyle _linkStyle = TextButton.styleFrom(
-    foregroundColor: BrandColors.bark,
+  static const _radius = BorderRadius.all(Radius.circular(12));
+  static const _buttonPadding = EdgeInsets.symmetric(
+    horizontal: 20,
+    vertical: 14,
   );
+
+  static final ButtonStyle _linkStyle =
+      TextButton.styleFrom(
+        textStyle: const TextStyle(decoration: TextDecoration.none),
+      ).copyWith(
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) return BrandColors.forest;
+          return BrandColors.bark;
+        }),
+      );
 
   static final ButtonStyle _socialStyle = OutlinedButton.styleFrom(
     backgroundColor: BrandColors.cream,
     foregroundColor: BrandColors.forest,
-    side: const BorderSide(color: BrandColors.forest),
+    side: const BorderSide(color: BrandColors.forest, width: 1),
+    padding: _buttonPadding,
+    minimumSize: const Size.fromHeight(48),
+    shape: const RoundedRectangleBorder(borderRadius: _radius),
   );
+
+  static final ButtonStyle _eyeStyle = ButtonStyle(
+    foregroundColor: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.pressed)) return BrandColors.forest;
+      return BrandColors.bark;
+    }),
+    minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+    tapTargetSize: MaterialTapTargetSize.padded,
+  );
+
+  ThemeData _authTheme(ThemeData base) {
+    final text = base.textTheme.apply(
+      bodyColor: BrandColors.forest,
+      displayColor: BrandColors.forest,
+    );
+    return base.copyWith(
+      scaffoldBackgroundColor: BrandColors.cream,
+      canvasColor: BrandColors.cream,
+      dividerColor: BrandColors.beige,
+      textTheme: text,
+      iconTheme: const IconThemeData(color: BrandColors.forest),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: BrandColors.neutral,
+        labelStyle: TextStyle(color: BrandColors.bark),
+        hintStyle: TextStyle(color: BrandColors.bark),
+        floatingLabelStyle: TextStyle(color: BrandColors.bark),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: _radius,
+          borderSide: BorderSide(color: BrandColors.beige),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: _radius,
+          borderSide: BorderSide(color: BrandColors.forest, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: _radius,
+          borderSide: BorderSide(color: BrandColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: _radius,
+          borderSide: BorderSide(color: BrandColors.error, width: 1.5),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: BrandColors.forest,
+          foregroundColor: BrandColors.onPrimary,
+          disabledBackgroundColor: BrandColors.forest.withValues(alpha: 0.4),
+          disabledForegroundColor: BrandColors.onPrimary,
+          padding: _buttonPadding,
+          minimumSize: const Size.fromHeight(48),
+          shape: const RoundedRectangleBorder(borderRadius: _radius),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(style: _socialStyle),
+      textButtonTheme: TextButtonThemeData(style: _linkStyle),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: BrandColors.onPrimary,
+      ),
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -269,46 +346,49 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
-    return Scaffold(
-      backgroundColor: BrandColors.cream,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const SizedBox(height: 32),
-            const Center(
-              child: BrandLockup(width: BrandAssets.splashLockupWidth),
-            ),
-            if (_step != _AuthStep.signIn) ...[
-              const SizedBox(height: 8),
-              Text(
-                switch (_step) {
-                  _AuthStep.register => strings.registerTitle,
-                  _AuthStep.confirmEmail => strings.confirmEmailTitle,
-                  _AuthStep.magicLink => strings.magicLinkSentTitle,
-                  _AuthStep.forgotPassword => strings.forgotPasswordTitle,
-                  _AuthStep.forgotPasswordSent => strings.resetEmailSentTitle,
-                  _AuthStep.setPassword => strings.setPasswordTitle,
-                  _AuthStep.signIn => '',
-                },
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(color: BrandColors.forest),
+    final title = switch (_step) {
+      _AuthStep.register => strings.registerTitle,
+      _AuthStep.confirmEmail => strings.confirmEmailTitle,
+      _AuthStep.magicLink => strings.magicLinkSentTitle,
+      _AuthStep.forgotPassword => strings.forgotPasswordTitle,
+      _AuthStep.setPassword => strings.setPasswordTitle,
+      _AuthStep.signIn || _AuthStep.forgotPasswordSent => null,
+    };
+    return Theme(
+      data: _authTheme(Theme.of(context)),
+      child: Scaffold(
+        backgroundColor: BrandColors.cream,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              const SizedBox(height: 32),
+              const Center(
+                child: BrandLockup(width: BrandAssets.splashLockupWidth),
               ),
+              if (title != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(color: BrandColors.forest),
+                ),
+              ],
+              const SizedBox(height: 32),
+              ..._fields(strings),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  key: const Key('auth-error'),
+                  style: const TextStyle(color: BrandColors.error),
+                ),
+              ],
+              const SizedBox(height: 24),
+              ..._actions(strings),
             ],
-            const SizedBox(height: 32),
-            ..._fields(strings),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                key: const Key('auth-error'),
-                style: const TextStyle(color: BrandColors.error),
-              ),
-            ],
-            const SizedBox(height: 24),
-            ..._actions(strings),
-          ],
+          ),
         ),
       ),
     );
@@ -326,6 +406,7 @@ class _AuthScreenState extends State<AuthScreen> {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email],
           ),
+          const SizedBox(height: 12),
           _passwordField(
             fieldKey: const Key('auth-password'),
             toggleKey: const Key('auth-toggle-password'),
@@ -349,6 +430,7 @@ class _AuthScreenState extends State<AuthScreen> {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.name],
           ),
+          const SizedBox(height: 12),
           TextField(
             key: const Key('auth-email'),
             controller: _email,
@@ -357,6 +439,7 @@ class _AuthScreenState extends State<AuthScreen> {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email],
           ),
+          const SizedBox(height: 12),
           _passwordField(
             fieldKey: const Key('auth-password'),
             toggleKey: const Key('auth-toggle-password'),
@@ -413,7 +496,13 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ];
       case _AuthStep.forgotPasswordSent:
-        return [Text(strings.resetEmailSentBody)];
+        return [
+          Text(
+            strings.resetEmailSentBody,
+            key: const Key('auth-reset-sent'),
+            style: const TextStyle(color: BrandColors.bark),
+          ),
+        ];
       case _AuthStep.setPassword:
         return [
           _passwordField(
@@ -428,6 +517,7 @@ class _AuthScreenState extends State<AuthScreen> {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.newPassword],
           ),
+          const SizedBox(height: 12),
           _passwordField(
             fieldKey: const Key('auth-confirm-password'),
             toggleKey: const Key('auth-toggle-confirm-password'),
@@ -446,16 +536,14 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _forgotPasswordLink(AppStrings strings) {
-    return Row(
-      children: [
-        const Spacer(),
-        TextButton(
-          key: const Key('auth-forgot-password'),
-          style: _linkStyle,
-          onPressed: _busy ? null : () => _goTo(_AuthStep.forgotPassword),
-          child: Text(strings.forgotPassword),
-        ),
-      ],
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton(
+        key: const Key('auth-forgot-password'),
+        style: _linkStyle,
+        onPressed: _busy ? null : () => _goTo(_AuthStep.forgotPassword),
+        child: Text(strings.forgotPassword),
+      ),
     );
   }
 
@@ -483,12 +571,15 @@ class _AuthScreenState extends State<AuthScreen> {
         suffixIcon: IconButton(
           key: toggleKey,
           tooltip: obscure ? strings.showPassword : strings.hidePassword,
-          color: BrandColors.bark,
+          style: _eyeStyle,
           onPressed: onToggle,
           icon: Icon(
             obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-            color: BrandColors.bark,
           ),
+        ),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 44,
+          minHeight: 44,
         ),
       ),
     );
@@ -504,17 +595,17 @@ class _AuthScreenState extends State<AuthScreen> {
             child: _busyChild(strings.signIn),
           ),
           TextButton(
-            key: const Key('auth-magic-link'),
-            style: _linkStyle,
-            onPressed: _busy ? null : _sendMagicLink,
-            child: Text(strings.sendMagicLink),
-          ),
-          ..._providers(strings),
-          TextButton(
             key: const Key('auth-open-register'),
             style: _linkStyle,
             onPressed: _busy ? null : () => _goTo(_AuthStep.register),
             child: Text(strings.registerAction),
+          ),
+          ..._providers(strings),
+          TextButton(
+            key: const Key('auth-magic-link'),
+            style: _linkStyle,
+            onPressed: _busy ? null : _sendMagicLink,
+            child: Text(strings.sendMagicLink),
           ),
         ];
       case _AuthStep.register:
@@ -522,7 +613,7 @@ class _AuthScreenState extends State<AuthScreen> {
           FilledButton(
             key: const Key('auth-submit-register'),
             onPressed: _busy ? null : _register,
-            child: _busyChild(strings.signUp),
+            child: _busyChild(strings.registerAction),
           ),
           ..._providers(strings),
           TextButton(
@@ -575,7 +666,7 @@ class _AuthScreenState extends State<AuthScreen> {
             key: const Key('auth-back-sign-in'),
             style: _linkStyle,
             onPressed: _busy ? null : () => _goTo(_AuthStep.signIn),
-            child: Text(strings.backToSignIn),
+            child: Text(strings.back),
           ),
         ];
       case _AuthStep.forgotPasswordSent:
@@ -637,7 +728,10 @@ class _AuthScreenState extends State<AuthScreen> {
     return const SizedBox(
       height: 18,
       width: 18,
-      child: CircularProgressIndicator(strokeWidth: 2),
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: BrandColors.onPrimary,
+      ),
     );
   }
 }

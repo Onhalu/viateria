@@ -75,7 +75,7 @@ void main() {
     expect(find.text(strings.displayName), findsOneWidget);
     expect(find.text(strings.email), findsOneWidget);
     expect(find.text(strings.password), findsOneWidget);
-    expect(find.text(strings.signUp), findsOneWidget);
+    expect(find.text(strings.registerAction), findsOneWidget);
     expect(find.text(strings.backToSignIn), findsOneWidget);
   });
 
@@ -235,24 +235,24 @@ void main() {
         .getTopLeft(find.byKey(const Key('auth-forgot-password')))
         .dy;
     final signInY = tester.getTopLeft(find.byKey(const Key('auth-sign-in'))).dy;
-    final magicY = tester
-        .getTopLeft(find.byKey(const Key('auth-magic-link')))
+    final registerY = tester
+        .getTopLeft(find.byKey(const Key('auth-open-register')))
         .dy;
     final dividerY = tester.getTopLeft(find.text(strings.authOrDivider)).dy;
     final googleY = tester.getTopLeft(find.byKey(const Key('auth-google'))).dy;
     final appleY = tester.getTopLeft(find.byKey(const Key('auth-apple'))).dy;
-    final registerY = tester
-        .getTopLeft(find.byKey(const Key('auth-open-register')))
+    final magicY = tester
+        .getTopLeft(find.byKey(const Key('auth-magic-link')))
         .dy;
     expect(lockupY, lessThan(emailY));
     expect(emailY, lessThan(passwordY));
     expect(passwordY, lessThan(forgotY));
     expect(forgotY, lessThan(signInY));
-    expect(signInY, lessThan(magicY));
-    expect(magicY, lessThan(dividerY));
+    expect(signInY, lessThan(registerY));
+    expect(registerY, lessThan(dividerY));
     expect(dividerY, lessThan(googleY));
     expect(googleY, lessThan(appleY));
-    expect(appleY, lessThan(registerY));
+    expect(appleY, lessThan(magicY));
 
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.backgroundColor, BrandColors.cream);
@@ -271,7 +271,7 @@ void main() {
     );
     expect(
       google.style?.side?.resolve(<WidgetState>{}),
-      const BorderSide(color: BrandColors.forest),
+      const BorderSide(color: BrandColors.forest, width: 1),
     );
     expect(
       google.style?.backgroundColor?.resolve(<WidgetState>{}),
@@ -283,6 +283,36 @@ void main() {
     expect(
       forgot.style?.foregroundColor?.resolve(<WidgetState>{}),
       BrandColors.bark,
+    );
+    expect(
+      forgot.style?.foregroundColor?.resolve(<WidgetState>{
+        WidgetState.pressed,
+      }),
+      BrandColors.forest,
+    );
+    final eye = tester.widget<IconButton>(
+      find.byKey(const Key('auth-toggle-password')),
+    );
+    expect(
+      eye.style?.foregroundColor?.resolve(<WidgetState>{}),
+      BrandColors.bark,
+    );
+    expect(
+      eye.style?.foregroundColor?.resolve(<WidgetState>{WidgetState.pressed}),
+      BrandColors.forest,
+    );
+    expect(
+      eye.style?.minimumSize?.resolve(<WidgetState>{}),
+      const Size(44, 44),
+    );
+    final decoration = Theme.of(
+      tester.element(find.byKey(const Key('auth-email'))),
+    ).inputDecorationTheme;
+    expect(decoration.fillColor, BrandColors.neutral);
+    expect(decoration.labelStyle?.color, BrandColors.bark);
+    expect(
+      filled?.backgroundColor?.resolve(<WidgetState>{WidgetState.disabled}),
+      BrandColors.forest.withValues(alpha: 0.4),
     );
     final divider = tester.widget<Divider>(find.byType(Divider).first);
     expect(divider.color, BrandColors.beige);
@@ -334,8 +364,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.resetEmails, ['ada@example.com']);
-    expect(find.text(strings.resetEmailSentTitle), findsOneWidget);
     expect(find.text(strings.resetEmailSentBody), findsOneWidget);
+    final sent = tester.widget<Text>(find.byKey(const Key('auth-reset-sent')));
+    expect(sent.style?.color, BrandColors.bark);
+    expect(find.text(strings.backToSignIn), findsOneWidget);
     expect(find.text(strings.errorGeneric), findsNothing);
 
     await tester.tap(find.byKey(const Key('auth-back-sign-in')));

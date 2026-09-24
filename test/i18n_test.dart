@@ -108,15 +108,23 @@ void main() {
       'Přihlášení přes Google zatím není zapnuté. Použijte e-mail.',
     );
     expect(AppStrings('cs').continueWithApple, 'Pokračovat přes Apple');
-    expect(AppStrings('en').sendMagicLink, 'Email me a sign-in link');
+    expect(AppStrings('en').sendMagicLink, 'Send a link by email');
     expect(AppStrings('de').authOrDivider, 'oder');
     expect(
       AppStrings('cs').authProviderUnavailableGeneric,
       'Tento způsob přihlášení zatím není zapnutý. Použijte e-mail.',
     );
     expect(AppStrings('cs').forgotPassword, 'Zapomenuté heslo?');
-    expect(AppStrings('cs').resetEmailSentTitle, 'Zkontrolujte e-mail');
-    expect(AppStrings('cs').savePassword, 'Uložit heslo');
+    expect(AppStrings('cs').sendMagicLink, 'Odeslat odkaz e-mailem');
+    expect(AppStrings('cs').sendResetLink, 'Odeslat odkaz na reset');
+    expect(
+      AppStrings('cs').resetEmailSentBody,
+      'Odkaz jsme poslali na e-mail.',
+    );
+    expect(AppStrings('cs').confirmPassword, 'Potvrzení');
+    expect(AppStrings('cs').savePassword, 'Uložit');
+    expect(AppStrings('cs').verifyOtp, 'Ověřit kód');
+    expect(AppStrings('cs').enterAfterConfirm, 'Už mám ověřeno — přihlásit');
     expect(AppStrings('cs').passwordMismatch, 'Hesla se neshodují.');
   });
 
