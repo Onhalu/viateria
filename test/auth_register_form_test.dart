@@ -34,7 +34,11 @@ Widget wrapAuth({MemoryAuth? auth, String locale = 'cs'}) {
         ),
       ),
     ],
-    child: MaterialApp(theme: AppTheme.light(), home: const AuthScreen()),
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      home: const AuthScreen(),
+    ),
   );
 }
 
@@ -226,6 +230,9 @@ void main() {
 
     expect(find.byType(BrandLockup), findsOneWidget);
     expect(find.text(strings.forgotPassword), findsOneWidget);
+    final lockupSize = tester.getSize(find.byType(BrandLockup));
+    expect(lockupSize.width, inInclusiveRange(120, 160));
+    expect(lockupSize.height, greaterThan(40));
     final lockupY = tester.getTopLeft(find.byType(BrandLockup)).dy;
     final emailY = tester.getTopLeft(find.byKey(const Key('auth-email'))).dy;
     final passwordY = tester
@@ -277,6 +284,13 @@ void main() {
       google.style?.backgroundColor?.resolve(<WidgetState>{}),
       BrandColors.cream,
     );
+    final forgotRect = tester.getRect(
+      find.byKey(const Key('auth-forgot-password')),
+    );
+    final passwordRect = tester.getRect(find.byKey(const Key('auth-password')));
+    expect(forgotRect.right, closeTo(passwordRect.right, 12));
+    expect(forgotRect.width, lessThan(passwordRect.width * 0.7));
+    expect(forgotRect.left, greaterThan(passwordRect.center.dx));
     final forgot = tester.widget<TextButton>(
       find.byKey(const Key('auth-forgot-password')),
     );

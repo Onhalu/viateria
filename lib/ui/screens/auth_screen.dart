@@ -540,7 +540,26 @@ class _AuthScreenState extends State<AuthScreen> {
       alignment: Alignment.centerRight,
       child: TextButton(
         key: const Key('auth-forgot-password'),
-        style: _linkStyle,
+        style:
+            TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              minimumSize: const Size(0, 44),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.centerRight,
+              textStyle: const TextStyle(
+                fontSize: 14,
+                height: 1.2,
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.none,
+              ),
+            ).copyWith(
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return BrandColors.forest;
+                }
+                return BrandColors.bark;
+              }),
+            ),
         onPressed: _busy ? null : () => _goTo(_AuthStep.forgotPassword),
         child: Text(strings.forgotPassword),
       ),

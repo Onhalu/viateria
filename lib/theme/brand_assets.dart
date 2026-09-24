@@ -10,6 +10,10 @@ abstract final class BrandAssets {
   /// Splash / auth hero width in dp.
   static const splashLockupWidth = 148.0;
   static const markMinSize = 24.0;
+
+  /// Pixel size of [lockup] / [lockupOnPrimary] (320×186).
+  static const lockupPixelWidth = 320.0;
+  static const lockupPixelHeight = 186.0;
 }
 
 class BrandMark extends StatelessWidget {
@@ -49,9 +53,14 @@ class BrandLockup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final height =
+        width * BrandAssets.lockupPixelHeight / BrandAssets.lockupPixelWidth;
     return Image.asset(
       onPrimary ? BrandAssets.lockupOnPrimary : BrandAssets.lockup,
       width: width,
+      height: height,
+      fit: BoxFit.contain,
+      gaplessPlayback: true,
       filterQuality: FilterQuality.medium,
       semanticLabel: 'VANDERY',
     );
