@@ -227,11 +227,14 @@ class PlaceDetailSheet extends StatelessWidget {
               strings.t(place.category.l10nKey),
               style: const TextStyle(color: MapPalette.bark, fontSize: 14),
             ),
-            const SizedBox(height: 6),
-            Text(
-              strings.detailPlaceholder,
-              style: const TextStyle(color: MapPalette.bark, fontSize: 13),
-            ),
+            if (place.description != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                place.description!,
+                key: const Key('map-poi-sheet-description'),
+                style: const TextStyle(color: MapPalette.bark, fontSize: 13),
+              ),
+            ],
             if (km != null) ...[
               const SizedBox(height: 2),
               Text(
@@ -326,7 +329,7 @@ class PlaceListPanel extends StatelessWidget {
                       BlendMode.srcIn,
                     ),
                     child: Image.asset(
-                      'assets/map/icons/${place.category.iconName}@2x.png',
+                      'assets/map/icons/${place.iconName}@2x.png',
                       width: MapChromeSizes.listRowIcon,
                       height: MapChromeSizes.listRowIcon,
                       filterQuality: FilterQuality.medium,
@@ -339,12 +342,25 @@ class PlaceListPanel extends StatelessWidget {
                       color: MapPalette.forest,
                     ),
                   ),
-                  subtitle: Text(
-                    [
-                      strings.t(place.category.l10nKey),
-                      if (km != null) strings.formatDistanceKm(km),
-                    ].join(' · '),
-                    style: const TextStyle(color: MapPalette.bark),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        [
+                          strings.t(place.category.l10nKey),
+                          if (km != null) strings.formatDistanceKm(km),
+                        ].join(' · '),
+                        style: const TextStyle(color: MapPalette.bark),
+                      ),
+                      if (place.description != null)
+                        Text(
+                          place.description!,
+                          key: Key('map-poi-list-description-${place.id}'),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: MapPalette.bark),
+                        ),
+                    ],
                   ),
                   trailing: const Icon(
                     Icons.chevron_right,

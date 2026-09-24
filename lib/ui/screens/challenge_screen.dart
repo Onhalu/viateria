@@ -10,6 +10,8 @@ import '../../data/route_services.dart';
 import '../../domain/challenge_photos.dart';
 import '../../domain/challenge_reward.dart';
 import '../../domain/route_planner.dart';
+import '../../map/place.dart';
+import '../../map/place_query.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
@@ -38,6 +40,7 @@ class ChallengeScreen extends StatefulWidget {
 }
 
 class _ChallengeScreenState extends State<ChallengeScreen> {
+  List<Place>? _catalogPlaces;
   static const _rules = UnlockRules();
 
   Future<_ChallengePageData>? _future;
@@ -67,6 +70,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 
   Future<_ChallengePageData> _load() async {
     final services = context.read<AppServices>();
+    // Catalog elevation is optional. Do not block the page or the route
+    // request on it: a slow fetch must not leave the planner stuck loading.
+    _rememberCatalog(services.places.fetchAll());
     final detail = await services.catalog.fetchChallenge(widget.challengeId);
     final progress = await services.progress.fetchProgress(widget.challengeId);
     final purchase = await services.purchases.fetchPurchase(widget.challengeId);
@@ -76,6 +82,20 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       progress: progress,
       purchase: purchase,
       photos: photos,
+    );
+  }
+
+  void _rememberCatalog(Future<List<Place>> placesFuture) {
+    placesFuture.then(
+      (places) {
+        if (!mounted) return;
+        _catalogPlaces = places;
+        if (_start != null) _refreshRoutes();
+      },
+      onError: (_, _) {
+        if (!mounted) return;
+        _catalogPlaces ??= const [];
+      },
     );
   }
 
@@ -129,6 +149,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     return waypoints.first;
   }
 
+  /// Uses `places.elevation_m` when a catalog row shares this coordinate.
+  /// A missing height leaves the endpoint unchanged.
+  RouteEndpoint _withCatalogElevation(
+    RouteEndpoint endpoint,
+    List<Place> places,
+  ) {
+    return endpoint.withCatalogElevation(
+      catalogPlaceAt(places, endpoint.lat, endpoint.lng)?.elevationM,
+    );
+  }
+
   Future<void> _refreshRoutes([List<Waypoint>? waypoints]) async {
     final services = context.read<AppServices>();
     final localeController = context.read<LocaleController>();
@@ -166,13 +197,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       _routeError = null;
     });
     try {
+      final catalogPlaces = _catalogPlaces ?? const <Place>[];
       final plan =
           await DualRoutePlanner(
             routing: services.routing,
             elevation: services.elevation,
           ).plan(
-            start: start,
-            end: RouteEndpoint.fromWaypoint(destination, locale),
+            start: _withCatalogElevation(start, catalogPlaces),
+            end: _withCatalogElevation(
+              RouteEndpoint.fromWaypoint(destination, locale),
+              catalogPlaces,
+            ),
           );
       if (!mounted || token != _routeToken) return;
       setState(() {

@@ -115,6 +115,8 @@ class AppStrings {
     'locateDisabled',
     'mapLoadError',
     'catalogLoadError',
+    'placesLoading',
+    'placesEmpty',
     'osmAttribution',
     'osmAttributionLong',
     'applyFilters',
@@ -289,6 +291,8 @@ class AppStrings {
   String get locateDisabled => t('locateDisabled');
   String get mapLoadError => t('mapLoadError');
   String get catalogLoadError => t('catalogLoadError');
+  String get placesLoading => t('placesLoading');
+  String get placesEmpty => t('placesEmpty');
   String get osmAttribution => t('osmAttribution');
   String get osmAttributionLong => t('osmAttributionLong');
   String get applyFilters => t('applyFilters');
@@ -495,6 +499,8 @@ class AppStrings {
           'Location services are off. Turn them on in device settings.',
       'mapLoadError': 'The map could not be loaded.',
       'catalogLoadError': 'Monuments could not be loaded.',
+      'placesLoading': 'Loading monuments…',
+      'placesEmpty': 'No monuments to show.',
       'osmAttribution': '© OpenStreetMap',
       'osmAttributionLong': '© OpenStreetMap contributors',
       'applyFilters': 'Apply',
@@ -679,6 +685,8 @@ class AppStrings {
           'Polohové služby jsou vypnuté. Zapněte je v nastavení zařízení.',
       'mapLoadError': 'Mapu se nepodařilo načíst.',
       'catalogLoadError': 'Památky se nepodařilo načíst.',
+      'placesLoading': 'Načítám památky…',
+      'placesEmpty': 'Žádné památky k zobrazení.',
       'osmAttribution': '© OpenStreetMap',
       'osmAttributionLong': '© přispěvatelé OpenStreetMap',
       'applyFilters': 'Použít',
@@ -863,6 +871,8 @@ class AppStrings {
       'locateDisabled': 'Ortungsdienste sind aus. Schalten Sie sie in den Geräteeinstellungen ein.',
       'mapLoadError': 'Die Karte konnte nicht geladen werden.',
       'catalogLoadError': 'Denkmäler konnten nicht geladen werden.',
+      'placesLoading': 'Denkmäler werden geladen…',
+      'placesEmpty': 'Keine Denkmäler zum Anzeigen.',
       'osmAttribution': '© OpenStreetMap',
       'osmAttributionLong': '© OpenStreetMap-Mitwirkende',
       'applyFilters': 'Übernehmen',

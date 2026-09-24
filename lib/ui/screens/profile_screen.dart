@@ -17,7 +17,7 @@ import '../navigation.dart';
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.places});
 
-  /// Test seam. Production uses [AssetPlaceCatalog].
+  /// Test seam. Production uses [AppServices.places].
   final PlaceCatalog? places;
 
   @override
@@ -39,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _load() async {
     final services = context.read<AppServices>();
-    final catalog = widget.places ?? const AssetPlaceCatalog();
+    final catalog = widget.places ?? services.places;
     final places = await _orDefault(catalog.fetchAll(), const <Place>[]);
     final completed = await _orDefault(
       services.progress.fetchCompleted(),

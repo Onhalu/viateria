@@ -7,6 +7,7 @@ import 'config/app_config.dart';
 import 'data/app_services.dart';
 import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
+import 'data/supabase_place_catalog.dart';
 import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
 import 'data/verified_places.dart';
@@ -38,6 +39,7 @@ Future<void> main() async {
       photos: SupabasePhotoStorage(client),
       photoCapture: LiveCameraPhotoCapture(),
       verifiedPlaces: verifiedPlaces,
+      places: resolvePlaceCatalog(config: config, client: client),
     );
   } else {
     services = AppServices(
@@ -49,6 +51,7 @@ Future<void> main() async {
       photos: UnconfiguredPhotos(),
       photoCapture: UnconfiguredCapture(),
       verifiedPlaces: verifiedPlaces,
+      places: resolvePlaceCatalog(config: config),
     );
   }
 

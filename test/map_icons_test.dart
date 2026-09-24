@@ -75,4 +75,38 @@ void main() {
       }
     },
   );
+
+  test('category icon filenames match their silhouettes', () async {
+    // On-disk graphic contract. Category → filename stays 1:1 in code;
+    // these bytes are what each name must contain:
+    // city = town/skyline, nature = tree, technical = derrick + gear,
+    // historical = castle. A previous batch had the three non-nature
+    // files rotated relative to those names.
+    const expected = <String, (int, int)>{
+      'city': (707, 0x58703650),
+      'nature': (1030, 0x007a7bce),
+      'technical': (780, 0xaecae4f1),
+      'historical': (526, 0x56e7ca30),
+    };
+    for (final entry in expected.entries) {
+      final data = await rootBundle.load(
+        'assets/map/icons/${entry.key}@2x.png',
+      );
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      expect(bytes.length, entry.value.$1, reason: entry.key);
+      expect(_fnv1a(bytes), entry.value.$2, reason: entry.key);
+    }
+  });
+}
+
+int _fnv1a(Uint8List bytes) {
+  var hash = 0x811c9dc5;
+  for (final byte in bytes) {
+    hash ^= byte;
+    hash = (hash * 0x01000193) & 0xFFFFFFFF;
+  }
+  return hash;
 }

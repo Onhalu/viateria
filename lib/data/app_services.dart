@@ -2,6 +2,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
 import '../domain/photo_verify.dart';
+import '../map/place_catalog.dart';
 import 'repositories.dart';
 import 'route_services.dart';
 import 'verified_places.dart';
@@ -31,12 +32,16 @@ class AppServices {
     ElevationLookup? elevation,
     ExternalUrlOpener? openUrl,
     VerifiedPlacesStore? verifiedPlaces,
+    PlaceCatalog? places,
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
        elevation = elevation ?? PublicElevationLookup(),
        openUrl = openUrl ?? launchExternalUrl,
-       verifiedPlaces = verifiedPlaces ?? VerifiedPlacesStore();
+       verifiedPlaces = verifiedPlaces ?? VerifiedPlacesStore(),
+       // Tests omit this and keep the bundled GeoJSON catalog. Production
+       // main.dart passes the Supabase catalog instead.
+       places = places ?? const AssetPlaceCatalog();
 
   final AppConfig config;
   final AuthRepository auth;
@@ -51,4 +56,7 @@ class AppServices {
   final ElevationLookup elevation;
   final ExternalUrlOpener openUrl;
   final VerifiedPlacesStore verifiedPlaces;
+
+  /// Map place source. Production passes a Supabase `public.places` catalog.
+  final PlaceCatalog places;
 }

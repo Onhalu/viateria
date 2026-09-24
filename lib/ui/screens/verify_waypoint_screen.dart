@@ -49,6 +49,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
   String? _fallbackHint;
   LivePhoto? _photo;
   GeoPoint? _target;
+  Place? _catalogPlace;
 
   @override
   void initState() {
@@ -60,24 +61,40 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
 
   Future<GeoPoint?> _resolveTarget() async {
     final extra = widget.place;
-    if (extra != null) return extra.location;
+    if (extra != null) {
+      _catalogPlace = extra;
+      return extra.location;
+    }
     if (widget.isChallengeStop) {
-      final detail = await context.read<AppServices>().catalog.fetchChallenge(
-        widget.challengeId!,
-      );
+      final services = context.read<AppServices>();
+      final detail = await services.catalog.fetchChallenge(widget.challengeId!);
       for (final waypoint in detail.waypoints) {
         if (waypoint.id == widget.waypointId) {
-          return GeoPoint(waypoint.lat, waypoint.lng);
+          final point = GeoPoint(waypoint.lat, waypoint.lng);
+          try {
+            final places = await (widget.places ?? services.places).fetchAll();
+            _catalogPlace = catalogPlaceAt(
+              places,
+              point.latitude,
+              point.longitude,
+            );
+          } catch (_) {
+            // Description stays hidden when the catalog cannot be read.
+          }
+          return point;
         }
       }
       return null;
     }
     final placeId = widget.placeId;
     if (placeId == null) return null;
-    final catalog = widget.places ?? const AssetPlaceCatalog();
+    final catalog = widget.places ?? context.read<AppServices>().places;
     final places = await catalog.fetchAll();
     for (final place in places) {
-      if (place.id == placeId) return place.location;
+      if (place.id == placeId) {
+        _catalogPlace = place;
+        return place.location;
+      }
     }
     return null;
   }
@@ -253,7 +270,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     if (widget.place != null) ids.add(widget.place!.id);
     if (widget.isChallengeStop && _target != null) {
       try {
-        final catalog = widget.places ?? const AssetPlaceCatalog();
+        final catalog = widget.places ?? services.places;
         final places = await catalog.fetchAll();
         ids.addAll(
           placeIdsInChallenge(
@@ -267,6 +284,12 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     await services.verifiedPlaces.addAll(ids);
   }
 
+  String? get _placeDescription {
+    final text = (widget.place ?? _catalogPlace)?.description?.trim();
+    if (text == null || text.isEmpty) return null;
+    return text;
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
@@ -274,68 +297,85 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
       appBar: AppBar(title: Text(strings.verify)),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: _gpsChecking
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      strings.gpsChecking,
-                      key: const Key('verify-gps-status'),
-                    ),
-                  ],
-                ),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_fallbackHint != null)
-                    Text(_fallbackHint!, key: const Key('verify-gps-status')),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: _photo == null
-                          ? Center(child: Text(strings.takePhoto))
-                          : ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.memory(
-                                Uint8List.fromList(_photo!.bytes),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _capture,
-                    icon: const Icon(Icons.photo_camera),
-                    label: Text(strings.takePhoto),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    key: const Key('verify-submit'),
-                    onPressed: _busy ? null : _submitPhoto,
-                    child: _busy
-                        ? Text(strings.uploading)
-                        : Text(strings.verify),
-                  ),
-                ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_placeDescription != null) ...[
+              Text(
+                _placeDescription!,
+                key: const Key('verify-place-description'),
               ),
+              const SizedBox(height: 12),
+            ],
+            Expanded(
+              child: _gpsChecking
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            strings.gpsChecking,
+                            key: const Key('verify-gps-status'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_fallbackHint != null)
+                          Text(
+                            _fallbackHint!,
+                            key: const Key('verify-gps-status'),
+                          ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black12,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: _photo == null
+                                ? Center(child: Text(strings.takePhoto))
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Image.memory(
+                                      Uint8List.fromList(_photo!.bytes),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        if (_error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _capture,
+                          icon: const Icon(Icons.photo_camera),
+                          label: Text(strings.takePhoto),
+                        ),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          key: const Key('verify-submit'),
+                          onPressed: _busy ? null : _submitPhoto,
+                          child: _busy
+                              ? Text(strings.uploading)
+                              : Text(strings.verify),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

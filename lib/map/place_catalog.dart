@@ -42,3 +42,14 @@ class MemoryPlaceCatalog implements PlaceCatalog {
     return List<Place>.from(places);
   }
 }
+
+/// Used when Supabase is not configured. Fetch fails so the map can show
+/// its catalog error state instead of falling back to bundled GeoJSON.
+class UnconfiguredPlaceCatalog implements PlaceCatalog {
+  const UnconfiguredPlaceCatalog();
+
+  @override
+  Future<List<Place>> fetchAll() async {
+    throw StateError('Supabase is not configured');
+  }
+}
