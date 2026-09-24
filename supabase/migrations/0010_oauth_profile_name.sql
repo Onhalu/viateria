@@ -1,7 +1,7 @@
 -- Google and Apple put the person's name in raw_user_meta_data as
 -- full_name or name. Email sign-up still sends display_name.
--- Display only: this trigger inserts the profile row. Authorization
--- stays on auth.uid() in the existing RLS policies.
+-- Display only: this trigger inserts the profile row. Existing RLS
+-- policies are unchanged.
 
 create or replace function public.handle_new_user()
 returns trigger

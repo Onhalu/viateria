@@ -10,7 +10,10 @@ void main() {
       displayNameFromMetadata({'display_name': ' Ada ', 'full_name': 'Other'}),
       'Ada',
     );
-    expect(displayNameFromMetadata({'full_name': 'Grace Hopper'}), 'Grace Hopper');
+    expect(
+      displayNameFromMetadata({'full_name': 'Grace Hopper'}),
+      'Grace Hopper',
+    );
     expect(displayNameFromMetadata({'name': 'Ada'}), 'Ada');
     expect(displayNameFromMetadata({'full_name': '  '}), isNull);
     expect(displayNameFromMetadata(null), isNull);
@@ -42,7 +45,10 @@ void main() {
       isTrue,
     );
     expect(
-      authProviderDisabled(code: 'invalid_credentials', message: 'Invalid login credentials'),
+      authProviderDisabled(
+        code: 'invalid_credentials',
+        message: 'Invalid login credentials',
+      ),
       isFalse,
     );
   });
@@ -67,9 +73,8 @@ void main() {
   });
 
   test('oauth profile migration copies names and does not touch RLS', () {
-    final sql = File(
-      'supabase/migrations/0010_oauth_profile_name.sql',
-    ).readAsStringSync();
+    final sql = File('supabase/migrations/0010_oauth_profile_name.sql')
+        .readAsStringSync();
     expect(sql, contains("raw_user_meta_data ->> 'full_name'"));
     expect(sql, contains("raw_user_meta_data ->> 'display_name'"));
     expect(sql, contains("raw_user_meta_data ->> 'name'"));

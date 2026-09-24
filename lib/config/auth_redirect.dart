@@ -34,8 +34,17 @@ abstract final class AuthRedirect {
   /// Public so tests can lock the web shape without a browser.
   static String webRedirectFrom(Uri uri) {
     if (uri.scheme != 'http' && uri.scheme != 'https') return webProduction;
-    final stripped = uri.replace(query: '', fragment: '');
-    final text = stripped.toString();
-    return text.endsWith('/') ? text : '$text/';
+    // Uri.replace(query: '', fragment: '') keeps a stray `?` and `#`.
+    // Rebuild so the allow-list entry is only scheme, host, port, and path.
+    final port = uri.hasPort ? uri.port : null;
+    var path = uri.path;
+    if (path.isEmpty) path = '/';
+    if (!path.endsWith('/')) path = '$path/';
+    return Uri(
+      scheme: uri.scheme,
+      host: uri.host,
+      port: port,
+      path: path,
+    ).toString();
   }
 }

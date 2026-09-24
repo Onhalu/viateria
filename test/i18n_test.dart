@@ -107,10 +107,7 @@ void main() {
       AppStrings('cs').authProviderUnavailable('Google'),
       'Přihlášení přes Google zatím není zapnuté. Použijte e-mail.',
     );
-    expect(
-      AppStrings('cs').continueWithApple,
-      'Pokračovat přes Apple',
-    );
+    expect(AppStrings('cs').continueWithApple, 'Pokračovat přes Apple');
     expect(AppStrings('en').sendMagicLink, 'Email me a sign-in link');
     expect(AppStrings('de').authOrDivider, 'oder');
     expect(

@@ -703,8 +703,7 @@ class AppStrings {
       'sendMagicLink': 'Poslat přihlašovací odkaz',
       'authOrDivider': 'nebo',
       'magicLinkSentTitle': 'Zkontrolujte e-mail',
-      'magicLinkSentBody':
-          'Otevřete odkaz v e-mailu, nebo sem zadejte kód.',
+      'magicLinkSentBody': 'Otevřete odkaz v e-mailu, nebo sem zadejte kód.',
       'authProviderUnavailable':
           'Přihlášení přes {provider} zatím není zapnuté. Použijte e-mail.',
       'authProviderUnavailableGeneric':
@@ -904,8 +903,7 @@ class AppStrings {
       'sendMagicLink': 'Anmeldelink per E-Mail',
       'authOrDivider': 'oder',
       'magicLinkSentTitle': 'E-Mail prüfen',
-      'magicLinkSentBody':
-          'Öffnen Sie den Link in der E-Mail, oder geben Sie den Code hier ein.',
+      'magicLinkSentBody': 'Öffnen Sie den Link in der E-Mail, oder geben Sie den Code hier ein.',
       'authProviderUnavailable':
           'Anmeldung mit {provider} ist noch nicht aktiv. Nutzen Sie E-Mail.',
       'authProviderUnavailableGeneric':

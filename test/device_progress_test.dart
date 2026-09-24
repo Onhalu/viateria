@@ -30,10 +30,9 @@ void main() {
     expect(store.ids, isEmpty);
 
     await store.add('prague');
-    expect(
-      prefs.getStringList('${VerifiedPlacesStore.prefsKey}.user-b'),
-      ['prague'],
-    );
+    expect(prefs.getStringList('${VerifiedPlacesStore.prefsKey}.user-b'), [
+      'prague',
+    ]);
     expect(prefs.getStringList('${VerifiedPlacesStore.prefsKey}.user-a'), [
       'karlstejn',
     ]);
@@ -46,29 +45,32 @@ void main() {
     expect(store.contains('prague'), isFalse);
   });
 
-  test('first signed-in user adopts the legacy last-opened challenge', () async {
-    SharedPreferences.setMockInitialValues({
-      LastOpenedChallengeStore.prefsKey: 'open-1',
-    });
-    final store = LastOpenedChallengeStore();
-    await store.bindUser('user-a');
-    expect(store.challengeId, 'open-1');
+  test(
+    'first signed-in user adopts the legacy last-opened challenge',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        LastOpenedChallengeStore.prefsKey: 'open-1',
+      });
+      final store = LastOpenedChallengeStore();
+      await store.bindUser('user-a');
+      expect(store.challengeId, 'open-1');
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(
-      prefs.getString('${LastOpenedChallengeStore.prefsKey}.user-a'),
-      'open-1',
-    );
-    expect(prefs.getString(LastOpenedChallengeStore.prefsKey), isNull);
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('${LastOpenedChallengeStore.prefsKey}.user-a'),
+        'open-1',
+      );
+      expect(prefs.getString(LastOpenedChallengeStore.prefsKey), isNull);
 
-    await store.bindUser('user-b');
-    expect(store.challengeId, isNull);
-    await store.remember('story-9');
-    expect(store.challengeId, 'story-9');
+      await store.bindUser('user-b');
+      expect(store.challengeId, isNull);
+      await store.remember('story-9');
+      expect(store.challengeId, 'story-9');
 
-    await store.bindUser('user-a');
-    expect(store.challengeId, 'open-1');
-  });
+      await store.bindUser('user-a');
+      expect(store.challengeId, 'open-1');
+    },
+  );
 
   test('unbound stores still use the legacy keys', () async {
     final places = VerifiedPlacesStore();

@@ -11,10 +11,7 @@ import 'package:viateria/ui/screens/auth_screen.dart';
 
 import 'helpers/fakes.dart';
 
-Widget wrapAuth({
-  MemoryAuth? auth,
-  String locale = 'cs',
-}) {
+Widget wrapAuth({MemoryAuth? auth, String locale = 'cs'}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: locale)),
@@ -66,29 +63,38 @@ void main() {
     expect(find.text(strings.backToSignIn), findsOneWidget);
   });
 
-  testWidgets('sign-up without session shows email confirmation, not generic error', (
-    tester,
-  ) async {
-    final strings = AppStrings('cs');
-    await tester.pumpWidget(wrapAuth(auth: MemoryAuth(sessionOnSignUp: false)));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'sign-up without session shows email confirmation, not generic error',
+    (tester) async {
+      final strings = AppStrings('cs');
+      await tester.pumpWidget(
+        wrapAuth(auth: MemoryAuth(sessionOnSignUp: false)),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('auth-open-register')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('auth-open-register')));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('auth-display-name')), 'Ada');
-    await tester.enterText(find.byKey(const Key('auth-email')), 'ada@example.com');
-    await tester.enterText(find.byKey(const Key('auth-password')), 'secret12');
-    await tester.tap(find.byKey(const Key('auth-submit-register')));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('auth-display-name')), 'Ada');
+      await tester.enterText(
+        find.byKey(const Key('auth-email')),
+        'ada@example.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('auth-password')),
+        'secret12',
+      );
+      await tester.tap(find.byKey(const Key('auth-submit-register')));
+      await tester.pumpAndSettle();
 
-    expect(find.text(strings.errorGeneric), findsNothing);
-    expect(find.text(strings.confirmEmailTitle), findsOneWidget);
-    expect(find.text(strings.confirmEmailBody), findsOneWidget);
-    expect(find.byKey(const Key('auth-otp')), findsOneWidget);
-    expect(find.text(strings.verifyOtp), findsOneWidget);
-    expect(find.text(strings.enterAfterConfirm), findsOneWidget);
-  });
+      expect(find.text(strings.errorGeneric), findsNothing);
+      expect(find.text(strings.confirmEmailTitle), findsOneWidget);
+      expect(find.text(strings.confirmEmailBody), findsOneWidget);
+      expect(find.byKey(const Key('auth-otp')), findsOneWidget);
+      expect(find.text(strings.verifyOtp), findsOneWidget);
+      expect(find.text(strings.enterAfterConfirm), findsOneWidget);
+    },
+  );
 
   testWidgets('back to sign-in returns to the default screen', (tester) async {
     final strings = AppStrings('en');
@@ -96,6 +102,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('auth-open-register')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('auth-back-sign-in')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('auth-back-sign-in')));
     await tester.pumpAndSettle();
@@ -170,7 +178,10 @@ void main() {
     await tester.pumpWidget(wrapAuth(auth: auth));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('auth-email')), 'ada@example.com');
+    await tester.enterText(
+      find.byKey(const Key('auth-email')),
+      'ada@example.com',
+    );
     await tester.tap(find.byKey(const Key('auth-magic-link')));
     await tester.pumpAndSettle();
 
@@ -181,13 +192,18 @@ void main() {
     expect(find.text(strings.errorGeneric), findsNothing);
   });
 
-  testWidgets('oauth callback failure is shown without a crash', (tester) async {
+  testWidgets('oauth callback failure is shown without a crash', (
+    tester,
+  ) async {
     final strings = AppStrings('cs');
     final auth = MemoryAuth();
     await tester.pumpWidget(wrapAuth(auth: auth));
     await tester.pumpAndSettle();
 
     auth.emitFailure(const AuthProviderUnavailable());
+    // The auth stream delivers on a later microtask, which schedules the
+    // rebuild for the following frame.
+    await tester.pump();
     await tester.pump();
 
     expect(find.text(strings.authProviderUnavailableGeneric), findsOneWidget);
