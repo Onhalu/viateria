@@ -123,10 +123,18 @@ void main() {
       ),
       findsOneWidget,
     );
+    await saveShot(tester, 'nav-header-lb.png');
     await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
     await tester.pumpAndSettle();
-    expect(find.byType(ProfileScreen), findsNothing);
-    await saveShot(tester, 'nav-header-lb.png');
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    await saveShot(tester, 'nav-avatar-profile.png');
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text('Výzvy'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(
         of: find.byKey(const Key('app-bottom-nav')),

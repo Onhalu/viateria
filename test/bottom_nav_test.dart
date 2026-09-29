@@ -333,9 +333,24 @@ void main() {
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
+    expect(
+      tester
+          .getSize(find.byKey(const Key('catalog-welcome-avatar')))
+          .shortestSide,
+      greaterThanOrEqualTo(CatalogWelcomeHeader.avatarHitSize),
+    );
     await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
     await tester.pumpAndSettle();
-    expect(find.byType(ProfileScreen), findsNothing);
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.catalogTitle),
+      ),
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
 
     await tester.tap(
@@ -617,10 +632,11 @@ void main() {
     expect(
       tester.getSize(find.byKey(const Key('catalog-welcome-avatar'))),
       const Size(
-        CatalogWelcomeHeader.avatarSize,
-        CatalogWelcomeHeader.avatarSize,
+        CatalogWelcomeHeader.avatarHitSize,
+        CatalogWelcomeHeader.avatarHitSize,
       ),
     );
+    expect(CatalogWelcomeHeader.avatarHitSize, greaterThanOrEqualTo(44));
     expect(
       tester.getSize(find.byKey(const Key('catalog-welcome-locale'))),
       const Size(

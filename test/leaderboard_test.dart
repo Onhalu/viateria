@@ -447,15 +447,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
     await tester.pumpAndSettle();
-    expect(find.byType(ProfileScreen), findsNothing);
-
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const Key('app-bottom-nav')),
-        matching: find.text('Profil'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const Key('profile-leaderboard')),
       300,
