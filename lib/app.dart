@@ -13,6 +13,7 @@ import 'ui/screens/challenge_screen.dart';
 import 'ui/screens/challenges_map_screen.dart';
 import 'ui/screens/diploma_screen.dart';
 import 'ui/screens/last_challenge_screen.dart';
+import 'ui/screens/leaderboard_screen.dart';
 import 'ui/screens/missing_config_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/verify_waypoint_screen.dart';
@@ -82,6 +83,18 @@ class _ViateriaAppState extends State<ViateriaApp> {
                         challengeId: state.pathParameters['id']!,
                       ),
                     ),
+                    GoRoute(
+                      path: 'profile',
+                      builder: (context, state) => const ProfileScreen(),
+                      routes: [
+                        GoRoute(
+                          path: 'challenge/:id',
+                          builder: (context, state) => ChallengeScreen(
+                            challengeId: state.pathParameters['id']!,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ],
@@ -105,16 +118,8 @@ class _ViateriaAppState extends State<ViateriaApp> {
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/profile',
-                  builder: (context, state) => const ProfileScreen(),
-                  routes: [
-                    GoRoute(
-                      path: 'challenge/:id',
-                      builder: (context, state) => ChallengeScreen(
-                        challengeId: state.pathParameters['id']!,
-                      ),
-                    ),
-                  ],
+                  path: '/leaderboard',
+                  builder: (context, state) => const LeaderboardScreen(),
                 ),
               ],
             ),

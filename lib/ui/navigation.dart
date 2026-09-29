@@ -6,8 +6,8 @@ import '../data/last_opened_challenge.dart';
 
 /// Records [challengeId] as last-opened and pushes the challenge detail route.
 ///
-/// [fromProfile] keeps the profile shell tab selected so the bottom nav stays
-/// on Profile while the detail is nested on that branch.
+/// [fromProfile] nests the detail under `/profile` so the catalog branch
+/// (where Profile lives) stays selected. Profile is not a bottom-nav tab.
 Future<void> openChallenge(
   BuildContext context,
   String challengeId, {

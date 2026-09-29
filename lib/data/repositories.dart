@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../domain/leaderboard_score.dart';
 import '../models/models.dart';
 
 /// Auth API failure with a message safe to show in the UI.
@@ -149,6 +150,29 @@ abstract class PurchaseRepository {
     RewardVariant? rewardVariant,
   });
   Future<Purchase?> refreshPurchase(String challengeId);
+}
+
+/// Live leaderboard. Scores are not cached on device.
+abstract class LeaderboardRepository {
+  /// Inserts one place visit. Duplicate `(user, place)` is a no-op.
+  ///
+  /// Non-uuid ids (bundled map fixtures) are ignored.
+  Future<void> recordPlaceVisit(
+    String placeId, {
+    required PlaceVisitSource source,
+  });
+
+  /// One-shot upload of ids already stored on the device.
+  Future<void> recordPlaceVisitsBatch(
+    List<String> placeIds, {
+    PlaceVisitSource source = PlaceVisitSource.prefsSync,
+  });
+
+  /// Top [limit] rows. The server clamps [limit] to at most 50.
+  Future<List<LeaderboardEntry>> fetchLeaderboard({int limit = 50});
+
+  /// Caller row, including rank when they sit outside the top N.
+  Future<LeaderboardEntry> fetchMyScore();
 }
 
 abstract class PhotoStorage {

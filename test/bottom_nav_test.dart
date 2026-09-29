@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/app.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
@@ -28,6 +29,7 @@ AppServices buildServices({
   MemoryProgress? progress,
   Profile? user,
   bool configured = true,
+  LeaderboardRepository? leaderboard,
 }) {
   final open = sampleOpenChallenge();
   final story = sampleStoryChallenge();
@@ -71,6 +73,7 @@ AppServices buildServices({
     purchases: MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
+    leaderboard: leaderboard,
   );
 }
 
@@ -132,7 +135,16 @@ void main() {
     expect(find.text(strings.catalogTitle), findsOneWidget);
     expect(find.text(strings.navLastChallenge), findsOneWidget);
     expect(find.text(strings.navMap), findsOneWidget);
-    expect(find.text(strings.navProfile), findsOneWidget);
+    expect(find.text(strings.navLeaderboard), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.navProfile),
+      ),
+      findsNothing,
+    );
+    expect(find.byIcon(Icons.military_tech), findsNothing);
+    expect(find.byIcon(Icons.military_tech_outlined), findsOneWidget);
 
     final screenSize = tester.getSize(find.byType(Scaffold).first);
     final navTop = tester.getTopLeft(nav).dy;
@@ -285,12 +297,14 @@ void main() {
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
-  testWidgets('profile tab shows identity and sign out', (tester) async {
+  testWidgets('welcome avatar opens profile with identity and sign out', (
+    tester,
+  ) async {
     final strings = AppStrings('en');
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(strings.navProfile));
+    await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
     await tester.pumpAndSettle();
 
     expect(

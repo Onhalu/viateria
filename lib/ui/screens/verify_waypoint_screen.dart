@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
 import '../../data/route_services.dart';
+import '../../domain/leaderboard_score.dart';
 import '../../domain/photo_verify.dart';
 import '../../domain/stop_verify.dart';
 import '../../domain/unlock_rules.dart';
@@ -221,7 +222,8 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         }
         return;
       }
-      await _persistPlaceIds(services);
+      final ids = await _persistPlaceIds(services);
+      await _recordMapVisits(services, ids);
       if (mounted) context.pop();
     } catch (_) {
       if (mounted) {
@@ -265,7 +267,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     return allowed;
   }
 
-  Future<void> _persistPlaceIds(AppServices services) async {
+  Future<Set<String>> _persistPlaceIds(AppServices services) async {
     final ids = <String>{};
     if (widget.placeId != null) ids.add(widget.placeId!);
     if (widget.place != null) ids.add(widget.place!.id);
@@ -283,6 +285,21 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
       } catch (_) {}
     }
     await services.verifiedPlaces.addAll(ids);
+    return ids;
+  }
+
+  /// Map visits score on the server. Failures stay local so the sheet can close.
+  /// Challenge stops are recorded inside `verify_waypoint` with source `verify`.
+  Future<void> _recordMapVisits(AppServices services, Set<String> ids) async {
+    for (final id in ids) {
+      if (!isPlaceUuid(id)) continue;
+      try {
+        await services.leaderboard.recordPlaceVisit(
+          id,
+          source: PlaceVisitSource.map,
+        );
+      } catch (_) {}
+    }
   }
 
   Place? get _shownPlace => widget.place ?? _catalogPlace;

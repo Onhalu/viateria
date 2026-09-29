@@ -140,7 +140,7 @@ void main() {
     expect(find.text(strings.catalogTitle), findsOneWidget);
     expect(find.text(strings.navLastChallenge), findsOneWidget);
     expect(find.text(strings.navMap), findsOneWidget);
-    expect(find.text(strings.navProfile), findsOneWidget);
+    expect(find.text(strings.navLeaderboard), findsOneWidget);
 
     final screenSize = tester.getSize(find.byType(Scaffold).first);
     final navTop = tester.getTopLeft(nav).dy;

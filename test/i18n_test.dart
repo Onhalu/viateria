@@ -145,4 +145,42 @@ void main() {
       'Noch keine Fotos. Sei der Erste.',
     );
   });
+
+  test('leaderboard copy and point plurals are localized', () {
+    expect(AppStrings('cs').navLeaderboard, 'Žebříček');
+    expect(AppStrings('cs').leaderboardTitle, 'Žebříček');
+    expect(AppStrings('en').leaderboardTitle, 'Leaderboard');
+    expect(AppStrings('de').leaderboardTitle, 'Rangliste');
+    expect(AppStrings('cs').leaderboardMe, 'Já');
+    expect(AppStrings('en').leaderboardMe, 'Me');
+    expect(AppStrings('de').leaderboardMe, 'Ich');
+    expect(
+      AppStrings('cs').leaderboardHowBody,
+      '1 bod za každé navštívené místo. 3 body za dokončenou výzvu; střední +1, náročná +2.',
+    );
+    expect(AppStrings('cs').leaderboardEmpty, 'Zatím tu nikoho není.');
+    expect(AppStrings('cs').leaderboardError, 'Nepodařilo se načíst žebříček.');
+    expect(AppStrings('cs').leaderboardRetry, 'Zkusit znovu');
+    expect(AppStrings('cs').leaderboardNoPoints, 'Zatím bez bodů');
+    expect(AppStrings('cs').leaderboardOpen, 'Zobrazit žebříček');
+    expect(AppStrings('cs').leaderboardBreakdown(2, 7), 'Místa: 2 · Výzvy: 7');
+    expect(
+      AppStrings('en').leaderboardBreakdown(2, 7),
+      'Places: 2 · Challenges: 7',
+    );
+    expect(AppStrings('cs').pointsLabel(0), '0 bodů');
+    expect(AppStrings('cs').pointsLabel(1), '1 bod');
+    expect(AppStrings('cs').pointsLabel(2), '2 body');
+    expect(AppStrings('cs').pointsLabel(4), '4 body');
+    expect(AppStrings('cs').pointsLabel(5), '5 bodů');
+    expect(AppStrings('cs').pointsLabel(11), '11 bodů');
+    expect(AppStrings('cs').pointsLabel(12), '12 bodů');
+    expect(AppStrings('cs').pointsLabel(21), '21 bod');
+    expect(AppStrings('cs').pointsLabel(22), '22 body');
+    expect(AppStrings('cs').leaderboardRankLine(3, 4), '#3 · 4 body');
+    expect(AppStrings('en').pointsLabel(1), '1 point');
+    expect(AppStrings('en').pointsLabel(3), '3 points');
+    expect(AppStrings('de').pointsLabel(1), '1 Punkt');
+    expect(AppStrings('de').pointsLabel(2), '2 Punkte');
+  });
 }

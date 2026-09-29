@@ -86,23 +86,35 @@ class CatalogWelcomeHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      key: const Key('catalog-welcome-avatar'),
-                      width: avatarSize,
-                      height: avatarSize,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: BrandColors.cream.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          color: BrandColors.cream,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                    Semantics(
+                      button: true,
+                      label: strings.navProfile,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () =>
+                              GoRouter.maybeOf(context)?.go('/profile'),
+                          child: Container(
+                            key: const Key('catalog-welcome-avatar'),
+                            width: avatarSize,
+                            height: avatarSize,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: BrandColors.cream.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              initial,
+                              style: const TextStyle(
+                                color: BrandColors.cream,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
