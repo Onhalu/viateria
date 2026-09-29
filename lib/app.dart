@@ -84,16 +84,8 @@ class _ViateriaAppState extends State<ViateriaApp> {
                       ),
                     ),
                     GoRoute(
-                      path: 'profile',
-                      builder: (context, state) => const ProfileScreen(),
-                      routes: [
-                        GoRoute(
-                          path: 'challenge/:id',
-                          builder: (context, state) => ChallengeScreen(
-                            challengeId: state.pathParameters['id']!,
-                          ),
-                        ),
-                      ],
+                      path: 'leaderboard',
+                      builder: (context, state) => const LeaderboardScreen(),
                     ),
                   ],
                 ),
@@ -118,8 +110,16 @@ class _ViateriaAppState extends State<ViateriaApp> {
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/leaderboard',
-                  builder: (context, state) => const LeaderboardScreen(),
+                  path: '/profile',
+                  builder: (context, state) => const ProfileScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'challenge/:id',
+                      builder: (context, state) => ChallengeScreen(
+                        challengeId: state.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

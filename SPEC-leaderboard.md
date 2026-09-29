@@ -36,8 +36,7 @@ Apply the migration before expecting the app RPCs to exist. Do not merge until a
 
 ## App
 
-- Bottom nav: Profil tab removed. **Žebříček** uses `Icons.military_tech_outlined` (outline).
-- Welcome-header avatar opens Profile. Profile stays off the tab bar.
+- Bottom nav fourth tab is **Profil** (`Icons.person_outline`). **Žebříček** is the welcome-header action (`Icons.military_tech_outlined`, outline) and opens `/leaderboard`. The header avatar does not open Profile.
 - Under completed challenges: card **Žebříček** with `#rank · N bodů` or **Zatím bez bodů**, chevron opens the board.
 - Colors stay on `BrandColors`. `shellFill` `#7D8B6A` is only the welcome header and the floating bottom nav.
 

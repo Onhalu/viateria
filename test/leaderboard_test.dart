@@ -261,7 +261,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(strings.navLeaderboard));
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('leaderboard-title')), findsOneWidget);
@@ -316,20 +316,13 @@ void main() {
     expect(page.color, isNot(BrandColors.shellFill));
   });
 
-  Finder navLabel(String label) {
-    return find.descendant(
-      of: find.byKey(const Key('app-bottom-nav')),
-      matching: find.text(label),
-    );
-  }
-
   testWidgets('empty board explains that nobody is ranked yet', (tester) async {
     final strings = AppStrings('en');
     await tester.pumpWidget(
       wrapApp(buildServices(leaderboard: MemoryLeaderboardRepository())),
     );
     await tester.pumpAndSettle();
-    await tester.tap(navLabel(strings.navLeaderboard));
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
     expect(find.text(strings.leaderboardEmpty), findsOneWidget);
     expect(find.text(strings.leaderboardEmptyBody), findsOneWidget);
@@ -344,7 +337,7 @@ void main() {
     final failing = MemoryLeaderboardRepository()..error = StateError('down');
     await tester.pumpWidget(wrapApp(buildServices(leaderboard: failing)));
     await tester.pumpAndSettle();
-    await tester.tap(navLabel(strings.navLeaderboard));
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
     expect(find.text(strings.leaderboardError), findsOneWidget);
     expect(
@@ -390,7 +383,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(navLabel(strings.navLeaderboard));
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
     expect(
       tester.widget<Text>(find.byKey(const Key('leaderboard-me-name'))).data,
@@ -427,12 +420,41 @@ void main() {
         of: find.byKey(const Key('app-bottom-nav')),
         matching: find.text('Žebříček'),
       ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text('Profil'),
+      ),
       findsOneWidget,
     );
     expect(find.bySemanticsLabel('Žebříček'), findsWidgets);
-    expect(find.byIcon(Icons.military_tech_outlined), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byIcon(Icons.military_tech_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.byIcon(Icons.military_tech_outlined),
+      ),
+      findsNothing,
+    );
 
     await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsNothing);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text('Profil'),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const Key('profile-leaderboard')),

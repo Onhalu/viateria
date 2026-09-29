@@ -45,9 +45,9 @@ class AppShell extends StatelessWidget {
         label: strings.navMap,
       ),
       (
-        icon: Icons.military_tech_outlined,
-        selectedIcon: Icons.military_tech_outlined,
-        label: strings.navLeaderboard,
+        icon: Icons.person_outline,
+        selectedIcon: Icons.person_outline,
+        label: strings.navProfile,
       ),
     ];
 

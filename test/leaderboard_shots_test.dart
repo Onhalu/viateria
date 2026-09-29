@@ -115,18 +115,26 @@ void main() {
       wrapApp(services, locale: LocaleController(initial: 'cs')),
     );
     await tester.pumpAndSettle();
-    await saveShot(tester, 'lb-nav-inactive.png');
-
+    expect(find.byIcon(Icons.person_outline), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byIcon(Icons.military_tech_outlined),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsNothing);
+    await saveShot(tester, 'nav-header-lb.png');
     await tester.tap(
       find.descendant(
         of: find.byKey(const Key('app-bottom-nav')),
-        matching: find.text('Žebříček'),
+        matching: find.text('Poslední výzva'),
       ),
     );
     await tester.pumpAndSettle();
-    await saveShot(tester, 'lb-full.png');
-    await saveShot(tester, 'lb-nav-active.png');
-
+    await saveShot(tester, 'nav-bottom-profile-inactive.png');
     await tester.tap(
       find.descendant(
         of: find.byKey(const Key('app-bottom-nav')),
@@ -134,7 +142,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
+    await tester.pumpAndSettle();
+    await saveShot(tester, 'lb-full.png');
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text('Profil'),
+      ),
+    );
     await tester.pumpAndSettle();
     final scrollable = find.descendant(
       of: find.byType(ProfileScreen),
@@ -166,6 +184,7 @@ void main() {
     expect(find.text('Otevřená stezka'), findsOneWidget);
     expect(find.text('Dokončené výzvy'), findsOneWidget);
     await saveShot(tester, 'lb-profile-teaser.png');
+    await saveShot(tester, 'nav-bottom-profile-active.png');
     debugDisableShadows = true;
   }, timeout: const Timeout(Duration(seconds: 40)));
 
@@ -179,12 +198,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const Key('app-bottom-nav')),
-        matching: find.text('Žebříček'),
-      ),
-    );
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
     await saveShot(tester, 'lb-empty.png');
     debugDisableShadows = true;
@@ -200,12 +214,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const Key('app-bottom-nav')),
-        matching: find.text('Žebříček'),
-      ),
-    );
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
     await saveShot(tester, 'lb-error.png');
     debugDisableShadows = true;

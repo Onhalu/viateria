@@ -24,6 +24,10 @@ class CatalogWelcomeHeader extends StatelessWidget {
 
   static const avatarSize = 36.0;
   static const actionSize = 36.0;
+
+  /// Žebříček control. Visual chrome matches the other header buttons;
+  /// the tap target is at least 44.
+  static const leaderboardHitSize = 44.0;
   static const horizontalInset = AppShell.horizontalInset;
   static const topGap = AppShell.topInset;
   static const barRadius = AppShell.barRadius;
@@ -86,35 +90,23 @@ class CatalogWelcomeHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Semantics(
-                      button: true,
-                      label: strings.navProfile,
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () =>
-                              GoRouter.maybeOf(context)?.go('/profile'),
-                          child: Container(
-                            key: const Key('catalog-welcome-avatar'),
-                            width: avatarSize,
-                            height: avatarSize,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: BrandColors.cream.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Text(
-                              initial,
-                              style: const TextStyle(
-                                color: BrandColors.cream,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
+                    Container(
+                      key: const Key('catalog-welcome-avatar'),
+                      width: avatarSize,
+                      height: avatarSize,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: BrandColors.cream.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          color: BrandColors.cream,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -151,11 +143,12 @@ class CatalogWelcomeHeader extends StatelessWidget {
                     _LocaleHeaderButton(controller: localeController),
                     const SizedBox(width: 4),
                     _RoundHeaderButton(
-                      key: const Key('catalog-welcome-profile'),
-                      icon: Icons.person_outline,
-                      tooltip: strings.navProfile,
+                      key: const Key('catalog-welcome-leaderboard'),
+                      icon: Icons.military_tech_outlined,
+                      tooltip: strings.navLeaderboard,
+                      hitSize: leaderboardHitSize,
                       onPressed: () =>
-                          GoRouter.maybeOf(context)?.go('/profile'),
+                          GoRouter.maybeOf(context)?.go('/leaderboard'),
                     ),
                   ],
                 ),
@@ -252,19 +245,31 @@ class _RoundHeaderButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.hitSize = CatalogWelcomeHeader.actionSize,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onPressed;
+  final double hitSize;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      style: CatalogWelcomeHeader.actionStyle,
-      icon: Icon(icon, size: 20, color: BrandColors.cream),
+    final style = CatalogWelcomeHeader.actionStyle.copyWith(
+      minimumSize: WidgetStatePropertyAll(Size(hitSize, hitSize)),
+      maximumSize: WidgetStatePropertyAll(Size.square(hitSize)),
+      fixedSize: WidgetStatePropertyAll(Size.square(hitSize)),
+    );
+    return Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        style: style,
+        icon: Icon(icon, size: 20, color: BrandColors.cream),
+      ),
     );
   }
 }

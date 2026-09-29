@@ -6,8 +6,9 @@ import '../data/last_opened_challenge.dart';
 
 /// Records [challengeId] as last-opened and pushes the challenge detail route.
 ///
-/// [fromProfile] nests the detail under `/profile` so the catalog branch
-/// (where Profile lives) stays selected. Profile is not a bottom-nav tab.
+/// [fromProfile] nests the detail under `/profile` so the profile branch
+/// stays selected. Profile is the bottom-nav tab. Žebříček opens from the
+/// welcome header.
 Future<void> openChallenge(
   BuildContext context,
   String challengeId, {
