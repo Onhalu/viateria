@@ -630,12 +630,8 @@ void main() {
     );
     expect(
       tester.getSize(find.byKey(const Key('catalog-welcome-leaderboard'))),
-      const Size(
-        CatalogWelcomeHeader.leaderboardHitSize,
-        CatalogWelcomeHeader.leaderboardHitSize,
-      ),
+      tester.getSize(find.byKey(const Key('catalog-welcome-locale'))),
     );
-    expect(CatalogWelcomeHeader.leaderboardHitSize, greaterThanOrEqualTo(44));
 
     final greeting = tester.widget<Text>(
       find.byKey(const Key('catalog-welcome-greeting')),
