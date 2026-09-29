@@ -903,6 +903,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('leaderboard-title')), findsOneWidget);
     expect(find.text(strings.leaderboardTitle), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+    expect(find.byKey(const Key('leaderboard-sheet')), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
     expect(find.byType(Badge), findsNothing);
     expect(

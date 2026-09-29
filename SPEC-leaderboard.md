@@ -36,8 +36,8 @@ Apply the migration before expecting the app RPCs to exist. Do not merge until a
 
 ## App
 
-- Bottom nav fourth tab is **Profil** (`Icons.person_outline`). The welcome-header avatar also opens `/profile`. **Žebříček** is the welcome-header action (`Icons.military_tech_outlined`, outline) and opens `/leaderboard`.
-- Under completed challenges: card **Žebříček** with `#rank · N bodů` or **Zatím bez bodů**, chevron opens the board.
+- Bottom nav fourth tab is **Profil** (`Icons.person_outline`). The welcome-header avatar also opens `/profile`. **Žebříček** is the welcome-header action (`Icons.military_tech_outlined`, outline). It opens a modal bottom sheet (~82% height, cream, forest barrier at 40%). The profile card opens the same sheet. Dismiss is the back arrow („Zavřít“) or a barrier tap. `/leaderboard` uses that same sheet, not a full-screen page.
+- Under completed challenges: card **Žebříček** with `#rank · N bodů` or **Zatím bez bodů**, chevron opens the sheet.
 - Colors stay on `BrandColors`. `shellFill` `#7D8B6A` is only the welcome header and the floating bottom nav.
 
 Out of scope: per-challenge boards, seasons, region filter, opt-out, invented visit history, medal artwork.

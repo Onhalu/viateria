@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
@@ -14,6 +13,7 @@ import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
 import '../navigation.dart';
+import 'leaderboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.places});
@@ -318,7 +318,7 @@ class _LeaderboardCard extends StatelessWidget {
           side: const BorderSide(color: BrandColors.beige),
         ),
         child: ListTile(
-          onTap: () => context.go('/leaderboard'),
+          onTap: () => showLeaderboardSheet(context),
           title: Text(
             strings.leaderboardTitle,
             style: const TextStyle(

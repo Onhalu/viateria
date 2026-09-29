@@ -314,6 +314,73 @@ void main() {
     );
     expect(page.color, BrandColors.cream);
     expect(page.color, isNot(BrandColors.shellFill));
+
+    final viewport =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    final sheet = tester.getSize(find.byKey(const Key('leaderboard-sheet')));
+    expect(sheet.height, closeTo(LeaderboardSheet.heightFor(viewport), 0.5));
+    expect(sheet.height, inInclusiveRange(viewport * 0.70, viewport * 0.88));
+    expect(sheet.height, lessThan(viewport));
+
+    final surface = tester.widget<Material>(
+      find.byKey(const Key('leaderboard-sheet-surface')),
+    );
+    final shape = surface.shape! as RoundedRectangleBorder;
+    expect(
+      shape.borderRadius,
+      const BorderRadius.vertical(
+        top: Radius.circular(LeaderboardSheet.radius),
+      ),
+    );
+    expect(LeaderboardSheet.radius, inInclusiveRange(16, 20));
+    expect(surface.color, BrandColors.cream);
+    expect(surface.color, isNot(BrandColors.shellFill));
+
+    final barriers = tester.widgetList<ModalBarrier>(find.byType(ModalBarrier));
+    expect(
+      barriers.map((barrier) => barrier.color),
+      contains(LeaderboardSheet.barrierColor),
+    );
+
+    final close = tester.getSize(find.byKey(const Key('leaderboard-close')));
+    expect(close.width, greaterThanOrEqualTo(LeaderboardSheet.closeHit));
+    expect(close.height, greaterThanOrEqualTo(LeaderboardSheet.closeHit));
+    expect(
+      tester.widget<Icon>(find.byIcon(Icons.arrow_back)).color,
+      BrandColors.forest,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('leaderboard-sheet-body')),
+        matching: find.byIcon(Icons.close),
+      ),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('arrow and barrier dismiss the sheet without leaving catalog', (
+    tester,
+  ) async {
+    final strings = AppStrings('en');
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip(strings.closeCta), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('leaderboard-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('leaderboard-title')), findsNothing);
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(12, 12));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('leaderboard-title')), findsNothing);
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
   });
 
   testWidgets('empty board explains that nobody is ranked yet', (tester) async {
@@ -484,7 +551,19 @@ void main() {
     await tester.tap(cardFinder);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('leaderboard-title')), findsOneWidget);
+    expect(find.byType(ProfileScreen), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+    expect(find.bySemanticsLabel('Zavřít'), findsOneWidget);
+    expect(find.bySemanticsLabel('Zpět'), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const Key('leaderboard-close'))).shortestSide,
+      greaterThanOrEqualTo(44),
+    );
+
+    await tester.tap(find.byKey(const Key('leaderboard-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('leaderboard-title')), findsNothing);
+    expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
   testWidgets('map place visit records source map and ignores fixture ids', (

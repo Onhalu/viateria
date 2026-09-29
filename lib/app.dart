@@ -85,7 +85,7 @@ class _ViateriaAppState extends State<ViateriaApp> {
                     ),
                     GoRoute(
                       path: 'leaderboard',
-                      builder: (context, state) => const LeaderboardScreen(),
+                      builder: (context, state) => const LeaderboardRoutePage(),
                     ),
                   ],
                 ),

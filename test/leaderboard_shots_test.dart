@@ -153,7 +153,13 @@ void main() {
 
     await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('leaderboard-close')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+    await saveShot(tester, 'lb-sheet-catalog.png');
+    await saveShot(tester, 'lb-sheet-close.png');
     await saveShot(tester, 'lb-full.png');
+    await tester.tap(find.byKey(const Key('leaderboard-close')));
+    await tester.pumpAndSettle();
 
     await tester.tap(
       find.descendant(
@@ -193,6 +199,11 @@ void main() {
     expect(find.text('Dokončené výzvy'), findsOneWidget);
     await saveShot(tester, 'lb-profile-teaser.png');
     await saveShot(tester, 'nav-bottom-profile-active.png');
+    await tester.tap(find.byKey(const Key('profile-leaderboard')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.byKey(const Key('leaderboard-close')), findsOneWidget);
+    await saveShot(tester, 'lb-sheet-profile.png');
     debugDisableShadows = true;
   }, timeout: const Timeout(Duration(seconds: 40)));
 
@@ -209,6 +220,7 @@ void main() {
     await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
     await tester.pumpAndSettle();
     await saveShot(tester, 'lb-empty.png');
+    await saveShot(tester, 'lb-sheet-empty-or-error.png');
     debugDisableShadows = true;
   }, timeout: const Timeout(Duration(seconds: 40)));
 

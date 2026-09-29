@@ -7,6 +7,7 @@ import '../../domain/catalog_query.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../theme/brand_colors.dart';
+import '../screens/leaderboard_screen.dart';
 import 'app_shell.dart';
 import 'catalog_filters.dart';
 
@@ -165,8 +166,7 @@ class CatalogWelcomeHeader extends StatelessWidget {
                       key: const Key('catalog-welcome-leaderboard'),
                       icon: Icons.military_tech_outlined,
                       tooltip: strings.navLeaderboard,
-                      onPressed: () =>
-                          GoRouter.maybeOf(context)?.go('/leaderboard'),
+                      onPressed: () => showLeaderboardSheet(context),
                     ),
                   ],
                 ),
