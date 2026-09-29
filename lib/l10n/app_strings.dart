@@ -215,6 +215,7 @@ class AppStrings {
     'leaderboardHowBody',
     'leaderboardBreakdown',
     'leaderboardEmpty',
+    'leaderboardEmptyBody',
     'leaderboardEmptyHint',
     'leaderboardError',
     'leaderboardRetry',
@@ -430,6 +431,7 @@ class AppStrings {
   String get leaderboardHowTitle => t('leaderboardHowTitle');
   String get leaderboardHowBody => t('leaderboardHowBody');
   String get leaderboardEmpty => t('leaderboardEmpty');
+  String get leaderboardEmptyBody => t('leaderboardEmptyBody');
   String get leaderboardEmptyHint => t('leaderboardEmptyHint');
   String get leaderboardError => t('leaderboardError');
   String get leaderboardRetry => t('leaderboardRetry');
@@ -722,6 +724,8 @@ class AppStrings {
       'leaderboardHowBody': '1 point for each place you visit. 3 points for a completed challenge; medium +1, hard +2.',
       'leaderboardBreakdown': 'Places: {places} · Challenges: {challenges}',
       'leaderboardEmpty': 'No one is here yet.',
+      'leaderboardEmptyBody':
+          'Points are counted from visited places and completed challenges.',
       'leaderboardEmptyHint': 'Visit a place or finish a challenge.',
       'leaderboardError': 'Could not load the leaderboard.',
       'leaderboardRetry': 'Try again',
@@ -949,6 +953,8 @@ class AppStrings {
       'leaderboardHowBody': '1 bod za každé navštívené místo. 3 body za dokončenou výzvu; střední +1, náročná +2.',
       'leaderboardBreakdown': 'Místa: {places} · Výzvy: {challenges}',
       'leaderboardEmpty': 'Zatím tu nikoho není.',
+      'leaderboardEmptyBody':
+          'Body se počítají z navštívených míst a dokončených výzev.',
       'leaderboardEmptyHint': 'Navštiv místo nebo dokonči výzvu.',
       'leaderboardError': 'Nepodařilo se načíst žebříček.',
       'leaderboardRetry': 'Zkusit znovu',
@@ -1176,6 +1182,7 @@ class AppStrings {
       'leaderboardHowBody': '1 Punkt für jeden besuchten Ort. 3 Punkte für eine abgeschlossene Challenge; mittel +1, anspruchsvoll +2.',
       'leaderboardBreakdown': 'Orte: {places} · Challenges: {challenges}',
       'leaderboardEmpty': 'Hier ist noch niemand.',
+      'leaderboardEmptyBody': 'Punkte werden aus besuchten Orten und abgeschlossenen Challenges gezählt.',
       'leaderboardEmptyHint':
           'Besuche einen Ort oder schließe eine Challenge ab.',
       'leaderboardError': 'Die Rangliste konnte nicht geladen werden.',

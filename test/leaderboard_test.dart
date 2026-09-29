@@ -332,6 +332,7 @@ void main() {
     await tester.tap(navLabel(strings.navLeaderboard));
     await tester.pumpAndSettle();
     expect(find.text(strings.leaderboardEmpty), findsOneWidget);
+    expect(find.text(strings.leaderboardEmptyBody), findsOneWidget);
     expect(find.text(strings.leaderboardEmptyHint), findsOneWidget);
     expect(find.text(strings.leaderboardNoPoints), findsOneWidget);
   });
@@ -346,6 +347,13 @@ void main() {
     await tester.tap(navLabel(strings.navLeaderboard));
     await tester.pumpAndSettle();
     expect(find.text(strings.leaderboardError), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('leaderboard-error')))
+          .style
+          ?.color,
+      BrandColors.error,
+    );
     final retry = tester.widget<FilledButton>(
       find.byKey(const Key('leaderboard-retry')),
     );

@@ -9,6 +9,7 @@ import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/last_challenge_screen.dart';
@@ -30,6 +31,7 @@ AppServices buildServices({
   Profile? user,
   bool configured = true,
   LeaderboardRepository? leaderboard,
+  PlaceCatalog? places,
 }) {
   final open = sampleOpenChallenge();
   final story = sampleStoryChallenge();
@@ -74,6 +76,7 @@ AppServices buildServices({
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     leaderboard: leaderboard,
+    places: places,
   );
 }
 

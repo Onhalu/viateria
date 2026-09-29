@@ -159,6 +159,14 @@ void main() {
       '1 bod za každé navštívené místo. 3 body za dokončenou výzvu; střední +1, náročná +2.',
     );
     expect(AppStrings('cs').leaderboardEmpty, 'Zatím tu nikoho není.');
+    expect(
+      AppStrings('cs').leaderboardEmptyBody,
+      'Body se počítají z navštívených míst a dokončených výzev.',
+    );
+    expect(
+      AppStrings('cs').leaderboardEmptyHint,
+      'Navštiv místo nebo dokonči výzvu.',
+    );
     expect(AppStrings('cs').leaderboardError, 'Nepodařilo se načíst žebříček.');
     expect(AppStrings('cs').leaderboardRetry, 'Zkusit znovu');
     expect(AppStrings('cs').leaderboardNoPoints, 'Zatím bez bodů');

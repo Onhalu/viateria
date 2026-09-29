@@ -108,7 +108,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         strings.leaderboardError,
                         key: const Key('leaderboard-error'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: BrandColors.forest),
+                        style: const TextStyle(color: BrandColors.error),
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
@@ -296,10 +296,17 @@ class _EmptyBoard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
+            strings.leaderboardEmptyBody,
+            key: const Key('leaderboard-empty-body'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: BrandColors.bark, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+          Text(
             strings.leaderboardEmptyHint,
             key: const Key('leaderboard-empty-hint'),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: BrandColors.bark),
+            style: const TextStyle(color: BrandColors.bark, height: 1.35),
           ),
         ],
       ),

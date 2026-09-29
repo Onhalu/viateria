@@ -166,6 +166,7 @@ class _ViateriaAppState extends State<ViateriaApp> {
     final strings = context.watch<LocaleController>().strings;
     return MaterialApp.router(
       title: strings.appName,
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       locale: Locale(locale),
       supportedLocales: AppStringsLocales.supported,
