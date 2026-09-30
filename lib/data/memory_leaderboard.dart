@@ -10,11 +10,16 @@ class MemoryLeaderboardRepository implements LeaderboardRepository {
     List<LeaderboardEntry>? entries,
     this.me,
     this.error,
-  }) : entries = entries ?? const [];
+    List<String>? visitedPlaceIds,
+  }) : entries = entries ?? const [],
+       visitedPlaceIds = List<String>.from(visitedPlaceIds ?? const []);
 
   List<LeaderboardEntry> entries;
   LeaderboardEntry? me;
   Object? error;
+
+  /// Ids returned by [fetchMyVisitedPlaceIds]. Tests set the server snapshot.
+  List<String> visitedPlaceIds;
 
   final visits = <({String placeId, PlaceVisitSource source})>[];
   final batches = <List<String>>[];
@@ -59,5 +64,14 @@ class MemoryLeaderboardRepository implements LeaderboardRepository {
     final forced = error;
     if (forced != null) throw forced;
     return me ?? LeaderboardEntry.unscored;
+  }
+
+  @override
+  Future<List<String>> fetchMyVisitedPlaceIds() async {
+    final forced = error;
+    if (forced != null) throw forced;
+    final ids = visitedPlaceIds.where((id) => id.isNotEmpty).toSet().toList()
+      ..sort();
+    return ids;
   }
 }

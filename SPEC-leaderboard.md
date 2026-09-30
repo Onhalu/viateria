@@ -22,6 +22,10 @@ Global all-time board. Live reads only (`get_leaderboard` / `get_my_score`). No 
 
 The score uses the server row, not a second local count.
 
+Profile category cards and map visited markers read `VerifiedPlacesStore`. On cold start and on each auth login, after `bindUser`, the app loads the caller's `place_visits.place_id` rows (`fetchMyVisitedPlaceIds`, RLS select own, no service role) and unions them into that store. The prefs-sync flag does not skip this read. The prefs upload still runs afterward.
+
+Migration `0012_backfill_place_visits_from_waypoints.sql` inserts `place_visits` from `waypoint_progress` (nearest place within 50 m, `source = verify`, `visited_at` from `completed_at`). `ON CONFLICT (user_id, place_id) DO NOTHING` keeps it idempotent. That migration is already applied on production; the file is the repo copy.
+
 ## API
 
 Migration: `supabase/migrations/0011_leaderboard.sql`. That file also ensures `challenges.difficulty` (nullable, `easy` / `normal` / `hard`) when the column is absent, same idempotent block as `0006_challenge_difficulty.sql`.

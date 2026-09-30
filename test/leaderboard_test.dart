@@ -163,6 +163,20 @@ void main() {
     expect(sql, isNot(contains('u.email')));
   });
 
+  test('place visit backfill is insert-only and idempotent', () {
+    final sql = File(
+      'supabase/migrations/0012_backfill_place_visits_from_waypoints.sql',
+    ).readAsStringSync().toLowerCase();
+    expect(sql, contains('insert into public.place_visits'));
+    expect(sql, contains('on conflict (user_id, place_id) do nothing'));
+    expect(sql, contains("'verify'"));
+    expect(sql, contains('coalesce(wp.completed_at, now())'));
+    expect(sql, contains('<= 50'));
+    expect(sql, contains('from public.waypoint_progress'));
+    expect(sql, isNot(contains('delete from')));
+    expect(sql, isNot(contains('service_role')));
+  });
+
   test(
     'prefs sync uploads uuid visits once and retries after failure',
     () async {
