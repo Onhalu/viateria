@@ -24,7 +24,7 @@ The score uses the server row, not a second local count.
 
 ## API
 
-Migration: `supabase/migrations/0011_leaderboard.sql`.
+Migration: `supabase/migrations/0011_leaderboard.sql`. That file also ensures `challenges.difficulty` (nullable, `easy` / `normal` / `hard`) when the column is absent, same idempotent block as `0006_challenge_difficulty.sql`.
 
 - Table `place_visits`. RLS: authenticated select/insert of **own** rows only.
 - `record_place_visit(p_place_id, p_source)` — insert, ignore duplicates.
