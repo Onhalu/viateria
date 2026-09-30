@@ -4,6 +4,7 @@ import '../map/place_category.dart';
 import 'enums.dart';
 
 export 'enums.dart';
+export 'leaderboard_entry.dart';
 
 class LocalizedText {
   const LocalizedText({

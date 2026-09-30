@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../domain/photo_verify.dart';
 import '../map/place_catalog.dart';
+import 'memory_leaderboard.dart';
 import 'repositories.dart';
 import 'route_services.dart';
 import 'verified_places.dart';
@@ -33,6 +34,7 @@ class AppServices {
     ExternalUrlOpener? openUrl,
     VerifiedPlacesStore? verifiedPlaces,
     PlaceCatalog? places,
+    LeaderboardRepository? leaderboard,
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
@@ -41,7 +43,8 @@ class AppServices {
        verifiedPlaces = verifiedPlaces ?? VerifiedPlacesStore(),
        // Tests omit this and keep the bundled GeoJSON catalog. Production
        // main.dart passes the Supabase catalog instead.
-       places = places ?? const AssetPlaceCatalog();
+       places = places ?? const AssetPlaceCatalog(),
+       leaderboard = leaderboard ?? MemoryLeaderboardRepository();
 
   final AppConfig config;
   final AuthRepository auth;
@@ -59,4 +62,7 @@ class AppServices {
 
   /// Map place source. Production passes a Supabase `public.places` catalog.
   final PlaceCatalog places;
+
+  /// Live leaderboard RPCs. The default memory repo does not call the network.
+  final LeaderboardRepository leaderboard;
 }

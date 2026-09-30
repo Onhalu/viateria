@@ -46,7 +46,7 @@ class AppShell extends StatelessWidget {
       ),
       (
         icon: Icons.person_outline,
-        selectedIcon: Icons.person,
+        selectedIcon: Icons.person_outline,
         label: strings.navProfile,
       ),
     ];
@@ -138,6 +138,7 @@ class _SageNavDestinationState extends State<_SageNavDestination> {
       button: true,
       selected: widget.selected,
       label: widget.label,
+      excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => _setPressed(true),

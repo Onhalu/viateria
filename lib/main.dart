@@ -9,6 +9,9 @@ import 'config/app_config.dart';
 import 'data/app_services.dart';
 import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
+import 'data/place_visit_sync.dart';
+import 'data/repositories.dart';
+import 'data/supabase_leaderboard.dart';
 import 'data/supabase_place_catalog.dart';
 import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
@@ -36,6 +39,7 @@ Future<void> main() async {
     final userId = client.auth.currentUser?.id;
     await verifiedPlaces.bindUser(userId);
     await lastOpened.bindUser(userId);
+    final leaderboard = SupabaseLeaderboardRepository(client);
     services = AppServices(
       config: config,
       auth: SupabaseAuthRepository(client),
@@ -46,10 +50,27 @@ Future<void> main() async {
       photoCapture: LiveCameraPhotoCapture(),
       verifiedPlaces: verifiedPlaces,
       places: resolvePlaceCatalog(config: config, client: client),
+      leaderboard: leaderboard,
     );
+    if (userId != null && userId.isNotEmpty) {
+      await _syncStoredPlaceVisits(
+        userId: userId,
+        verifiedPlaces: verifiedPlaces,
+        leaderboard: leaderboard,
+      );
+    }
     services.auth.authState().listen((profile) {
-      unawaited(verifiedPlaces.bindUser(profile?.id));
-      unawaited(lastOpened.bindUser(profile?.id));
+      unawaited(() async {
+        await verifiedPlaces.bindUser(profile?.id);
+        await lastOpened.bindUser(profile?.id);
+        final id = profile?.id;
+        if (id == null || id.isEmpty) return;
+        await _syncStoredPlaceVisits(
+          userId: id,
+          verifiedPlaces: verifiedPlaces,
+          leaderboard: leaderboard,
+        );
+      }());
     });
   } else {
     await lastOpened.load();
@@ -77,4 +98,19 @@ Future<void> main() async {
       child: const ViateriaApp(),
     ),
   );
+}
+
+/// One-shot prefs upload. A failed RPC leaves the flag unset for next launch.
+Future<void> _syncStoredPlaceVisits({
+  required String userId,
+  required VerifiedPlacesStore verifiedPlaces,
+  required LeaderboardRepository leaderboard,
+}) async {
+  try {
+    await const PlaceVisitSync().syncStored(
+      userId: userId,
+      store: verifiedPlaces,
+      leaderboard: leaderboard,
+    );
+  } catch (_) {}
 }

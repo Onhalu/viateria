@@ -208,6 +208,22 @@ class AppStrings {
     'challengePhotosEmpty',
     'showMore',
     'showLess',
+    'navLeaderboard',
+    'leaderboardTitle',
+    'leaderboardMe',
+    'leaderboardHowTitle',
+    'leaderboardHowBody',
+    'leaderboardBreakdown',
+    'leaderboardEmpty',
+    'leaderboardEmptyBody',
+    'leaderboardEmptyHint',
+    'leaderboardError',
+    'leaderboardRetry',
+    'leaderboardNoPoints',
+    'leaderboardOpen',
+    'pointsOne',
+    'pointsFew',
+    'pointsMany',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -409,6 +425,49 @@ class AppStrings {
   String get challengePhotosEmpty => t('challengePhotosEmpty');
   String get showMore => t('showMore');
   String get showLess => t('showLess');
+  String get navLeaderboard => t('navLeaderboard');
+  String get leaderboardTitle => t('leaderboardTitle');
+  String get leaderboardMe => t('leaderboardMe');
+  String get leaderboardHowTitle => t('leaderboardHowTitle');
+  String get leaderboardHowBody => t('leaderboardHowBody');
+  String get leaderboardEmpty => t('leaderboardEmpty');
+  String get leaderboardEmptyBody => t('leaderboardEmptyBody');
+  String get leaderboardEmptyHint => t('leaderboardEmptyHint');
+  String get leaderboardError => t('leaderboardError');
+  String get leaderboardRetry => t('leaderboardRetry');
+  String get leaderboardNoPoints => t('leaderboardNoPoints');
+  String get leaderboardOpen => t('leaderboardOpen');
+  String get pointsOne => t('pointsOne');
+  String get pointsFew => t('pointsFew');
+  String get pointsMany => t('pointsMany');
+
+  String leaderboardBreakdown(int places, int challenges) =>
+      t('leaderboardBreakdown')
+          .replaceAll('{places}', '$places')
+          .replaceAll('{challenges}', '$challenges');
+
+  String leaderboardRankLine(int rank, int points) =>
+      '#$rank · ${pointsLabel(points)}';
+
+  /// Czech: 1 bod, 2–4 body, otherwise bodů (including 11–14).
+  String pointsLabel(int count) {
+    final n = count.abs();
+    final word = switch (locale) {
+      'cs' => _czechPoints(n),
+      _ => n == 1 ? pointsOne : pointsMany,
+    };
+    return '$count $word';
+  }
+
+  String _czechPoints(int n) {
+    final mod100 = n % 100;
+    final mod10 = n % 10;
+    if (mod10 == 1 && mod100 != 11) return pointsOne;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+      return pointsFew;
+    }
+    return pointsMany;
+  }
 
   String difficultyLabel(String name) => t(name);
 
@@ -658,6 +717,23 @@ class AppStrings {
       'challengePhotosEmpty': 'No photos yet. Be the first to verify a place.',
       'showMore': 'More',
       'showLess': 'Less',
+      'navLeaderboard': 'Leaderboard',
+      'leaderboardTitle': 'Leaderboard',
+      'leaderboardMe': 'Me',
+      'leaderboardHowTitle': 'How are points counted?',
+      'leaderboardHowBody': '1 point for each place you visit. 3 points for a completed challenge; medium +1, hard +2.',
+      'leaderboardBreakdown': 'Places: {places} · Challenges: {challenges}',
+      'leaderboardEmpty': 'No one is here yet.',
+      'leaderboardEmptyBody':
+          'Points are counted from visited places and completed challenges.',
+      'leaderboardEmptyHint': 'Visit a place or finish a challenge.',
+      'leaderboardError': 'Could not load the leaderboard.',
+      'leaderboardRetry': 'Try again',
+      'leaderboardNoPoints': 'No points yet',
+      'leaderboardOpen': 'View leaderboard',
+      'pointsOne': 'point',
+      'pointsFew': 'points',
+      'pointsMany': 'points',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -870,6 +946,23 @@ class AppStrings {
       'challengePhotosEmpty': 'Zatím žádná fotka. Ověř místo jako první.',
       'showMore': 'Více',
       'showLess': 'Méně',
+      'navLeaderboard': 'Žebříček',
+      'leaderboardTitle': 'Žebříček',
+      'leaderboardMe': 'Já',
+      'leaderboardHowTitle': 'Jak se počítají body?',
+      'leaderboardHowBody': '1 bod za každé navštívené místo. 3 body za dokončenou výzvu; střední +1, náročná +2.',
+      'leaderboardBreakdown': 'Místa: {places} · Výzvy: {challenges}',
+      'leaderboardEmpty': 'Zatím tu nikoho není.',
+      'leaderboardEmptyBody':
+          'Body se počítají z navštívených míst a dokončených výzev.',
+      'leaderboardEmptyHint': 'Navštiv místo nebo dokonči výzvu.',
+      'leaderboardError': 'Nepodařilo se načíst žebříček.',
+      'leaderboardRetry': 'Zkusit znovu',
+      'leaderboardNoPoints': 'Zatím bez bodů',
+      'leaderboardOpen': 'Zobrazit žebříček',
+      'pointsOne': 'bod',
+      'pointsFew': 'body',
+      'pointsMany': 'bodů',
     },
     'de': {
       'appName': 'VANDERY',
@@ -1082,6 +1175,23 @@ class AppStrings {
       'challengePhotosEmpty': 'Noch keine Fotos. Sei der Erste.',
       'showMore': 'Mehr',
       'showLess': 'Weniger',
+      'navLeaderboard': 'Rangliste',
+      'leaderboardTitle': 'Rangliste',
+      'leaderboardMe': 'Ich',
+      'leaderboardHowTitle': 'Wie werden Punkte gezählt?',
+      'leaderboardHowBody': '1 Punkt für jeden besuchten Ort. 3 Punkte für eine abgeschlossene Challenge; mittel +1, anspruchsvoll +2.',
+      'leaderboardBreakdown': 'Orte: {places} · Challenges: {challenges}',
+      'leaderboardEmpty': 'Hier ist noch niemand.',
+      'leaderboardEmptyBody': 'Punkte werden aus besuchten Orten und abgeschlossenen Challenges gezählt.',
+      'leaderboardEmptyHint':
+          'Besuche einen Ort oder schließe eine Challenge ab.',
+      'leaderboardError': 'Die Rangliste konnte nicht geladen werden.',
+      'leaderboardRetry': 'Erneut versuchen',
+      'leaderboardNoPoints': 'Noch keine Punkte',
+      'leaderboardOpen': 'Rangliste anzeigen',
+      'pointsOne': 'Punkt',
+      'pointsFew': 'Punkte',
+      'pointsMany': 'Punkte',
     },
   };
 }

@@ -7,6 +7,7 @@ import '../../domain/catalog_query.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../theme/brand_colors.dart';
+import '../screens/leaderboard_screen.dart';
 import 'app_shell.dart';
 import 'catalog_filters.dart';
 
@@ -23,6 +24,9 @@ class CatalogWelcomeHeader extends StatelessWidget {
   final ValueChanged<CatalogFilter> onFilterChanged;
 
   static const avatarSize = 36.0;
+
+  /// Tap target around the 36px avatar. Visual disk stays [avatarSize].
+  static const avatarHitSize = 44.0;
   static const actionSize = 36.0;
   static const horizontalInset = AppShell.horizontalInset;
   static const topGap = AppShell.topInset;
@@ -86,23 +90,43 @@ class CatalogWelcomeHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      key: const Key('catalog-welcome-avatar'),
-                      width: avatarSize,
-                      height: avatarSize,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: BrandColors.cream.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          color: BrandColors.cream,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                    Semantics(
+                      button: true,
+                      label: strings.navProfile,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: InkWell(
+                          key: const Key('catalog-welcome-avatar'),
+                          customBorder: const CircleBorder(),
+                          onTap: () =>
+                              GoRouter.maybeOf(context)?.go('/profile'),
+                          child: SizedBox(
+                            width: avatarHitSize,
+                            height: avatarHitSize,
+                            child: Center(
+                              child: Container(
+                                width: avatarSize,
+                                height: avatarSize,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: BrandColors.cream.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    color: BrandColors.cream,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -139,11 +163,10 @@ class CatalogWelcomeHeader extends StatelessWidget {
                     _LocaleHeaderButton(controller: localeController),
                     const SizedBox(width: 4),
                     _RoundHeaderButton(
-                      key: const Key('catalog-welcome-profile'),
-                      icon: Icons.person_outline,
-                      tooltip: strings.navProfile,
-                      onPressed: () =>
-                          GoRouter.maybeOf(context)?.go('/profile'),
+                      key: const Key('catalog-welcome-leaderboard'),
+                      icon: Icons.military_tech_outlined,
+                      tooltip: strings.navLeaderboard,
+                      onPressed: () => showLeaderboardSheet(context),
                     ),
                   ],
                 ),
@@ -248,11 +271,20 @@ class _RoundHeaderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      style: CatalogWelcomeHeader.actionStyle,
-      icon: Icon(icon, size: 20, color: BrandColors.cream),
+    return Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: SizedBox(
+        width: CatalogWelcomeHeader.actionSize,
+        height: CatalogWelcomeHeader.actionSize,
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onPressed,
+          style: CatalogWelcomeHeader.actionStyle,
+          icon: Icon(icon, size: 16, color: BrandColors.cream),
+        ),
+      ),
     );
   }
 }

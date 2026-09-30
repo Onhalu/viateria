@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/app.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
 import 'package:viateria/ui/screens/last_challenge_screen.dart';
@@ -28,6 +30,8 @@ AppServices buildServices({
   MemoryProgress? progress,
   Profile? user,
   bool configured = true,
+  LeaderboardRepository? leaderboard,
+  PlaceCatalog? places,
 }) {
   final open = sampleOpenChallenge();
   final story = sampleStoryChallenge();
@@ -71,6 +75,8 @@ AppServices buildServices({
     purchases: MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
+    leaderboard: leaderboard,
+    places: places,
   );
 }
 
@@ -132,7 +138,42 @@ void main() {
     expect(find.text(strings.catalogTitle), findsOneWidget);
     expect(find.text(strings.navLastChallenge), findsOneWidget);
     expect(find.text(strings.navMap), findsOneWidget);
-    expect(find.text(strings.navProfile), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.navProfile),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.navLeaderboard),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.byIcon(Icons.military_tech_outlined),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byIcon(Icons.military_tech_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.military_tech), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.byIcon(Icons.person_outline),
+      ),
+      findsOneWidget,
+    );
 
     final screenSize = tester.getSize(find.byType(Scaffold).first);
     final navTop = tester.getTopLeft(nav).dy;
@@ -285,12 +326,39 @@ void main() {
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
   });
 
-  testWidgets('profile tab shows identity and sign out', (tester) async {
+  testWidgets('profile tab opens profile with identity and sign out', (
+    tester,
+  ) async {
     final strings = AppStrings('en');
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text(strings.navProfile));
+    expect(
+      tester
+          .getSize(find.byKey(const Key('catalog-welcome-avatar')))
+          .shortestSide,
+      greaterThanOrEqualTo(CatalogWelcomeHeader.avatarHitSize),
+    );
+    await tester.tap(find.byKey(const Key('catalog-welcome-avatar')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.catalogTitle),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.navProfile),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -301,6 +369,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('ada@example.com'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(strings.signOut),
+      200,
+      scrollable: find.descendant(
+        of: find.byType(ProfileScreen),
+        matching: find.byType(Scrollable),
+      ),
+    );
     expect(find.text(strings.signOut), findsOneWidget);
     expect(find.text(strings.language), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
@@ -503,7 +579,11 @@ void main() {
     expect(find.byType(Badge), findsNothing);
     expect(find.byKey(const Key('catalog-welcome-map')), findsNothing);
     expect(find.byKey(const Key('catalog-welcome-locale')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-welcome-profile')), findsOneWidget);
+    expect(
+      find.byKey(const Key('catalog-welcome-leaderboard')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('catalog-welcome-profile')), findsNothing);
     expect(find.byKey(const Key('catalog-search-field')), findsOneWidget);
     expect(find.byKey(const Key('catalog-filter-chips')), findsOneWidget);
     expect(
@@ -552,10 +632,11 @@ void main() {
     expect(
       tester.getSize(find.byKey(const Key('catalog-welcome-avatar'))),
       const Size(
-        CatalogWelcomeHeader.avatarSize,
-        CatalogWelcomeHeader.avatarSize,
+        CatalogWelcomeHeader.avatarHitSize,
+        CatalogWelcomeHeader.avatarHitSize,
       ),
     );
+    expect(CatalogWelcomeHeader.avatarHitSize, greaterThanOrEqualTo(44));
     expect(
       tester.getSize(find.byKey(const Key('catalog-welcome-locale'))),
       const Size(
@@ -564,11 +645,8 @@ void main() {
       ),
     );
     expect(
-      tester.getSize(find.byKey(const Key('catalog-welcome-profile'))),
-      const Size(
-        CatalogWelcomeHeader.actionSize,
-        CatalogWelcomeHeader.actionSize,
-      ),
+      tester.getSize(find.byKey(const Key('catalog-welcome-leaderboard'))),
+      tester.getSize(find.byKey(const Key('catalog-welcome-locale'))),
     );
 
     final greeting = tester.widget<Text>(
@@ -592,18 +670,29 @@ void main() {
       BrandColors.creamPill,
     );
     expect(localeButton.style?.foregroundColor?.resolve({}), BrandColors.cream);
-    final profileButton = tester.widget<IconButton>(
+    final leaderboardButton = tester.widget<IconButton>(
       find.descendant(
-        of: find.byKey(const Key('catalog-welcome-profile')),
+        of: find.byKey(const Key('catalog-welcome-leaderboard')),
         matching: find.byType(IconButton),
       ),
     );
     expect(
-      profileButton.style?.backgroundColor?.resolve({}),
+      leaderboardButton.style?.backgroundColor?.resolve({}),
       BrandColors.creamPill,
     );
     expect(
-      profileButton.style?.foregroundColor?.resolve({}),
+      leaderboardButton.style?.foregroundColor?.resolve({}),
+      BrandColors.cream,
+    );
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(const Key('catalog-welcome-leaderboard')),
+              matching: find.byIcon(Icons.military_tech_outlined),
+            ),
+          )
+          .color,
       BrandColors.cream,
     );
 
@@ -795,23 +884,35 @@ void main() {
     );
   });
 
-  testWidgets('catalog welcome profile button switches tabs', (tester) async {
+  testWidgets('header medal opens the leaderboard and keeps the shell', (
+    tester,
+  ) async {
     final strings = AppStrings('en');
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('catalog-welcome-map')), findsNothing);
-    await tester.tap(find.byKey(const Key('catalog-welcome-profile')));
-    await tester.pumpAndSettle();
     expect(
       find.descendant(
-        of: find.byType(ProfileScreen),
-        matching: find.text('Ada'),
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byIcon(Icons.person_outline),
+      ),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const Key('catalog-welcome-leaderboard')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('leaderboard-title')), findsOneWidget);
+    expect(find.text(strings.leaderboardTitle), findsOneWidget);
+    expect(find.byKey(const Key('catalog-welcome-header')), findsOneWidget);
+    expect(find.byKey(const Key('leaderboard-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+    expect(find.byType(Badge), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('app-bottom-nav')),
+        matching: find.text(strings.navProfile),
       ),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
-    expect(find.byType(Badge), findsNothing);
-    expect(find.text(strings.language, skipOffstage: false), findsOneWidget);
   });
 }

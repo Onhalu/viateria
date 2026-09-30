@@ -13,6 +13,7 @@ import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
 import '../navigation.dart';
+import 'leaderboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.places});
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   var _started = false;
   List<Place> _places = const [];
   List<Challenge> _completed = const [];
+  LeaderboardEntry? _score;
 
   @override
   void didChangeDependencies() {
@@ -40,15 +42,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _load() async {
     final services = context.read<AppServices>();
     final catalog = widget.places ?? services.places;
-    final places = await _orDefault(catalog.fetchAll(), const <Place>[]);
-    final completed = await _orDefault(
+    final placesFuture = _orDefault(catalog.fetchAll(), const <Place>[]);
+    final completedFuture = _orDefault(
       services.progress.fetchCompleted(),
       const <ChallengeProgress>[],
     );
-    final published = await _orDefault(
+    final publishedFuture = _orDefault(
       services.catalog.fetchPublishedChallenges(),
       const <Challenge>[],
     );
+    final score = await _orDefault(
+      services.leaderboard.fetchMyScore(),
+      LeaderboardEntry.unscored,
+    );
+    if (!mounted) return;
+    setState(() => _score = score);
+
+    final places = await placesFuture;
+    final completed = await completedFuture;
+    final published = await publishedFuture;
     if (!mounted) return;
     setState(() {
       _places = places;
@@ -119,6 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     verifiedIds: services.verifiedPlaces.ids,
                   ),
                   completed: _completed,
+                  score: _score,
                 );
               },
             ),
@@ -179,12 +192,14 @@ class _ProfileStatsBody extends StatelessWidget {
     required this.locale,
     required this.counts,
     required this.completed,
+    required this.score,
   });
 
   final AppStrings strings;
   final String locale;
   final List<CategoryVisitCount> counts;
   final List<Challenge> completed;
+  final LeaderboardEntry? score;
 
   static const _gridGap = 12.0;
 
@@ -271,8 +286,58 @@ class _ProfileStatsBody extends StatelessWidget {
                   ],
                 ),
         ),
+        const SizedBox(height: 12),
+        _LeaderboardCard(strings: strings, score: score),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+class _LeaderboardCard extends StatelessWidget {
+  const _LeaderboardCard({required this.strings, required this.score});
+
+  final AppStrings strings;
+  final LeaderboardEntry? score;
+
+  @override
+  Widget build(BuildContext context) {
+    final loaded = score;
+    final subtitle = loaded == null
+        ? strings.leaderboardOpen
+        : loaded.hasRank
+        ? strings.leaderboardRankLine(loaded.rank!, loaded.totalPoints)
+        : strings.leaderboardNoPoints;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        key: const Key('profile-leaderboard'),
+        color: BrandColors.neutral,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: BrandColors.beige),
+        ),
+        child: ListTile(
+          onTap: () => showLeaderboardSheet(context),
+          title: Text(
+            strings.leaderboardTitle,
+            style: const TextStyle(
+              color: BrandColors.forest,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            key: const Key('profile-leaderboard-score'),
+            style: const TextStyle(color: BrandColors.bark),
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: BrandColors.forest,
+            semanticLabel: strings.leaderboardOpen,
+          ),
+        ),
+      ),
     );
   }
 }

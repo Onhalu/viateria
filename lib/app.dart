@@ -13,6 +13,7 @@ import 'ui/screens/challenge_screen.dart';
 import 'ui/screens/challenges_map_screen.dart';
 import 'ui/screens/diploma_screen.dart';
 import 'ui/screens/last_challenge_screen.dart';
+import 'ui/screens/leaderboard_screen.dart';
 import 'ui/screens/missing_config_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/verify_waypoint_screen.dart';
@@ -81,6 +82,10 @@ class _ViateriaAppState extends State<ViateriaApp> {
                       builder: (context, state) => ChallengeScreen(
                         challengeId: state.pathParameters['id']!,
                       ),
+                    ),
+                    GoRoute(
+                      path: 'leaderboard',
+                      builder: (context, state) => const LeaderboardRoutePage(),
                     ),
                   ],
                 ),
@@ -161,6 +166,7 @@ class _ViateriaAppState extends State<ViateriaApp> {
     final strings = context.watch<LocaleController>().strings;
     return MaterialApp.router(
       title: strings.appName,
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       locale: Locale(locale),
       supportedLocales: AppStringsLocales.supported,
