@@ -10,7 +10,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 - Free / paid catalog; **FAPI sales forms** unlock paid challenges (Stripe edge functions remain unused by the CTA)
 - **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
-- Promo stripe (same card chrome as a challenge card), DB-driven
+- Promo widget on the catalog welcome, between Featured and Regions. DB-driven stripes with audience targeting. Exclusive `is_promo` challenges stay out of the ordinary catalog.
 - Diploma **9:16** with confetti and medals on complete
 - Custom i18n: **cs / en / de**
 - Secrets via environment — never committed
@@ -105,7 +105,38 @@ Code: `lib/map/map_style_config.dart`. Map places load from Supabase `public.pla
 
 Apply `supabase/migrations/0001_init.sql` (CLI: `supabase db push` or the SQL editor).
 
-Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `purchases`, `places`.
+Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `promo_segments`, `promo_segment_members`, `promo_assignments`, `purchases`, `places`.
+
+### Promo widget (SPEC-promo-widget)
+
+`supabase/migrations/0015_promo_widget.sql` adds `challenges.is_promo`, stripe `kind` (`exclusive` | `discount`) and optional `promo_diploma_price_cents` / `promo_medal_price_cents`, audience tables, and `list_my_promos()`. The app calls that RPC with the signed-in session. It does not ship `service_role`.
+
+Apply the migration yourself (SQL editor or `supabase db push`). This change does not run it.
+
+The catalog list is hero, then Featured (Vybrané), then the promo slot, then Regions. Zero active stripes (or a failed promo fetch) collapse the slot. One stripe is a forest card. Two or more snap in a carousel. Tap opens the linked challenge. `shellFill` stays on the welcome header and the bottom nav only.
+
+Ordinary catalog queries exclude `is_promo = true`. An exclusive challenge is readable when the caller matches a published, in-window stripe for that challenge. A discount stripe leaves the challenge listed. `start-fapi-checkout` uses `promo_*_price_cents` from an active discount stripe when those values are set.
+
+**Test A** is in the migration: challenge slug `promo-mock` (`is_promo`), one published exclusive stripe `c0ffee00-0000-4000-8000-000000000002` ending 14 days after apply, and **no** `promo_assignments` row, so every signed-in user sees it. Empty segments `new_users` and `cz_users` are seeded too.
+
+**Test B** — show that stripe only to Ondřej. Look up the profile, then insert one assignment. Any assignment row replaces “everyone”:
+
+```sql
+select id, display_name, email
+from public.profiles
+where display_name ilike '%ondřej%'
+   or display_name ilike '%ondrej%'
+   or email ilike '%ondrej%';
+
+insert into public.promo_assignments (promo_stripe_id, target_type, user_id)
+values (
+  'c0ffee00-0000-4000-8000-000000000002',
+  'user',
+  '<ondrej-profile-uuid>'
+);
+```
+
+Delete that row to restore Test A.
 
 Author content in the dashboard. Only `status = published` is visible. Publish translations for `cs`, `en`, and `de`.
 
@@ -149,7 +180,7 @@ Dashboard checklist (providers, redirect URLs, Google web client, Apple Services
 3. Deploy `start-fapi-checkout` and `fapi-webhook`.
 4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`.
 
-Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback).
+Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price.
 
 ### Stripe (unused by CTAs)
 

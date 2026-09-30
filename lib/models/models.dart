@@ -66,6 +66,7 @@ class Challenge {
     this.rewardVariant,
     this.diplomaPriceCents,
     this.medalPriceCents,
+    this.isPromo = false,
   });
 
   final String id;
@@ -109,6 +110,10 @@ class Challenge {
   /// that CTA.
   final String? fapiFormUrlMedal;
   final RewardVariant? rewardVariant;
+
+  /// Exclusive promo challenge. Ordinary catalog queries omit these rows.
+  /// Detail still opens when the caller has a matching active promo.
+  final bool isPromo;
 
   bool get isPaid => pricingType == PricingType.paid;
 
@@ -204,15 +209,19 @@ class PromoStripe {
     required this.status,
     required this.sortOrder,
     required this.translations,
+    this.kind = PromoKind.discount,
     this.imageUrl,
     this.linkUrl,
     this.challengeId,
     this.startsAt,
     this.endsAt,
+    this.promoDiplomaPriceCents,
+    this.promoMedalPriceCents,
   });
 
   final String id;
   final PublishStatus status;
+  final PromoKind kind;
   final int sortOrder;
   final List<LocalizedText> translations;
   final String? imageUrl;
@@ -220,6 +229,24 @@ class PromoStripe {
   final String? challengeId;
   final DateTime? startsAt;
   final DateTime? endsAt;
+
+  /// Discount-stripe diploma price. Null keeps the challenge price.
+  final int? promoDiplomaPriceCents;
+
+  /// Discount-stripe medal + diploma price. Null keeps the challenge price.
+  final int? promoMedalPriceCents;
+
+  bool get hasCover {
+    final url = imageUrl?.trim();
+    return url != null && url.isNotEmpty;
+  }
+
+  bool get hasTarget {
+    final id = challengeId?.trim();
+    if (id != null && id.isNotEmpty) return true;
+    final url = linkUrl?.trim();
+    return url != null && url.isNotEmpty;
+  }
 
   bool isActiveAt(DateTime now) {
     if (!isPubliclyVisible(status)) return false;

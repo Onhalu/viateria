@@ -72,6 +72,11 @@ class AppStrings {
     'haveAccount',
     'displayName',
     'promoFallbackCta',
+    'promoTag',
+    'promoDiscountTag',
+    'promoValidUntil',
+    'promoHoursLeft',
+    'promoUnderHour',
     'needAccess',
     'liveCameraOnly',
     'viewDiploma',
@@ -292,6 +297,13 @@ class AppStrings {
   String get haveAccount => t('haveAccount');
   String get displayName => t('displayName');
   String get promoFallbackCta => t('promoFallbackCta');
+  String get promoTag => t('promoTag');
+  String get promoDiscountTag => t('promoDiscountTag');
+  String promoValidUntil(String date) =>
+      t('promoValidUntil').replaceAll('{date}', date);
+  String promoHoursLeft(int hours) =>
+      t('promoHoursLeft').replaceAll('{hours}', '$hours');
+  String get promoUnderHour => t('promoUnderHour');
   String get needAccess => t('needAccess');
   String get liveCameraOnly => t('liveCameraOnly');
   String get viewDiploma => t('viewDiploma');
@@ -570,6 +582,11 @@ class AppStrings {
       'haveAccount': 'Already registered? Sign in',
       'displayName': 'Display name',
       'promoFallbackCta': 'Learn more',
+      'promoTag': 'Promo',
+      'promoDiscountTag': 'Discount',
+      'promoValidUntil': 'Valid until {date}',
+      'promoHoursLeft': '{hours} h left',
+      'promoUnderHour': 'Less than an hour left',
       'needAccess': 'Unlock this challenge to continue.',
       'liveCameraOnly': 'Gallery photos are not accepted.',
       'viewDiploma': 'View diploma',
@@ -800,7 +817,12 @@ class AppStrings {
       'noAccount': 'Nemáte účet? Registrace',
       'haveAccount': 'Už máte účet? Přihlášení',
       'displayName': 'Zobrazované jméno',
-      'promoFallbackCta': 'Zjistit více',
+      'promoFallbackCta': 'Získat výzvu',
+      'promoTag': 'Promo',
+      'promoDiscountTag': 'Sleva',
+      'promoValidUntil': 'Platí do {date}',
+      'promoHoursLeft': 'Zbývá {hours} h',
+      'promoUnderHour': 'Zbývá méně než hodinu',
       'needAccess': 'Pro pokračování výzvu odemkněte.',
       'liveCameraOnly': 'Fotky z galerie se nepřijímají.',
       'viewDiploma': 'Zobrazit diplom',
@@ -1031,6 +1053,11 @@ class AppStrings {
       'haveAccount': 'Bereits registriert? Anmelden',
       'displayName': 'Anzeigename',
       'promoFallbackCta': 'Mehr erfahren',
+      'promoTag': 'Promo',
+      'promoDiscountTag': 'Rabatt',
+      'promoValidUntil': 'Gültig bis {date}',
+      'promoHoursLeft': 'Noch {hours} Std.',
+      'promoUnderHour': 'Weniger als eine Stunde',
       'needAccess': 'Schalten Sie diese Challenge frei, um fortzufahren.',
       'liveCameraOnly': 'Galerie-Fotos werden nicht akzeptiert.',
       'viewDiploma': 'Diplom ansehen',

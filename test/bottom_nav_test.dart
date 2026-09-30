@@ -178,6 +178,11 @@ void main() {
     final screenSize = tester.getSize(find.byType(Scaffold).first);
     final navTop = tester.getTopLeft(nav).dy;
     expect(navTop, greaterThan(screenSize.height / 2));
+    await tester.scrollUntilVisible(
+      find.text('Weekend hike'),
+      300,
+      scrollable: catalogVerticalScrollable(),
+    );
     expect(find.text('Weekend hike'), findsOneWidget);
 
     final navRect = tester.getRect(nav);
@@ -389,13 +394,18 @@ void main() {
         wrapScreen(const CatalogScreen(), buildServices()),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Weekend hike'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byKey(const Key('catalog-hero-open-1')),
         400,
         scrollable: catalogVerticalScrollable(),
       );
       expect(find.text('Open trail'), findsAtLeastNWidgets(1));
+      await tester.scrollUntilVisible(
+        find.text('Weekend hike'),
+        400,
+        scrollable: catalogVerticalScrollable(),
+      );
+      expect(find.text('Weekend hike'), findsOneWidget);
       expect(find.text('Hidden draft'), findsNothing);
     },
   );
