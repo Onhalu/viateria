@@ -58,17 +58,46 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
   );
 }
 
+/// PostgREST embed of `places` via `waypoints_place_id_fkey` (migration 0013).
+/// List length and the planner read lat/lng from this object in [waypointFromRow].
+const waypointPlaceEmbed =
+    'places!waypoints_place_id_fkey(id, lat, lng, elevation_m)';
+
 Waypoint waypointFromRow(Map<String, dynamic> row) {
+  final place = _placeEmbed(row['places']);
+  final placeElevation = place?['elevation_m'];
   return Waypoint(
     id: row['id'] as String,
     challengeId: row['challenge_id'] as String,
     sortOrder: (row['sort_order'] as num).toInt(),
-    lat: (row['lat'] as num).toDouble(),
-    lng: (row['lng'] as num).toDouble(),
-    elevationM: (row['elevation_m'] as num?)?.toDouble() ?? 0,
+    lat: _coord(place?['lat'], row['lat']),
+    lng: _coord(place?['lng'], row['lng']),
+    elevationM: placeElevation is num
+        ? placeElevation.toDouble()
+        : (row['elevation_m'] as num?)?.toDouble() ?? 0,
+    placeId: _text(row['place_id']) ?? _text(place?['id']),
     category: PlaceCategory.fromWire(
       row['category'] as String? ?? 'historical',
     ),
     translations: i18nFromRows(row['waypoint_i18n']),
   );
+}
+
+Map<String, dynamic>? _placeEmbed(Object? raw) {
+  if (raw is Map) return Map<String, dynamic>.from(raw);
+  if (raw is List && raw.isNotEmpty && raw.first is Map) {
+    return Map<String, dynamic>.from(raw.first as Map);
+  }
+  return null;
+}
+
+double _coord(Object? embedded, Object? stored) {
+  if (embedded is num) return embedded.toDouble();
+  return (stored as num).toDouble();
+}
+
+String? _text(Object? value) {
+  final text = value?.toString().trim();
+  if (text == null || text.isEmpty) return null;
+  return text;
 }

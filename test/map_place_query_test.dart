@@ -81,26 +81,25 @@ void main() {
     expect(alpha, ['karlstejn', 'pravcicka', 'staromestske']);
   });
 
-  test('challenge membership matches waypoint id or nearby coordinates', () {
+  test('challenge membership is place_id only', () {
     expect(placeIdsInChallenge(places), isEmpty);
+    expect(
+      placeIdsInChallenge(places, placeIds: const [null, '', '  ']),
+      isEmpty,
+    );
 
-    expect(placeIdsInChallenge(places, waypointIds: const ['karlstejn']), {
+    expect(placeIdsInChallenge(places, placeIds: const ['karlstejn']), {
       'karlstejn',
     });
 
+    // Same coordinate as Staroměstské, but that id was not linked.
     expect(
-      placeIdsInChallenge(
-        places,
-        waypointLocations: const [GeoPoint(50.0875, 14.4211)],
-      ),
-      {'staromestske'},
+      placeIdsInChallenge(places, placeIds: const ['karlstejn']),
+      isNot(contains('staromestske')),
     );
 
     expect(
-      placeIdsInChallenge(
-        places,
-        waypointLocations: const [GeoPoint(50.0, 14.0)],
-      ),
+      placeIdsInChallenge(places, placeIds: const ['missing-place']),
       isEmpty,
     );
   });
@@ -144,19 +143,9 @@ void main() {
   });
 
   test('placesOfChallenge returns only matching catalog stops', () {
+    expect(placesOfChallenge(places, placeIds: const ['missing']), isEmpty);
     expect(
-      placesOfChallenge(
-        places,
-        waypointIds: const ['missing'],
-        waypointLocations: const [GeoPoint(0, 0)],
-      ),
-      isEmpty,
-    );
-    expect(
-      placesOfChallenge(
-        places,
-        waypointIds: const ['karlstejn'],
-      ).map((p) => p.id),
+      placesOfChallenge(places, placeIds: const ['karlstejn']).map((p) => p.id),
       ['karlstejn'],
     );
   });

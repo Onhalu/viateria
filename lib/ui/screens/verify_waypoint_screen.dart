@@ -15,8 +15,29 @@ import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
-import '../../map/place_query.dart';
 import '../widgets/place_presentation.dart';
+
+/// Local visited-place ids recorded after a successful verify.
+///
+/// A challenge stop contributes [waypointPlaceId] (`waypoints.place_id`).
+/// A nearby catalog row is not included.
+Set<String> placeIdsPersistedForVerify({
+  String? placeId,
+  String? shownPlaceId,
+  String? waypointPlaceId,
+}) {
+  final ids = <String>{};
+  void add(String? id) {
+    final trimmed = id?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+    ids.add(trimmed);
+  }
+
+  add(placeId);
+  add(shownPlaceId);
+  add(waypointPlaceId);
+  return ids;
+}
 
 class VerifyWaypointScreen extends StatefulWidget {
   const VerifyWaypointScreen({
@@ -72,18 +93,21 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
       final detail = await services.catalog.fetchChallenge(widget.challengeId!);
       for (final waypoint in detail.waypoints) {
         if (waypoint.id == widget.waypointId) {
-          final point = GeoPoint(waypoint.lat, waypoint.lng);
+          final fallback = GeoPoint(waypoint.lat, waypoint.lng);
+          final placeId = waypoint.placeId;
+          if (placeId == null || placeId.isEmpty) return fallback;
           try {
             final places = await (widget.places ?? services.places).fetchAll();
-            _catalogPlace = catalogPlaceAt(
-              places,
-              point.latitude,
-              point.longitude,
-            );
+            for (final place in places) {
+              if (place.id == placeId) {
+                _catalogPlace = place;
+                return place.location;
+              }
+            }
           } catch (_) {
             // Description stays hidden when the catalog cannot be read.
           }
-          return point;
+          return fallback;
         }
       }
       return null;
@@ -268,22 +292,25 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
   }
 
   Future<Set<String>> _persistPlaceIds(AppServices services) async {
-    final ids = <String>{};
-    if (widget.placeId != null) ids.add(widget.placeId!);
-    if (widget.place != null) ids.add(widget.place!.id);
-    if (widget.isChallengeStop && _target != null) {
+    String? waypointPlaceId;
+    if (widget.isChallengeStop) {
       try {
-        final catalog = widget.places ?? services.places;
-        final places = await catalog.fetchAll();
-        ids.addAll(
-          placeIdsInChallenge(
-            places,
-            waypointIds: [widget.waypointId!],
-            waypointLocations: [_target!],
-          ),
+        final detail = await services.catalog.fetchChallenge(
+          widget.challengeId!,
         );
+        for (final waypoint in detail.waypoints) {
+          if (waypoint.id == widget.waypointId) {
+            waypointPlaceId = waypoint.placeId;
+            break;
+          }
+        }
       } catch (_) {}
     }
+    final ids = placeIdsPersistedForVerify(
+      placeId: widget.placeId,
+      shownPlaceId: widget.place?.id,
+      waypointPlaceId: waypointPlaceId,
+    );
     await services.verifiedPlaces.addAll(ids);
     return ids;
   }

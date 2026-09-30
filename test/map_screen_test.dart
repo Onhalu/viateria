@@ -348,9 +348,11 @@ void main() {
       id: 'wp-karlstejn',
       challengeId: 'open-1',
       sortOrder: 0,
-      lat: 49.9394,
-      lng: 14.1880,
+      // Sits on Staroměstské. Membership is placeId, so the list stays Karlštejn.
+      lat: 50.0875,
+      lng: 14.4211,
       elevationM: 300,
+      placeId: 'karlstejn',
       translations: [LocalizedText(locale: 'cs', title: 'Karlštejn')],
     );
     final router = GoRouter(
@@ -461,9 +463,10 @@ void main() {
       id: 'wp-karlstejn',
       challengeId: 'open-1',
       sortOrder: 0,
-      lat: 49.9394,
-      lng: 14.1880,
+      lat: 50.0875,
+      lng: 14.4211,
       elevationM: 300,
+      placeId: 'karlstejn',
       translations: [LocalizedText(locale: 'cs', title: 'Karlštejn')],
     );
     final router = GoRouter(

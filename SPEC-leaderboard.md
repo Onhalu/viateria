@@ -17,7 +17,7 @@ Global all-time board. Live reads only (`get_leaderboard` / `get_my_score`). No 
 | Source | When |
 |---|---|
 | `map` | The signed-in user marks a place on the map (existing visited-places flow). |
-| `verify` | `verify_waypoint` succeeds and a `places` row is within **50 m** of the waypoint. Nearest row only. |
+| `verify` | `verify_waypoint` succeeds. After `0014_waypoints_place_id_required_verify.sql`, the visit is `waypoints.place_id` (no proximity search). Until that migration, `0011` records the nearest place within 50 m. |
 | `prefs_sync` | One-shot upload of place ids still stored in device SharedPreferences. |
 
 The score uses the server row, not a second local count.
@@ -25,6 +25,8 @@ The score uses the server row, not a second local count.
 Profile category cards and map visited markers read `VerifiedPlacesStore`. On cold start and on each auth login, after `bindUser`, the app loads the caller's `place_visits.place_id` rows (`fetchMyVisitedPlaceIds`, RLS select own, no service role) and unions them into that store. The prefs-sync flag does not skip this read. The prefs upload still runs afterward.
 
 Migration `0012_backfill_place_visits_from_waypoints.sql` inserts `place_visits` from `waypoint_progress` (nearest place within 50 m, `source = verify`, `visited_at` from `completed_at`). `ON CONFLICT (user_id, place_id) DO NOTHING` keeps it idempotent. That migration is already applied on production; the file is the repo copy.
+
+`0013_waypoints_place_id_nullable_backfill.sql` adds nullable `waypoints.place_id` and backfills the nearest place within 50 m. `0014` makes `place_id` required and points `verify_waypoint` at that id. Apply `0014` only when unmatched published waypoints = 0 (CMS-fix Zelená Hora `95f6584b-45be-4b57-9af8-12a10b2a2a2d` first).
 
 ## API
 

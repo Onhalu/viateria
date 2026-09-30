@@ -100,6 +100,10 @@ PlaceCatalog resolvePlaceCatalog({
   required AppConfig config,
   SupabaseClient? client,
 }) {
+  refuseAssetPlaceCatalogInRelease(
+    releaseMode: kReleaseMode,
+    useAssetPlaceCatalog: config.useAssetPlaceCatalog,
+  );
   if (!config.isSupabaseConfigured) return const UnconfiguredPlaceCatalog();
   if (config.useAssetPlaceCatalog) return const AssetPlaceCatalog();
   final supabase = client;

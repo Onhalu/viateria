@@ -497,10 +497,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     _controller.setChallengePlaceIds(
       placeIdsInChallenge(
         _controller.all,
-        waypointIds: geometry.waypoints.map((waypoint) => waypoint.id),
-        waypointLocations: geometry.waypoints.map(
-          (waypoint) => GeoPoint(waypoint.lat, waypoint.lng),
-        ),
+        placeIds: geometry.waypoints.map((waypoint) => waypoint.placeId),
       ),
     );
   }
@@ -537,10 +534,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     return sortForList(
       placesOfChallenge(
         _controller.filtered,
-        waypointIds: geometry.waypoints.map((waypoint) => waypoint.id),
-        waypointLocations: geometry.waypoints.map(
-          (waypoint) => GeoPoint(waypoint.lat, waypoint.lng),
-        ),
+        placeIds: geometry.waypoints.map((waypoint) => waypoint.placeId),
         verifiedPlaceIds: context.read<AppServices>().verifiedPlaces.ids,
       ),
       _controller.userLocation,

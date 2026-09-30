@@ -266,6 +266,10 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 }
 
+/// Published challenge plus stops. Place coordinates come from the 0013 FK.
+const publishedChallengeDetailSelect =
+    '*, challenge_i18n(*), waypoints(*, waypoint_i18n(*), $waypointPlaceEmbed)';
+
 class SupabaseCatalogRepository implements CatalogRepository {
   SupabaseCatalogRepository(this._client);
 
@@ -289,7 +293,7 @@ class SupabaseCatalogRepository implements CatalogRepository {
   Future<List<ChallengeDetail>> fetchPublishedDetails() async {
     final rows = await _client
         .from('challenges')
-        .select('*, challenge_i18n(*), waypoints(*, waypoint_i18n(*))')
+        .select(publishedChallengeDetailSelect)
         .eq('status', 'published')
         .order('created_at');
     return (rows as List)
@@ -305,7 +309,7 @@ class SupabaseCatalogRepository implements CatalogRepository {
     try {
       final row = await _client
           .from('challenges')
-          .select('*, challenge_i18n(*), waypoints(*, waypoint_i18n(*))')
+          .select(publishedChallengeDetailSelect)
           .eq('id', id)
           .eq('status', 'published')
           .single();
