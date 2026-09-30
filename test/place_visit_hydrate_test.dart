@@ -132,7 +132,7 @@ void main() {
     expect(board.batches, [
       [localId, serverId],
     ]);
-    expect(board.visits.map((visit) => visit.source), [
+    expect(board.visits.map((visit) => visit.source).toList(), [
       PlaceVisitSource.prefsSync,
       PlaceVisitSource.prefsSync,
     ]);
@@ -160,20 +160,40 @@ void main() {
     ]);
   });
 
-  test('a failed upload keeps hydrated ids and leaves the flag unset', () async {
-    final store = VerifiedPlacesStore();
-    await store.bindUser(userId);
-    final board = _BatchFails(visitedPlaceIds: [serverId]);
+  test(
+    'a failed upload keeps hydrated ids and leaves the flag unset',
+    () async {
+      final store = VerifiedPlacesStore();
+      await store.bindUser(userId);
+      final board = _BatchFails(visitedPlaceIds: [serverId]);
 
-    await refreshVerifiedPlacesOnLogin(
-      userId: userId,
-      store: store,
-      leaderboard: board,
+      await refreshVerifiedPlacesOnLogin(
+        userId: userId,
+        store: store,
+        leaderboard: board,
+      );
+
+      expect(store.ids, {serverId});
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool('${PlaceVisitSync.syncedFlag}.$userId'),
+        isNot(true),
+      );
+    },
+  );
+
+  test('place id rows skip blanks and non-maps', () {
+    const pageA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    expect(
+      placeIdsFromVisitRows([
+        {'place_id': ' $pageA '},
+        {'place_id': '  '},
+        {'place_id': ''},
+        'nope',
+        {'other': pageA},
+      ]),
+      [pageA],
     );
-
-    expect(store.ids, {serverId});
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('${PlaceVisitSync.syncedFlag}.$userId'), isNot(true));
   });
 
   test('place visit pages union ids and stop on a short page', () async {
@@ -187,11 +207,10 @@ void main() {
       ],
       [
         {'place_id': pageA},
-        {'place_id': '  '},
-        'nope',
+        {'place_id': pageC},
       ],
       [
-        {'place_id': pageC},
+        {'place_id': pageB},
       ],
     ];
     var calls = 0;
@@ -231,8 +250,7 @@ class _ReadFails extends MemoryLeaderboardRepository {
 }
 
 class _BatchFails extends MemoryLeaderboardRepository {
-  _BatchFails({List<String>? visitedPlaceIds})
-    : super(visitedPlaceIds: visitedPlaceIds);
+  _BatchFails({super.visitedPlaceIds});
 
   @override
   Future<void> recordPlaceVisitsBatch(
@@ -247,8 +265,8 @@ class _RebindDuringRead extends MemoryLeaderboardRepository {
   _RebindDuringRead(
     this.store, {
     required this.nextUserId,
-    List<String>? visitedPlaceIds,
-  }) : super(visitedPlaceIds: visitedPlaceIds);
+    super.visitedPlaceIds,
+  });
 
   final VerifiedPlacesStore store;
   final String nextUserId;
