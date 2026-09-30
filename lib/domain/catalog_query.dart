@@ -10,10 +10,11 @@ const catalogCountryCodes = ['CZ', 'SK', 'AT', 'DE', 'PL'];
 /// short < 3 h, medium 3–6 h, long ≥ 6 h. Never invent hours for the UI.
 enum CatalogLengthBand { short, medium, long }
 
-/// Haversine + hike-time summary derived from stored waypoints.
+/// Haversine + hike-time summary derived from loaded waypoints.
 ///
 /// There is no CMS duration/distance column. Stats come from ordered
-/// `waypoints.lat/lng/elevation_m` via [RoutePlanner] (hike / Naismith).
+/// waypoint coordinates via [RoutePlanner] (hike / Naismith). When the
+/// row includes a joined place, those coordinates are the place's.
 /// Null when a challenge has fewer than two waypoints or time rounds to
 /// nothing — callers must hide the length label.
 class CatalogRouteStats {

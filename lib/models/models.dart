@@ -159,6 +159,7 @@ class Waypoint {
     required this.lng,
     required this.elevationM,
     required this.translations,
+    this.placeId,
     this.category = PlaceCategory.historical,
     this.verifyMethod = VerifyMethod.photo,
   });
@@ -170,6 +171,9 @@ class Waypoint {
   final double lng;
   final double elevationM;
   final List<LocalizedText> translations;
+
+  /// `waypoints.place_id`. Map tint and verify use this id, not proximity.
+  final String? placeId;
 
   /// Map category used for the waypoint-list icon. Wire values come from
   /// `waypoints.category` via [PlaceCategory.fromWire].

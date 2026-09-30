@@ -105,7 +105,7 @@ class PlacesMapController extends ChangeNotifier {
   }
 
   /// Challenge membership used when [challengeOnly] is on.
-  /// Same ids as [placeIdsInChallenge] / forest+verified challenge stops.
+  /// Same ids as [placeIdsInChallenge]: waypoint `place_id` only.
   void setChallengePlaceIds(Set<String> ids) {
     if (setEquals(_challengePlaceIds, ids)) return;
     _challengePlaceIds = Set<String>.from(ids);

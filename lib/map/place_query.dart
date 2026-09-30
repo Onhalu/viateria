@@ -131,29 +131,24 @@ bool _categoryMatches(PlaceCategory category, String foldedQuery) {
   return false;
 }
 
-/// Places that belong to the current challenge: matching waypoint id, or
-/// within [radiusKm] of a waypoint. Empty inputs → no matches (sage tint).
+/// Catalog ids that belong to the current challenge.
+///
+/// Membership is the waypoint `place_id` set in [placeIds]. A nearby place
+/// is not a member. Empty [placeIds] → no matches (sage tint).
 Set<String> placeIdsInChallenge(
   Iterable<Place> places, {
-  Iterable<String> waypointIds = const [],
-  Iterable<GeoPoint> waypointLocations = const [],
-  double radiusKm = 0.2,
+  Iterable<String?> placeIds = const [],
 }) {
-  final ids = waypointIds.toSet();
-  final points = waypointLocations.toList(growable: false);
-  if (ids.isEmpty && points.isEmpty) return const {};
+  final wanted = <String>{};
+  for (final id in placeIds) {
+    final trimmed = id?.trim();
+    if (trimmed == null || trimmed.isEmpty) continue;
+    wanted.add(trimmed);
+  }
+  if (wanted.isEmpty) return const {};
   final matched = <String>{};
   for (final place in places) {
-    if (ids.contains(place.id)) {
-      matched.add(place.id);
-      continue;
-    }
-    for (final point in points) {
-      if (distanceKm(place.location, point) <= radiusKm) {
-        matched.add(place.id);
-        break;
-      }
-    }
+    if (wanted.contains(place.id)) matched.add(place.id);
   }
   return matched;
 }
@@ -207,17 +202,11 @@ List<Place> dedupePlaces(
 /// Catalog places that belong to a challenge, already de-duplicated.
 List<Place> placesOfChallenge(
   Iterable<Place> places, {
-  Iterable<String> waypointIds = const [],
-  Iterable<GeoPoint> waypointLocations = const [],
+  Iterable<String?> placeIds = const [],
   Set<String> verifiedPlaceIds = const {},
   double radiusKm = 0.2,
 }) {
-  final challengeIds = placeIdsInChallenge(
-    places,
-    waypointIds: waypointIds,
-    waypointLocations: waypointLocations,
-    radiusKm: radiusKm,
-  );
+  final challengeIds = placeIdsInChallenge(places, placeIds: placeIds);
   if (challengeIds.isEmpty) return const [];
   return dedupePlaces(
     [

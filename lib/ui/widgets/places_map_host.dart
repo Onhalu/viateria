@@ -46,13 +46,11 @@ class ChallengeMapGeometry {
         navigating == other.navigating;
   }
 
-  Waypoint? waypointMatching(Place place, {double radiusKm = 0.2}) {
+  /// Stop linked to [place] by `waypoints.place_id`. Proximity is not a match.
+  Waypoint? waypointMatching(Place place) {
     for (final waypoint in waypoints) {
-      if (waypoint.id == place.id) return waypoint;
-      if (distanceKm(place.location, GeoPoint(waypoint.lat, waypoint.lng)) <=
-          radiusKm) {
-        return waypoint;
-      }
+      final placeId = waypoint.placeId;
+      if (placeId != null && placeId == place.id) return waypoint;
     }
     return null;
   }
@@ -290,10 +288,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     if (geometry == null) return const {};
     return placeIdsInChallenge(
       places,
-      waypointIds: geometry.waypoints.map((waypoint) => waypoint.id),
-      waypointLocations: geometry.waypoints.map(
-        (waypoint) => GeoPoint(waypoint.lat, waypoint.lng),
-      ),
+      placeIds: geometry.waypoints.map((waypoint) => waypoint.placeId),
     );
   }
 
