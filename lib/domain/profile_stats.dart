@@ -20,9 +20,8 @@ class CategoryVisitCount {
 
 /// Counts catalog places per category and how many of those ids are verified.
 ///
-/// Verified ids come from [VerifiedPlacesStore] (map GPS/photo). Challenge
-/// waypoint verifies write matching catalog place ids into that store at
-/// completion time, so they are included without a second backend.
+/// [verifiedIds] is the local visited-place set. Login copies `place_visits`
+/// into that set, and a map or waypoint verify writes ids there too.
 ///
 /// Ids that are not in [places] do not count. Every category is returned,
 /// including `0 / N`.

@@ -10,6 +10,8 @@ import 'verified_places.dart';
 /// Runs once per user. Later map visits call `record_place_visit` themselves.
 /// The flag stays unset when the RPC fails so the next launch can retry.
 /// Local ids remain the map's visited markers; the score is the server row.
+/// Login copies server rows back into the store (`PlaceVisitHydrate`) and
+/// does not read this flag.
 class PlaceVisitSync {
   const PlaceVisitSync();
 

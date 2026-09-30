@@ -173,6 +173,12 @@ abstract class LeaderboardRepository {
 
   /// Caller row, including rank when they sit outside the top N.
   Future<LeaderboardEntry> fetchMyScore();
+
+  /// `place_id` values from the caller's `place_visits` rows.
+  ///
+  /// Empty when signed out. The authenticated client selects its own rows
+  /// (RLS). This does not use the service role.
+  Future<List<String>> fetchMyVisitedPlaceIds();
 }
 
 abstract class PhotoStorage {

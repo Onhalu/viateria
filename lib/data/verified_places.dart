@@ -18,6 +18,9 @@ class VerifiedPlacesStore extends ChangeNotifier {
 
   Set<String> get ids => Set<String>.unmodifiable(_ids);
 
+  /// Account whose prefs are loaded, or null when signed out.
+  String? get boundUserId => _userId;
+
   bool contains(String id) => _ids.contains(id);
 
   /// Loads the key for the current binding (legacy key when unbound).
