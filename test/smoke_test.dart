@@ -95,7 +95,6 @@ void main() {
     (tester) async {
       await tester.pumpWidget(wrap(const CatalogScreen(), buildServices()));
       await tester.pumpAndSettle();
-      expect(find.text('Weekend hike'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byKey(const Key('catalog-hero-open-1')),
         400,
@@ -108,6 +107,12 @@ void main() {
         scrollable: catalogResultsScrollable(),
       );
       expect(find.text('Story trail'), findsAtLeastNWidgets(1));
+      await tester.scrollUntilVisible(
+        find.text('Weekend hike'),
+        400,
+        scrollable: catalogResultsScrollable(),
+      );
+      expect(find.text('Weekend hike'), findsOneWidget);
       expect(find.text('Hidden draft'), findsNothing);
     },
   );
@@ -151,6 +156,11 @@ void main() {
     expect(
       tester.getBottomLeft(list.first).dy,
       lessThanOrEqualTo(navTop + 0.5),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Weekend hike'),
+      300,
+      scrollable: catalogResultsScrollable(),
     );
     expect(find.text('Weekend hike'), findsOneWidget);
   });

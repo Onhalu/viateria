@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/app_services.dart';
 import '../../domain/catalog_query.dart';
+import '../../domain/promo.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../navigation.dart';
@@ -11,6 +12,7 @@ import '../widgets/catalog_cards.dart';
 import '../widgets/catalog_filters.dart';
 import '../widgets/catalog_welcome_header.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/promo_widget.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -38,9 +40,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<_CatalogData> _load() async {
     final services = context.read<AppServices>();
-    final details = await services.catalog.fetchPublishedDetails();
-    final promos = await services.catalog.fetchPublishedPromos();
-    return _CatalogData(details: details, promos: promos);
+    final detailsFuture = services.catalog.fetchPublishedDetails();
+    final promosFuture = _loadPromos(services);
+    return _CatalogData(
+      details: await detailsFuture,
+      promos: await promosFuture,
+    );
+  }
+
+  /// A promo failure leaves the catalog up. The slot collapses.
+  Future<List<PromoStripe>> _loadPromos(AppServices services) async {
+    try {
+      return await services.catalog.fetchPublishedPromos();
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<void> _reload() async {
@@ -108,9 +122,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       visible.isEmpty &&
                       _filter.isActive;
                   final cmsEmpty = challenges.isEmpty && data.promos.isEmpty;
-                  final promos = !noMatches && _filter.showPromos
-                      ? data.promos
-                      : const <PromoStripe>[];
+                  final now = DateTime.now();
+                  final promos = visiblePromos(
+                    !noMatches && _filter.showPromos
+                        ? data.promos
+                        : const <PromoStripe>[],
+                    now,
+                  );
 
                   return RefreshIndicator(
                     onRefresh: _reload,
@@ -145,13 +163,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             key: const Key('catalog-results'),
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                             children: [
-                              for (final promo in promos) ...[
-                                PromoStripeCard(
-                                  promo: promo,
-                                  onTap: () => _openPromo(promo),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
                               CatalogHeroCarousel(
                                 challenges: visible,
                                 routeStats: routeStats,
@@ -165,6 +176,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                 onOpen: (challenge) =>
                                     openChallenge(context, challenge.id),
                               ),
+                              if (promos.isNotEmpty) ...[
+                                const SizedBox(height: 16),
+                                PromoWidget(
+                                  key: const Key('promo-widget'),
+                                  promos: promos,
+                                  now: now,
+                                  onOpen: _openPromo,
+                                ),
+                              ],
                               const SizedBox(height: 16),
                               CatalogRegionsSection(
                                 filter: _filter,

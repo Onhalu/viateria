@@ -1,10 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
+import {
+  createClient,
+  type SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import {
   appendFapiPrefill,
+  checkoutAmountCents,
   fapiPrefillParams,
   httpUrlOrNull,
   parseRewardVariant,
+  selectActiveDiscountStripe,
+  type DiscountStripe,
+  type PromoAssignment,
+  type PromoTargetType,
 } from "../_shared/fapi.ts";
 
 /**
@@ -89,9 +97,18 @@ Deno.serve(async (req) => {
     return json({ error: "already paid" }, 409);
   }
 
-  const amountCents = isMedal
-    ? (challenge.medal_price_cents ?? challenge.price_cents)
-    : (challenge.diploma_price_cents ?? challenge.price_cents);
+  const promoPrices = await activeDiscountPrices(
+    admin,
+    user.id,
+    challengeId,
+  );
+  const amountCents = checkoutAmountCents({
+    isMedal,
+    diplomaPriceCents: challenge.diploma_price_cents ?? challenge.price_cents,
+    medalPriceCents: challenge.medal_price_cents ?? challenge.price_cents,
+    promoDiplomaPriceCents: promoPrices?.diploma ?? null,
+    promoMedalPriceCents: promoPrices?.medal ?? null,
+  });
 
   await admin.from("purchases").upsert(
     {
@@ -120,6 +137,112 @@ Deno.serve(async (req) => {
 
   return json({ url });
 });
+
+async function activeDiscountPrices(
+  admin: SupabaseClient,
+  userId: string,
+  challengeId: string,
+): Promise<{ diploma: number | null; medal: number | null } | null> {
+  try {
+    const { data: profile, error: profileError } = await admin
+      .from("profiles")
+      .select("locale, country_code")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profileError) throw profileError;
+
+    const { data: memberships, error: memberError } = await admin
+      .from("promo_segment_members")
+      .select("segment_id")
+      .eq("user_id", userId);
+    if (memberError) throw memberError;
+
+    const { data: stripes, error: stripeError } = await admin
+      .from("promo_stripes")
+      .select(
+        "id, sort_order, starts_at, ends_at, promo_diploma_price_cents, promo_medal_price_cents, promo_assignments(target_type, user_id, segment_id, locale, country_code)",
+      )
+      .eq("challenge_id", challengeId)
+      .eq("status", "published")
+      .eq("kind", "discount");
+    if (stripeError) throw stripeError;
+
+    const segmentIds = new Set<string>();
+    for (const row of memberships ?? []) {
+      const id = (row as { segment_id?: string }).segment_id;
+      if (id) segmentIds.add(id);
+    }
+
+    const selected = selectActiveDiscountStripe(
+      (stripes ?? []).map((row) =>
+        discountStripeFromRow(row as Record<string, unknown>)
+      ),
+      {
+        userId,
+        locale: (profile as { locale?: string } | null)?.locale ?? null,
+        countryCode:
+          (profile as { country_code?: string } | null)?.country_code ?? null,
+        segmentIds,
+      },
+      new Date(),
+    );
+    if (!selected) return null;
+    return {
+      diploma: selected.promoDiplomaPriceCents,
+      medal: selected.promoMedalPriceCents,
+    };
+  } catch (error) {
+    console.error("promo price lookup failed", error);
+    return null;
+  }
+}
+
+function discountStripeFromRow(row: Record<string, unknown>): DiscountStripe {
+  return {
+    id: String(row.id),
+    sortOrder: typeof row.sort_order === "number" ? row.sort_order : 0,
+    startsAt: typeof row.starts_at === "string" ? row.starts_at : null,
+    endsAt: typeof row.ends_at === "string" ? row.ends_at : null,
+    promoDiplomaPriceCents: centsOrNull(row.promo_diploma_price_cents),
+    promoMedalPriceCents: centsOrNull(row.promo_medal_price_cents),
+    assignments: assignmentsFromRaw(row.promo_assignments),
+  };
+}
+
+function centsOrNull(value: unknown): number | null {
+  return typeof value === "number" ? value : null;
+}
+
+function assignmentsFromRaw(raw: unknown): PromoAssignment[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PromoAssignment[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const target = record.target_type;
+    if (!isTargetType(target)) continue;
+    out.push({
+      targetType: target,
+      userId: typeof record.user_id === "string" ? record.user_id : null,
+      segmentId: typeof record.segment_id === "string"
+        ? record.segment_id
+        : null,
+      locale: typeof record.locale === "string" ? record.locale : null,
+      countryCode: typeof record.country_code === "string"
+        ? record.country_code
+        : null,
+    });
+  }
+  return out;
+}
+
+function isTargetType(value: unknown): value is PromoTargetType {
+  return value === "all" ||
+    value === "user" ||
+    value === "segment" ||
+    value === "locale" ||
+    value === "country";
+}
 
 function cors() {
   return {

@@ -57,6 +57,18 @@ void main() {
     expect(AppStrings('cs').catalogDifficultyHard, 'Náročná');
     expect(AppStrings('en').catalogDifficultyHard, 'Hard');
     expect(AppStrings('de').catalogDifficultyHard, 'Anspruchsvoll');
+    expect(AppStrings('cs').promoTag, 'Promo');
+    expect(AppStrings('en').promoTag, 'Promo');
+    expect(AppStrings('de').promoTag, 'Promo');
+    expect(AppStrings('cs').promoDiscountTag, 'Sleva');
+    expect(AppStrings('en').promoDiscountTag, 'Discount');
+    expect(AppStrings('de').promoDiscountTag, 'Rabatt');
+    expect(AppStrings('cs').promoFallbackCta, 'Získat výzvu');
+    expect(AppStrings('cs').promoUnderHour, 'Zbývá méně než hodinu');
+    expect(AppStrings('cs').promoHoursLeft(3), 'Zbývá 3 h');
+    expect(AppStrings('cs').promoValidUntil('14. 10.'), 'Platí do 14. 10.');
+    expect(AppStrings('en').promoValidUntil('14. 10.'), 'Valid until 14. 10.');
+    expect(AppStrings('de').promoValidUntil('14. 10.'), 'Gültig bis 14. 10.');
   });
 
   test('profile stats copy is localized', () {

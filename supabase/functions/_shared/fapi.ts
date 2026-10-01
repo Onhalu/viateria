@@ -290,6 +290,109 @@ export async function fetchFapiInvoice(
   return await response.json() as FapiInvoice;
 }
 
+export type PromoTargetType = "all" | "user" | "segment" | "locale" | "country";
+
+export type PromoAssignment = {
+  targetType: PromoTargetType;
+  userId?: string | null;
+  segmentId?: string | null;
+  locale?: string | null;
+  countryCode?: string | null;
+};
+
+export type PromoViewer = {
+  userId: string;
+  locale?: string | null;
+  countryCode?: string | null;
+  segmentIds: ReadonlySet<string>;
+};
+
+export type DiscountStripe = {
+  id: string;
+  sortOrder: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  promoDiplomaPriceCents: number | null;
+  promoMedalPriceCents: number | null;
+  assignments: PromoAssignment[];
+};
+
+/** Zero assignments means everyone. Otherwise any one row is enough. */
+export function promoMatchesViewer(
+  assignments: PromoAssignment[],
+  viewer: PromoViewer,
+): boolean {
+  if (assignments.length === 0) return true;
+  return assignments.some((assignment) => {
+    switch (assignment.targetType) {
+      case "all":
+        return true;
+      case "user":
+        return assignment.userId != null && assignment.userId === viewer.userId;
+      case "segment":
+        return assignment.segmentId != null &&
+          viewer.segmentIds.has(assignment.segmentId);
+      case "locale":
+        return viewer.locale != null &&
+          viewer.locale.length > 0 &&
+          assignment.locale === viewer.locale;
+      case "country": {
+        const viewerCode = viewer.countryCode?.trim().toUpperCase();
+        const targetCode = assignment.countryCode?.trim().toUpperCase();
+        return viewerCode != null &&
+          viewerCode.length > 0 &&
+          viewerCode === targetCode;
+      }
+    }
+  });
+}
+
+export function isStripeInWindow(
+  stripe: { startsAt: string | null; endsAt: string | null },
+  now: Date,
+): boolean {
+  if (stripe.startsAt && Date.parse(stripe.startsAt) > now.getTime()) {
+    return false;
+  }
+  if (stripe.endsAt && Date.parse(stripe.endsAt) < now.getTime()) {
+    return false;
+  }
+  return true;
+}
+
+/** Lowest sort_order, then id, among in-window stripes the viewer matches. */
+export function selectActiveDiscountStripe(
+  stripes: DiscountStripe[],
+  viewer: PromoViewer,
+  now: Date,
+): DiscountStripe | null {
+  const matches = stripes
+    .filter((stripe) => isStripeInWindow(stripe, now))
+    .filter((stripe) => promoMatchesViewer(stripe.assignments, viewer))
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
+  return matches[0] ?? null;
+}
+
+/**
+ * Prefer a discount stripe price when it is set (including 0).
+ * Null promo prices keep the challenge SKU.
+ */
+export function checkoutAmountCents(options: {
+  isMedal: boolean;
+  diplomaPriceCents: number;
+  medalPriceCents: number;
+  promoDiplomaPriceCents?: number | null;
+  promoMedalPriceCents?: number | null;
+}): number {
+  const fallback = options.isMedal
+    ? options.medalPriceCents
+    : options.diplomaPriceCents;
+  const promo = options.isMedal
+    ? options.promoMedalPriceCents
+    : options.promoDiplomaPriceCents;
+  return promo ?? fallback;
+}
+
 export function webhookTokenFromRequest(req: Request): string | null {
   const url = new URL(req.url);
   return (

@@ -847,6 +847,7 @@ void main() {
     );
     expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('promo-widget')), findsOneWidget);
     expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
 
     final chipsRect = tester.getRect(
@@ -864,8 +865,12 @@ void main() {
     final featuredRect = tester.getRect(
       find.byKey(const Key('catalog-featured')),
     );
+    final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
     final regionsRect = tester.getRect(
       find.byKey(const Key('catalog-regions')),
+    );
+    final list = tester.widget<ListView>(
+      find.byKey(const Key('catalog-results')),
     );
     _expectLengthDifficultyUnderRegions(tester);
     expect(heroRect.top, greaterThan(chipsRect.bottom));
@@ -873,7 +878,27 @@ void main() {
     expect(heroRect.top, greaterThan(difficultyRect.bottom));
     expect(heroRect.width / heroRect.height, closeTo(16 / 9, 0.08));
     expect(featuredRect.top, greaterThan(heroRect.bottom - 0.5));
-    expect(regionsRect.top, greaterThan(featuredRect.bottom - 0.5));
+    expect(promoRect.top, greaterThan(featuredRect.bottom - 0.5));
+    expect(regionsRect.top, greaterThan(promoRect.bottom - 0.5));
+    expect(promoRect.top - featuredRect.bottom, closeTo(16, 1));
+    expect(regionsRect.top - promoRect.bottom, closeTo(16, 1));
+    expect(list.padding, const EdgeInsets.fromLTRB(16, 8, 16, 16));
+    expect(
+      tester
+          .widget<Material>(
+            find.byKey(const Key('promo-surface-promo-1')),
+          )
+          .color,
+      BrandColors.forest,
+    );
+    expect(
+      tester
+          .widget<Material>(
+            find.byKey(const Key('promo-surface-promo-1')),
+          )
+          .color,
+      isNot(BrandColors.shellFill),
+    );
   });
 
   testWidgets('length chips stay in the main filter without waypoint data', (

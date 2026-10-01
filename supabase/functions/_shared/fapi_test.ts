@@ -1,13 +1,17 @@
 import {
   appendFapiPrefill,
+  checkoutAmountCents,
   fapiPrefillParams,
   httpUrlOrNull,
   invoiceSecurityHash,
   isInvoiceSecurityValid,
   parseNotification,
   parseViateriaNotes,
+  promoMatchesViewer,
   purchaseKeysFromInvoice,
+  selectActiveDiscountStripe,
   viateriaNotes,
+  type DiscountStripe,
 } from "./fapi.ts";
 
 Deno.test("httpUrlOrNull rejects blank and non-http values", () => {
@@ -96,6 +100,89 @@ Deno.test("purchase keys prefer custom fields then notes", () => {
   ) {
     throw new Error(JSON.stringify(keys));
   }
+});
+
+Deno.test("promo audience: empty assignments match everyone", () => {
+  const viewer = {
+    userId: "ada",
+    locale: "cs",
+    countryCode: "CZ",
+    segmentIds: new Set<string>(),
+  };
+  if (!promoMatchesViewer([], viewer)) throw new Error("empty should match");
+  if (
+    promoMatchesViewer(
+      [{ targetType: "user", userId: "ondrej" }],
+      viewer,
+    )
+  ) {
+    throw new Error("other user should not match");
+  }
+  if (
+    !promoMatchesViewer(
+      [
+        { targetType: "user", userId: "ondrej" },
+        { targetType: "locale", locale: "cs" },
+      ],
+      viewer,
+    )
+  ) {
+    throw new Error("OR locale should match");
+  }
+});
+
+Deno.test("discount checkout prefers promo cents when the stripe matches", () => {
+  const now = new Date("2026-09-30T12:00:00Z");
+  const stripes: DiscountStripe[] = [
+    {
+      id: "later",
+      sortOrder: 2,
+      startsAt: null,
+      endsAt: null,
+      promoDiplomaPriceCents: 100,
+      promoMedalPriceCents: 200,
+      assignments: [],
+    },
+    {
+      id: "first",
+      sortOrder: 0,
+      startsAt: "2026-09-01T00:00:00Z",
+      endsAt: "2026-10-14T00:00:00Z",
+      promoDiplomaPriceCents: 50,
+      promoMedalPriceCents: null,
+      assignments: [{ targetType: "country", countryCode: "cz" }],
+    },
+  ];
+  const viewer = {
+    userId: "ada",
+    locale: "cs",
+    countryCode: "CZ",
+    segmentIds: new Set<string>(),
+  };
+  const selected = selectActiveDiscountStripe(stripes, viewer, now);
+  if (selected?.id !== "first") throw new Error(selected?.id ?? "none");
+  const diploma = checkoutAmountCents({
+    isMedal: false,
+    diplomaPriceCents: 499,
+    medalPriceCents: 900,
+    promoDiplomaPriceCents: selected?.promoDiplomaPriceCents,
+    promoMedalPriceCents: selected?.promoMedalPriceCents,
+  });
+  const medal = checkoutAmountCents({
+    isMedal: true,
+    diplomaPriceCents: 499,
+    medalPriceCents: 900,
+    promoDiplomaPriceCents: selected?.promoDiplomaPriceCents,
+    promoMedalPriceCents: selected?.promoMedalPriceCents,
+  });
+  if (diploma !== 50) throw new Error(`diploma ${diploma}`);
+  if (medal !== 900) throw new Error(`medal ${medal}`);
+  const plain = checkoutAmountCents({
+    isMedal: false,
+    diplomaPriceCents: 499,
+    medalPriceCents: 900,
+  });
+  if (plain !== 499) throw new Error(`plain ${plain}`);
 });
 
 Deno.test("notification parser reads id or invoice", () => {

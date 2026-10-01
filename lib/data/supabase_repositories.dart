@@ -281,11 +281,12 @@ class SupabaseCatalogRepository implements CatalogRepository {
         .from('challenges')
         .select('*, challenge_i18n(*)')
         .eq('status', 'published')
+        .eq('is_promo', false)
         .order('created_at');
     return (rows as List)
         .whereType<Map<String, dynamic>>()
         .map(challengeFromRow)
-        .where((c) => isPubliclyVisible(c.status))
+        .where((c) => isPubliclyVisible(c.status) && !c.isPromo)
         .toList();
   }
 
@@ -295,11 +296,16 @@ class SupabaseCatalogRepository implements CatalogRepository {
         .from('challenges')
         .select(publishedChallengeDetailSelect)
         .eq('status', 'published')
+        .eq('is_promo', false)
         .order('created_at');
     return (rows as List)
         .whereType<Map<String, dynamic>>()
         .map(_detailFromRow)
-        .where((detail) => isPubliclyVisible(detail.challenge.status))
+        .where(
+          (detail) =>
+              isPubliclyVisible(detail.challenge.status) &&
+              !detail.challenge.isPromo,
+        )
         .toList();
   }
 
@@ -336,32 +342,15 @@ class SupabaseCatalogRepository implements CatalogRepository {
   @override
   Future<List<PromoStripe>> fetchPublishedPromos({DateTime? now}) async {
     final moment = now ?? DateTime.now().toUtc();
-    final rows = await _client
-        .from('promo_stripes')
-        .select('*, promo_stripe_i18n(*)')
-        .eq('status', 'published')
-        .order('sort_order');
-    return (rows as List)
-        .whereType<Map<String, dynamic>>()
-        .map(
-          (row) => PromoStripe(
-            id: row['id'] as String,
-            status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
-            sortOrder: (row['sort_order'] as num?)?.toInt() ?? 0,
-            imageUrl: row['image_url'] as String?,
-            linkUrl: row['link_url'] as String?,
-            challengeId: row['challenge_id'] as String?,
-            startsAt: row['starts_at'] == null
-                ? null
-                : DateTime.parse(row['starts_at'] as String),
-            endsAt: row['ends_at'] == null
-                ? null
-                : DateTime.parse(row['ends_at'] as String),
-            translations: i18nFromRows(row['promo_stripe_i18n']),
-          ),
-        )
-        .where((promo) => promo.isActiveAt(moment))
-        .toList();
+    // Audience (including "zero assignments = everyone") is enforced by
+    // list_my_promos / RLS. The client only drops rows outside the window.
+    final raw = await _client.rpc('list_my_promos');
+    return promosFromRpc(raw).where((promo) => promo.isActiveAt(moment)).toList()
+      ..sort((a, b) {
+        final byOrder = a.sortOrder.compareTo(b.sortOrder);
+        if (byOrder != 0) return byOrder;
+        return a.id.compareTo(b.id);
+      });
   }
 }
 

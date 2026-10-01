@@ -4,6 +4,10 @@ enum PricingType { free, paid }
 
 enum PublishStatus { draft, published, archived }
 
+/// Promo stripe kind. [exclusive] pairs with [Challenge.isPromo].
+/// [discount] leaves the challenge in the ordinary catalog.
+enum PromoKind { exclusive, discount }
+
 enum TravelMode { hike, bike }
 
 enum Difficulty { easy, moderate, hard, expert }
@@ -35,6 +39,11 @@ PublishStatus publishStatusFromWire(String value) => switch (value) {
   'published' => PublishStatus.published,
   'archived' => PublishStatus.archived,
   _ => PublishStatus.draft,
+};
+
+PromoKind promoKindFromWire(String? value) => switch (value) {
+  'exclusive' => PromoKind.exclusive,
+  _ => PromoKind.discount,
 };
 
 ChallengeRunStatus runStatusFromWire(String value) => switch (value) {

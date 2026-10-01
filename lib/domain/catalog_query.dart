@@ -205,6 +205,7 @@ bool _matchesChallenge(
   String foldedQuery,
   Map<String, CatalogRouteStats> routeStats,
 ) {
+  if (challenge.isPromo) return false;
   if (filter.pricingTypes.isNotEmpty &&
       !filter.pricingTypes.contains(challenge.pricingType)) {
     return false;

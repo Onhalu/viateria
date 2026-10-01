@@ -181,9 +181,14 @@ class MemoryCatalog implements CatalogRepository {
   final List<ChallengeDetail> details;
   final List<PromoStripe> promos;
 
+  /// When set, [fetchPublishedPromos] throws and the catalog continues
+  /// without a promo section.
+  Object? promosError;
+
   @override
-  Future<List<Challenge>> fetchPublishedChallenges() async =>
-      challenges.where((c) => isPubliclyVisible(c.status)).toList();
+  Future<List<Challenge>> fetchPublishedChallenges() async => challenges
+      .where((c) => isPubliclyVisible(c.status) && !c.isPromo)
+      .toList();
 
   @override
   Future<List<ChallengeDetail>> fetchPublishedDetails() async {
@@ -217,6 +222,8 @@ class MemoryCatalog implements CatalogRepository {
 
   @override
   Future<List<PromoStripe>> fetchPublishedPromos({DateTime? now}) async {
+    final forced = promosError;
+    if (forced != null) throw forced;
     final moment = now ?? DateTime.now().toUtc();
     return promos.where((p) => p.isActiveAt(moment)).toList();
   }

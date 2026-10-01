@@ -54,8 +54,40 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
     fapiFormUrlDiploma: httpUrlOrNull(row['fapi_form_url_diploma'] as String?),
     fapiFormUrlMedal: httpUrlOrNull(row['fapi_form_url_medal'] as String?),
     rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),
+    isPromo: row['is_promo'] == true,
     translations: i18nFromRows(row['challenge_i18n']),
   );
+}
+
+PromoStripe promoFromRow(Map<String, dynamic> row) {
+  return PromoStripe(
+    id: row['id'] as String,
+    status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
+    kind: promoKindFromWire(row['kind'] as String?),
+    sortOrder: (row['sort_order'] as num?)?.toInt() ?? 0,
+    imageUrl: row['image_url'] as String?,
+    linkUrl: row['link_url'] as String?,
+    challengeId: row['challenge_id'] as String?,
+    startsAt: dateTimeFromWire(row['starts_at']),
+    endsAt: dateTimeFromWire(row['ends_at']),
+    promoDiplomaPriceCents: (row['promo_diploma_price_cents'] as num?)?.toInt(),
+    promoMedalPriceCents: (row['promo_medal_price_cents'] as num?)?.toInt(),
+    translations: i18nFromRows(row['promo_stripe_i18n']),
+  );
+}
+
+List<PromoStripe> promosFromRpc(dynamic raw) {
+  if (raw == null) return const [];
+  if (raw is Map) {
+    return [promoFromRow(Map<String, dynamic>.from(raw))];
+  }
+  if (raw is List) {
+    return [
+      for (final row in raw)
+        if (row is Map) promoFromRow(Map<String, dynamic>.from(row)),
+    ];
+  }
+  return const [];
 }
 
 /// PostgREST embed of `places` via `waypoints_place_id_fkey` (migration 0013).
