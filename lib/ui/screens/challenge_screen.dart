@@ -10,6 +10,8 @@ import '../../data/route_services.dart';
 import '../../domain/challenge_photos.dart';
 import '../../domain/challenge_reward.dart';
 import '../../domain/route_planner.dart';
+import '../../domain/story_feed.dart';
+import '../../domain/story_fog.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
 import '../../domain/unlock_rules.dart';
@@ -24,6 +26,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/map_chrome.dart';
 import '../widgets/place_presentation.dart';
 import '../widgets/route_planner_panel.dart';
+import '../widgets/story_chapter_card.dart';
 import 'payment_checkout_screen.dart';
 
 class ChallengeScreen extends StatefulWidget {
@@ -55,6 +58,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   String? _routeError;
   int _routeToken = 0;
   TravelMode? _navigating;
+  String? _pendingRevealId;
+  var _revealScheduled = false;
+  final _chapterKeys = <String, GlobalKey>{};
 
   @override
   void didChangeDependencies() {
@@ -143,6 +149,27 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _reload();
   }
 
+  List<Waypoint> _plannerStops(_ChallengePageData? data) {
+    if (data == null) return const [];
+    final waypoints = data.detail.orderedWaypoints;
+    if (data.detail.challenge.accessMode != AccessMode.story) {
+      return waypoints;
+    }
+    final hidden = storyHiddenWaypointIds(
+      mode: AccessMode.story,
+      hasAccess: _rules.hasAccess(
+        pricing: data.detail.challenge.pricingType,
+        purchased: data.purchase?.isPaid ?? false,
+      ),
+      ordered: waypoints,
+      completedIds: data.progress?.completedWaypointIds ?? const {},
+    );
+    return [
+      for (final waypoint in waypoints)
+        if (!hidden.contains(waypoint.id)) waypoint,
+    ];
+  }
+
   Waypoint? _destinationOf(List<Waypoint> waypoints) {
     if (waypoints.isEmpty) return null;
     for (final waypoint in waypoints) {
@@ -173,10 +200,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     final localeController = context.read<LocaleController>();
     final strings = localeController.strings;
     final locale = localeController.locale;
-    final places =
-        waypoints ??
-        (await _future)?.detail.orderedWaypoints ??
-        const <Waypoint>[];
+    final places = waypoints ?? _plannerStops(await _future);
     if (!mounted) return;
     final start = _start;
     final destination = _destinationOf(places);
@@ -248,8 +272,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     if (query.isEmpty) return;
     try {
       final data = await _future;
-      final near = _destinationOf(data?.detail.orderedWaypoints ?? const [])
-          ?.latLng;
+      final near = _destinationOf(_plannerStops(data))?.latLng;
       final found = await services.geocoder.findPlace(query, near: near);
       if (!mounted) return;
       if (found == null) {
@@ -333,6 +356,63 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     setState(() => _navigating = null);
   }
 
+  GlobalKey _chapterKey(String id) =>
+      _chapterKeys.putIfAbsent(id, GlobalKey.new);
+
+  Future<void> _openVerify(String challengeId, String waypointId) async {
+    final revealed = await context.push<String?>(
+      '/verify/$challengeId/$waypointId',
+    );
+    if (!mounted) return;
+    if (revealed != null && revealed.isNotEmpty) {
+      setState(() {
+        _pendingRevealId = revealed;
+        _revealScheduled = false;
+      });
+    }
+    await _reload();
+  }
+
+  void _rejectLockedPlace() {
+    final strings = context.read<LocaleController>().strings;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            strings.storyFogLocked,
+            key: const Key('story-fog-locked'),
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: BrandColors.forest,
+        ),
+      );
+  }
+
+  void _scheduleStoryReveal(List<ChallengeFeedItem> feed) {
+    final id = _pendingRevealId;
+    if (id == null || _revealScheduled) return;
+    final shown = feed.any(
+      (item) => item is StoryFeedChapter && item.step.id == id,
+    );
+    if (!shown) return;
+    _revealScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _chapterKeys[id]?.currentContext;
+      if (target == null) return;
+      final reduceMotion = MediaQuery.disableAnimationsOf(context);
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.12,
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleController>().locale;
@@ -371,12 +451,31 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         final challenge = data.detail.challenge;
         final copy = challenge.copyFor(locale);
         final waypoints = data.detail.orderedWaypoints;
-        final destination = _destinationOf(waypoints);
         final completed = data.progress?.completedWaypointIds ?? {};
         final hasAccess = _rules.hasAccess(
           pricing: challenge.pricingType,
           purchased: data.purchase?.isPaid ?? false,
         );
+        final hidden = storyHiddenWaypointIds(
+          mode: challenge.accessMode,
+          hasAccess: hasAccess,
+          ordered: waypoints,
+          completedIds: completed,
+        );
+        final fog = storyFogPins(ordered: waypoints, hiddenIds: hidden);
+        final plannerWaypoints = [
+          for (final waypoint in waypoints)
+            if (!hidden.contains(waypoint.id)) waypoint,
+        ];
+        final destination = _destinationOf(plannerWaypoints);
+        final feed = buildChallengeFeed(
+          mode: challenge.accessMode,
+          hasAccess: hasAccess,
+          ordered: waypoints,
+          steps: data.detail.orderedStorySteps,
+          completedIds: completed,
+        );
+        _scheduleStoryReveal(feed);
         final isComplete = _rules.isChallengeComplete(
           waypoints: waypoints,
           completedWaypointIds: completed,
@@ -410,11 +509,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   const SizedBox(height: 12),
                   ChallengeMap(
                     waypoints: waypoints,
+                    hiddenWaypointIds: hidden,
+                    fogPins: fog,
                     selectedWaypointId: destination?.id,
                     start: _start?.latLng,
                     hikeLine: _routes?.hikeLine ?? const <LatLng>[],
                     bikeLine: _routes?.bikeLine ?? const <LatLng>[],
                     onWaypointTap: _setDestination,
+                    onFogTap: (_) => _rejectLockedPlace(),
                     navigating: _navigating,
                     navigationBanner: _navigating == null
                         ? null
@@ -448,7 +550,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   RoutePlannerPanel(
                     strings: strings,
                     locale: locale,
-                    waypoints: waypoints,
+                    waypoints: plannerWaypoints,
                     startController: _startController,
                     onStartSubmitted: _submitStartText,
                     onUseGps: _useGps,
@@ -502,27 +604,40 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  for (var i = 0; i < waypoints.length; i++)
-                    _WaypointTile(
-                      waypoint: waypoints[i],
-                      locale: locale,
-                      selected: waypoints[i].id == destination?.id,
-                      unlocked: _rules.isWaypointUnlocked(
-                        mode: challenge.accessMode,
-                        hasAccess: hasAccess,
-                        waypointIndex: i,
-                        completedIndexes: {
-                          for (var j = 0; j < waypoints.length; j++)
-                            if (completed.contains(waypoints[j].id)) j,
-                        },
+                  for (final item in feed)
+                    if (item is StoryFeedChapter)
+                      KeyedSubtree(
+                        key: _chapterKey(item.step.id),
+                        child: StoryChapterCard(
+                          step: item.step,
+                          locale: locale,
+                          expandOnce: _pendingRevealId == item.step.id,
+                        ),
+                      )
+                    else if (item is StoryFeedPlace)
+                      _WaypointTile(
+                        waypoint: item.waypoint,
+                        locale: locale,
+                        selected: item.waypoint.id == destination?.id,
+                        unlocked: item.unlocked,
+                        completed: item.completed,
+                        mystery:
+                            challenge.accessMode == AccessMode.story &&
+                            !item.unlocked,
+                        displayTitle: storyPlaceTitle(
+                          mode: challenge.accessMode,
+                          unlocked: item.unlocked,
+                          waypoint: item.waypoint,
+                          locale: locale,
+                          lockedTitle: strings.storyNextStop,
+                        ),
+                        strings: strings,
+                        onSelect: item.unlocked
+                            ? () => _setDestination(item.waypoint)
+                            : _rejectLockedPlace,
+                        onVerify: () =>
+                            _openVerify(challenge.id, item.waypoint.id),
                       ),
-                      completed: completed.contains(waypoints[i].id),
-                      strings: strings,
-                      onSelect: () => _setDestination(waypoints[i]),
-                      onVerify: () => context.push(
-                        '/verify/${challenge.id}/${waypoints[i].id}',
-                      ),
-                    ),
                   const SizedBox(height: 16),
                   ChallengeDeadlineBanner(
                     strings: strings,
@@ -774,6 +889,8 @@ class _WaypointTile extends StatelessWidget {
     required this.selected,
     required this.unlocked,
     required this.completed,
+    required this.mystery,
+    required this.displayTitle,
     required this.strings,
     required this.onSelect,
     required this.onVerify,
@@ -784,6 +901,8 @@ class _WaypointTile extends StatelessWidget {
   final bool selected;
   final bool unlocked;
   final bool completed;
+  final bool mystery;
+  final String displayTitle;
   final AppStrings strings;
   final VoidCallback onSelect;
   final VoidCallback onVerify;
@@ -797,6 +916,7 @@ class _WaypointTile extends StatelessWidget {
         ? (copy.hint ?? copy.description)
         : strings.storyLockedHint;
     return Card(
+      key: Key('waypoint-tile-${waypoint.id}'),
       color: selected ? Theme.of(context).colorScheme.secondaryContainer : null,
       child: InkWell(
         onTap: onSelect,
@@ -805,11 +925,14 @@ class _WaypointTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PlaceCategoryIcon(
-                iconName: waypoint.category.iconName,
-                iconKey: Key('waypoint-category-${waypoint.id}'),
-                semanticLabel: strings.t(waypoint.category.l10nKey),
-              ),
+              if (mystery)
+                StoryQuestionMark(key: Key('waypoint-mystery-${waypoint.id}'))
+              else
+                PlaceCategoryIcon(
+                  iconName: waypoint.category.iconName,
+                  iconKey: Key('waypoint-category-${waypoint.id}'),
+                  semanticLabel: strings.t(waypoint.category.l10nKey),
+                ),
               const SizedBox(width: PlaceRowMetrics.titleGap),
               Expanded(
                 child: Padding(
@@ -819,7 +942,11 @@ class _WaypointTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(copy.title, style: PlaceRowMetrics.titleStyle),
+                      Text(
+                        displayTitle,
+                        key: Key('waypoint-title-${waypoint.id}'),
+                        style: PlaceRowMetrics.titleStyle,
+                      ),
                       if (subtitle.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(

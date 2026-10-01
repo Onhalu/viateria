@@ -10,9 +10,11 @@ import '../../data/route_services.dart';
 import '../../domain/leaderboard_score.dart';
 import '../../domain/photo_verify.dart';
 import '../../domain/stop_verify.dart';
+import '../../domain/story_feed.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
+import '../../models/models.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
 import '../widgets/place_presentation.dart';
@@ -232,6 +234,9 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
             mimeType: photo.mimeType,
           );
         }
+        final detail = await services.catalog.fetchChallenge(
+          widget.challengeId!,
+        );
         final updated = await services.progress.verifyWaypoint(
           challengeId: widget.challengeId!,
           waypointId: widget.waypointId!,
@@ -239,11 +244,21 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         );
         await _persistPlaceIds(services);
         if (!mounted) return;
-        if (updated.isCompleted) {
+        final story = detail.challenge.accessMode == AccessMode.story;
+        if (updated.isCompleted && !story) {
           context.go('/diploma/${widget.challengeId}');
-        } else {
-          context.pop();
+          return;
         }
+        final hints = storyStepIdsAfterVerify(
+          detail: detail,
+          verifiedWaypointId: widget.waypointId!,
+          completedIds: updated.completedWaypointIds,
+        );
+        final reveal =
+            updated.revealStoryStepId ??
+            hints.closingStoryStepId ??
+            hints.nextStoryStepId;
+        context.pop(story ? reveal : null);
         return;
       }
       final ids = await _persistPlaceIds(services);

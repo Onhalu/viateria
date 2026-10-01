@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -32,6 +33,7 @@ class PlacesMapSurface extends StatefulWidget {
     this.initialCamera,
     this.geometry,
     this.onWaypointTap,
+    this.onFogTap,
     this.onReady,
     this.onLayersReady,
     this.overlayTop,
@@ -44,6 +46,7 @@ class PlacesMapSurface extends StatefulWidget {
   final CameraPosition? initialCamera;
   final ChallengeMapGeometry? geometry;
   final ValueChanged<Waypoint>? onWaypointTap;
+  final ValueChanged<String>? onFogTap;
   final void Function(MapLibreMapController controller)? onReady;
   final void Function(MapLibreMapController controller)? onLayersReady;
   final Widget? overlayTop;
@@ -132,6 +135,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                         .verifiedPlaces
                         .ids,
                     onWaypointTap: widget.onWaypointTap,
+                    onFogTap: widget.onFogTap,
                     onReady: (controller) {
                       _map = controller;
                       widget.onReady?.call(controller);
@@ -492,14 +496,18 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     final geometry = widget.geometry;
     if (geometry == null || geometry.waypoints.isEmpty) {
       _controller.setChallengePlaceIds(const {});
+      _controller.setSuppressedPlaceIds(const {});
       return;
     }
     _controller.setChallengePlaceIds(
       placeIdsInChallenge(
         _controller.all,
-        placeIds: geometry.waypoints.map((waypoint) => waypoint.placeId),
+        placeIds: geometry.revealedWaypoints.map(
+          (waypoint) => waypoint.placeId,
+        ),
       ),
     );
+    _controller.setSuppressedPlaceIds(geometry.suppressedPlaceIds);
   }
 
   void _syncVerifiedIds() {
@@ -512,7 +520,8 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   ) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return a == b;
-    return a.waypoints == b.waypoints;
+    return a.waypoints == b.waypoints &&
+        setEquals(a.hiddenWaypointIds, b.hiddenWaypointIds);
   }
 
   void _selectFromList(Place place) {
@@ -534,7 +543,9 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     return sortForList(
       placesOfChallenge(
         _controller.filtered,
-        placeIds: geometry.waypoints.map((waypoint) => waypoint.placeId),
+        placeIds: geometry.revealedWaypoints.map(
+          (waypoint) => waypoint.placeId,
+        ),
         verifiedPlaceIds: context.read<AppServices>().verifiedPlaces.ids,
       ),
       _controller.userLocation,
@@ -656,7 +667,16 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-CameraPosition challengeCameraOf(List<Waypoint> waypoints) {
+CameraPosition challengeCameraOf(
+  List<Waypoint> waypoints, {
+  List<ll.LatLng> anchors = const [],
+}) {
+  if (anchors.isNotEmpty) {
+    return CameraPosition(
+      target: LatLng(anchors.first.latitude, anchors.first.longitude),
+      zoom: anchors.length > 1 ? 12 : 13,
+    );
+  }
   final ordered = [...waypoints]
     ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   final center = ordered.isEmpty

@@ -95,6 +95,9 @@ List<PromoStripe> promosFromRpc(dynamic raw) {
 const waypointPlaceEmbed =
     'places!waypoints_place_id_fkey(id, lat, lng, elevation_m)';
 
+/// Story chapters. Empty for open-mode challenges. Migration 0016.
+const storyStepEmbed = 'challenge_story_steps(*, challenge_story_step_i18n(*))';
+
 Waypoint waypointFromRow(Map<String, dynamic> row) {
   final place = _placeEmbed(row['places']);
   final placeElevation = place?['elevation_m'];
@@ -132,4 +135,32 @@ String? _text(Object? value) {
   final text = value?.toString().trim();
   if (text == null || text.isEmpty) return null;
   return text;
+}
+
+List<StoryStep> storyStepsFromRows(dynamic raw) {
+  if (raw is! List) return const [];
+  final steps = <StoryStep>[];
+  for (final row in raw.whereType<Map>()) {
+    final step = storyStepFromRow(Map<String, dynamic>.from(row));
+    if (step != null) steps.add(step);
+  }
+  steps.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  return steps;
+}
+
+StoryStep? storyStepFromRow(Map<String, dynamic> row) {
+  final kind = storyStepKindFromWire(row['kind'] as String?);
+  final id = row['id'] as String?;
+  final challengeId = row['challenge_id'] as String?;
+  if (kind == null || id == null || challengeId == null) return null;
+  return StoryStep(
+    id: id,
+    challengeId: challengeId,
+    sortOrder: (row['sort_order'] as num?)?.toInt() ?? 0,
+    kind: kind,
+    waypointId: _text(row['waypoint_id']),
+    imageUrl: httpUrlOrNull(row['image_url'] as String?),
+    youtubeUrl: _text(row['youtube_url']),
+    translations: i18nFromRows(row['challenge_story_step_i18n']),
+  );
 }

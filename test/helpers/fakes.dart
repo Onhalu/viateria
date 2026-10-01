@@ -7,6 +7,7 @@ import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/challenge_photos.dart';
 import 'package:viateria/domain/photo_verify.dart';
 import 'package:viateria/domain/route_planner.dart';
+import 'package:viateria/domain/story_feed.dart';
 import 'package:viateria/domain/unlock_rules.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
@@ -202,6 +203,7 @@ class MemoryCatalog implements CatalogRepository {
         return ChallengeDetail(
           challenge: challenge,
           waypoints: detail.waypoints,
+          storySteps: detail.storySteps,
         );
       }
     }
@@ -302,7 +304,21 @@ class MemoryProgress implements ProgressRepository {
     } else {
       statuses[challengeId] = ChallengeRunStatus.inProgress;
     }
-    return (await fetchProgress(challengeId))!;
+    final progress = (await fetchProgress(challengeId))!;
+    final hints = storyStepIdsAfterVerify(
+      detail: detail,
+      verifiedWaypointId: waypointId,
+      completedIds: done,
+    );
+    return ChallengeProgress(
+      challengeId: progress.challengeId,
+      status: progress.status,
+      completedWaypointIds: progress.completedWaypointIds,
+      completedAt: progress.completedAt,
+      nextStoryStepId: hints.nextStoryStepId,
+      closingStoryStepId: hints.closingStoryStepId,
+      unlockedWaypointId: hints.unlockedWaypointId,
+    );
   }
 
   @override
