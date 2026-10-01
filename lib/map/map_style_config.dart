@@ -72,6 +72,11 @@ abstract final class MapStyleConfig {
   static const hikeLayerId = 'challenge-hike-line';
   static const bikeLayerId = 'challenge-bike-line';
 
+  /// Locked story stops. Sage `?` at a fog offset, never the true coordinate.
+  static const fogSourceId = 'story-fog';
+  static const fogLayerId = 'story-fog-symbols';
+  static const fogIconId = 'story-fog-question';
+
   static const CameraPosition defaultCamera = CameraPosition(
     target: czechCenter,
     zoom: defaultZoom,

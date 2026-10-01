@@ -206,30 +206,43 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(widget.destination?.id ?? 'none'),
-                    initialValue: widget.destination?.id,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: strings.routeDestination,
-                      border: const OutlineInputBorder(),
-                      isDense: true,
+                  if (widget.waypoints.isEmpty)
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: strings.routeDestination,
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      child: Text(
+                        strings.storyLockedHint,
+                        key: const Key('route-destination-locked'),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(widget.destination?.id ?? 'none'),
+                      initialValue: widget.destination?.id,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: strings.routeDestination,
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: [
+                        for (final waypoint in widget.waypoints)
+                          DropdownMenuItem<String>(
+                            value: waypoint.id,
+                            child: Text(waypoint.copyFor(widget.locale).title),
+                          ),
+                      ],
+                      onChanged: (id) {
+                        if (id == null) return;
+                        final match = widget.waypoints.where((w) => w.id == id);
+                        if (match.isNotEmpty) {
+                          widget.onDestinationChanged(match.first);
+                        }
+                      },
                     ),
-                    items: [
-                      for (final waypoint in widget.waypoints)
-                        DropdownMenuItem<String>(
-                          value: waypoint.id,
-                          child: Text(waypoint.copyFor(widget.locale).title),
-                        ),
-                    ],
-                    onChanged: (id) {
-                      if (id == null) return;
-                      final match = widget.waypoints.where((w) => w.id == id);
-                      if (match.isNotEmpty) {
-                        widget.onDestinationChanged(match.first);
-                      }
-                    },
-                  ),
                   if (widget.destinationElevationM != null) ...[
                     const SizedBox(height: 8),
                     Align(
