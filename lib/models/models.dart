@@ -192,15 +192,70 @@ class Waypoint {
 }
 
 class ChallengeDetail {
-  const ChallengeDetail({required this.challenge, required this.waypoints});
+  const ChallengeDetail({
+    required this.challenge,
+    required this.waypoints,
+    this.storySteps = const [],
+  });
 
   final Challenge challenge;
   final List<Waypoint> waypoints;
+
+  /// Rows from `challenge_story_steps`. Ignored when [Challenge.accessMode]
+  /// is [AccessMode.open].
+  final List<StoryStep> storySteps;
 
   List<Waypoint> get orderedWaypoints {
     final copy = [...waypoints];
     copy.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return copy;
+  }
+
+  List<StoryStep> get orderedStorySteps {
+    final copy = [...storySteps];
+    copy.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return copy;
+  }
+}
+
+/// One `challenge_story_steps` row plus its `challenge_story_step_i18n` copy.
+class StoryStep {
+  const StoryStep({
+    required this.id,
+    required this.challengeId,
+    required this.sortOrder,
+    required this.kind,
+    required this.translations,
+    this.waypointId,
+    this.imageUrl,
+    this.youtubeUrl,
+  });
+
+  final String id;
+  final String challengeId;
+  final int sortOrder;
+  final StoryStepKind kind;
+
+  /// Set only for [StoryStepKind.beforeWaypoint].
+  final String? waypointId;
+  final String? imageUrl;
+  final String? youtubeUrl;
+  final List<LocalizedText> translations;
+
+  LocalizedText copyFor(String locale) => pickLocale(translations, locale);
+
+  /// YouTube, a cover image, or a non-empty body in any locale.
+  ///
+  /// A title with no media is skipped in the list. The place tile stays.
+  bool get hasChapterMedia {
+    final video = youtubeUrl?.trim();
+    if (video != null && video.isNotEmpty) return true;
+    final image = imageUrl?.trim();
+    if (image != null && image.isNotEmpty) return true;
+    for (final text in translations) {
+      if (text.description.trim().isNotEmpty) return true;
+    }
+    return false;
   }
 }
 
@@ -265,6 +320,9 @@ class ChallengeProgress {
     required this.status,
     required this.completedWaypointIds,
     this.completedAt,
+    this.nextStoryStepId,
+    this.closingStoryStepId,
+    this.unlockedWaypointId,
   });
 
   final String challengeId;
@@ -272,7 +330,19 @@ class ChallengeProgress {
   final Set<String> completedWaypointIds;
   final DateTime? completedAt;
 
+  /// `verify_waypoint` → `next_story_step_id`. Null on a plain progress read.
+  final String? nextStoryStepId;
+
+  /// `verify_waypoint` → `closing_story_step_id` after the last stop.
+  final String? closingStoryStepId;
+
+  /// `verify_waypoint` → `unlocked_waypoint_id` (the next stop, if any).
+  final String? unlockedWaypointId;
+
   bool get isCompleted => status == ChallengeRunStatus.completed;
+
+  /// Chapter to scroll to after this verify. Closing wins when the run is done.
+  String? get revealStoryStepId => closingStoryStepId ?? nextStoryStepId;
 }
 
 /// One `waypoint_progress` photo row for a challenge waypoint.

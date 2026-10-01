@@ -1,5 +1,11 @@
 enum AccessMode { open, story }
 
+/// Narrative slot on a story-mode challenge.
+///
+/// [beforeWaypoint] is the chapter that introduces [waypointId]. Opening and
+/// closing have no waypoint.
+enum StoryStepKind { opening, beforeWaypoint, closing }
+
 enum PricingType { free, paid }
 
 enum PublishStatus { draft, published, archived }
@@ -28,6 +34,13 @@ enum RewardVariant { diploma, medalAndDiploma }
 AccessMode accessModeFromWire(String value) => switch (value) {
   'story' => AccessMode.story,
   _ => AccessMode.open,
+};
+
+StoryStepKind? storyStepKindFromWire(String? value) => switch (value) {
+  'opening' => StoryStepKind.opening,
+  'before_waypoint' => StoryStepKind.beforeWaypoint,
+  'closing' => StoryStepKind.closing,
+  _ => null,
 };
 
 PricingType pricingTypeFromWire(String value) => switch (value) {

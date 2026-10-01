@@ -268,7 +268,7 @@ class SupabaseAuthRepository implements AuthRepository {
 
 /// Published challenge plus stops. Place coordinates come from the 0013 FK.
 const publishedChallengeDetailSelect =
-    '*, challenge_i18n(*), waypoints(*, waypoint_i18n(*), $waypointPlaceEmbed)';
+    '*, challenge_i18n(*), waypoints(*, waypoint_i18n(*), $waypointPlaceEmbed), $storyStepEmbed';
 
 class SupabaseCatalogRepository implements CatalogRepository {
   SupabaseCatalogRepository(this._client);
@@ -336,7 +336,11 @@ class SupabaseCatalogRepository implements CatalogRepository {
         .whereType<Map<String, dynamic>>()
         .map(waypointFromRow)
         .toList();
-    return ChallengeDetail(challenge: challenge, waypoints: waypoints);
+    return ChallengeDetail(
+      challenge: challenge,
+      waypoints: waypoints,
+      storySteps: storyStepsFromRows(map['challenge_story_steps']),
+    );
   }
 
   @override
@@ -345,7 +349,9 @@ class SupabaseCatalogRepository implements CatalogRepository {
     // Audience (including "zero assignments = everyone") is enforced by
     // list_my_promos / RLS. The client only drops rows outside the window.
     final raw = await _client.rpc('list_my_promos');
-    return promosFromRpc(raw).where((promo) => promo.isActiveAt(moment)).toList()
+    return promosFromRpc(raw)
+        .where((promo) => promo.isActiveAt(moment))
+        .toList()
       ..sort((a, b) {
         final byOrder = a.sortOrder.compareTo(b.sortOrder);
         if (byOrder != 0) return byOrder;
@@ -420,11 +426,28 @@ class SupabaseProgressRepository implements ProgressRepository {
     required String waypointId,
     required String photoPath,
   }) async {
-    await _client.rpc(
+    final raw = await _client.rpc(
       'verify_waypoint',
       params: {'p_waypoint_id': waypointId, 'p_photo_path': photoPath},
     );
-    return (await fetchProgress(challengeId))!;
+    final progress = (await fetchProgress(challengeId))!;
+    final payload = raw is Map ? Map<String, dynamic>.from(raw) : const {};
+    return ChallengeProgress(
+      challengeId: progress.challengeId,
+      status: progress.status,
+      completedWaypointIds: progress.completedWaypointIds,
+      completedAt: progress.completedAt,
+      nextStoryStepId: _rpcId(payload['next_story_step_id']),
+      closingStoryStepId: _rpcId(payload['closing_story_step_id']),
+      unlockedWaypointId: _rpcId(payload['unlocked_waypoint_id']),
+    );
+  }
+
+  String? _rpcId(Object? value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text == 'null') return null;
+    return text;
   }
 
   @override

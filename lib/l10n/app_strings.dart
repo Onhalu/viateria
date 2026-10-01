@@ -62,6 +62,8 @@ class AppStrings {
     'expert',
     'challengeLockedPaid',
     'storyLockedHint',
+    'storyNextStop',
+    'storyFogLocked',
     'missingConfig',
     'errorGeneric',
     'purchasePending',
@@ -286,6 +288,8 @@ class AppStrings {
   String get expert => t('expert');
   String get challengeLockedPaid => t('challengeLockedPaid');
   String get storyLockedHint => t('storyLockedHint');
+  String get storyNextStop => t('storyNextStop');
+  String get storyFogLocked => t('storyFogLocked');
   String get missingConfig => t('missingConfig');
   String get errorGeneric => t('errorGeneric');
   String get purchasePending => t('purchasePending');
@@ -570,6 +574,8 @@ class AppStrings {
       'expert': 'Expert',
       'challengeLockedPaid': 'Purchase this challenge to access waypoints.',
       'storyLockedHint': 'Complete the previous waypoint to unlock the next.',
+      'storyNextStop': 'Next stop',
+      'storyFogLocked': 'Verify the previous place first',
       'missingConfig': 'Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY via env.',
       'errorGeneric': 'Something went wrong. Please try again.',
       'purchasePending': 'Payment is still pending.',
@@ -805,6 +811,8 @@ class AppStrings {
       'expert': 'Expert',
       'challengeLockedPaid': 'Pro přístup k zastávkám výzvu zakupte.',
       'storyLockedHint': 'Další zastávku odemknete dokončením předchozí.',
+      'storyNextStop': 'Další zastávka',
+      'storyFogLocked': 'Nejdřív dolož předchozí místo',
       'missingConfig': 'Supabase není nastavené. Doplňte SUPABASE_URL a SUPABASE_ANON_KEY v env.',
       'errorGeneric': 'Něco se pokazilo. Zkuste to znovu.',
       'purchasePending': 'Platba ještě není dokončená.',
@@ -1039,6 +1047,8 @@ class AppStrings {
       'challengeLockedPaid':
           'Kaufen Sie diese Challenge, um Wegpunkte zu sehen.',
       'storyLockedHint': 'Schließen Sie den vorherigen Wegpunkt ab, um den nächsten zu öffnen.',
+      'storyNextStop': 'Nächster Halt',
+      'storyFogLocked': 'Belege zuerst den vorherigen Ort',
       'missingConfig': 'Supabase ist nicht konfiguriert. Setzen Sie SUPABASE_URL und SUPABASE_ANON_KEY per Env.',
       'errorGeneric': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
       'purchasePending': 'Zahlung steht noch aus.',
