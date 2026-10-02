@@ -135,7 +135,7 @@ void main() {
   test('migration limits waypoint-photos and leaves read policies alone', () {
     final sql = File(
       'supabase/migrations/0016_waypoint_photos_upload_limits.sql',
-    ).readAsStringSync();
+    ).readAsStringSync().replaceAll(RegExp(r'--[^\n]*'), '');
     expect(sql, contains("where id = 'waypoint-photos'"));
     expect(sql, contains('file_size_limit = 8388608'));
     expect(sql, contains("'image/jpeg'"));
@@ -144,6 +144,7 @@ void main() {
     expect(sql, isNot(contains('create policy')));
     expect(sql, isNot(contains('is_shared_verification_photo')));
     expect(sql, isNot(contains('challenge_waypoint_photos')));
+    expect(sql, isNot(contains('public =')));
   });
 
   test('draft and archived catalog rows are not public', () {
