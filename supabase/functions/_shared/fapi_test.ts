@@ -1,14 +1,17 @@
 import {
   appendFapiPrefill,
+  callerCanReadChallenge,
   checkoutAmountCents,
   fapiPrefillParams,
   httpUrlOrNull,
   invoiceSecurityHash,
   isInvoiceSecurityValid,
+  isWebhookTokenValid,
   parseNotification,
   parseViateriaNotes,
   promoMatchesViewer,
   purchaseKeysFromInvoice,
+  purchaseUnlockPlan,
   selectActiveDiscountStripe,
   viateriaNotes,
   type DiscountStripe,
@@ -199,5 +202,47 @@ Deno.test("notification parser reads id or invoice", () => {
   );
   if (json.invoiceId !== "12" || json.time !== "3") {
     throw new Error(JSON.stringify(json));
+  }
+});
+
+Deno.test("webhook token fails closed when the secret is missing or wrong", () => {
+  if (isWebhookTokenValid(undefined, "anything")) {
+    throw new Error("unset secret");
+  }
+  if (isWebhookTokenValid("", "")) throw new Error("empty must not match empty");
+  if (isWebhookTokenValid("secret", null)) throw new Error("missing token");
+  if (isWebhookTokenValid("secret", "Secret")) {
+    throw new Error("token compare is case-sensitive");
+  }
+  if (isWebhookTokenValid("secret", "secret-extra")) {
+    throw new Error("length mismatch");
+  }
+  if (!isWebhookTokenValid("secret", "secret")) {
+    throw new Error("exact token should pass");
+  }
+});
+
+Deno.test("paid unlock only marks an existing pending purchase", () => {
+  if (purchaseUnlockPlan(null) !== "reject") throw new Error("no row");
+  if (purchaseUnlockPlan({ status: "failed" }) !== "reject") {
+    throw new Error("failed");
+  }
+  if (purchaseUnlockPlan({ status: "refunded" }) !== "reject") {
+    throw new Error("refunded");
+  }
+  if (purchaseUnlockPlan({ status: "pending" }) !== "mark_paid") {
+    throw new Error("pending");
+  }
+  if (purchaseUnlockPlan({ status: "paid" }) !== "already_paid") {
+    throw new Error("replay");
+  }
+});
+
+Deno.test("checkout readable gate accepts only a true RPC result", () => {
+  if (!callerCanReadChallenge(true, null)) throw new Error("true");
+  if (callerCanReadChallenge(false, null)) throw new Error("false");
+  if (callerCanReadChallenge(null, null)) throw new Error("null");
+  if (callerCanReadChallenge(true, { message: "missing function" })) {
+    throw new Error("rpc error must fail closed");
   }
 });
