@@ -13,8 +13,12 @@
 -- public.challenge_readable is the wrapper start-fapi-checkout calls with
 -- the user JWT. private.challenge_readable (0015) stays the source of truth.
 --
--- Apply on the target project before deploying start-fapi-checkout.
--- This file does not run itself.
+-- Numbered 0018 so it does not collide with 0016_challenge_story_steps and
+-- 0017_verify_waypoint_story_enrich. Prod already has those story objects
+-- under timestamp migration versions. Apply this after those story
+-- migrations when both are on the same database, so this replace stays
+-- the verify_waypoint definition. Apply it before deploying
+-- start-fapi-checkout. This file does not run itself.
 
 create or replace function public.challenge_readable(p_challenge_id uuid)
 returns boolean
