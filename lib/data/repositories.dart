@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../domain/leaderboard_score.dart';
+import '../domain/photo_verify.dart';
 import '../models/models.dart';
 
 /// Auth API failure with a message safe to show in the UI.
@@ -182,6 +183,12 @@ abstract class LeaderboardRepository {
 }
 
 abstract class PhotoStorage {
+  /// Stores one verification photo in `waypoint-photos`.
+  ///
+  /// Callers must reject an empty body, a MIME type outside
+  /// [allowedWaypointPhotoMimeTypes], or more than [waypointPhotoMaxBytes]
+  /// before the storage request. The live-camera path sends
+  /// [liveCameraPhotoMimeType].
   Future<String> uploadWaypointPhoto({
     required String userId,
     required String challengeId,

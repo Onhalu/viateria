@@ -178,8 +178,16 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
           .captureLivePhoto();
       if (captured == null) return;
       final request = const PhotoCaptureRequest(source: PhotoSource.liveCamera);
-      if (!_policy.acceptsUpload(request: request, bytes: captured.bytes)) {
+      if (!_policy.allows(request)) {
         setState(() => _error = strings.liveCameraOnly);
+        return;
+      }
+      if (!_policy.acceptsUpload(
+        request: request,
+        bytes: captured.bytes,
+        mimeType: captured.mimeType,
+      )) {
+        setState(() => _error = strings.errorGeneric);
         return;
       }
       setState(() => _photo = captured);
@@ -222,6 +230,14 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
               _busy = false;
               _error = strings.photoRequired;
             });
+            return;
+          }
+          if (!_policy.acceptsUpload(
+            request: const PhotoCaptureRequest(source: PhotoSource.liveCamera),
+            bytes: photo.bytes,
+            mimeType: photo.mimeType,
+          )) {
+            setState(() => _error = strings.errorGeneric);
             return;
           }
           photoPath = await services.photos.uploadWaypointPhoto(
