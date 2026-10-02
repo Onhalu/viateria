@@ -11,7 +11,7 @@ class PhotoCaptureRequest {
 /// Bucket `waypoint-photos` upload cap: 8 MiB (8 * 1024 * 1024 bytes).
 ///
 /// Keep this equal to `storage.buckets.file_size_limit` in
-/// `supabase/migrations/0016_waypoint_photos_upload_limits.sql`.
+/// `supabase/migrations/0019_waypoint_photos_upload_limits.sql`.
 const int waypointPhotoMaxBytes = 8388608;
 
 /// Content types the bucket accepts. Comparison is exact and case-sensitive.

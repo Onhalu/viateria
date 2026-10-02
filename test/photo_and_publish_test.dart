@@ -134,7 +134,7 @@ void main() {
 
   test('migration limits waypoint-photos and leaves read policies alone', () {
     final sql = File(
-      'supabase/migrations/0016_waypoint_photos_upload_limits.sql',
+      'supabase/migrations/0019_waypoint_photos_upload_limits.sql',
     ).readAsStringSync().replaceAll(RegExp(r'--[^\n]*'), '');
     expect(sql, contains("where id = 'waypoint-photos'"));
     expect(sql, contains('file_size_limit = 8388608'));
