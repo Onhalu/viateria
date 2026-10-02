@@ -142,11 +142,14 @@ Author content in the dashboard. Only `status = published` is visible. Publish t
 
 Edge functions:
 
-- `start-fapi-checkout` — authenticated; upserts a pending purchase and returns the FAPI form URL for the chosen reward variant
-- `fapi-webhook` — marks `purchases.status = paid` on a verified FAPI paid-invoice notification
+- `start-fapi-checkout` — authenticated; calls `challenge_readable` (same promo gate as the catalog) before upserting a pending purchase and returning the FAPI form URL
+- `fapi-webhook` — requires `FAPI_WEBHOOK_SECURITY`; marks an existing pending `purchases` row `paid` on a verified FAPI paid-invoice notification
+- `send-email` — Auth Send Email hook; requires `SEND_EMAIL_HOOK_SECRET` and a valid webhook signature before it sends
 - `create-checkout-session` / `stripe-webhook` — leftover Stripe path; not used by the Flutter pay CTAs
 
-Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, optional `FAPI_WEBHOOK_SECURITY` and `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, required `FAPI_WEBHOOK_SECURITY`, required `SEND_EMAIL_HOOK_SECRET`, and optional `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+
+`supabase/migrations/0016_verify_waypoint_challenge_readable.sql` makes `verify_waypoint` use `private.challenge_readable` and adds the public wrapper checkout calls. Apply it yourself before deploying `start-fapi-checkout`. This change does not run it.
 
 Storage bucket: `waypoint-photos` (`{user_id}/{challenge_id}/{waypoint_id}/{uuid}.jpg`).
 
@@ -178,7 +181,7 @@ Dashboard checklist (providers, redirect URLs, Google web client, Apple Services
 1. Create two sales forms in FAPI (digital diploma, medal + diploma). Do not invent URLs in the repo — paste each public form-page URL into `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` when ready. A null/empty URL disables that pay CTA.
 2. Create custom fields named `user_id`, `challenge_id`, `reward_variant` and add them to both forms (see `supabase/functions/fapi-webhook/README.md`).
 3. Deploy `start-fapi-checkout` and `fapi-webhook`.
-4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`.
+4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`. The secret is required; an empty value rejects the notification.
 
 Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price.
 
@@ -200,7 +203,7 @@ flutter test
 | **open** | Every waypoint is available |
 | **story** | Waypoint *n+1* unlocks only after waypoint *n* is verified |
 
-Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enforces photo path, access, and story order on the server.
+Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enforces photo path, access, story order, and the same promo readability rule as the catalog (`private.challenge_readable`). It does not check GPS or that a storage object exists.
 
 ## Project layout
 
