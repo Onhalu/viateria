@@ -9,7 +9,8 @@ functions stay in the repo but are unused by the Flutter CTA path.
 supabase secrets set FAPI_API_USERNAME="<fapi login email>"
 supabase secrets set FAPI_API_KEY="<fapi API token>"
 
-# Optional extra gate: append ?token=... to the notification URL in FAPI.
+# Required. The function rejects every notification when this is unset
+# or the token does not match (401, no purchase update).
 supabase secrets set FAPI_WEBHOOK_SECURITY="<random string>"
 
 # Optional: numeric IDs of FAPI custom fields (Prodej → Vlastní pole)
@@ -58,11 +59,11 @@ https://<project>.supabase.co/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECU
 
 FAPI POSTs `id` (or `invoice`), `time`, `security`. This function:
 
-1. Checks `token` when `FAPI_WEBHOOK_SECURITY` is set
+1. Requires `FAPI_WEBHOOK_SECURITY` and a matching `token` (timing-safe). Missing or wrong → 401, no invoice lookup and no purchase write
 2. `GET /invoices/{id}` with Basic auth
 3. Verifies `security === sha1(time + id + number + Σ md5(item.id + item.name))`
-   ([SecurityChecker](https://github.com/fapi-cz/fapi-client/blob/master/src/Fapi/FapiClient/Tools/SecurityChecker.php))
-4. If `paid`, upserts `purchases` (`status=paid`, `paid_at`, `reward_variant`)
+   ([SecurityChecker](https://github.com/fapi-cz/fapi-client/blob/master/src/Fapi/FapiClient/Tools/SecurityChecker.php)) with a timing-safe compare
+4. If `paid`, updates an existing `purchases` row that is still `pending` (`status=paid`, `paid_at`, `reward_variant`). Already `paid` returns `OK` / `already paid`. No pending row → 409, nothing is inserted
 5. Returns 2xx (`OK` or `SKIPPED` for unpaid / missing metadata)
 
 Unpaid proforma notifications are acknowledged with 200 so FAPI does

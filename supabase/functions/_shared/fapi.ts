@@ -167,15 +167,56 @@ export async function isInvoiceSecurityValid(
   return timingSafeEqual(actual, expectedSecurity);
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  const left = a.toLowerCase();
-  const right = b.toLowerCase();
-  if (left.length !== right.length) return false;
+/** Case-sensitive constant-time compare. A length mismatch returns false. */
+export function timingSafeEqualExact(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   let diff = 0;
-  for (let i = 0; i < left.length; i++) {
-    diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return diff === 0;
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  return timingSafeEqualExact(a.toLowerCase(), b.toLowerCase());
+}
+
+/**
+ * Shared-secret gate for `fapi-webhook`.
+ * Missing secret, missing token, or a mismatch all fail. Never treats an
+ * empty secret as "check skipped".
+ */
+export function isWebhookTokenValid(
+  secret: string | null | undefined,
+  token: string | null | undefined,
+): boolean {
+  if (secret == null || secret.length === 0) return false;
+  if (token == null || token.length === 0) return false;
+  return timingSafeEqualExact(secret, token);
+}
+
+export type PurchaseUnlockPlan = "already_paid" | "mark_paid" | "reject";
+
+/**
+ * Paid unlock only updates an existing pending row.
+ * An already-paid row is an idempotent replay. Anything else (no row,
+ * failed, refunded) must not insert a paid purchase.
+ */
+export function purchaseUnlockPlan(
+  existing: { status?: string | null } | null | undefined,
+): PurchaseUnlockPlan {
+  const status = existing?.status;
+  if (status === "paid") return "already_paid";
+  if (status === "pending") return "mark_paid";
+  return "reject";
+}
+
+/** Catalog readability RPC: only a literal true with no error may proceed. */
+export function callerCanReadChallenge(
+  readable: unknown,
+  rpcError: unknown,
+): boolean {
+  return rpcError == null && readable === true;
 }
 
 const USER_FIELD_NAMES = ["user_id", "userid", "viateria_user_id"];
