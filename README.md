@@ -149,7 +149,7 @@ Edge functions:
 
 Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, required `FAPI_WEBHOOK_SECURITY`, required `SEND_EMAIL_HOOK_SECRET`, and optional `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
-`supabase/migrations/0016_verify_waypoint_challenge_readable.sql` makes `verify_waypoint` use `private.challenge_readable` and adds the public wrapper checkout calls. Apply it yourself before deploying `start-fapi-checkout`. This change does not run it.
+`supabase/migrations/0018_verify_waypoint_challenge_readable.sql` makes `verify_waypoint` use `private.challenge_readable` and adds the public wrapper checkout calls. It is 0018 so it sorts after the story migrations `0016` / `0017`. Apply it yourself before deploying `start-fapi-checkout`. This change does not run it.
 
 Storage bucket: `waypoint-photos` (`{user_id}/{challenge_id}/{waypoint_id}/{uuid}.jpg`).
 
