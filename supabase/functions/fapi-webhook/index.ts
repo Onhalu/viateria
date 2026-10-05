@@ -1,8 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.10";
+import {
+  createClient,
+  type SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import {
   FAPI_API_BASE,
+  fapiClientId,
+  fapiInvoiceId,
   fetchFapiInvoice,
+  invoiceCurrencyCode,
+  invoiceTotalCents,
   isInvoiceSecurityValid,
   parseNotification,
   parseRewardVariant,
@@ -87,38 +94,143 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
-  const { data: existing } = await admin
+  const invoiceId = fapiInvoiceId(invoice);
+  const amountCents = invoiceTotalCents(invoice);
+  const currency = invoiceCurrencyCode(invoice);
+  if (!invoiceId || amountCents == null || !currency) {
+    return json({
+      status: "FAILED",
+      message: "invoice id, total, or currency missing",
+    }, 500);
+  }
+  const clientId = fapiClientId(invoice);
+
+  // Replay of this invoice is a no-op. UNIQUE(fapi_invoice_id) is the
+  // backstop if two deliveries pass this lookup together.
+  const { data: applied, error: appliedError } = await admin
     .from("purchases")
-    .select("status, reward_variant, amount_cents, currency")
+    .select("id")
+    .eq("fapi_invoice_id", invoiceId)
+    .maybeSingle();
+  if (appliedError) {
+    console.error("fapi-webhook invoice lookup failed", appliedError.message);
+    return json({ status: "FAILED", message: "purchase lookup failed" }, 500);
+  }
+  if (applied) {
+    const profileError = await linkProfileFapiClient(
+      admin,
+      keys.userId,
+      clientId,
+    );
+    if (profileError) return profileError;
+    return json({ status: "OK", message: "already applied" });
+  }
+
+  const { data: existing, error: existingError } = await admin
+    .from("purchases")
+    .select("status, reward_variant")
     .eq("user_id", keys.userId)
     .eq("challenge_id", keys.challengeId)
     .maybeSingle();
+  if (existingError) {
+    console.error("fapi-webhook purchase lookup failed", existingError.message);
+    return json({ status: "FAILED", message: "purchase lookup failed" }, 500);
+  }
 
   if (existing?.status === "paid") {
     return json({ status: "OK", message: "already paid" });
   }
+  // Do not insert a paid row. Draft PR #36 removes that upsert and only
+  // flips an existing pending purchase.
+  if (existing?.status !== "pending") {
+    return json({ status: "FAILED", message: "no pending purchase" }, 409);
+  }
 
   const rewardVariant = keys.rewardVariant ??
-    (existing?.reward_variant
+    (existing.reward_variant
       ? parseRewardVariant(existing.reward_variant)
       : "diploma");
 
-  await admin.from("purchases").upsert(
-    {
-      user_id: keys.userId,
-      challenge_id: keys.challengeId,
+  const { data: updated, error: updateError } = await admin
+    .from("purchases")
+    .update({
       status: "paid",
       paid_at: new Date().toISOString(),
       reward_variant: rewardVariant,
-      amount_cents: existing?.amount_cents ?? 0,
-      currency: existing?.currency ??
-        (typeof invoice.currency === "string" ? invoice.currency : "eur"),
-    },
-    { onConflict: "user_id,challenge_id" },
-  );
+      amount_cents: amountCents,
+      currency,
+      fapi_invoice_id: invoiceId,
+      ...(clientId ? { fapi_client_id: clientId } : {}),
+    })
+    .eq("user_id", keys.userId)
+    .eq("challenge_id", keys.challengeId)
+    .eq("status", "pending")
+    .select("id");
+
+  if (updateError) {
+    if (isUniqueViolation(updateError)) {
+      const profileError = await linkProfileFapiClient(
+        admin,
+        keys.userId,
+        clientId,
+      );
+      if (profileError) return profileError;
+      return json({ status: "OK", message: "already applied" });
+    }
+    console.error("fapi-webhook purchase update failed", updateError.message);
+    return json({ status: "FAILED", message: "purchase update failed" }, 500);
+  }
+  if (!updated || updated.length === 0) {
+    const { data: again, error: againError } = await admin
+      .from("purchases")
+      .select("status, fapi_invoice_id")
+      .eq("user_id", keys.userId)
+      .eq("challenge_id", keys.challengeId)
+      .maybeSingle();
+    if (againError) {
+      console.error("fapi-webhook purchase recheck failed", againError.message);
+      return json({ status: "FAILED", message: "purchase lookup failed" }, 500);
+    }
+    if (again?.fapi_invoice_id === invoiceId || again?.status === "paid") {
+      return json({ status: "OK", message: "already applied" });
+    }
+    return json({ status: "FAILED", message: "no pending purchase" }, 409);
+  }
+
+  const profileError = await linkProfileFapiClient(admin, keys.userId, clientId);
+  if (profileError) return profileError;
 
   return json({ status: "OK" });
 });
+
+function isUniqueViolation(error: { code?: string; message?: string }): boolean {
+  return error.code === "23505" ||
+    (error.message ?? "").toLowerCase().includes("duplicate key");
+}
+
+/** Sets profiles.fapi_client_id only when it is still empty. */
+async function linkProfileFapiClient(
+  admin: SupabaseClient,
+  userId: string,
+  clientId: string | null,
+): Promise<Response | null> {
+  if (!clientId) return null;
+  const { error } = await admin
+    .from("profiles")
+    .update({ fapi_client_id: clientId })
+    .eq("id", userId)
+    .is("fapi_client_id", null);
+  if (!error) return null;
+  if (isUniqueViolation(error)) {
+    console.error(
+      "fapi-webhook profile client id already linked elsewhere",
+      error.message,
+    );
+    return null;
+  }
+  console.error("fapi-webhook profile update failed", error.message);
+  return json({ status: "FAILED", message: "profile update failed" }, 500);
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

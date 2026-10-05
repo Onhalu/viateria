@@ -59,8 +59,6 @@ class Challenge {
     this.countryCode,
     this.difficulty,
     this.stripePriceId,
-    this.stripePriceIdDiploma,
-    this.stripePriceIdMedal,
     this.fapiFormUrlDiploma,
     this.fapiFormUrlMedal,
     this.rewardVariant,
@@ -97,10 +95,9 @@ class Challenge {
   /// CMS `easy` / `normal` / `hard`. Null hides the catalog label.
   final CatalogDifficulty? difficulty;
 
-  /// Legacy shared Stripe Price id. Used when a per-SKU id is unset.
+  /// Legacy shared Stripe Price id (`challenges.stripe_price_id`).
+  /// `stripe_price_id_diploma` / `stripe_price_id_medal` are not on prod.
   final String? stripePriceId;
-  final String? stripePriceIdDiploma;
-  final String? stripePriceIdMedal;
 
   /// Public FAPI sales-form page for Digitální diplom. Null / blank disables
   /// that CTA. Prefill query params are added by `start-fapi-checkout`.
@@ -131,9 +128,10 @@ class Challenge {
     return null;
   }
 
+  /// Both reward variants share [stripePriceId]. Per-SKU Stripe columns
+  /// are not read; they are not on prod.
   String? stripePriceIdFor(RewardVariant variant) => switch (variant) {
-    RewardVariant.diploma => stripePriceIdDiploma ?? stripePriceId,
-    RewardVariant.medalAndDiploma => stripePriceIdMedal ?? stripePriceId,
+    RewardVariant.diploma || RewardVariant.medalAndDiploma => stripePriceId,
   };
 
   /// http(s) FAPI form URL for [variant], or null when unset / not openable.

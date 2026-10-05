@@ -1,9 +1,13 @@
 import {
   appendFapiPrefill,
   checkoutAmountCents,
+  fapiClientId,
+  fapiInvoiceId,
   fapiPrefillParams,
   httpUrlOrNull,
+  invoiceCurrencyCode,
   invoiceSecurityHash,
+  invoiceTotalCents,
   isInvoiceSecurityValid,
   parseNotification,
   parseViateriaNotes,
@@ -183,6 +187,29 @@ Deno.test("discount checkout prefers promo cents when the stripe matches", () =>
     medalPriceCents: 900,
   });
   if (plain !== 499) throw new Error(`plain ${plain}`);
+});
+
+Deno.test("invoice money comes from total and currency, not the pending row", () => {
+  const invoice = {
+    id: 239,
+    client: 23,
+    currency: "CZK",
+    total: 199,
+  };
+  if (fapiInvoiceId(invoice) !== "239") throw new Error("id");
+  if (fapiClientId(invoice) !== "23") throw new Error("client");
+  if (invoiceCurrencyCode(invoice) !== "czk") throw new Error("currency");
+  if (invoiceTotalCents(invoice) !== 19900) throw new Error("cents");
+  if (invoiceTotalCents({ total: "19.99" }) !== 1999) {
+    throw new Error("string total");
+  }
+  if (invoiceTotalCents({ total: -1 }) !== null) throw new Error("negative");
+  if (invoiceCurrencyCode({ currency: "euro" }) !== null) {
+    throw new Error("bad currency");
+  }
+  if (invoiceTotalCents({}) !== null || invoiceCurrencyCode({}) !== null) {
+    throw new Error("missing");
+  }
 });
 
 Deno.test("notification parser reads id or invoice", () => {

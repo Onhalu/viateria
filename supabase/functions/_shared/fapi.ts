@@ -34,6 +34,10 @@ export type FapiInvoice = {
   notes?: unknown;
   clients_note?: unknown;
   client_note?: unknown;
+  /** FAPI client id (integer on the wire). */
+  client?: unknown;
+  /** Invoice total in major units of [currency] (199.00 CZK → 199). */
+  total?: unknown;
   currency?: unknown;
   custom_fields?: FapiCustomField[] | null;
   items?: FapiInvoiceItem[] | null;
@@ -266,6 +270,44 @@ function stringish(value: unknown): string | undefined {
   if (value == null) return undefined;
   const text = String(value).trim();
   return text ? text : undefined;
+}
+
+export function fapiInvoiceId(invoice: FapiInvoice): string | null {
+  return stringish(invoice.id) ?? null;
+}
+
+export function fapiClientId(invoice: FapiInvoice): string | null {
+  return stringish(invoice.client) ?? null;
+}
+
+/** Lowercase ISO currency from the invoice. Empty or non-3-letter → null. */
+export function invoiceCurrencyCode(invoice: FapiInvoice): string | null {
+  const raw = stringish(invoice.currency);
+  if (!raw) return null;
+  const code = raw.toLowerCase();
+  if (!/^[a-z]{3}$/.test(code)) return null;
+  return code;
+}
+
+/**
+ * `invoice.total` is major currency units. Purchases store integer cents
+ * (199.00 CZK → 19900), matching `challenges.*_price_cents`.
+ */
+export function invoiceTotalCents(invoice: FapiInvoice): number | null {
+  const major = finiteNumber(invoice.total);
+  if (major == null || major < 0) return null;
+  return Math.round(major * 100);
+}
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 export async function fetchFapiInvoice(

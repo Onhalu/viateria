@@ -62,7 +62,7 @@ FAPI POSTs `id` (or `invoice`), `time`, `security`. This function:
 2. `GET /invoices/{id}` with Basic auth
 3. Verifies `security === sha1(time + id + number + Σ md5(item.id + item.name))`
    ([SecurityChecker](https://github.com/fapi-cz/fapi-client/blob/master/src/Fapi/FapiClient/Tools/SecurityChecker.php))
-4. If `paid`, upserts `purchases` (`status=paid`, `paid_at`, `reward_variant`)
+4. If `paid`, updates the existing pending `purchases` row: `status=paid`, `paid_at`, `reward_variant` from the invoice custom field or the pending row, `amount_cents` and `currency` from the invoice (`total` in major units → cents), `fapi_invoice_id`, `fapi_client_id`. A replay of the same `fapi_invoice_id` is a no-op (`UNIQUE`). No pending row → 409, nothing is inserted. Also sets `profiles.fapi_client_id` when that column is still empty.
 5. Returns 2xx (`OK` or `SKIPPED` for unpaid / missing metadata)
 
 Unpaid proforma notifications are acknowledged with 200 so FAPI does

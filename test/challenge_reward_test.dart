@@ -245,8 +245,6 @@ void main() {
         currency: 'czk',
         status: PublishStatus.published,
         stripePriceId: 'price_legacy',
-        stripePriceIdDiploma: 'price_diploma',
-        stripePriceIdMedal: 'price_medal',
         fapiFormUrlDiploma: ' https://form.fapi.cz/diploma ',
         fapiFormUrlMedal: 'javascript:alert(1)',
         translations: [LocalizedText(locale: 'cs', title: 'C')],
@@ -254,10 +252,10 @@ void main() {
       expect(priced.priceCents, 499);
       expect(priced.displayPriceCents(RewardVariant.diploma), 19900);
       expect(priced.displayPriceCents(RewardVariant.medalAndDiploma), 39900);
-      expect(priced.stripePriceIdFor(RewardVariant.diploma), 'price_diploma');
+      expect(priced.stripePriceIdFor(RewardVariant.diploma), 'price_legacy');
       expect(
         priced.stripePriceIdFor(RewardVariant.medalAndDiploma),
-        'price_medal',
+        'price_legacy',
       );
       expect(
         priced.fapiFormUrlFor(RewardVariant.diploma),
@@ -292,8 +290,6 @@ void main() {
       expect(story.diplomaPriceCents, 499);
       expect(story.medalPriceCents, 900);
       expect(story.priceCents, 499);
-      expect(story.stripePriceIdDiploma, 'price_diploma_test');
-      expect(story.stripePriceIdMedal, 'price_medal_test');
       expect(story.fapiFormUrlDiploma, 'https://form.fapi.cz/diploma-test');
       expect(story.fapiFormUrlMedal, 'https://form.fapi.cz/medal-test');
       final open = sampleOpenChallenge().challenge;
@@ -334,12 +330,17 @@ void main() {
         'medal_price_cents': 39900,
         'currency': 'czk',
         'status': 'published',
+        'stripe_price_id': 'price_legacy',
+        'stripe_price_id_diploma': 'not-a-column',
+        'stripe_price_id_medal': 'not-a-column',
         'fapi_form_url_diploma': ' https://form.fapi.cz/d ',
         'fapi_form_url_medal': '',
         'challenge_i18n': [
           {'locale': 'cs', 'title': 'C', 'description': ''},
         ],
       });
+      expect(mapped.stripePriceId, 'price_legacy');
+      expect(mapped.stripePriceIdFor(RewardVariant.diploma), 'price_legacy');
       expect(mapped.fapiFormUrlDiploma, 'https://form.fapi.cz/d');
       expect(mapped.fapiFormUrlMedal, isNull);
       expect(
