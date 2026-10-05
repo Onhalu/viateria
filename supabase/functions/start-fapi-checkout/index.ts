@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
     promoMedalPriceCents: promoPrices?.medal ?? null,
   });
 
-  await admin.from("purchases").upsert(
+  const { error: purchaseError } = await admin.from("purchases").upsert(
     {
       user_id: user.id,
       challenge_id: challengeId,
@@ -121,6 +121,13 @@ Deno.serve(async (req) => {
     },
     { onConflict: "user_id,challenge_id" },
   );
+  if (purchaseError) {
+    console.error(
+      "start-fapi-checkout purchase upsert failed",
+      purchaseError.message,
+    );
+    return json({ error: "purchase upsert failed" }, 500);
+  }
 
   const url = appendFapiPrefill(
     formUrl,

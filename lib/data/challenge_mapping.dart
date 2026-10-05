@@ -49,8 +49,6 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
     ),
     difficulty: catalogDifficultyFromWire(row['difficulty'] as String?),
     stripePriceId: row['stripe_price_id'] as String?,
-    stripePriceIdDiploma: row['stripe_price_id_diploma'] as String?,
-    stripePriceIdMedal: row['stripe_price_id_medal'] as String?,
     fapiFormUrlDiploma: httpUrlOrNull(row['fapi_form_url_diploma'] as String?),
     fapiFormUrlMedal: httpUrlOrNull(row['fapi_form_url_medal'] as String?),
     rewardVariant: rewardVariantFromWire(row['reward_variant'] as String?),

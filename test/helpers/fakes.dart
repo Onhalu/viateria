@@ -505,8 +505,6 @@ ChallengeDetail sampleStoryChallenge() {
     diplomaPriceCents: 499,
     medalPriceCents: 900,
     currency: 'eur',
-    stripePriceIdDiploma: 'price_diploma_test',
-    stripePriceIdMedal: 'price_medal_test',
     fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
     fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
     status: PublishStatus.published,
