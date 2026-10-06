@@ -317,17 +317,60 @@ class CatalogFeaturedSection extends StatelessWidget {
   }
 }
 
+/// Challenges under the country flags. No section title.
+///
+/// [challenges] is already filtered: every catalog row when no flag is
+/// selected, and only the selected countries once a flag is on.
+class CatalogCountryResults extends StatelessWidget {
+  const CatalogCountryResults({
+    super.key,
+    required this.challenges,
+    required this.routeStats,
+    required this.onOpen,
+  });
+
+  final List<Challenge> challenges;
+  final Map<String, CatalogRouteStats> routeStats;
+  final ValueChanged<Challenge> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    if (challenges.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      key: const Key('catalog-country-results'),
+      height: 196,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        itemCount: challenges.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final challenge = challenges[index];
+          return CatalogFeaturedCard(
+            challenge: challenge,
+            stats: routeStats[challenge.id],
+            onTap: () => onOpen(challenge),
+            cardKeyPrefix: 'catalog-country',
+          );
+        },
+      ),
+    );
+  }
+}
+
 class CatalogFeaturedCard extends StatelessWidget {
   const CatalogFeaturedCard({
     super.key,
     required this.challenge,
     required this.onTap,
     this.stats,
+    this.cardKeyPrefix = 'catalog-featured',
   });
 
   final Challenge challenge;
   final CatalogRouteStats? stats;
   final VoidCallback onTap;
+  final String cardKeyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +378,7 @@ class CatalogFeaturedCard extends StatelessWidget {
     final strings = context.watch<LocaleController>().strings;
     final title = challenge.copyFor(locale).title;
     return SizedBox(
-      key: Key('catalog-featured-${challenge.id}'),
+      key: Key('$cardKeyPrefix-${challenge.id}'),
       width: 196,
       child: Material(
         color: BrandColors.cream,

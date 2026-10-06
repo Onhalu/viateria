@@ -184,6 +184,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ],
                 const SizedBox(height: 16),
                 CatalogRegionsSection(filter: _filter, onChanged: _applyFilter),
+                const SizedBox(height: 16),
+                CatalogCountryResults(
+                  challenges: visible,
+                  routeStats: routeStats,
+                  onOpen: (challenge) => openChallenge(context, challenge.id),
+                ),
               ],
             ),
     );
