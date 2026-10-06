@@ -14,3 +14,7 @@ verify_jwt = true
 
 [functions.fapi-webhook]
 verify_jwt = false
+
+# Auth Send Email hook. Supabase signs the body; there is no user JWT.
+[functions.send-email]
+verify_jwt = false

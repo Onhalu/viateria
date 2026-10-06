@@ -11,9 +11,11 @@ import {
   invoiceCurrencyCode,
   invoiceTotalCents,
   isInvoiceSecurityValid,
+  isWebhookTokenValid,
   parseNotification,
   parseRewardVariant,
   purchaseKeysFromInvoice,
+  purchaseUnlockPlan,
   webhookTokenFromRequest,
 } from "../_shared/fapi.ts";
 
@@ -36,12 +38,16 @@ Deno.serve(async (req) => {
     return json({ status: "FAILED", message: "POST required" }, 405);
   }
 
+  // Fail closed. An unset secret used to skip this check and still mark
+  // purchases paid. Missing and wrong tokens share one response so the
+  // body does not reveal whether the secret is configured.
   const webhookSecret = Deno.env.get("FAPI_WEBHOOK_SECURITY") ?? "";
-  if (webhookSecret) {
-    const token = webhookTokenFromRequest(req);
-    if (token !== webhookSecret) {
-      return json({ status: "FAILED", message: "invalid webhook token" }, 401);
+  const token = webhookTokenFromRequest(req);
+  if (!isWebhookTokenValid(webhookSecret, token)) {
+    if (webhookSecret.length === 0) {
+      console.error("fapi-webhook rejected: FAPI_WEBHOOK_SECURITY is not set");
     }
+    return json({ status: "FAILED", message: "invalid webhook token" }, 401);
   }
 
   const payload = await req.text();
@@ -137,17 +143,19 @@ Deno.serve(async (req) => {
     return json({ status: "FAILED", message: "purchase lookup failed" }, 500);
   }
 
-  if (existing?.status === "paid") {
+  // Happy path: start-fapi-checkout inserted pending, then this invoice
+  // marks that row paid. Replay of the same invoice id is handled above.
+  // Do not insert a paid row for a user/challenge that never started checkout.
+  const plan = purchaseUnlockPlan(existing);
+  if (plan === "already_paid") {
     return json({ status: "OK", message: "already paid" });
   }
-  // Do not insert a paid row. Draft PR #36 removes that upsert and only
-  // flips an existing pending purchase.
-  if (existing?.status !== "pending") {
+  if (plan !== "mark_paid") {
     return json({ status: "FAILED", message: "no pending purchase" }, 409);
   }
 
   const rewardVariant = keys.rewardVariant ??
-    (existing.reward_variant
+    (existing?.reward_variant
       ? parseRewardVariant(existing.reward_variant)
       : "diploma");
 

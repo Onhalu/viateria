@@ -5,6 +5,7 @@ import {
 } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import {
   appendFapiPrefill,
+  callerCanReadChallenge,
   checkoutAmountCents,
   fapiPrefillParams,
   httpUrlOrNull,
@@ -57,6 +58,17 @@ Deno.serve(async (req) => {
     return json({ error: "challenge_id required" }, 400);
   }
   const rewardVariant = parseRewardVariant(body.reward_variant);
+
+  // Same gate as catalog RLS (`private.challenge_readable` via the public
+  // wrapper). service_role below bypasses RLS, so this check has to happen
+  // on the user JWT first. A missing migration or any error fails closed.
+  const { data: readable, error: readableError } = await supabase.rpc(
+    "challenge_readable",
+    { p_challenge_id: challengeId },
+  );
+  if (!callerCanReadChallenge(readable, readableError)) {
+    return json({ error: "challenge not available" }, 404);
+  }
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
