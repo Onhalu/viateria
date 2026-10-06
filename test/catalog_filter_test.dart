@@ -668,13 +668,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Open trail'), findsAtLeastNWidgets(1));
     expect(find.text('Story trail'), findsNothing);
-    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-story-1')), findsNothing);
-    final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
-    final countryRect = tester.getRect(
-      find.byKey(const Key('catalog-country-challenges')),
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-story-1')), findsNothing);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-filter-region-CZ')),
+          )
+          .selected,
+      isTrue,
     );
-    expect(countryRect.top, greaterThan(promoRect.bottom - 0.5));
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(find.text('Výzvy ve vybrané zemi'), findsNothing);
+    expect(find.text('Challenges in the selected country'), findsNothing);
+    final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
+    final flagsRect = tester.getRect(find.byKey(const Key('catalog-regions')));
+    expect(flagsRect.top, greaterThan(promoRect.bottom - 0.5));
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-regions-SK')));
+    await tester.pumpAndSettle();
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Open trail'), findsNothing);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-filter-region-SK')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-SK')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isFalse,
+    );
   });
 
   testWidgets('empty state and clear filters restore the catalog', (
@@ -905,13 +952,16 @@ void main() {
     expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('promo-widget')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-regions')), findsNothing);
-    expect(find.byKey(const Key('catalog-country-challenges')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-story-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-regions-CZ')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-challenges')), findsNothing);
+    expect(find.text('Výzvy ve vybrané zemi'), findsNothing);
     expect(
-      find.text(AppStrings('en').catalogCountryChallenges),
-      findsOneWidget,
+      find.descendant(
+        of: find.byKey(const Key('catalog-regions')),
+        matching: find.byType(CountryFlag),
+      ),
+      findsNWidgets(catalogCountryCodes.length),
     );
 
     final chipsRect = tester.getRect(
@@ -938,7 +988,7 @@ void main() {
     expect(promoRect.top, greaterThan(featuredRect.bottom - 0.5));
     expect(promoRect.top - featuredRect.bottom, closeTo(16, 1));
     final countryRect = tester.getRect(
-      find.byKey(const Key('catalog-country-challenges')),
+      find.byKey(const Key('catalog-regions')),
     );
     expect(countryRect.top, greaterThan(promoRect.bottom - 0.5));
     expect(countryRect.top - promoRect.bottom, closeTo(16, 1));
@@ -1174,30 +1224,33 @@ void main() {
     expect(find.text('Alpine unknown'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-tatry')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-challenges')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-alps')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
+    expect(find.text('Výzvy ve vybrané zemi'), findsNothing);
     final featuredBottom = tester
         .getRect(find.byKey(const Key('catalog-featured')))
         .bottom;
     final countryTop = tester
-        .getRect(find.byKey(const Key('catalog-country-challenges')))
+        .getRect(find.byKey(const Key('catalog-regions')))
         .top;
     expect(countryTop - featuredBottom, closeTo(16, 1));
 
-    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.tap(find.byKey(const Key('catalog-regions-CZ')));
     await tester.pumpAndSettle();
     expect(find.text('Beskydy ridge'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-beskydy')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-filter-region-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
     expect(find.text('Tatra path'), findsNothing);
     expect(find.text('Alpine unknown'), findsNothing);
     expect(find.byKey(const Key('catalog-hero-tatry')), findsNothing);
     expect(find.byKey(const Key('catalog-featured-alps')), findsNothing);
-    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
-    expect(find.byKey(const Key('catalog-country-alps')), findsNothing);
 
     await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
     await tester.pumpAndSettle();
@@ -1208,7 +1261,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-no-matches')), findsOneWidget);
     expect(find.text('Beskydy ridge'), findsNothing);
-    expect(find.byKey(const Key('catalog-country-challenges')), findsNothing);
+    expect(find.byKey(const Key('catalog-regions')), findsNothing);
 
     await tester.tap(find.byKey(const Key('catalog-filter-difficulty-hard')));
     await tester.pumpAndSettle();
@@ -1227,9 +1280,14 @@ void main() {
     expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-tatry')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-alps')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-alps')), findsOneWidget);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isFalse,
+    );
   });
 
   testWidgets('country flag filters featured by country_code', (tester) async {
@@ -1244,13 +1302,19 @@ void main() {
     expect(filterChip.selected, isTrue);
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-story-1')), findsNothing);
-    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-country-story-1')), findsNothing);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
     final promoBottom = tester
         .getRect(find.byKey(const Key('promo-widget')))
         .bottom;
     final countryTop = tester
-        .getRect(find.byKey(const Key('catalog-country-challenges')))
+        .getRect(find.byKey(const Key('catalog-regions')))
         .top;
     expect(countryTop - promoBottom, closeTo(16, 1));
   });

@@ -6,7 +6,7 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 
-/// Catalog promo slot between Featured and the country challenge list.
+/// Catalog promo slot between Featured and the country flags.
 ///
 /// One active stripe is a single forest card. Two or more snap in a
 /// horizontal carousel with a 24px peek. None, expired, or out of audience

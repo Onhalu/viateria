@@ -10,6 +10,7 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../navigation.dart';
 import '../widgets/catalog_cards.dart';
+import '../widgets/catalog_filters.dart';
 import '../widgets/catalog_welcome_header.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/promo_widget.dart';
@@ -182,11 +183,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                CatalogCountryChallengesSection(
-                  challenges: visible,
-                  routeStats: routeStats,
-                  onOpen: (challenge) => openChallenge(context, challenge.id),
-                ),
+                CatalogRegionsSection(filter: _filter, onChanged: _applyFilter),
               ],
             ),
     );

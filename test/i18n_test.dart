@@ -39,15 +39,6 @@ void main() {
     expect(AppStrings('cs').catalogFeatured, 'Vybrané');
     expect(AppStrings('en').catalogFeatured, 'Featured');
     expect(AppStrings('de').catalogFeatured, 'Ausgewählt');
-    expect(AppStrings('cs').catalogCountryChallenges, 'Výzvy ve vybrané zemi');
-    expect(
-      AppStrings('en').catalogCountryChallenges,
-      'Challenges in the selected country',
-    );
-    expect(
-      AppStrings('de').catalogCountryChallenges,
-      'Challenges im gewählten Land',
-    );
     expect(AppStrings('cs').catalogLengthShort, 'Krátká');
     expect(AppStrings('en').catalogLengthShort, 'Short');
     expect(AppStrings('de').catalogLengthShort, 'Kurz');

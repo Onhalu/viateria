@@ -180,6 +180,50 @@ class CatalogFilterChipRow extends StatelessWidget {
   }
 }
 
+/// Country flags under the promo. Same [CatalogFilter.countryCodes] as the
+/// header chips, so either row selects the country for the challenge list.
+class CatalogRegionsSection extends StatelessWidget {
+  const CatalogRegionsSection({
+    super.key,
+    required this.filter,
+    required this.onChanged,
+  });
+
+  final CatalogFilter filter;
+  final ValueChanged<CatalogFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const Key('catalog-regions'),
+      height: CatalogFilterChip.height,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        children: [
+          for (var i = 0; i < catalogCountryCodes.length; i++) ...[
+            if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+            CatalogFilterChip(
+              key: Key('catalog-regions-${catalogCountryCodes[i]}'),
+              selected: filter.countryCodes.contains(catalogCountryCodes[i]),
+              semanticLabel: catalogCountryCodes[i],
+              flagCode: catalogCountryCodes[i],
+              onTap: () => onChanged(
+                filter.copyWith(
+                  countryCodes: _toggle(
+                    filter.countryCodes,
+                    catalogCountryCodes[i],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _ChipGroupGap extends StatelessWidget {
   const _ChipGroupGap();
 

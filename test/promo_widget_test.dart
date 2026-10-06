@@ -301,7 +301,7 @@ void main() {
     expect(find.byKey(const Key('promo-widget')), findsNothing);
     expect(find.byKey(const Key('catalog-hero-carousel')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-regions')), findsNothing);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
     expect(find.text('Promo'), findsNothing);
 
     await _pumpCatalog(
@@ -320,7 +320,7 @@ void main() {
     );
     expect(find.text('Expired offer'), findsNothing);
     expect(find.byKey(const Key('promo-widget')), findsNothing);
-    expect(find.byKey(const Key('catalog-regions')), findsNothing);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
   });
 
   testWidgets('promo fetch error keeps the catalog and hides the slot', (
@@ -332,7 +332,7 @@ void main() {
     expect(find.text('Open trail'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('promo-widget')), findsNothing);
     expect(find.text(AppStrings('en').errorGeneric), findsNothing);
-    expect(find.byKey(const Key('catalog-regions')), findsNothing);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
   });
 
   testWidgets('exclusive challenge is absent from hero, featured, and search', (
@@ -408,7 +408,7 @@ void main() {
     expect(featured.top, greaterThan(hero.bottom - 0.5));
     expect(promo.top, greaterThan(featured.bottom - 0.5));
     expect(promo.top - featured.bottom, closeTo(16, 1));
-    expect(find.byKey(const Key('catalog-regions')), findsNothing);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
     expect(find.byKey(const Key('promo-carousel')), findsNothing);
     expect(find.byKey(const Key('promo-page-view')), findsNothing);
 
