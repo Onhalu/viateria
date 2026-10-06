@@ -78,8 +78,8 @@ class CatalogFilter {
   final String query;
   final Set<AccessMode> accessModes;
 
-  /// Exact `challenges.country_code` values (CZ, SK, AT, DE, PL).
-  /// Empty means every country, including null.
+  /// Exact country codes (CZ, SK, AT, DE, PL).
+  /// Empty means every country, including unresolved ones.
   final Set<String> countryCodes;
   final Set<CatalogDifficulty> difficulties;
 
@@ -118,6 +118,51 @@ String? parseCountryCode(String? raw) {
   return catalogCountryCodes.contains(code) ? code : null;
 }
 
+/// Best-effort map from the free-text [region] display string.
+/// Used when `country_code` is still null so the flag chips keep working.
+String? inferCountryCodeFromRegion(String? region) {
+  if (region == null || region.trim().isEmpty) return null;
+  final folded = foldCatalogText(region);
+  if (_matchesAny(folded, const [
+    'cesko',
+    'morava',
+    'palava',
+    'beskydy',
+    'vysocina',
+    'orlicke',
+    'stredohori',
+    'bohemia',
+    'czechia',
+    'prague',
+    'praha',
+  ])) {
+    return 'CZ';
+  }
+  if (_matchesAny(folded, const ['slovensko', 'slovakia', 'tatry', 'liptov'])) {
+    return 'SK';
+  }
+  if (_matchesAny(folded, const ['rakousko', 'osterreich', 'austria'])) {
+    return 'AT';
+  }
+  if (_matchesAny(folded, const [
+    'nemecko',
+    'deutschland',
+    'germany',
+    'bavorsko',
+  ])) {
+    return 'DE';
+  }
+  if (_matchesAny(folded, const ['polsko', 'poland', 'polen'])) {
+    return 'PL';
+  }
+  return null;
+}
+
+/// Prefer the stored `country_code`. Fall back to a known region label.
+String? resolveCountryCode({String? countryCode, String? region}) {
+  return parseCountryCode(countryCode) ?? inferCountryCodeFromRegion(region);
+}
+
 /// Case- and diacritic-insensitive haystack for catalog search.
 String foldCatalogText(String input) {
   final buf = StringBuffer();
@@ -130,8 +175,9 @@ String foldCatalogText(String input) {
 /// Mode OR, country OR, difficulty OR; groups AND search AND chips.
 ///
 /// Search matches any locale's title + description on the challenge.
-/// Country chips match [Challenge.countryCode] exactly. A null country
-/// stays in the list only when no country chip is selected.
+/// Country chips match [resolveCountryCode] exactly. An explicit
+/// `country_code` wins over region text. A challenge with no resolved
+/// country stays in the list only when no country chip is selected.
 /// A null CMS difficulty does not exclude a challenge when a difficulty
 /// chip is active — only challenges that have a value are filtered.
 List<Challenge> filterCatalogChallenges(
@@ -156,7 +202,10 @@ bool _matchesChallenge(
     return false;
   }
   if (filter.countryCodes.isNotEmpty) {
-    final code = challenge.countryCode;
+    final code = resolveCountryCode(
+      countryCode: challenge.countryCode,
+      region: challenge.region,
+    );
     if (code == null || !filter.countryCodes.contains(code)) {
       return false;
     }
@@ -169,6 +218,13 @@ bool _matchesChallenge(
   }
   if (foldedQuery.isEmpty) return true;
   return foldCatalogText(_searchHaystack(challenge)).contains(foldedQuery);
+}
+
+bool _matchesAny(String folded, List<String> needles) {
+  for (final needle in needles) {
+    if (folded.contains(needle)) return true;
+  }
+  return false;
 }
 
 String _searchHaystack(Challenge challenge) {
