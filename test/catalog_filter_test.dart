@@ -668,6 +668,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Open trail'), findsAtLeastNWidgets(1));
     expect(find.text('Story trail'), findsNothing);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsNothing);
+    final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
+    final countryRect = tester.getRect(
+      find.byKey(const Key('catalog-country-challenges')),
+    );
+    expect(countryRect.top, greaterThan(promoRect.bottom - 0.5));
   });
 
   testWidgets('empty state and clear filters restore the catalog', (
@@ -899,6 +906,13 @@ void main() {
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('promo-widget')), findsOneWidget);
     expect(find.byKey(const Key('catalog-regions')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-challenges')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsOneWidget);
+    expect(
+      find.text(AppStrings('en').catalogCountryChallenges),
+      findsOneWidget,
+    );
 
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
@@ -923,6 +937,11 @@ void main() {
     expect(featuredRect.top, greaterThan(heroRect.bottom - 0.5));
     expect(promoRect.top, greaterThan(featuredRect.bottom - 0.5));
     expect(promoRect.top - featuredRect.bottom, closeTo(16, 1));
+    final countryRect = tester.getRect(
+      find.byKey(const Key('catalog-country-challenges')),
+    );
+    expect(countryRect.top, greaterThan(promoRect.bottom - 0.5));
+    expect(countryRect.top - promoRect.bottom, closeTo(16, 1));
     expect(list.padding, const EdgeInsets.fromLTRB(16, 8, 16, 16));
     expect(
       tester
@@ -1155,16 +1174,30 @@ void main() {
     expect(find.text('Alpine unknown'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-challenges')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-alps')), findsOneWidget);
+    final featuredBottom = tester
+        .getRect(find.byKey(const Key('catalog-featured')))
+        .bottom;
+    final countryTop = tester
+        .getRect(find.byKey(const Key('catalog-country-challenges')))
+        .top;
+    expect(countryTop - featuredBottom, closeTo(16, 1));
 
     await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
     await tester.pumpAndSettle();
     expect(find.text('Beskydy ridge'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
     expect(find.text('Tatra path'), findsNothing);
     expect(find.text('Alpine unknown'), findsNothing);
     expect(find.byKey(const Key('catalog-hero-tatry')), findsNothing);
     expect(find.byKey(const Key('catalog-featured-alps')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-alps')), findsNothing);
 
     await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
     await tester.pumpAndSettle();
@@ -1175,6 +1208,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-no-matches')), findsOneWidget);
     expect(find.text('Beskydy ridge'), findsNothing);
+    expect(find.byKey(const Key('catalog-country-challenges')), findsNothing);
 
     await tester.tap(find.byKey(const Key('catalog-filter-difficulty-hard')));
     await tester.pumpAndSettle();
@@ -1193,6 +1227,9 @@ void main() {
     expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-tatry')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-alps')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-alps')), findsOneWidget);
   });
 
   testWidgets('country flag filters featured by country_code', (tester) async {
@@ -1207,6 +1244,15 @@ void main() {
     expect(filterChip.selected, isTrue);
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-story-1')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsNothing);
+    final promoBottom = tester
+        .getRect(find.byKey(const Key('promo-widget')))
+        .bottom;
+    final countryTop = tester
+        .getRect(find.byKey(const Key('catalog-country-challenges')))
+        .top;
+    expect(countryTop - promoBottom, closeTo(16, 1));
   });
 
   testWidgets('featured follows the same chips as the rest of the catalog', (

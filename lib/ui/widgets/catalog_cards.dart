@@ -317,17 +317,76 @@ class CatalogFeaturedSection extends StatelessWidget {
   }
 }
 
+/// Country-filtered challenges. Sits directly under the promo slot.
+///
+/// With no country flag selected this lists every challenge still in the
+/// catalog (access, difficulty, and search still apply). A selected flag
+/// narrows the list to that country. An empty result uses the catalog
+/// empty state instead of this section.
+class CatalogCountryChallengesSection extends StatelessWidget {
+  const CatalogCountryChallengesSection({
+    super.key,
+    required this.challenges,
+    required this.routeStats,
+    required this.onOpen,
+  });
+
+  final List<Challenge> challenges;
+  final Map<String, CatalogRouteStats> routeStats;
+  final ValueChanged<Challenge> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.watch<LocaleController>().strings;
+    if (challenges.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const Key('catalog-country-challenges'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          strings.catalogCountryChallenges,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: BrandColors.forest,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 196,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            primary: false,
+            itemCount: challenges.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final challenge = challenges[index];
+              return CatalogFeaturedCard(
+                challenge: challenge,
+                stats: routeStats[challenge.id],
+                onTap: () => onOpen(challenge),
+                cardKeyPrefix: 'catalog-country',
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class CatalogFeaturedCard extends StatelessWidget {
   const CatalogFeaturedCard({
     super.key,
     required this.challenge,
     required this.onTap,
     this.stats,
+    this.cardKeyPrefix = 'catalog-featured',
   });
 
   final Challenge challenge;
   final CatalogRouteStats? stats;
   final VoidCallback onTap;
+  final String cardKeyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +394,7 @@ class CatalogFeaturedCard extends StatelessWidget {
     final strings = context.watch<LocaleController>().strings;
     final title = challenge.copyFor(locale).title;
     return SizedBox(
-      key: Key('catalog-featured-${challenge.id}'),
+      key: Key('$cardKeyPrefix-${challenge.id}'),
       width: 196,
       child: Material(
         color: BrandColors.cream,
