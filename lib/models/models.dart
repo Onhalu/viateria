@@ -56,7 +56,6 @@ class Challenge {
     required this.translations,
     this.coverImageUrl,
     this.region,
-    this.countryCode,
     this.difficulty,
     this.stripePriceId,
     this.fapiFormUrlDiploma,
@@ -86,11 +85,9 @@ class Challenge {
   final List<LocalizedText> translations;
   final String? coverImageUrl;
 
-  /// Free-text place / range label for cards (Pálava, Beskydy, …).
+  /// `challenges.region`. Exact catalog filter value (Beskydy, Česko, …).
+  /// Null challenges stay visible only when no region chip is selected.
   final String? region;
-
-  /// ISO 3166-1 alpha-2 used by catalog region chips: CZ SK AT DE PL.
-  final String? countryCode;
 
   /// CMS `easy` / `normal` / `hard`. Null hides the catalog label.
   final CatalogDifficulty? difficulty;

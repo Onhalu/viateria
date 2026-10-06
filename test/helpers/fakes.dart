@@ -459,7 +459,7 @@ ChallengeDetail sampleOpenChallenge() {
     medalPriceCents: 0,
     currency: 'eur',
     status: PublishStatus.published,
-    countryCode: 'CZ',
+    region: 'Beskydy',
     translations: [
       LocalizedText(
         locale: 'en',
@@ -508,7 +508,7 @@ ChallengeDetail sampleStoryChallenge() {
     fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
     fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
     status: PublishStatus.published,
-    countryCode: 'SK',
+    region: 'Morava',
     translations: [
       LocalizedText(
         locale: 'en',

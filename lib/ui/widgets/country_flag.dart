@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/catalog_query.dart';
-
-/// 22×16 SVG-geometry flags for catalog region chips. Not emoji.
+/// 22×16 SVG-geometry flags. Not emoji.
 class CountryFlag extends StatelessWidget {
   const CountryFlag({
     super.key,
@@ -17,7 +15,7 @@ class CountryFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolved = parseCountryCode(code) ?? code.toUpperCase();
+    final resolved = code.trim().toUpperCase();
     return Semantics(
       label: resolved,
       image: true,

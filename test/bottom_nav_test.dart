@@ -613,7 +613,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
-        matching: find.byKey(const Key('catalog-length-chips')),
+        matching: find.byKey(const Key('catalog-filter-region-chips')),
       ),
       findsOneWidget,
     );
@@ -737,18 +737,19 @@ void main() {
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
     expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
-    final lengthRect = tester.getRect(
-      find.byKey(const Key('catalog-length-chips')),
+    final difficultyRect = tester.getRect(
+      find.byKey(const Key('catalog-difficulty-chips')),
     );
     final regionRect = tester.getRect(
-      find.byKey(const Key('catalog-filter-region-CZ')),
+      find.byKey(const Key('catalog-filter-region-chips')),
     );
-    expect(lengthRect.top, greaterThan(regionRect.bottom - 0.5));
-    expect(lengthRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    expect(difficultyRect.top, greaterThan(regionRect.bottom - 0.5));
+    expect(regionRect.height, closeTo(CatalogFilterChip.height, 0.5));
     expect(
       headerRect.height,
       lessThanOrEqualTo(
-        screenSize.height * CatalogWelcomeHeader.maxViewportFraction,
+        CatalogWelcomeHeader.typicalPhoneViewportHeight *
+            CatalogWelcomeHeader.maxViewportFraction,
       ),
     );
     expect(

@@ -1,4 +1,3 @@
-import '../domain/catalog_query.dart';
 import '../map/place_category.dart';
 import '../models/models.dart';
 
@@ -43,10 +42,6 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
     status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
     coverImageUrl: row['cover_image_url'] as String?,
     region: row['region'] as String?,
-    countryCode: resolveCountryCode(
-      countryCode: row['country_code'] as String?,
-      region: row['region'] as String?,
-    ),
     difficulty: catalogDifficultyFromWire(row['difficulty'] as String?),
     stripePriceId: row['stripe_price_id'] as String?,
     fapiFormUrlDiploma: httpUrlOrNull(row['fapi_form_url_diploma'] as String?),
