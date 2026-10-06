@@ -17,6 +17,32 @@ import 'data/unconfigured.dart';
 import 'data/verified_places.dart';
 import 'l10n/locale_controller.dart';
 
+Future<void> syncLocaleFromProfile(
+  LocaleController controller,
+  SupabaseClient client,
+) async {
+  final userId = client.auth.currentUser?.id;
+  if (userId == null || userId.isEmpty) {
+    await controller.load();
+    return;
+  }
+  try {
+    final row = await client
+        .from('profiles')
+        .select('locale')
+        .eq('id', userId)
+        .maybeSingle();
+    controller.adoptResolvedLocale(
+      resolveSessionLocale(
+        signedIn: true,
+        profileLocale: row?['locale'] as String?,
+      ),
+    );
+  } catch (_) {
+    // Keep the SharedPreferences locale loaded before sign-in.
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = AppConfig.fromEnvironment();
@@ -58,8 +84,10 @@ Future<void> main() async {
         leaderboard: leaderboard,
       );
     }
+    await syncLocaleFromProfile(localeController, client);
     services.auth.authState().listen((profile) {
       unawaited(() async {
+        await syncLocaleFromProfile(localeController, client);
         await verifiedPlaces.bindUser(profile?.id);
         await lastOpened.bindUser(profile?.id);
         final id = profile?.id;

@@ -44,9 +44,14 @@ Prefill uses [FAPI URL parameters](https://napoveda.fapi.cz/article/46-predvypln
 - `fapi-form-email` when the user has an email
 
 The webhook matches a purchase by custom-field name first, then by the
-`viateria:...` notes payload. Store the public **form page** URLs on
-`challenges.fapi_form_url_diploma` / `fapi_form_url_medal` (leave null
-until the forms exist — the matching CTA stays disabled).
+`viateria:...` notes payload. `start-fapi-checkout` reads the public
+**form page** URL from the active `challenge_sale_forms` row (variant +
+`profiles.locale`, fallback cs → en → de) and the displayed amount from
+the active `challenge_prices` row. Until those tables exist it still
+uses `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` and the
+legacy price columns (leave a URL null until the form exists — that
+CTA stays disabled). A second purchase of a challenge that is already
+`paid` returns `already_purchased`.
 
 ## Notification URL
 
@@ -63,7 +68,7 @@ FAPI POSTs `id` (or `invoice`), `time`, `security`. This function:
 2. `GET /invoices/{id}` with Basic auth
 3. Verifies `security === sha1(time + id + number + Σ md5(item.id + item.name))`
    ([SecurityChecker](https://github.com/fapi-cz/fapi-client/blob/master/src/Fapi/FapiClient/Tools/SecurityChecker.php)) with a timing-safe compare
-4. If `paid`, updates the existing pending `purchases` row: `status=paid`, `paid_at`, `reward_variant` from the invoice custom field or the pending row, `amount_cents` and `currency` from the invoice (`total` in major units → cents), `fapi_invoice_id`, `fapi_client_id`. A replay of the same `fapi_invoice_id` is a no-op (`UNIQUE`). Already `paid` returns `OK`. No pending row → 409, nothing is inserted. Also sets `profiles.fapi_client_id` when that column is still empty.
+4. If `paid`, updates the existing pending `purchases` row: `status=paid`, `paid_at`, `reward_variant` from the invoice custom field or the pending row, `amount_cents` and `currency` from the invoice (`total` in major units → cents), `fapi_invoice_id`, `fapi_client_id`. A replay of the same `fapi_invoice_id` is a no-op (`UNIQUE`). Already `paid` returns `OK`. No pending row → 409, nothing is inserted. Also sets `profiles.fapi_client_id` when that column is still empty, and sets `challenge_participations.joined_at` (inserts `joined` only when no participation exists; does not change `in_progress` / `completed`). If `challenge_participations` is not migrated yet, that step is skipped and the purchase still completes.
 5. Returns 2xx (`OK` or `SKIPPED` for unpaid / missing metadata)
 
 Unpaid proforma notifications are acknowledged with 200 so FAPI does

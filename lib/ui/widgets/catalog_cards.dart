@@ -247,10 +247,17 @@ class _HeroSlide extends StatelessWidget {
                         height: 1.2,
                       ),
                     ),
-                    if (_hasCatalogMeta(stats, challenge.difficulty)) ...[
+                    if (_hasCatalogMeta(
+                      stats,
+                      challenge.difficulty,
+                      challenge.length,
+                    )) ...[
                       const SizedBox(height: 4),
                       CatalogChallengeMeta(
                         stats: stats,
+                        lengthBand: challenge.length == null
+                            ? null
+                            : catalogLengthBandForChallenge(challenge, null),
                         difficulty: challenge.difficulty,
                         strings: strings,
                         color: BrandColors.cream,
@@ -413,10 +420,17 @@ class CatalogFeaturedCard extends StatelessWidget {
                           height: 1.2,
                         ),
                       ),
-                      if (_hasCatalogMeta(stats, challenge.difficulty)) ...[
+                      if (_hasCatalogMeta(
+                        stats,
+                        challenge.difficulty,
+                        challenge.length,
+                      )) ...[
                         const SizedBox(height: 4),
                         CatalogChallengeMeta(
                           stats: stats,
+                          lengthBand: challenge.length == null
+                              ? null
+                              : catalogLengthBandForChallenge(challenge, null),
                           difficulty: challenge.difficulty,
                           strings: strings,
                           color: BrandColors.bark,
@@ -464,19 +478,24 @@ class CatalogChallengeMeta extends StatelessWidget {
     required this.strings,
     required this.color,
     this.stats,
+    this.lengthBand,
     this.difficulty,
   });
 
   final CatalogRouteStats? stats;
+
+  /// CMS length. When null, [stats] hike-time band is used.
+  final CatalogLengthBand? lengthBand;
   final CatalogDifficulty? difficulty;
   final AppStrings strings;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final band = lengthBand ?? stats?.lengthBand;
     final parts = <String>[
-      if (stats?.lengthBand != null)
-        switch (stats!.lengthBand!) {
+      if (band != null)
+        switch (band) {
           CatalogLengthBand.short => strings.catalogLengthShort,
           CatalogLengthBand.medium => strings.catalogLengthMedium,
           CatalogLengthBand.long => strings.catalogLengthLong,
@@ -503,8 +522,12 @@ class CatalogChallengeMeta extends StatelessWidget {
   }
 }
 
-bool _hasCatalogMeta(CatalogRouteStats? stats, CatalogDifficulty? difficulty) {
-  return stats?.lengthBand != null || difficulty != null;
+bool _hasCatalogMeta(
+  CatalogRouteStats? stats,
+  CatalogDifficulty? difficulty,
+  ChallengeLength? length,
+) {
+  return length != null || stats?.lengthBand != null || difficulty != null;
 }
 
 class _Chip extends StatelessWidget {

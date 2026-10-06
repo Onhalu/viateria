@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
 import '../../l10n/locale_controller.dart';
+import '../../models/models.dart';
 import '../widgets/diploma_view.dart';
 
 class DiplomaScreen extends StatefulWidget {
@@ -28,17 +29,29 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
     final locale = context.read<LocaleController>().locale;
     final detail = await services.catalog.fetchChallenge(widget.challengeId);
     final progress = await services.progress.fetchProgress(widget.challengeId);
+    final issued = await services.progress.fetchIssuedDiploma(
+      widget.challengeId,
+    );
     final copy = detail.challenge.copyFor(locale);
+    final days = issued?.displayDayCount ?? progress?.inclusiveDayCount;
+    final durationLabel = days == null
+        ? null
+        : formatParticipationDays(locale, days);
+    final named =
+        issued?.recipientNameDisplay ??
+        issued?.recipientName ??
+        services.auth.currentUser?.displayName;
     return _DiplomaData(
-      title: copy.title,
-      headline: copy.diplomaHeadline,
-      body: copy.diplomaBody,
+      title: issued?.challengeTitle ?? copy.title,
+      headline: issued?.headline ?? copy.diplomaHeadline,
+      body: issued?.body ?? copy.diplomaBody,
       medalCount: detail.waypoints.length,
-      completedAt: progress?.completedAt ?? DateTime.now(),
-      explorer:
-          services.auth.currentUser?.displayName ??
-          services.auth.currentUser?.email ??
-          'Explorer',
+      completedAt:
+          issued?.completedAt ?? progress?.completedAt ?? DateTime.now(),
+      explorer: (named != null && named.trim().isNotEmpty)
+          ? named.trim()
+          : (services.auth.currentUser?.email ?? 'Explorer'),
+      durationLabel: durationLabel,
     );
   }
 
@@ -70,6 +83,7 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
                   strings: strings,
                   headline: data.headline,
                   body: data.body,
+                  durationLabel: data.durationLabel,
                 ),
               ),
             ),
@@ -88,6 +102,7 @@ class _DiplomaData {
     required this.medalCount,
     this.headline,
     this.body,
+    this.durationLabel,
   });
 
   final String title;
@@ -96,4 +111,5 @@ class _DiplomaData {
   final int medalCount;
   final String? headline;
   final String? body;
+  final String? durationLabel;
 }

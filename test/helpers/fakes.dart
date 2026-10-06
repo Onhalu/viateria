@@ -259,6 +259,9 @@ class MemoryProgress implements ProgressRepository {
   }
 
   @override
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId) async => null;
+
+  @override
   Future<List<ChallengeProgress>> fetchCompleted() async {
     final forced = fetchProgressError;
     if (forced != null) throw forced;

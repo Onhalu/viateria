@@ -178,12 +178,16 @@ Dashboard checklist (providers, redirect URLs, Google web client, Apple Services
 
 ### FAPI
 
-1. Create two sales forms in FAPI (digital diploma, medal + diploma). Do not invent URLs in the repo — paste each public form-page URL into `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` when ready. A null/empty URL disables that pay CTA.
+1. Create sales forms in FAPI (digital diploma, medal + diploma) per locale. Do not invent URLs in the repo. After migrations 0023+, the checkout source of truth is `challenge_sale_forms` (locale → cs → en → de). `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` stay as the legacy fallback until a later contract migration. A null/empty URL disables that pay CTA.
 2. Create custom fields named `user_id`, `challenge_id`, `reward_variant` and add them to both forms (see `supabase/functions/fapi-webhook/README.md`).
 3. Deploy `start-fapi-checkout` and `fapi-webhook`.
 4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`. The secret is required; an empty value rejects the notification.
 
-Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price.
+Prices under the CTAs come from the active `challenge_prices` row when that table exists, otherwise `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price. The catalog reads `challenge_catalog_v` when the view is present and falls back to `challenges` + `challenge_i18n` until then. Signed-in copy uses `profiles.locale` (fallback cs → en → de).
+
+### Challenge architecture migrations (not applied on prod)
+
+Draft only. Apply order on prod, after an explicit OK, is **0018 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026**. `0018_verify_waypoint_challenge_readable.sql` is already in `main` and may not be applied on prod yet. W0 (`0020` / history `20261005125735`) is already on prod. W4 (`0027`, dropping legacy columns) is not in this change. Do not `db push` these files to production from a pull request.
 
 ### Stripe (unused by CTAs)
 

@@ -16,6 +16,7 @@ class DiplomaView extends StatelessWidget {
     required this.strings,
     this.headline,
     this.body,
+    this.durationLabel,
     this.showConfetti = true,
   });
 
@@ -28,6 +29,7 @@ class DiplomaView extends StatelessWidget {
   final AppStrings strings;
   final String? headline;
   final String? body;
+  final String? durationLabel;
   final bool showConfetti;
 
   @override
@@ -42,6 +44,7 @@ class DiplomaView extends StatelessWidget {
         strings: strings,
         headline: headline,
         body: body,
+        durationLabel: durationLabel,
         showConfetti: showConfetti,
       ),
     );
@@ -58,6 +61,7 @@ class _DiplomaCanvas extends StatefulWidget {
     required this.showConfetti,
     this.headline,
     this.body,
+    this.durationLabel,
   });
 
   final String challengeTitle;
@@ -67,6 +71,7 @@ class _DiplomaCanvas extends StatefulWidget {
   final AppStrings strings;
   final String? headline;
   final String? body;
+  final String? durationLabel;
   final bool showConfetti;
 
   @override
@@ -173,6 +178,14 @@ class _DiplomaCanvasState extends State<_DiplomaCanvas> {
                       date,
                       style: const TextStyle(color: BrandColors.muted),
                     ),
+                    if (widget.durationLabel != null &&
+                        widget.durationLabel!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.durationLabel!,
+                        style: const TextStyle(color: BrandColors.muted),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Text(
                       widget.strings.appName,
