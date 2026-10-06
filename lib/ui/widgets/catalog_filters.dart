@@ -4,6 +4,7 @@ import '../../domain/catalog_query.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import 'country_flag.dart';
 
 class CatalogSearchField extends StatelessWidget {
   const CatalogSearchField({
@@ -70,23 +71,19 @@ class CatalogFilterChipRow extends StatelessWidget {
   const CatalogFilterChipRow({
     super.key,
     required this.filter,
-    required this.regions,
     required this.strings,
     required this.onChanged,
   });
 
   final CatalogFilter filter;
-
-  /// Distinct `challenges.region` values from the loaded catalog.
-  final List<String> regions;
   final AppStrings strings;
   final ValueChanged<CatalogFilter> onChanged;
 
-  /// Compact gap between access, region, and difficulty.
+  /// Gap between the access/difficulty row and the country flags.
   static const rowGap = 6.0;
 
-  /// Three 28px chip rows plus [rowGap]. Used by welcome-panel height tests.
-  static const areaHeight = CatalogFilterChip.height * 3 + rowGap * 2;
+  /// Two 28px chip rows plus [rowGap]. Used by welcome-panel height tests.
+  static const areaHeight = CatalogFilterChip.height * 2 + rowGap;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +118,12 @@ class CatalogFilterChipRow extends StatelessWidget {
                 ),
               ),
             ),
+            const _ChipGroupGap(),
+            CatalogDifficultyChipRow(
+              filter: filter,
+              strings: strings,
+              onChanged: onChanged,
+            ),
             if (filter.isActive) ...[
               const SizedBox(width: 12),
               Center(
@@ -150,34 +153,48 @@ class CatalogFilterChipRow extends StatelessWidget {
         ),
         const SizedBox(height: rowGap),
         _FilterScrollRow(
-          rowKey: const Key('catalog-filter-region-chips'),
+          rowKey: const Key('catalog-filter-country-chips'),
           children: [
-            for (var i = 0; i < regions.length; i++) ...[
+            for (var i = 0; i < catalogCountryCodes.length; i++) ...[
               if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
               CatalogFilterChip(
-                key: Key('catalog-filter-region-${regions[i]}'),
-                selected: filter.regions.contains(regions[i]),
-                label: regions[i],
+                key: Key('catalog-filter-region-${catalogCountryCodes[i]}'),
+                selected: filter.countryCodes.contains(catalogCountryCodes[i]),
+                semanticLabel: catalogCountryCodes[i],
+                flagCode: catalogCountryCodes[i],
                 onShell: true,
                 onTap: () => onChanged(
-                  filter.copyWith(regions: _toggle(filter.regions, regions[i])),
+                  filter.copyWith(
+                    countryCodes: _toggle(
+                      filter.countryCodes,
+                      catalogCountryCodes[i],
+                    ),
+                  ),
                 ),
               ),
             ],
           ],
         ),
-        const SizedBox(height: rowGap),
-        _FilterScrollRow(
-          rowKey: const Key('catalog-filter-difficulty-row'),
-          children: [
-            CatalogDifficultyChipRow(
-              filter: filter,
-              strings: strings,
-              onChanged: onChanged,
-            ),
-          ],
-        ),
       ],
+    );
+  }
+}
+
+class _ChipGroupGap extends StatelessWidget {
+  const _ChipGroupGap();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 16,
+      height: CatalogFilterChip.height,
+      child: Center(
+        child: SizedBox(
+          width: 1,
+          height: 12,
+          child: ColoredBox(color: BrandColors.cream.withValues(alpha: 0.4)),
+        ),
+      ),
     );
   }
 }
@@ -257,13 +274,17 @@ class CatalogFilterChip extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onTap,
-    required this.label,
+    this.label,
+    this.flagCode,
+    this.semanticLabel,
     this.onShell = false,
   });
 
   final bool selected;
   final VoidCallback onTap;
-  final String label;
+  final String? label;
+  final String? flagCode;
+  final String? semanticLabel;
 
   /// When true, chips sit on [BrandColors.shellFill]: cream @ 22% unselected,
   /// solid cream selected, no border.
@@ -277,14 +298,15 @@ class CatalogFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFlag = flagCode != null;
     final fill = onShell
         ? (selected ? BrandColors.cream : BrandColors.creamPill)
-        : (selected ? BrandColors.forest : BrandColors.cream);
+        : (selected && !isFlag ? BrandColors.forest : BrandColors.cream);
     final border = selected ? BrandColors.forest : BrandColors.beige;
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
+      label: semanticLabel ?? label,
       child: Material(
         color: fill,
         shape: RoundedRectangleBorder(
@@ -303,17 +325,23 @@ class CatalogFilterChip extends StatelessWidget {
                 horizontal: horizontalPadding,
               ),
               child: Center(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    height: 1.1,
-                    fontWeight: FontWeight.w600,
-                    color: onShell
-                        ? (selected ? BrandColors.forest : BrandColors.cream)
-                        : (selected ? BrandColors.onPrimary : BrandColors.bark),
-                  ),
-                ),
+                child: isFlag
+                    ? ExcludeSemantics(child: CountryFlag(code: flagCode!))
+                    : Text(
+                        label!,
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          height: 1.1,
+                          fontWeight: FontWeight.w600,
+                          color: onShell
+                              ? (selected
+                                    ? BrandColors.forest
+                                    : BrandColors.cream)
+                              : (selected
+                                    ? BrandColors.onPrimary
+                                    : BrandColors.bark),
+                        ),
+                      ),
               ),
             ),
           ),

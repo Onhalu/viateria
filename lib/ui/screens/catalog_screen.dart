@@ -23,7 +23,6 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   Future<_CatalogData>? _future;
-  _CatalogData? _data;
   final _search = TextEditingController();
   CatalogFilter _filter = const CatalogFilter();
 
@@ -43,12 +42,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final services = context.read<AppServices>();
     final detailsFuture = services.catalog.fetchPublishedDetails();
     final promosFuture = _loadPromos(services);
-    final data = _CatalogData(
+    return _CatalogData(
       details: await detailsFuture,
       promos: await promosFuture,
     );
-    _data = data;
-    return data;
   }
 
   /// A promo failure leaves the catalog up. The slot collapses.
@@ -77,37 +74,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final locale = context.watch<LocaleController>();
-    final strings = locale.strings;
+    final strings = context.watch<LocaleController>().strings;
     return Scaffold(
-      body: FutureBuilder<_CatalogData>(
-        future: _future,
-        builder: (context, snapshot) {
-          final loaded =
-              snapshot.data?.details ??
-              _data?.details ??
-              const <ChallengeDetail>[];
-          final regions = catalogRegionOptions([
-            for (final detail in loaded) detail.challenge,
-          ], locale: locale.locale);
-          return Column(
-            children: [
-              CatalogWelcomeHeader(
-                search: _search,
-                filter: _filter,
-                regions: regions,
-                onFilterChanged: _applyFilter,
+      body: Column(
+        children: [
+          CatalogWelcomeHeader(
+            search: _search,
+            filter: _filter,
+            onFilterChanged: _applyFilter,
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: FutureBuilder<_CatalogData>(
+                future: _future,
+                builder: (context, snapshot) =>
+                    _catalogBody(context, snapshot, strings),
               ),
-              Expanded(
-                child: SafeArea(
-                  top: false,
-                  bottom: false,
-                  child: _catalogBody(context, snapshot, strings),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }

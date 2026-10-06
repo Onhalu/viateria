@@ -16,13 +16,11 @@ class CatalogWelcomeHeader extends StatelessWidget {
     super.key,
     required this.search,
     required this.filter,
-    required this.regions,
     required this.onFilterChanged,
   });
 
   final TextEditingController search;
   final CatalogFilter filter;
-  final List<String> regions;
   final ValueChanged<CatalogFilter> onFilterChanged;
 
   static const avatarSize = 36.0;
@@ -41,7 +39,7 @@ class CatalogWelcomeHeader extends StatelessWidget {
     8,
   );
 
-  /// Greeting + search + access, region, and difficulty chip rows.
+  /// Greeting + search + access/difficulty row and country flags.
   /// Keep the painted panel under ~1/3 of a typical phone viewport
   /// (800 logical px → 267).
   static const typicalPhoneViewportHeight = 800.0;
@@ -183,7 +181,6 @@ class CatalogWelcomeHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 CatalogFilterChipRow(
                   filter: filter,
-                  regions: regions,
                   strings: strings,
                   onChanged: onFilterChanged,
                 ),

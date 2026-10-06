@@ -1,7 +1,8 @@
-import 'package:intl/intl.dart';
-
 import '../models/models.dart';
 import 'route_planner.dart';
+
+/// ISO country codes shown as catalog flag chips.
+const catalogCountryCodes = ['CZ', 'SK', 'AT', 'DE', 'PL'];
 
 /// Length bands for catalog card labels.
 ///
@@ -70,19 +71,22 @@ class CatalogFilter {
   const CatalogFilter({
     this.query = '',
     this.accessModes = const {},
-    this.regions = const {},
+    this.countryCodes = const {},
     this.difficulties = const {},
   });
 
   final String query;
   final Set<AccessMode> accessModes;
 
-  /// Exact `challenges.region` values. Empty means every region, including null.
-  final Set<String> regions;
+  /// Exact `challenges.country_code` values (CZ, SK, AT, DE, PL).
+  /// Empty means every country, including null.
+  final Set<String> countryCodes;
   final Set<CatalogDifficulty> difficulties;
 
   bool get hasActiveChips =>
-      accessModes.isNotEmpty || regions.isNotEmpty || difficulties.isNotEmpty;
+      accessModes.isNotEmpty ||
+      countryCodes.isNotEmpty ||
+      difficulties.isNotEmpty;
 
   bool get isActive => query.trim().isNotEmpty || hasActiveChips;
 
@@ -92,13 +96,13 @@ class CatalogFilter {
   CatalogFilter copyWith({
     String? query,
     Set<AccessMode>? accessModes,
-    Set<String>? regions,
+    Set<String>? countryCodes,
     Set<CatalogDifficulty>? difficulties,
   }) {
     return CatalogFilter(
       query: query ?? this.query,
       accessModes: accessModes ?? this.accessModes,
-      regions: regions ?? this.regions,
+      countryCodes: countryCodes ?? this.countryCodes,
       difficulties: difficulties ?? this.difficulties,
     );
   }
@@ -106,38 +110,12 @@ class CatalogFilter {
   CatalogFilter cleared() => const CatalogFilter();
 }
 
-/// Distinct non-blank [Challenge.region] values from challenges already loaded.
-///
-/// Published, non-promo rows only. Null and blank regions are omitted — those
-/// challenges stay visible only when no region chip is selected. Order is a
-/// diacritic-primary dictionary sort for the UI [locale] (cs, en, de).
-List<String> catalogRegionOptions(
-  Iterable<Challenge> challenges, {
-  required String locale,
-}) {
-  final seen = <String>{};
-  for (final challenge in challenges) {
-    if (challenge.isPromo || !isPubliclyVisible(challenge.status)) continue;
-    final region = challenge.region;
-    if (region == null || region.trim().isEmpty) continue;
-    seen.add(region);
-  }
-  final options = seen.toList();
-  options.sort((a, b) => compareCatalogRegions(a, b, locale));
-  return options;
-}
-
-/// Dictionary order for region chips in the active UI [locale].
-///
-/// cs / en / de (and other UI locales) use a diacritic-primary key
-/// (č with c, ř with r) so "České středohoří" sorts with C rather than after Z.
-int compareCatalogRegions(String a, String b, String locale) {
-  final language = Intl.canonicalizedLocale(locale).split('_').first;
-  if (language == 'cs' || language == 'en' || language == 'de') {
-    final folded = foldCatalogText(a).compareTo(foldCatalogText(b));
-    if (folded != 0) return folded;
-  }
-  return a.compareTo(b);
+/// Keep ISO codes the flag chips understand. Anything else is unknown.
+String? parseCountryCode(String? raw) {
+  if (raw == null) return null;
+  final code = raw.trim().toUpperCase();
+  if (code.isEmpty) return null;
+  return catalogCountryCodes.contains(code) ? code : null;
 }
 
 /// Case- and diacritic-insensitive haystack for catalog search.
@@ -149,11 +127,11 @@ String foldCatalogText(String input) {
   return buf.toString();
 }
 
-/// Mode OR, region OR, difficulty OR; groups AND search AND chips.
+/// Mode OR, country OR, difficulty OR; groups AND search AND chips.
 ///
 /// Search matches any locale's title + description on the challenge.
-/// Region chips match [Challenge.region] exactly. A null or blank region
-/// stays in the list only when no region chip is selected.
+/// Country chips match [Challenge.countryCode] exactly. A null country
+/// stays in the list only when no country chip is selected.
 /// A null CMS difficulty does not exclude a challenge when a difficulty
 /// chip is active — only challenges that have a value are filtered.
 List<Challenge> filterCatalogChallenges(
@@ -177,11 +155,9 @@ bool _matchesChallenge(
       !filter.accessModes.contains(challenge.accessMode)) {
     return false;
   }
-  if (filter.regions.isNotEmpty) {
-    final region = challenge.region;
-    if (region == null ||
-        region.trim().isEmpty ||
-        !filter.regions.contains(region)) {
+  if (filter.countryCodes.isNotEmpty) {
+    final code = challenge.countryCode;
+    if (code == null || !filter.countryCodes.contains(code)) {
       return false;
     }
   }
