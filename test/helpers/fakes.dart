@@ -237,6 +237,7 @@ class MemoryProgress implements ProgressRepository {
   final Map<String, Set<String>> completed = {};
   final Map<String, ChallengeRunStatus> statuses = {};
   Object? fetchProgressError;
+  Object? verifyError;
   static const _rules = UnlockRules();
 
   @override
@@ -278,6 +279,8 @@ class MemoryProgress implements ProgressRepository {
     required String waypointId,
     required String photoPath,
   }) async {
+    final forced = verifyError;
+    if (forced != null) throw forced;
     if (photoPath.isEmpty) {
       throw StateError('photo required');
     }

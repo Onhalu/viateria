@@ -16,6 +16,7 @@ import '../../l10n/locale_controller.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
 import '../widgets/place_presentation.dart';
+import '../widgets/verify_success_confetti.dart';
 
 /// Local visited-place ids recorded after a successful verify.
 ///
@@ -240,15 +241,18 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         await _persistPlaceIds(services);
         if (!mounted) return;
         if (updated.isCompleted) {
-          context.go('/diploma/${widget.challengeId}');
+          _celebrateAndLeave(
+            () => context.go('/diploma/${widget.challengeId}'),
+          );
         } else {
-          context.pop();
+          _celebrateAndLeave(() => context.pop());
         }
         return;
       }
       final ids = await _persistPlaceIds(services);
       await _recordMapVisits(services, ids);
-      if (mounted) context.pop();
+      if (!mounted) return;
+      _celebrateAndLeave(() => context.pop());
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -259,6 +263,22 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Plays the burst on the frame the success UI appears, then leaves.
+  ///
+  /// The overlay is [IgnorePointer], so dismiss and other CTAs stay usable.
+  /// Reduced motion and a missing overlay skip the burst. Failures never
+  /// call this.
+  void _celebrateAndLeave(VoidCallback leave) {
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    leave();
+    if (reduceMotion || overlay == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!overlay.mounted) return;
+      VerifySuccessConfetti.insertInto(overlay);
+    });
   }
 
   Future<bool> _challengeAllowed(
