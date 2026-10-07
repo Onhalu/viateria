@@ -187,6 +187,14 @@ class AppStrings {
     'rewardUnlocksAfterComplete',
     'rewardDependsOnPaidOption',
     'saveDiploma',
+    'diplomaBlurred',
+    'diplomaNeedName',
+    'diplomaGenerating',
+    'diplomaDownload',
+    'diplomaShare',
+    'diplomaError',
+    'diplomaRevoked',
+    'diplomaIncomplete',
     'woodenMedal',
     'diplomaLabel',
     'payDigitalDiploma',
@@ -412,6 +420,14 @@ class AppStrings {
   String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
   String get rewardDependsOnPaidOption => t('rewardDependsOnPaidOption');
   String get saveDiploma => t('saveDiploma');
+  String get diplomaBlurred => t('diplomaBlurred');
+  String get diplomaNeedName => t('diplomaNeedName');
+  String get diplomaGenerating => t('diplomaGenerating');
+  String get diplomaDownload => t('diplomaDownload');
+  String get diplomaShare => t('diplomaShare');
+  String get diplomaError => t('diplomaError');
+  String get diplomaRevoked => t('diplomaRevoked');
+  String get diplomaIncomplete => t('diplomaIncomplete');
   String get woodenMedal => t('woodenMedal');
   String get diplomaLabel => t('diplomaLabel');
   String get payDigitalDiploma => t('payDigitalDiploma');
@@ -709,6 +725,14 @@ class AppStrings {
       'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
       'rewardDependsOnPaidOption': 'Reward depends on your paid option',
       'saveDiploma': 'Save diploma',
+      'diplomaBlurred': 'Preview stays blurred until the diploma is unlocked.',
+      'diplomaNeedName': 'Add your name in your profile.',
+      'diplomaGenerating': 'Creating the diploma…',
+      'diplomaDownload': 'Download',
+      'diplomaShare': 'Share',
+      'diplomaError': 'The diploma could not be created.',
+      'diplomaRevoked': 'This diploma was revoked.',
+      'diplomaIncomplete': 'The diploma opens after you finish the challenge.',
       'woodenMedal': 'Wooden medal',
       'diplomaLabel': 'Diploma',
       'payDigitalDiploma': 'Digital diploma',
@@ -944,6 +968,14 @@ class AppStrings {
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
       'rewardDependsOnPaidOption': 'Odměna podle zvolené varianty po zaplacení',
       'saveDiploma': 'Uložit diplom',
+      'diplomaBlurred': 'Náhled je rozmazaný, dokud diplom není odemčený.',
+      'diplomaNeedName': 'Doplň jméno v profilu.',
+      'diplomaGenerating': 'Generuji diplom…',
+      'diplomaDownload': 'Stáhnout',
+      'diplomaShare': 'Sdílet',
+      'diplomaError': 'Diplom se nepodařilo vytvořit.',
+      'diplomaRevoked': 'Diplom byl odebrán.',
+      'diplomaIncomplete': 'Diplom se otevře po dokončení výzvy.',
       'woodenMedal': 'Dřevěná medaile',
       'diplomaLabel': 'Diplom',
       'payDigitalDiploma': 'Digitální diplom',
@@ -1180,6 +1212,16 @@ class AppStrings {
       'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
       'rewardDependsOnPaidOption': 'Belohnung je nach gewählter Variante',
       'saveDiploma': 'Diplom speichern',
+      'diplomaBlurred':
+          'Die Vorschau bleibt unscharf, bis das Diplom freigeschaltet ist.',
+      'diplomaNeedName': 'Ergänze den Namen im Profil.',
+      'diplomaGenerating': 'Diplom wird erstellt…',
+      'diplomaDownload': 'Herunterladen',
+      'diplomaShare': 'Teilen',
+      'diplomaError': 'Das Diplom konnte nicht erstellt werden.',
+      'diplomaRevoked': 'Dieses Diplom wurde entzogen.',
+      'diplomaIncomplete':
+          'Das Diplom öffnet sich nach Abschluss der Challenge.',
       'woodenMedal': 'Holzmedaille',
       'diplomaLabel': 'Diplom',
       'payDigitalDiploma': 'Digitales Diplom',

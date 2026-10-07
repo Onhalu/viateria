@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
+import '../../data/diploma_client.dart';
 import '../../domain/challenge_reward.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import '../diploma_share.dart';
 
 /// Cream panel with a 1pt beige stroke and 16pt corners.
 BoxDecoration challengeBrandPanel() {
@@ -93,17 +97,27 @@ class ChallengeRewardSection extends StatelessWidget {
   const ChallengeRewardSection({
     super.key,
     required this.strings,
-    required this.unlocked,
+    required this.completed,
+    required this.entitled,
     required this.paid,
     this.variant,
+    this.challengeId,
+    this.diplomas,
+    this.hasDisplayName = true,
     this.onSaveDiploma,
   });
 
   final AppStrings strings;
-  final bool unlocked;
+  final bool completed;
+  final bool entitled;
   final bool paid;
   final RewardVariant? variant;
+  final String? challengeId;
+  final DiplomaClient? diplomas;
+  final bool hasDisplayName;
   final VoidCallback? onSaveDiploma;
+
+  bool get _blurPreview => completed && !entitled;
 
   bool get _showMedalAndDiploma {
     if (variant == null) return true;
@@ -129,7 +143,7 @@ class ChallengeRewardSection extends StatelessWidget {
           decoration: challengeBrandPanel(),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-            child: unlocked ? _unlockedBody() : _lockedBody(),
+            child: _body(),
           ),
         ),
         if (!paid) ...[
@@ -147,55 +161,51 @@ class ChallengeRewardSection extends StatelessWidget {
     );
   }
 
-  Widget _lockedBody() {
-    return AbsorbPointer(
-      child: Stack(
-        children: [
-          Opacity(
-            opacity: 0.55,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _placeholders(includeLabels: true),
-                const SizedBox(height: 12),
-                Text(
-                  strings.rewardUnlocksAfterComplete,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BrandColors.bark, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          const Positioned(
-            top: 0,
-            right: 0,
-            child: Icon(
-              Icons.lock,
-              key: Key('challenge-reward-lock'),
-              size: 24,
-              color: BrandColors.bark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _unlockedBody() {
+  Widget _body() {
+    final showFile = entitled && hasDisplayName;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _placeholders(includeLabels: true, woodenMedal: true),
-        const SizedBox(height: 14),
-        FilledButton(
-          key: const Key('challenge-save-diploma'),
-          onPressed: onSaveDiploma,
-          style: FilledButton.styleFrom(
-            backgroundColor: BrandColors.forest,
-            foregroundColor: BrandColors.cream,
+        _placeholders(includeLabels: true, woodenMedal: showFile),
+        if (!completed) ...[
+          const SizedBox(height: 12),
+          Text(
+            strings.rewardUnlocksAfterComplete,
+            key: const Key('challenge-reward-incomplete'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: BrandColors.bark, fontSize: 13),
           ),
-          child: Text(strings.saveDiploma),
-        ),
+        ],
+        if (_blurPreview) ...[
+          const SizedBox(height: 12),
+          Text(
+            strings.diplomaBlurred,
+            key: const Key('challenge-reward-blurred-hint'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: BrandColors.bark, fontSize: 13),
+          ),
+        ],
+        if (completed && entitled && !hasDisplayName) ...[
+          const SizedBox(height: 12),
+          Text(
+            strings.diplomaNeedName,
+            key: const Key('challenge-reward-need-name'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: BrandColors.bark, fontSize: 13),
+          ),
+        ],
+        if (showFile) ...[
+          const SizedBox(height: 14),
+          FilledButton(
+            key: const Key('challenge-save-diploma'),
+            onPressed: onSaveDiploma,
+            style: FilledButton.styleFrom(
+              backgroundColor: BrandColors.forest,
+              foregroundColor: BrandColors.cream,
+            ),
+            child: Text(strings.saveDiploma),
+          ),
+        ],
       ],
     );
   }
@@ -206,6 +216,11 @@ class ChallengeRewardSection extends StatelessWidget {
   }) {
     final diploma = _DiplomaPlaceholder(
       label: includeLabels ? strings.diplomaLabel : null,
+      blur: _blurPreview,
+      image:
+          entitled && hasDisplayName && diplomas != null && challengeId != null
+          ? _ServerDiplomaPreview(client: diplomas!, challengeId: challengeId!)
+          : null,
     );
     if (!_showMedalAndDiploma) return diploma;
     return Row(
@@ -214,7 +229,7 @@ class ChallengeRewardSection extends StatelessWidget {
         Expanded(
           child: _MedalPlaceholder(
             label: includeLabels ? strings.woodenMedal : null,
-            wooden: woodenMedal && unlocked,
+            wooden: woodenMedal && entitled,
           ),
         ),
         const SizedBox(width: 12),
@@ -225,33 +240,41 @@ class ChallengeRewardSection extends StatelessWidget {
 }
 
 class _DiplomaPlaceholder extends StatelessWidget {
-  const _DiplomaPlaceholder({this.label});
+  const _DiplomaPlaceholder({this.label, this.blur = false, this.image});
 
   final String? label;
+  final bool blur;
+  final Widget? image;
 
   @override
   Widget build(BuildContext context) {
+    final schematic = DecoratedBox(
+      decoration: BoxDecoration(
+        color: BrandColors.cream,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BrandColors.beige),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.description_outlined,
+          size: 36,
+          color: BrandColors.forest,
+        ),
+      ),
+    );
+    Widget art = AspectRatio(aspectRatio: 1, child: image ?? schematic);
+    if (blur) {
+      art = ImageFiltered(
+        key: const Key('challenge-reward-diploma-blur'),
+        imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: art,
+      );
+    }
     return Column(
       key: const Key('challenge-reward-diploma'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 10,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: BrandColors.cream,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: BrandColors.beige),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.description_outlined,
-                size: 36,
-                color: BrandColors.forest,
-              ),
-            ),
-          ),
-        ),
+        art,
         if (label != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -265,6 +288,49 @@ class _DiplomaPlaceholder extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _ServerDiplomaPreview extends StatefulWidget {
+  const _ServerDiplomaPreview({
+    required this.client,
+    required this.challengeId,
+  });
+
+  final DiplomaClient client;
+  final String challengeId;
+
+  @override
+  State<_ServerDiplomaPreview> createState() => _ServerDiplomaPreviewState();
+}
+
+class _ServerDiplomaPreviewState extends State<_ServerDiplomaPreview> {
+  DiplomaImageResult? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await widget.client.fetchImage(widget.challengeId);
+    if (!mounted) return;
+    setState(() => _result = result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = _result?.url;
+    if (url == null || url.isEmpty) {
+      return const ColoredBox(color: BrandColors.cream);
+    }
+    return Image(
+      key: const Key('challenge-reward-diploma-image'),
+      image: diplomaImageProvider(url),
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const ColoredBox(color: BrandColors.cream),
     );
   }
 }

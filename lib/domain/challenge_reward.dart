@@ -22,6 +22,20 @@ abstract final class ChallengeCompletionWindow {
 
 /// Locked/unlocked reward rules for challenge detail.
 abstract final class ChallengeReward {
+  /// Full diploma file: completed, and paid or a zero diploma price or free.
+  static bool isDiplomaEntitled({
+    required bool challengeCompleted,
+    required bool purchasePaid,
+    int? diplomaPriceCents,
+    bool requiresPurchase = true,
+  }) {
+    if (!challengeCompleted) return false;
+    if (purchasePaid) return true;
+    if (diplomaPriceCents == 0) return true;
+    if (!requiresPurchase) return true;
+    return false;
+  }
+
   /// Unlocked when the run is complete and the purchase is paid.
   /// Free challenges have no purchase — complete is enough.
   static bool isUnlocked({

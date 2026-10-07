@@ -202,7 +202,7 @@ void main() {
     expect(durationFromWire('P2DT10H'), const Duration(days: 2, hours: 10));
   });
 
-  test('cms length filters without hike stats', () {
+  test('cms length still labels a card when hike stats are missing', () {
     const challenge = Challenge(
       id: 'c',
       slug: 'c',
@@ -214,13 +214,9 @@ void main() {
       length: ChallengeLength.short,
       translations: [LocalizedText(locale: 'cs', title: 'Kratka')],
     );
-    final matches = filterCatalogChallenges([
-      challenge,
-    ], const CatalogFilter(lengthBands: {CatalogLengthBand.short}));
-    expect(matches, [challenge]);
-    final longOnly = filterCatalogChallenges([
-      challenge,
-    ], const CatalogFilter(lengthBands: {CatalogLengthBand.long}));
-    expect(longOnly, isEmpty);
+    expect(
+      catalogLengthBandForChallenge(challenge, null),
+      CatalogLengthBand.short,
+    );
   });
 }

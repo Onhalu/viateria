@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'config/app_config.dart';
 import 'data/app_services.dart';
+import 'data/diploma_client.dart';
 import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
 import 'data/place_visit_hydrate.dart';
@@ -76,6 +77,7 @@ Future<void> main() async {
       verifiedPlaces: verifiedPlaces,
       places: resolvePlaceCatalog(config: config, client: client),
       leaderboard: leaderboard,
+      diplomas: SupabaseDiplomaClient(client),
     );
     if (userId != null && userId.isNotEmpty) {
       await refreshVerifiedPlacesOnLogin(

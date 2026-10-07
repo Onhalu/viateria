@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/data/challenge_mapping.dart';
 import 'package:viateria/domain/challenge_reward.dart';
@@ -25,6 +26,7 @@ AppServices buildServices({
   MemoryPurchases? purchases,
   ChallengeDetail? detail,
   ExternalUrlOpener? openUrl,
+  DiplomaClient? diplomas,
 }) {
   final open = detail ?? sampleOpenChallenge();
   return AppServices(
@@ -42,6 +44,7 @@ AppServices buildServices({
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     openUrl: openUrl ?? (_) async {},
+    diplomas: diplomas,
   );
 }
 
@@ -946,7 +949,11 @@ void main() {
       expect(find.text(strings.purchasePending), findsNothing);
       expect(find.text(strings.congratulations), findsNothing);
       expect(find.text(strings.deadlineCompleteBy), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
+      expect(
+        find.byKey(const Key('challenge-reward-incomplete')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
     });
 
     testWidgets('pay CTA without a FAPI form URL is disabled and is a no-op', (
@@ -1030,7 +1037,15 @@ void main() {
           find.byKey(const Key('challenge-reward-section')),
         );
         expect(find.text(strings.rewardTitle), findsOneWidget);
-        expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
+        expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+        expect(
+          find.byKey(const Key('challenge-reward-incomplete')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('challenge-reward-diploma-blur')),
+          findsNothing,
+        );
         expect(
           find.byKey(const Key('challenge-reward-diploma')),
           findsOneWidget,
@@ -1039,7 +1054,6 @@ void main() {
         expect(find.text(strings.rewardUnlocksAfterComplete), findsOneWidget);
         expect(find.text(strings.rewardDependsOnPaidOption), findsOneWidget);
         expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
-        expect(find.byType(AbsorbPointer), findsWidgets);
       },
     );
 
@@ -1061,7 +1075,11 @@ void main() {
       );
       expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
-      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-incomplete')),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
       expect(
         find.byKey(const Key('challenge-reward-unpaid-hint')),
@@ -1097,6 +1115,10 @@ void main() {
           find.byKey(const Key('challenge-save-diploma')),
         );
         expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+        expect(
+          find.byKey(const Key('challenge-reward-diploma-blur')),
+          findsNothing,
+        );
         expect(find.text(strings.saveDiploma), findsOneWidget);
         expect(find.text(strings.woodenMedal), findsOneWidget);
         expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
@@ -1117,6 +1139,35 @@ void main() {
           cta.style?.foregroundColor?.resolve(const {}),
           BrandColors.cream,
         );
+      },
+    );
+
+    testWidgets(
+      'completed unpaid reward blurs the diploma and does not request the file',
+      (tester) async {
+        useTallView(tester);
+        final story = sampleStoryChallenge();
+        final diplomas = MemoryDiplomaClient();
+        await tester.pumpWidget(
+          wrapScreen(
+            buildServices(
+              detail: story,
+              progress: completedProgress(story),
+              diplomas: diplomas,
+            ),
+            locale: 'cs',
+            challengeId: 'story-1',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('challenge-reward-diploma-blur')),
+        );
+        expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+        expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+        expect(find.text(AppStrings('cs').diplomaBlurred), findsOneWidget);
+        expect(diplomas.imageRequests, isEmpty);
       },
     );
   });

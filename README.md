@@ -1,6 +1,6 @@
 # Viateria
 
-Gamified tourist challenges (SPEC v1). Hikers and cyclists pick a published challenge, follow OSM-mapped waypoints, verify each stop with a **live camera photo**, and earn a 9:16 diploma.
+Gamified tourist challenges (SPEC v1). Hikers and cyclists pick a published challenge, follow OSM-mapped waypoints, verify each stop with a **live camera photo**, and earn a square diploma.
 
 Catalog content is **not** hardcoded in the app. Challenges, waypoints, and promo stripes are authored in **Supabase** (`draft` | `published` | `archived`). The client only renders `published` rows.
 
@@ -11,7 +11,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 - **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
 - Promo widget on the catalog welcome, between Featured and Regions. DB-driven stripes with audience targeting. Exclusive `is_promo` challenges stay out of the ordinary catalog.
-- Diploma **9:16** with confetti and medals on complete
+- Diploma **1080×1080 PNG** rendered by the `diploma` Edge Function (cs copy). Confetti still plays on a successful verify.
 - Custom i18n: **cs / en / de**
 - Secrets via environment — never committed
 - **Mapa tab**: MapLibre OSM basemap, památky by type, search/filters/list/locate
@@ -188,6 +188,8 @@ Prices under the CTAs come from the active `challenge_prices` row when that tabl
 ### Challenge architecture migrations (not applied on prod)
 
 Draft only. Apply order on prod, after an explicit OK, is **0018 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026**. `0018_verify_waypoint_challenge_readable.sql` is already in `main` and may not be applied on prod yet. W0 (`0020` / history `20261005125735`) is already on prod. W4 (`0027`, dropping legacy columns) is not in this change. Do not `db push` these files to production from a pull request.
+
+`20261006190006_diploma_generation.sql` is the DBA file synced on 2026-10-07 (no `set_diploma_name` / `name_edits`, PNG paths, buckets `diplomas` and `diploma-assets`). It is not applied on prod. The `diploma` Edge Function (`POST`, user JWT) checks entitlement, caches by `render_hash`, and returns a one-hour signed URL. Without entitlement it responds `402 not_entitled` and does not write the file. The app shows a blurred preview until then. Temporary backgrounds, the VANDERY mark, and Playfair live under `supabase/functions/diploma/assets/` (see `SEED.md`). The Flutter client never receives `service_role`.
 
 ### Stripe (unused by CTAs)
 

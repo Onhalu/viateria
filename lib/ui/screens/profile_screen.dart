@@ -29,7 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   var _started = false;
   List<Place> _places = const [];
   List<Challenge> _completed = const [];
-  Map<String, int> _durationDays = const {};
+  Map<String, String> _completedOn = const {};
   LeaderboardEntry? _score;
 
   @override
@@ -69,10 +69,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         published: published,
         completedProgress: completed,
       );
-      _durationDays = {
+      _completedOn = {
         for (final progress in completed)
-          if (progress.inclusiveDayCount != null)
-            progress.challengeId: progress.inclusiveDayCount!,
+          if (progress.completedAt != null)
+            progress.challengeId: formatDiplomaCompletedOn(
+              progress.completedAt!,
+            ),
       };
     });
   }
@@ -137,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     verifiedIds: services.verifiedPlaces.ids,
                   ),
                   completed: _completed,
-                  durationDays: _durationDays,
+                  completedOn: _completedOn,
                   score: _score,
                 );
               },
@@ -199,7 +201,7 @@ class _ProfileStatsBody extends StatelessWidget {
     required this.locale,
     required this.counts,
     required this.completed,
-    required this.durationDays,
+    required this.completedOn,
     required this.score,
   });
 
@@ -207,7 +209,7 @@ class _ProfileStatsBody extends StatelessWidget {
   final String locale;
   final List<CategoryVisitCount> counts;
   final List<Challenge> completed;
-  final Map<String, int> durationDays;
+  final Map<String, String> completedOn;
   final LeaderboardEntry? score;
 
   static const _gridGap = 12.0;
@@ -282,15 +284,12 @@ class _ProfileStatsBody extends StatelessWidget {
                           challenge.copyFor(locale).title,
                           style: const TextStyle(color: BrandColors.forest),
                         ),
-                        subtitle: durationDays[challenge.id] == null
+                        subtitle: completedOn[challenge.id] == null
                             ? null
                             : Text(
-                                formatParticipationDays(
-                                  locale,
-                                  durationDays[challenge.id]!,
-                                ),
+                                completedOn[challenge.id]!,
                                 key: Key(
-                                  'profile-completed-duration-${challenge.id}',
+                                  'profile-completed-date-${challenge.id}',
                                 ),
                               ),
                         trailing: const Icon(
