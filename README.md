@@ -105,7 +105,7 @@ Code: `lib/map/map_style_config.dart`. Map places load from Supabase `public.pla
 
 Apply `supabase/migrations/0001_init.sql` (CLI: `supabase db push` or the SQL editor).
 
-Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `promo_segments`, `promo_segment_members`, `promo_assignments`, `purchases`, `places`.
+Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_story_steps`, `challenge_story_step_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `promo_segments`, `promo_segment_members`, `promo_assignments`, `purchases`, `places`.
 
 ### Promo widget (SPEC-promo-widget)
 
@@ -200,10 +200,20 @@ flutter test
 
 | Mode | After access |
 | --- | --- |
-| **open** | Every waypoint is available |
+| **open** | Every waypoint is available. Story steps are ignored. |
 | **story** | Waypoint *n+1* unlocks only after waypoint *n* is verified |
 
 Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enforces photo path, access, story order, and the same promo readability rule as the catalog (`private.challenge_readable`). It does not check GPS or that a storage object exists.
+
+### Story mode (SPEC-story-mode)
+
+`supabase/migrations/0016_challenge_story_steps.sql` adds `challenge_story_steps` and `challenge_story_step_i18n` (`opening` | `before_waypoint` | `closing`). A `before_waypoint` row points at the waypoint it introduces. `0017_verify_waypoint_story_enrich.sql` returns `next_story_step_id`, `closing_story_step_id`, and `unlocked_waypoint_id` without changing the n+1 gate or the open-mode path. It keeps the exclusive-promo check from `0015`. `0018` then replaces that function with `private.challenge_readable` (published, and a promo audience match when `is_promo`) and still returns the three story ids.
+
+The list is opening, then each unlocked chapter beside its stop, then closing after the last verify. A step with no YouTube URL, image, or body is skipped. Locked stops are titled “Další zastávka” / “Next stop” / “Nächster Halt”. `StoryChapterCard` is an inline cream card (beige border, Playfair forest title). YouTube plays in an in-app embed; otherwise the card shows an optional image and the body. `shellFill` stays off the card. After a successful verify the list scrolls to the new chapter and expands it once. Reduce-motion scrolls without expanding. Completing a story challenge returns to that list (the diploma stays on the page). Open mode still opens the diploma.
+
+On the map, unlocked and finished stops use the category icon on the real place coordinate. Locked stops are a sage `?` in a fog cluster at least 2 km from every true coordinate — not the real lat/lng and not a ±200 m jitter. Tapping `?` says “Nejdřív dolož předchozí místo” and does not pan. The route planner offers only unlocked stops.
+
+**story-mock** (slug, free, published, three waypoints) is the prod fixture. Open it while signed in to walk opening → verify → next chapter → closing. Apply `0016` and `0017` yourself if a database was created from this repo; prod already has them.
 
 ## Project layout
 

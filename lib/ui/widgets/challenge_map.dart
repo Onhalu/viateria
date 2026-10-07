@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import '../../domain/story_fog.dart';
 import '../../map/place_catalog.dart';
 import '../../models/models.dart';
 import 'places_map_host.dart';
@@ -17,6 +18,9 @@ class ChallengeMap extends StatefulWidget {
     this.hikeLine = const [],
     this.bikeLine = const [],
     this.onWaypointTap,
+    this.onFogTap,
+    this.hiddenWaypointIds = const {},
+    this.fogPins = const [],
     this.actions = const [],
     this.navigating,
     this.navigationBanner,
@@ -30,6 +34,9 @@ class ChallengeMap extends StatefulWidget {
   final List<ll.LatLng> hikeLine;
   final List<ll.LatLng> bikeLine;
   final ValueChanged<Waypoint>? onWaypointTap;
+  final ValueChanged<String>? onFogTap;
+  final Set<String> hiddenWaypointIds;
+  final List<StoryFogPin> fogPins;
   final List<Widget> actions;
   final TravelMode? navigating;
   final Widget? navigationBanner;
@@ -52,6 +59,8 @@ class _ChallengeMapState extends State<ChallengeMap> {
     hikeLine: widget.hikeLine,
     bikeLine: widget.bikeLine,
     navigating: widget.navigating,
+    hiddenWaypointIds: widget.hiddenWaypointIds,
+    fogPins: widget.fogPins,
   );
 
   @override
@@ -63,7 +72,9 @@ class _ChallengeMapState extends State<ChallengeMap> {
         oldWidget.bikeLine != widget.bikeLine ||
         oldWidget.start != widget.start ||
         oldWidget.selectedWaypointId != widget.selectedWaypointId ||
-        oldWidget.waypoints != widget.waypoints;
+        oldWidget.waypoints != widget.waypoints ||
+        oldWidget.hiddenWaypointIds != widget.hiddenWaypointIds ||
+        !sameStoryFog(oldWidget.fogPins, widget.fogPins);
     if (!geometryChanged && !navChanged) return;
     if (navChanged) {
       if (oldWidget.navigating == null && widget.navigating != null) {
@@ -115,13 +126,12 @@ class _ChallengeMapState extends State<ChallengeMap> {
   void _fitOverview() {
     final controller = _controller;
     if (controller == null || !_layersReady) return;
-    fitChallengeCamera(
-      controller,
-      waypoints: widget.waypoints,
-      start: widget.start,
-      hikeLine: widget.hikeLine,
-      bikeLine: widget.bikeLine,
-    );
+    fitMapPoints(controller, [
+      ..._geometry.overviewLatLngs,
+      ?widget.start,
+      ...widget.hikeLine,
+      ...widget.bikeLine,
+    ]);
   }
 
   void _fitActive() {
@@ -139,9 +149,13 @@ class _ChallengeMapState extends State<ChallengeMap> {
           catalog: widget.catalog,
           compact: true,
           safeArea: false,
-          initialCamera: challengeCameraOf(widget.waypoints),
+          initialCamera: challengeCameraOf(
+            widget.waypoints,
+            anchors: _geometry.overviewLatLngs,
+          ),
           geometry: _geometry,
           onWaypointTap: widget.onWaypointTap,
+          onFogTap: widget.onFogTap,
           onReady: (controller) => _controller = controller,
           onLayersReady: (controller) {
             _controller = controller;
