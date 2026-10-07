@@ -13,7 +13,7 @@ import {
   type PriceSnapshot,
 } from "./access.ts";
 import { RENDERER_VERSION } from "./hash.ts";
-import { loadBundledRenderAssets, readBundledAsset, renderDiploma } from "./render.ts";
+import { LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -175,7 +175,7 @@ async function loadRenderAssets(admin: SupabaseClient, variant: number) {
     `bg/${variant}.png`,
     `bg/${variant}.png`,
   );
-  const logo = await assetOrBundle(admin, "logo/vandery-mark.png", "logo/vandery-mark.png");
+  const logo = await assetOrBundle(admin, LOGO_ASSET, LOGO_ASSET);
   const font = await assetOrBundle(
     admin,
     "fonts/PlayfairDisplay.ttf",

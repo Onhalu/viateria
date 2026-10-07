@@ -35,10 +35,10 @@ export function pragueIsoDate(instant: Date): string {
   return `${parts.year}-${mm}-${dd}`;
 }
 
-/** Product line (cs v1). Always this sentence, never "za N dní". */
+/** Product line (cs). "dne dd.mm.yyyy", never "za N dní". */
 export function completionLabel(instant: Date): string {
   const parts = pragueParts(instant);
   const dd = String(parts.day).padStart(2, "0");
   const mm = String(parts.month).padStart(2, "0");
-  return `dokončeno dne ${dd}.${mm}.${parts.year}`;
+  return `dne ${dd}.${mm}.${parts.year}`;
 }

@@ -9,7 +9,7 @@ import {
   type IssuedDiplomaRow,
 } from "./access.ts";
 import { csAccusative } from "./declension.ts";
-import { renderHash } from "./hash.ts";
+import { RENDERER_VERSION, renderHash } from "./hash.ts";
 import { completionLabel, pragueIsoDate } from "./prague.ts";
 import { decodeRgbaPng, pixelAlpha } from "./png.ts";
 import { loadBundledRenderAssets, renderDiploma } from "./render.ts";
@@ -53,11 +53,11 @@ Deno.test("completion line is the Prague calendar date", () => {
     "winter crosses midnight",
   );
   assert(
-    completionLabel(new Date("2026-01-15T23:30:00.000Z")) === "dokončeno dne 16.01.2026",
+    completionLabel(new Date("2026-01-15T23:30:00.000Z")) === "dne 16.01.2026",
     "winter label",
   );
   assert(
-    completionLabel(new Date("2026-07-15T22:30:00.000Z")) === "dokončeno dne 16.07.2026",
+    completionLabel(new Date("2026-07-15T22:30:00.000Z")) === "dne 16.07.2026",
     "summer label",
   );
   assert(
@@ -146,7 +146,7 @@ Deno.test("render hash is stable and changes with the Prague date", async () => 
   assert(isCacheHit({ ...issued, render_hash: hash, image_path: path }, hash, path), "hit");
   assert(!isCacheHit(issued, hash, path), "miss when unset");
   const manual = await renderHash({
-    rendererVersion: 1,
+    rendererVersion: RENDERER_VERSION,
     lang: "cs",
     headline: "",
     body: "",
@@ -159,7 +159,7 @@ Deno.test("render hash is stable and changes with the Prague date", async () => 
   const copy = diplomaCopy(issued);
   assert(copy.headline === "DIPLOM", "default headline");
   assert(copy.body === "za zdolání výzvy", "default body");
-  assert(copy.duration === "dokončeno dne 16.07.2026", "duration line");
+  assert(copy.duration === "dne 16.07.2026", "duration line");
   assert(copy.preposition === "pro", "preposition");
 });
 

@@ -12,7 +12,7 @@ Upload with the service role (the bucket has no client policies):
 | `bg/2.png` | `assets/bg/2.png` |
 | `bg/3.png` | `assets/bg/3.png` |
 | `bg/4.png` | `assets/bg/4.png` |
-| `logo/vandery-mark.png` | `assets/logo/vandery-mark.png` |
+| `logo/vandery-lockup.png` | `assets/logo/vandery-lockup.png` (= `assets/brand/vandery-lockup@3x.png`) |
 | `fonts/PlayfairDisplay.ttf` | `assets/fonts/PlayfairDisplay.ttf` |
 
 The Edge function reads the bucket first and falls back to these bundled copies
