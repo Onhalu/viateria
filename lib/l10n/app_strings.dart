@@ -19,7 +19,6 @@ class AppStrings {
     'catalogNoMatches',
     'catalogNoMatchesHint',
     'catalogFeatured',
-    'catalogRegions',
     'catalogLengthShort',
     'catalogLengthMedium',
     'catalogLengthLong',
@@ -244,7 +243,6 @@ class AppStrings {
   String get catalogNoMatches => t('catalogNoMatches');
   String get catalogNoMatchesHint => t('catalogNoMatchesHint');
   String get catalogFeatured => t('catalogFeatured');
-  String get catalogRegions => t('catalogRegions');
   String get catalogLengthShort => t('catalogLengthShort');
   String get catalogLengthMedium => t('catalogLengthMedium');
   String get catalogLengthLong => t('catalogLengthLong');
@@ -529,7 +527,6 @@ class AppStrings {
       'catalogNoMatches': 'No matches',
       'catalogNoMatchesHint': 'Try different filters or search.',
       'catalogFeatured': 'Featured',
-      'catalogRegions': 'Regions',
       'catalogLengthShort': 'Short',
       'catalogLengthMedium': 'Medium',
       'catalogLengthLong': 'Long',
@@ -765,7 +762,6 @@ class AppStrings {
       'catalogNoMatches': 'Nic nesedí',
       'catalogNoMatchesHint': 'Uprav filtry nebo hledaný text.',
       'catalogFeatured': 'Vybrané',
-      'catalogRegions': 'Regiony',
       'catalogLengthShort': 'Krátká',
       'catalogLengthMedium': 'Střední',
       'catalogLengthLong': 'Dlouhá',
@@ -999,7 +995,6 @@ class AppStrings {
       'catalogNoMatches': 'Keine Treffer',
       'catalogNoMatchesHint': 'Andere Filter oder Suche versuchen.',
       'catalogFeatured': 'Ausgewählt',
-      'catalogRegions': 'Regionen',
       'catalogLengthShort': 'Kurz',
       'catalogLengthMedium': 'Mittel',
       'catalogLengthLong': 'Lang',

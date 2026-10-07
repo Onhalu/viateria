@@ -302,9 +302,6 @@ void main() {
     expect(find.byKey(const Key('catalog-hero-carousel')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured')), findsOneWidget);
     expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
-    final featured = tester.getRect(find.byKey(const Key('catalog-featured')));
-    final regions = tester.getRect(find.byKey(const Key('catalog-regions')));
-    expect(regions.top - featured.bottom, closeTo(16, 1));
     expect(find.text('Promo'), findsNothing);
 
     await _pumpCatalog(
@@ -351,7 +348,6 @@ void main() {
       currency: 'eur',
       status: PublishStatus.published,
       isPromo: true,
-      countryCode: 'CZ',
       translations: const [
         LocalizedText(
           locale: 'en',
@@ -409,10 +405,10 @@ void main() {
     final hero = tester.getRect(find.byKey(const Key('catalog-hero-carousel')));
     final featured = tester.getRect(find.byKey(const Key('catalog-featured')));
     final promo = tester.getRect(find.byKey(const Key('promo-widget')));
-    final regions = tester.getRect(find.byKey(const Key('catalog-regions')));
     expect(featured.top, greaterThan(hero.bottom - 0.5));
     expect(promo.top, greaterThan(featured.bottom - 0.5));
-    expect(regions.top, greaterThan(promo.bottom - 0.5));
+    expect(promo.top - featured.bottom, closeTo(16, 1));
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
     expect(find.byKey(const Key('promo-carousel')), findsNothing);
     expect(find.byKey(const Key('promo-page-view')), findsNothing);
 

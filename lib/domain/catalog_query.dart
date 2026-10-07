@@ -1,10 +1,10 @@
 import '../models/models.dart';
 import 'route_planner.dart';
 
-/// ISO country codes shown as catalog region chips.
+/// ISO country codes shown as catalog flag chips.
 const catalogCountryCodes = ['CZ', 'SK', 'AT', 'DE', 'PL'];
 
-/// Length bands for catalog chips and card labels.
+/// Length bands for catalog card labels.
 ///
 /// Bounds use actual hike hours from [CatalogRouteStats.estimatedDuration]:
 /// short < 3 h, medium 3–6 h, long ≥ 6 h. Never invent hours for the UI.
@@ -70,25 +70,23 @@ Map<String, CatalogRouteStats> catalogRouteStatsByChallenge(
 class CatalogFilter {
   const CatalogFilter({
     this.query = '',
-    this.pricingTypes = const {},
     this.accessModes = const {},
     this.countryCodes = const {},
-    this.lengthBands = const {},
     this.difficulties = const {},
   });
 
   final String query;
-  final Set<PricingType> pricingTypes;
   final Set<AccessMode> accessModes;
+
+  /// Selected flag codes (CZ, SK, AT, DE, PL).
+  /// Empty means every country, including unresolved ones.
+  /// A challenge matches when any selected code is in its parsed list.
   final Set<String> countryCodes;
-  final Set<CatalogLengthBand> lengthBands;
   final Set<CatalogDifficulty> difficulties;
 
   bool get hasActiveChips =>
-      pricingTypes.isNotEmpty ||
       accessModes.isNotEmpty ||
       countryCodes.isNotEmpty ||
-      lengthBands.isNotEmpty ||
       difficulties.isNotEmpty;
 
   bool get isActive => query.trim().isNotEmpty || hasActiveChips;
@@ -98,18 +96,14 @@ class CatalogFilter {
 
   CatalogFilter copyWith({
     String? query,
-    Set<PricingType>? pricingTypes,
     Set<AccessMode>? accessModes,
     Set<String>? countryCodes,
-    Set<CatalogLengthBand>? lengthBands,
     Set<CatalogDifficulty>? difficulties,
   }) {
     return CatalogFilter(
       query: query ?? this.query,
-      pricingTypes: pricingTypes ?? this.pricingTypes,
       accessModes: accessModes ?? this.accessModes,
       countryCodes: countryCodes ?? this.countryCodes,
-      lengthBands: lengthBands ?? this.lengthBands,
       difficulties: difficulties ?? this.difficulties,
     );
   }
@@ -117,7 +111,9 @@ class CatalogFilter {
   CatalogFilter cleared() => const CatalogFilter();
 }
 
-/// Keep ISO codes the chips understand; anything else is treated as unknown.
+/// Keep ISO codes the flag chips understand. Anything else is unknown.
+///
+/// One token only. A comma-separated value is handled by [parseCountryCodes].
 String? parseCountryCode(String? raw) {
   if (raw == null) return null;
   final code = raw.trim().toUpperCase();
@@ -125,8 +121,20 @@ String? parseCountryCode(String? raw) {
   return catalogCountryCodes.contains(code) ? code : null;
 }
 
+/// Codes in a `country_code` cell. Split on commas, trim, uppercase.
+/// Unknown tokens are dropped. Order is kept and duplicates collapse.
+List<String> parseCountryCodes(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return const [];
+  final out = <String>[];
+  for (final part in raw.split(',')) {
+    final code = parseCountryCode(part);
+    if (code != null && !out.contains(code)) out.add(code);
+  }
+  return out;
+}
+
 /// Best-effort map from the free-text [region] display string.
-/// Used as a client fallback when `country_code` is still null.
+/// Used when `country_code` is still null so the flag chips keep working.
 String? inferCountryCodeFromRegion(String? region) {
   if (region == null || region.trim().isEmpty) return null;
   final folded = foldCatalogText(region);
@@ -165,8 +173,22 @@ String? inferCountryCodeFromRegion(String? region) {
   return null;
 }
 
+/// Prefer the stored `country_code` list. An empty cell falls back to one
+/// known region label. A stored list wins even when region text names
+/// another country.
+List<String> resolveCountryCodes({String? countryCode, String? region}) {
+  final parsed = parseCountryCodes(countryCode);
+  if (parsed.isNotEmpty) return parsed;
+  final inferred = inferCountryCodeFromRegion(region);
+  if (inferred == null) return const [];
+  return [inferred];
+}
+
+/// Canonical `country_code` for the model: `CZ` or `CZ,AT`, or null.
 String? resolveCountryCode({String? countryCode, String? region}) {
-  return parseCountryCode(countryCode) ?? inferCountryCodeFromRegion(region);
+  final codes = resolveCountryCodes(countryCode: countryCode, region: region);
+  if (codes.isEmpty) return null;
+  return codes.join(',');
 }
 
 /// Case- and diacritic-insensitive haystack for catalog search.
@@ -178,24 +200,23 @@ String foldCatalogText(String input) {
   return buf.toString();
 }
 
-/// Price OR, mode OR, region OR, length OR, difficulty OR; groups AND
-/// search AND chips.
+/// Mode OR, country OR, difficulty OR; groups AND search AND chips.
 ///
 /// Search matches any locale's title + description on the challenge.
-/// Length chips use [routeStats] derived from waypoints; a challenge
-/// without a length band never matches a selected length chip.
+/// Country chips match when the selected code is in [resolveCountryCodes].
+/// An explicit `country_code` list wins over region text. A challenge with
+/// no resolved country stays in the list only when no country chip is
+/// selected.
 /// A null CMS difficulty does not exclude a challenge when a difficulty
 /// chip is active — only challenges that have a value are filtered.
 List<Challenge> filterCatalogChallenges(
   Iterable<Challenge> challenges,
-  CatalogFilter filter, {
-  Map<String, CatalogRouteStats> routeStats = const {},
-}) {
+  CatalogFilter filter,
+) {
   final foldedQuery = foldCatalogText(filter.query.trim());
   return [
     for (final challenge in challenges)
-      if (_matchesChallenge(challenge, filter, foldedQuery, routeStats))
-        challenge,
+      if (_matchesChallenge(challenge, filter, foldedQuery)) challenge,
   ];
 }
 
@@ -203,26 +224,18 @@ bool _matchesChallenge(
   Challenge challenge,
   CatalogFilter filter,
   String foldedQuery,
-  Map<String, CatalogRouteStats> routeStats,
 ) {
   if (challenge.isPromo) return false;
-  if (filter.pricingTypes.isNotEmpty &&
-      !filter.pricingTypes.contains(challenge.pricingType)) {
-    return false;
-  }
   if (filter.accessModes.isNotEmpty &&
       !filter.accessModes.contains(challenge.accessMode)) {
     return false;
   }
   if (filter.countryCodes.isNotEmpty) {
-    final code = challenge.countryCode;
-    if (code == null || !filter.countryCodes.contains(code)) {
-      return false;
-    }
-  }
-  if (filter.lengthBands.isNotEmpty) {
-    final band = routeStats[challenge.id]?.lengthBand;
-    if (band == null || !filter.lengthBands.contains(band)) {
+    final codes = resolveCountryCodes(
+      countryCode: challenge.countryCode,
+      region: challenge.region,
+    );
+    if (codes.isEmpty || !codes.any(filter.countryCodes.contains)) {
       return false;
     }
   }
@@ -236,6 +249,13 @@ bool _matchesChallenge(
   return foldCatalogText(_searchHaystack(challenge)).contains(foldedQuery);
 }
 
+bool _matchesAny(String folded, List<String> needles) {
+  for (final needle in needles) {
+    if (folded.contains(needle)) return true;
+  }
+  return false;
+}
+
 String _searchHaystack(Challenge challenge) {
   final buf = StringBuffer();
   for (final text in challenge.translations) {
@@ -246,13 +266,6 @@ String _searchHaystack(Challenge challenge) {
       ..write(' ');
   }
   return buf.toString();
-}
-
-bool _matchesAny(String folded, List<String> needles) {
-  for (final needle in needles) {
-    if (folded.contains(needle)) return true;
-  }
-  return false;
 }
 
 String _foldChar(int rune) {

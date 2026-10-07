@@ -18,7 +18,6 @@ import 'package:viateria/ui/widgets/catalog_filters.dart';
 import 'package:viateria/ui/widgets/catalog_welcome_header.dart';
 import 'package:viateria/ui/widgets/country_flag.dart';
 
-import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
 
 Material _chipMaterial(WidgetTester tester, Key key) {
@@ -33,8 +32,8 @@ Challenge _challenge({
   String description = '',
   AccessMode mode = AccessMode.open,
   PricingType pricing = PricingType.free,
-  String? countryCode,
   String? region,
+  String? countryCode,
   CatalogDifficulty? difficulty,
   List<LocalizedText>? translations,
 }) {
@@ -124,39 +123,46 @@ void _expectSameChipStrip(Rect a, Rect b) {
   expect((a.center.dy - b.center.dy).abs(), lessThan(1.5));
 }
 
-void _expectLengthDifficultyUnderRegions(WidgetTester tester) {
-  final priceRect = tester.getRect(
-    find.byKey(const Key('catalog-filter-price-free')),
+void _expectAccessAndDifficultyAboveCountries(WidgetTester tester) {
+  final storyRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-mode-story')),
   );
-  final regionRect = tester.getRect(
-    find.byKey(const Key('catalog-filter-region-CZ')),
-  );
-  final lengthRect = tester.getRect(
-    find.byKey(const Key('catalog-length-chips')),
+  final openRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-mode-open')),
   );
   final difficultyRect = tester.getRect(
     find.byKey(const Key('catalog-difficulty-chips')),
   );
+  final countryRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-country-chips')),
+  );
+  final flagRect = tester.getRect(
+    find.byKey(const Key('catalog-filter-region-CZ')),
+  );
   final chipsRect = tester.getRect(
     find.byKey(const Key('catalog-filter-chips')),
   );
-  final bottomRowRect = tester.getRect(
-    find.byKey(const Key('catalog-length-difficulty-chips')),
-  );
 
   expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
-  expect(bottomRowRect.height, closeTo(CatalogFilterChip.height, 0.5));
-  _expectSameChipStrip(priceRect, regionRect);
-  _expectSameChipStrip(lengthRect, difficultyRect);
-  expect(difficultyRect.left, greaterThan(lengthRect.right - 0.5));
-  expect(lengthRect.top, greaterThan(priceRect.bottom - 0.5));
-  expect(lengthRect.top, greaterThan(regionRect.bottom - 0.5));
-  expect(bottomRowRect.top, greaterThan(priceRect.bottom - 0.5));
-  expect(bottomRowRect.top, greaterThan(regionRect.bottom - 0.5));
-  expect(lengthRect.top, greaterThanOrEqualTo(bottomRowRect.top - 0.5));
-  expect(difficultyRect.bottom, lessThanOrEqualTo(bottomRowRect.bottom + 0.5));
-  expect(chipsRect.top, lessThanOrEqualTo(priceRect.top + 0.5));
-  expect(chipsRect.bottom, greaterThanOrEqualTo(difficultyRect.bottom - 0.5));
+  expect(countryRect.height, closeTo(CatalogFilterChip.height, 0.5));
+  _expectSameChipStrip(storyRect, openRect);
+  _expectSameChipStrip(openRect, difficultyRect);
+  expect(difficultyRect.left, greaterThan(openRect.right - 0.5));
+  expect(countryRect.top, greaterThan(storyRect.bottom - 0.5));
+  expect(countryRect.top, greaterThan(difficultyRect.bottom - 0.5));
+  _expectSameChipStrip(countryRect, flagRect);
+  expect(chipsRect.top, lessThanOrEqualTo(storyRect.top + 0.5));
+  expect(chipsRect.bottom, greaterThanOrEqualTo(flagRect.bottom - 0.5));
+  expect(find.byKey(const Key('catalog-filter-price-free')), findsNothing);
+  expect(find.byKey(const Key('catalog-filter-price-paid')), findsNothing);
+  expect(find.byKey(const Key('catalog-length-chips')), findsNothing);
+  expect(
+    find.descendant(
+      of: find.byKey(const Key('catalog-filter-country-chips')),
+      matching: find.byType(CountryFlag),
+    ),
+    findsNWidgets(catalogCountryCodes.length),
+  );
 }
 
 void main() {
@@ -167,86 +173,189 @@ void main() {
   });
 
   group('filterCatalogChallenges', () {
-    final freeOpenCz = _challenge(
+    final openCz = _challenge(
       id: 'a',
       title: 'Pálava hike',
       description: 'White rocks',
+      region: 'Beskydy',
       countryCode: 'CZ',
     );
-    final paidStorySk = _challenge(
+    final storySk = _challenge(
       id: 'b',
       title: 'Tatra story',
       description: 'Unlock in order',
       mode: AccessMode.story,
       pricing: PricingType.paid,
+      region: 'Morava',
       countryCode: 'SK',
     );
-    final paidOpenAt = _challenge(
+    final openUnset = _challenge(
       id: 'c',
       title: 'Alpine trail',
       description: 'Vienna woods',
       pricing: PricingType.paid,
-      countryCode: 'AT',
+      region: 'Alps',
     );
-    final all = [freeOpenCz, paidStorySk, paidOpenAt];
+    final all = [openCz, storySk, openUnset];
 
     test('empty groups keep every challenge', () {
       expect(filterCatalogChallenges(all, const CatalogFilter()), all);
     });
 
-    test('price is OR within the group', () {
-      final filtered = filterCatalogChallenges(
-        all,
-        CatalogFilter(pricingTypes: {PricingType.free, PricingType.paid}),
-      );
-      expect(filtered, all);
-    });
-
-    test('single price chip keeps only that pricing', () {
-      final filtered = filterCatalogChallenges(
-        all,
-        CatalogFilter(pricingTypes: {PricingType.free}),
-      );
-      expect(filtered, [freeOpenCz]);
-    });
-
     test('mode is OR within the group', () {
       final filtered = filterCatalogChallenges(
         all,
-        CatalogFilter(accessModes: {AccessMode.open, AccessMode.story}),
+        const CatalogFilter(accessModes: {AccessMode.open, AccessMode.story}),
       );
       expect(filtered, all);
     });
 
-    test('region is OR within the group', () {
-      final filtered = filterCatalogChallenges(
-        all,
-        CatalogFilter(countryCodes: {'CZ', 'AT'}),
+    test('single mode chip keeps only that access mode', () {
+      expect(
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(accessModes: {AccessMode.story}),
+        ),
+        [storySk],
       );
-      expect(filtered.map((c) => c.id), ['a', 'c']);
+    });
+
+    test('country is exact OR and hides a null country_code', () {
+      expect(
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(countryCodes: {'CZ', 'SK'}),
+        ).map((c) => c.id),
+        ['a', 'b'],
+      );
+      expect(
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(countryCodes: {'CZ'}),
+        ).map((c) => c.id),
+        ['a'],
+      );
+      expect(
+        filterCatalogChallenges([
+          openUnset,
+        ], const CatalogFilter(countryCodes: {'CZ'})),
+        isEmpty,
+      );
+      expect(filterCatalogChallenges([openUnset], const CatalogFilter()), [
+        openUnset,
+      ]);
+    });
+
+    test('comma-separated country_code matches each listed code', () {
+      final palava = _challenge(
+        id: 'toulky-palavou',
+        title: 'Toulky Pálavou',
+        region: 'Morava',
+        countryCode: 'CZ,AT',
+      );
+      final spaced = _challenge(
+        id: 'spaced',
+        title: 'Spaced codes',
+        region: 'Tatry',
+        countryCode: 'cz, at, pl',
+      );
+      final single = _challenge(
+        id: 'single',
+        title: 'Single CZ',
+        countryCode: 'CZ',
+      );
+      final inferred = _challenge(
+        id: 'inferred',
+        title: 'Inferred CZ',
+        region: 'Beskydy',
+      );
+      final rows = [palava, spaced, single, inferred];
+
+      expect(
+        filterCatalogChallenges(
+          rows,
+          const CatalogFilter(countryCodes: {'CZ'}),
+        ).map((c) => c.id),
+        ['toulky-palavou', 'spaced', 'single', 'inferred'],
+      );
+      expect(
+        filterCatalogChallenges(
+          rows,
+          const CatalogFilter(countryCodes: {'AT'}),
+        ).map((c) => c.id),
+        ['toulky-palavou', 'spaced'],
+      );
+      expect(
+        filterCatalogChallenges(
+          rows,
+          const CatalogFilter(countryCodes: {'SK'}),
+        ),
+        isEmpty,
+      );
+      expect(
+        filterCatalogChallenges([
+          inferred,
+        ], const CatalogFilter(countryCodes: {'AT'})),
+        isEmpty,
+      );
+    });
+
+    test('country chip matches resolved country, and stored code wins', () {
+      final hills = _challenge(id: 's', title: 'Hills', region: 'Česko');
+      final labeledSk = _challenge(
+        id: 't',
+        title: 'Labeled SK',
+        region: 'Česko',
+        countryCode: 'SK',
+      );
+      final unknown = _challenge(id: 'u', title: 'Alps', region: 'Alps');
+      expect(
+        filterCatalogChallenges([
+          hills,
+          labeledSk,
+          unknown,
+          openCz,
+        ], const CatalogFilter(countryCodes: {'CZ'})).map((c) => c.id),
+        ['s', 'a'],
+      );
+      expect(
+        filterCatalogChallenges([
+          labeledSk,
+        ], const CatalogFilter(countryCodes: {'SK'})).map((c) => c.id),
+        ['t'],
+      );
+      expect(
+        filterCatalogChallenges([
+          unknown,
+        ], const CatalogFilter(countryCodes: {'CZ'})),
+        isEmpty,
+      );
     });
 
     test('groups combine with AND', () {
-      final filtered = filterCatalogChallenges(
-        all,
-        CatalogFilter(
-          pricingTypes: {PricingType.paid},
-          accessModes: {AccessMode.open},
-          countryCodes: {'AT'},
+      expect(
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(
+            accessModes: {AccessMode.open},
+            countryCodes: {'CZ'},
+          ),
         ),
+        [openCz],
       );
-      expect(filtered, [paidOpenAt]);
     });
 
     test('AND across groups can yield no matches', () {
-      final filtered = filterCatalogChallenges(
-        all,
-        CatalogFilter(
-          pricingTypes: {PricingType.free},
-          accessModes: {AccessMode.story},
+      expect(
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(
+            accessModes: {AccessMode.story},
+            countryCodes: {'CZ'},
+          ),
         ),
+        isEmpty,
       );
-      expect(filtered, isEmpty);
     });
 
     test('search matches title and description from any i18n locale', () {
@@ -287,50 +396,42 @@ void main() {
     });
 
     test('search ANDs with chips', () {
-      final filtered = filterCatalogChallenges(
-        all,
-        CatalogFilter(query: 'trail', pricingTypes: {PricingType.paid}),
-      );
-      expect(filtered, [paidOpenAt]);
-    });
-
-    test('unknown country_code does not match a region chip', () {
-      final unknown = _challenge(id: 'x', title: 'Mystery', countryCode: null);
       expect(
-        filterCatalogChallenges([unknown], CatalogFilter(countryCodes: {'CZ'})),
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(query: 'order', countryCodes: {'SK'}),
+        ),
+        [storySk],
+      );
+      expect(
+        filterCatalogChallenges(
+          all,
+          const CatalogFilter(query: 'woods', countryCodes: {'CZ'}),
+        ),
         isEmpty,
       );
     });
+
+    test(
+      'null country_code stays visible only when no country is selected',
+      () {
+        final blank = _challenge(id: 'x', title: 'Mystery', region: 'Alps');
+        expect(
+          filterCatalogChallenges([
+            blank,
+          ], const CatalogFilter(countryCodes: {'CZ'})),
+          isEmpty,
+        );
+        expect(filterCatalogChallenges([blank], const CatalogFilter()), [
+          blank,
+        ]);
+      },
+    );
 
     test('promos stay visible unless search is active', () {
       expect(const CatalogFilter().showPromos, isTrue);
-      expect(
-        CatalogFilter(pricingTypes: {PricingType.paid}).showPromos,
-        isTrue,
-      );
+      expect(const CatalogFilter(countryCodes: {'CZ'}).showPromos, isTrue);
       expect(const CatalogFilter(query: '  hike ').showPromos, isFalse);
-    });
-
-    test('length chips filter by waypoint-derived hike time', () {
-      final open = sampleOpenChallenge();
-      final stats = catalogRouteStatsByChallenge([open]);
-      expect(stats[open.challenge.id]?.lengthBand, CatalogLengthBand.short);
-      expect(
-        filterCatalogChallenges(
-          [open.challenge],
-          CatalogFilter(lengthBands: {CatalogLengthBand.short}),
-          routeStats: stats,
-        ),
-        [open.challenge],
-      );
-      expect(
-        filterCatalogChallenges(
-          [open.challenge],
-          CatalogFilter(lengthBands: {CatalogLengthBand.long}),
-          routeStats: stats,
-        ),
-        isEmpty,
-      );
     });
 
     test('difficulty chips skip null and exclude unmatched values', () {
@@ -350,13 +451,13 @@ void main() {
           easy,
           hard,
           unset,
-        ], CatalogFilter(difficulties: {CatalogDifficulty.easy})),
+        ], const CatalogFilter(difficulties: {CatalogDifficulty.easy})),
         [easy, unset],
       );
       expect(
         filterCatalogChallenges(
           [easy, hard, unset],
-          CatalogFilter(
+          const CatalogFilter(
             difficulties: {CatalogDifficulty.easy, CatalogDifficulty.hard},
           ),
         ),
@@ -367,43 +468,36 @@ void main() {
           easy,
           hard,
           unset,
-        ], CatalogFilter(difficulties: {CatalogDifficulty.normal})),
+        ], const CatalogFilter(difficulties: {CatalogDifficulty.normal})),
         [unset],
       );
     });
 
-    test('length and difficulty AND with other groups', () {
+    test('difficulty ANDs with country', () {
       final match = _challenge(
         id: 'm',
         title: 'Match',
-        pricing: PricingType.paid,
         difficulty: CatalogDifficulty.easy,
+        region: 'Vysočina',
         countryCode: 'CZ',
       );
-      final stats = {
-        'm': const CatalogRouteStats(estimatedDuration: Duration(hours: 2)),
-      };
       expect(
         filterCatalogChallenges(
           [match],
-          CatalogFilter(
-            pricingTypes: {PricingType.paid},
-            lengthBands: {CatalogLengthBand.short},
+          const CatalogFilter(
+            countryCodes: {'CZ'},
             difficulties: {CatalogDifficulty.easy},
           ),
-          routeStats: stats,
         ),
         [match],
       );
       expect(
         filterCatalogChallenges(
           [match],
-          CatalogFilter(
-            pricingTypes: {PricingType.paid},
-            lengthBands: {CatalogLengthBand.long},
+          const CatalogFilter(
+            countryCodes: {'SK'},
             difficulties: {CatalogDifficulty.easy},
           ),
-          routeStats: stats,
         ),
         isEmpty,
       );
@@ -416,6 +510,24 @@ void main() {
       expect(parseCountryCode(' SK '), 'SK');
       expect(parseCountryCode('US'), isNull);
       expect(parseCountryCode(''), isNull);
+      expect(parseCountryCode(null), isNull);
+      expect(parseCountryCode('CZ,AT'), isNull);
+    });
+
+    test('parses a comma-separated country_code list', () {
+      expect(parseCountryCodes('CZ,AT'), ['CZ', 'AT']);
+      expect(parseCountryCodes(' cz, at , pl '), ['CZ', 'AT', 'PL']);
+      expect(parseCountryCodes('CZ,CZ,AT'), ['CZ', 'AT']);
+      expect(parseCountryCodes('CZ,US'), ['CZ']);
+      expect(parseCountryCodes(''), isEmpty);
+      expect(parseCountryCodes(null), isEmpty);
+      expect(resolveCountryCodes(countryCode: 'CZ,AT', region: 'Tatry'), [
+        'CZ',
+        'AT',
+      ]);
+      expect(resolveCountryCodes(countryCode: null, region: 'Morava'), ['CZ']);
+      expect(resolveCountryCodes(countryCode: '  ', region: 'Beskydy'), ['CZ']);
+      expect(resolveCountryCode(countryCode: 'cz, at'), 'CZ,AT');
     });
 
     test('infers CZ from known Czech region labels', () {
@@ -430,9 +542,7 @@ void main() {
       ]) {
         expect(inferCountryCodeFromRegion(region), 'CZ', reason: region);
       }
-    });
-
-    test('leaves non-obvious regions null', () {
+      expect(inferCountryCodeFromRegion('Tatry'), 'SK');
       expect(inferCountryCodeFromRegion('Alps'), isNull);
       expect(inferCountryCodeFromRegion(null), isNull);
     });
@@ -446,16 +556,50 @@ void main() {
         'price_cents': 0,
         'currency': 'eur',
         'status': 'published',
-        'region': 'Pálava',
+        'region': 'České středohoří',
         'country_code': 'sk',
         'challenge_i18n': [
           {'locale': 'cs', 'title': 'C', 'description': ''},
         ],
       });
-      expect(withCode.region, 'Pálava');
+      expect(withCode.region, 'České středohoří');
       expect(withCode.countryCode, 'SK');
 
-      final inferred = challengeFromRow({
+      final palava = challengeFromRow({
+        'id': 'toulky-palavou',
+        'slug': 'toulky-palavou',
+        'access_mode': 'open',
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'region': 'Morava',
+        'country_code': 'CZ,AT',
+        'challenge_i18n': [
+          {'locale': 'cs', 'title': 'Toulky Pálavou', 'description': ''},
+        ],
+      });
+      expect(palava.countryCode, 'CZ,AT');
+      expect(
+        filterCatalogChallenges([
+          palava,
+        ], const CatalogFilter(countryCodes: {'CZ'})),
+        [palava],
+      );
+      expect(
+        filterCatalogChallenges([
+          palava,
+        ], const CatalogFilter(countryCodes: {'AT'})),
+        [palava],
+      );
+      expect(
+        filterCatalogChallenges([
+          palava,
+        ], const CatalogFilter(countryCodes: {'SK'})),
+        isEmpty,
+      );
+
+      final regionOnly = challengeFromRow({
         'id': 'c2',
         'slug': 'c2',
         'access_mode': 'story',
@@ -468,10 +612,10 @@ void main() {
           {'locale': 'cs', 'title': 'B', 'description': ''},
         ],
       });
-      expect(inferred.accessMode, AccessMode.story);
-      expect(inferred.region, 'Beskydy');
-      expect(inferred.countryCode, 'CZ');
-      expect(inferred.difficulty, isNull);
+      expect(regionOnly.accessMode, AccessMode.story);
+      expect(regionOnly.region, 'Beskydy');
+      expect(regionOnly.countryCode, 'CZ');
+      expect(regionOnly.difficulty, isNull);
 
       final graded = challengeFromRow({
         'id': 'c3',
@@ -482,11 +626,14 @@ void main() {
         'currency': 'eur',
         'status': 'published',
         'difficulty': 'hard',
+        'region': 'Beskydy',
         'challenge_i18n': [
           {'locale': 'cs', 'title': 'H', 'description': ''},
         ],
       });
       expect(graded.difficulty, CatalogDifficulty.hard);
+      expect(graded.region, 'Beskydy');
+      expect(graded.countryCode, 'CZ');
       expect(
         challengeFromRow({
           'id': 'c4',
@@ -553,7 +700,8 @@ void main() {
   });
 
   test('SVG flag assets exist for CZ SK AT DE PL', () {
-    for (final code in catalogCountryCodes) {
+    const flagCodes = ['CZ', 'SK', 'AT', 'DE', 'PL'];
+    for (final code in flagCodes) {
       final path = 'assets/flags/${code.toLowerCase()}.svg';
       expect(File(path).existsSync(), isTrue, reason: path);
       final svg = File(path).readAsStringSync();
@@ -603,10 +751,10 @@ void main() {
     expect(find.text('Open trail'), findsNothing);
   });
 
-  testWidgets('price and mode chips use AND across groups', (tester) async {
+  testWidgets('mode chip filters story versus open', (tester) async {
     await _pumpCatalog(tester);
 
-    await tester.tap(find.byKey(const Key('catalog-filter-price-paid')));
+    await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
     await tester.pumpAndSettle();
     expect(find.text('Story trail'), findsAtLeastNWidgets(1));
     expect(find.text('Open trail'), findsNothing);
@@ -614,17 +762,79 @@ void main() {
 
     await tester.tap(find.byKey(const Key('catalog-filter-mode-open')));
     await tester.pumpAndSettle();
-    expect(find.text(AppStrings('en').catalogNoMatches), findsOneWidget);
-    expect(find.text('Story trail'), findsNothing);
+    expect(find.text('Open trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('region chip keeps the matching country only', (tester) async {
+  testWidgets('country flag keeps the matching country only', (tester) async {
     await _pumpCatalog(tester);
 
     await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
     await tester.pumpAndSettle();
     expect(find.text('Open trail'), findsAtLeastNWidgets(1));
     expect(find.text('Story trail'), findsNothing);
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-story-1')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsNothing);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-filter-region-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(find.text('Výzvy ve vybrané zemi'), findsNothing);
+    expect(find.text('Challenges in the selected country'), findsNothing);
+    final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
+    final flagsRect = tester.getRect(find.byKey(const Key('catalog-regions')));
+    final resultsRect = tester.getRect(
+      find.byKey(const Key('catalog-country-results')),
+    );
+    expect(flagsRect.top, greaterThan(promoRect.bottom - 0.5));
+    expect(resultsRect.top - flagsRect.bottom, closeTo(16, 1));
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-regions-SK')));
+    await tester.pumpAndSettle();
+    expect(find.text('Story trail'), findsAtLeastNWidgets(1));
+    expect(find.text('Open trail'), findsNothing);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsNothing);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-filter-region-SK')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-SK')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isFalse,
+    );
   });
 
   testWidgets('empty state and clear filters restore the catalog', (
@@ -650,11 +860,11 @@ void main() {
 
   testWidgets('chip row clear-all also resets search', (tester) async {
     await _pumpCatalog(tester);
-    await tester.tap(find.byKey(const Key('catalog-filter-price-free')));
+    await tester.tap(find.byKey(const Key('catalog-filter-mode-open')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-clear-filters')), findsOneWidget);
     await tester.fling(
-      find.byKey(const Key('catalog-filter-primary-chips')),
+      find.byKey(const Key('catalog-filter-access-chips')),
       const Offset(-400, 0),
       1000,
     );
@@ -674,15 +884,25 @@ void main() {
     expect(field.decoration?.hintText, 'Hledat výzvy');
     expect(find.text('Otevřené'), findsOneWidget);
     expect(find.text('Příběh'), findsWidgets);
-    expect(find.text('Zdarma'), findsWidgets);
+    expect(find.text('Zdarma'), findsNothing);
+    expect(find.text('Placené'), findsNothing);
   });
 
-  testWidgets('region chips expose country-code semantics, not emoji', (
+  testWidgets('country chips are flags, not region names or emoji', (
     tester,
   ) async {
     await _pumpCatalog(tester);
     expect(find.byType(CatalogFilterChipRow), findsOneWidget);
-    expect(find.byType(CountryFlag), findsNWidgets(10));
+    expect(
+      find.descendant(
+        of: find.byType(CatalogFilterChipRow),
+        matching: find.byType(CountryFlag),
+      ),
+      findsNWidgets(catalogCountryCodes.length),
+    );
+    expect(find.text('Beskydy'), findsNothing);
+    expect(find.text('Morava'), findsNothing);
+    expect(find.byKey(const Key('catalog-filter-region-CZ')), findsOneWidget);
     expect(find.textContaining('🇨🇿'), findsNothing);
   });
 
@@ -707,14 +927,14 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
-        matching: find.byKey(const Key('catalog-length-difficulty-chips')),
+        matching: find.byKey(const Key('catalog-filter-access-chips')),
       ),
       findsOneWidget,
     );
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
-        matching: find.byKey(const Key('catalog-length-chips')),
+        matching: find.byKey(const Key('catalog-filter-country-chips')),
       ),
       findsOneWidget,
     );
@@ -759,7 +979,7 @@ void main() {
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
     expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
-    _expectLengthDifficultyUnderRegions(tester);
+    _expectAccessAndDifficultyAboveCountries(tester);
     expect(
       searchRect.left,
       headerRect.left + CatalogWelcomeHeader.innerHorizontalPadding,
@@ -779,13 +999,13 @@ void main() {
 
     final unselected = _chipMaterial(
       tester,
-      const Key('catalog-filter-price-free'),
+      const Key('catalog-filter-mode-story'),
     );
     expect(unselected.color, BrandColors.creamPill);
     expect((unselected.shape as RoundedRectangleBorder).side, BorderSide.none);
     final unselectedLabel = tester.widget<Text>(
       find.descendant(
-        of: find.byKey(const Key('catalog-filter-price-free')),
+        of: find.byKey(const Key('catalog-filter-mode-story')),
         matching: find.byType(Text),
       ),
     );
@@ -793,17 +1013,17 @@ void main() {
     expect(unselectedLabel.style?.fontWeight, FontWeight.w600);
     expect(unselectedLabel.style?.fontSize, CatalogFilterChip.fontSize);
 
-    await tester.tap(find.byKey(const Key('catalog-filter-price-free')));
+    await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
     await tester.pumpAndSettle();
     final selected = _chipMaterial(
       tester,
-      const Key('catalog-filter-price-free'),
+      const Key('catalog-filter-mode-story'),
     );
     expect(selected.color, BrandColors.cream);
     expect((selected.shape as RoundedRectangleBorder).side, BorderSide.none);
     final selectedLabel = tester.widget<Text>(
       find.descendant(
-        of: find.byKey(const Key('catalog-filter-price-free')),
+        of: find.byKey(const Key('catalog-filter-mode-story')),
         matching: find.byType(Text),
       ),
     );
@@ -824,7 +1044,7 @@ void main() {
     expect(clearLabel.style?.decoration, TextDecoration.underline);
   });
 
-  testWidgets('discover sections follow chips: hero, featured, regions', (
+  testWidgets('discover sections follow chips: hero, featured, promo', (
     tester,
   ) async {
     await _pumpCatalog(tester);
@@ -832,29 +1052,36 @@ void main() {
     expect(find.byKey(const Key('catalog-hero-open-1')), findsOneWidget);
     expect(find.byKey(const Key('catalog-hero-next')), findsOneWidget);
     expect(
-      find.byKey(const Key('catalog-length-difficulty-chips')),
+      find.byKey(const Key('catalog-filter-country-chips')),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('catalog-length-chips')), findsOneWidget);
-    expect(
-      find.byKey(const Key('catalog-filter-length-short')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('catalog-filter-region-CZ')), findsOneWidget);
     expect(find.byKey(const Key('catalog-difficulty-chips')), findsOneWidget);
     expect(
       find.byKey(const Key('catalog-filter-difficulty-easy')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('catalog-length-chips')), findsNothing);
     expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('promo-widget')), findsOneWidget);
     expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-regions-CZ')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-results')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-challenges')), findsNothing);
+    expect(find.text('Výzvy ve vybrané zemi'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-regions')),
+        matching: find.byType(CountryFlag),
+      ),
+      findsNWidgets(catalogCountryCodes.length),
+    );
 
     final chipsRect = tester.getRect(
       find.byKey(const Key('catalog-filter-chips')),
-    );
-    final lengthRect = tester.getRect(
-      find.byKey(const Key('catalog-length-chips')),
     );
     final difficultyRect = tester.getRect(
       find.byKey(const Key('catalog-difficulty-chips')),
@@ -866,59 +1093,60 @@ void main() {
       find.byKey(const Key('catalog-featured')),
     );
     final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
-    final regionsRect = tester.getRect(
-      find.byKey(const Key('catalog-regions')),
-    );
     final list = tester.widget<ListView>(
       find.byKey(const Key('catalog-results')),
     );
-    _expectLengthDifficultyUnderRegions(tester);
+    _expectAccessAndDifficultyAboveCountries(tester);
     expect(heroRect.top, greaterThan(chipsRect.bottom));
-    expect(heroRect.top, greaterThan(lengthRect.bottom));
     expect(heroRect.top, greaterThan(difficultyRect.bottom));
     expect(heroRect.width / heroRect.height, closeTo(16 / 9, 0.08));
     expect(featuredRect.top, greaterThan(heroRect.bottom - 0.5));
     expect(promoRect.top, greaterThan(featuredRect.bottom - 0.5));
-    expect(regionsRect.top, greaterThan(promoRect.bottom - 0.5));
     expect(promoRect.top - featuredRect.bottom, closeTo(16, 1));
-    expect(regionsRect.top - promoRect.bottom, closeTo(16, 1));
+    final countryRect = tester.getRect(
+      find.byKey(const Key('catalog-regions')),
+    );
+    expect(countryRect.top, greaterThan(promoRect.bottom - 0.5));
+    expect(countryRect.top - promoRect.bottom, closeTo(16, 1));
+    final resultsRect = tester.getRect(
+      find.byKey(const Key('catalog-country-results')),
+    );
+    expect(resultsRect.top - countryRect.bottom, closeTo(16, 1));
     expect(list.padding, const EdgeInsets.fromLTRB(16, 8, 16, 16));
     expect(
       tester
-          .widget<Material>(
-            find.byKey(const Key('promo-surface-promo-1')),
-          )
+          .widget<Material>(find.byKey(const Key('promo-surface-promo-1')))
           .color,
       BrandColors.forest,
     );
     expect(
       tester
-          .widget<Material>(
-            find.byKey(const Key('promo-surface-promo-1')),
-          )
+          .widget<Material>(find.byKey(const Key('promo-surface-promo-1')))
           .color,
       isNot(BrandColors.shellFill),
     );
   });
 
-  testWidgets('length chips stay in the main filter without waypoint data', (
+  testWidgets('country flags stay in the filter without waypoint data', (
     tester,
   ) async {
     await _pumpCatalog(
       tester,
       challenges: [
-        _challenge(id: 'solo', title: 'No route yet', countryCode: 'CZ'),
+        _challenge(id: 'solo', title: 'No route yet', region: 'Vysočina'),
       ],
       promos: const [],
     );
     expect(find.text('No route yet'), findsAtLeastNWidgets(1));
     expect(find.byKey(const Key('catalog-hero-solo')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-length-chips')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-filter-region-CZ')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-filter-region-PL')), findsOneWidget);
     expect(
-      find.byKey(const Key('catalog-filter-length-short')),
-      findsOneWidget,
+      find.byKey(const Key('catalog-filter-region-Vysočina')),
+      findsNothing,
     );
     expect(find.byKey(const Key('catalog-difficulty-chips')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-length-chips')), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-hero-solo')),
@@ -929,85 +1157,56 @@ void main() {
     expect(find.text(AppStrings('en').catalogFeatured), findsOneWidget);
   });
 
-  testWidgets(
-    'length and difficulty sit under regions in the welcome panel, not the results list',
-    (tester) async {
-      await _pumpCatalog(tester);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-welcome-header')),
-          matching: find.byKey(const Key('catalog-length-chips')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-welcome-header')),
-          matching: find.byKey(const Key('catalog-difficulty-chips')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(CatalogFilterChipRow),
-          matching: find.byKey(const Key('catalog-length-chips')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(CatalogFilterChipRow),
-          matching: find.byKey(const Key('catalog-difficulty-chips')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-filter-chips')),
-          matching: find.byKey(const Key('catalog-length-chips')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-filter-chips')),
-          matching: find.byKey(const Key('catalog-difficulty-chips')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-filter-primary-chips')),
-          matching: find.byKey(const Key('catalog-length-chips')),
-        ),
-        findsNothing,
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-length-difficulty-chips')),
-          matching: find.byKey(const Key('catalog-length-chips')),
-        ),
-        findsOneWidget,
-      );
-      _expectLengthDifficultyUnderRegions(tester);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-results')),
-          matching: find.byKey(const Key('catalog-length-chips')),
-        ),
-        findsNothing,
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('catalog-results')),
-          matching: find.byKey(const Key('catalog-difficulty-chips')),
-        ),
-        findsNothing,
-      );
-    },
-  );
+  testWidgets('difficulty sits beside access, and country flags sit below', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-welcome-header')),
+        matching: find.byKey(const Key('catalog-filter-country-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-filter-access-chips')),
+        matching: find.byKey(const Key('catalog-difficulty-chips')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CatalogFilterChipRow),
+        matching: find.byKey(const Key('catalog-filter-region-CZ')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-filter-access-chips')),
+        matching: find.byKey(const Key('catalog-filter-region-CZ')),
+      ),
+      findsNothing,
+    );
+    _expectAccessAndDifficultyAboveCountries(tester);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-results')),
+        matching: find.byKey(const Key('catalog-filter-country-chips')),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('catalog-results')),
+        matching: find.byKey(const Key('catalog-difficulty-chips')),
+      ),
+      findsNothing,
+    );
+  });
 
-  testWidgets('narrow panel keeps length and difficulty under regions', (
+  testWidgets('narrow panel keeps countries under access and difficulty', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(320, 2400);
@@ -1024,7 +1223,7 @@ void main() {
     final heroRect = tester.getRect(
       find.byKey(const Key('catalog-hero-carousel')),
     );
-    _expectLengthDifficultyUnderRegions(tester);
+    _expectAccessAndDifficultyAboveCountries(tester);
     expect(heroRect.top, greaterThan(chipsRect.bottom));
   });
 
@@ -1052,25 +1251,24 @@ void main() {
       expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
       expect(
         tester
-            .getSize(find.byKey(const Key('catalog-filter-price-free')))
+            .getSize(find.byKey(const Key('catalog-filter-mode-story')))
             .height,
         closeTo(CatalogFilterChip.height, 0.5),
       );
       expect(
-        tester.getSize(find.byKey(const Key('catalog-length-chips'))).height,
+        tester
+            .getSize(find.byKey(const Key('catalog-filter-country-chips')))
+            .height,
         closeTo(CatalogFilterChip.height, 0.5),
       );
-      _expectLengthDifficultyUnderRegions(tester);
+      _expectAccessAndDifficultyAboveCountries(tester);
     },
   );
 
   testWidgets('featured title is Czech', (tester) async {
     await _pumpCatalog(tester, locale: 'cs');
     expect(find.text('Vybrané'), findsOneWidget);
-    expect(
-      find.byKey(const Key('catalog-filter-length-short')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('catalog-filter-length-short')), findsNothing);
     expect(find.text('Krátká'), findsWidgets);
     expect(find.text('Lehká'), findsOneWidget);
     expect(find.text('Běžná'), findsOneWidget);
@@ -1085,16 +1283,147 @@ void main() {
     expect(find.text('Anspruchsvoll'), findsOneWidget);
   });
 
-  testWidgets('regions section uses the same country_code filter', (
+  testWidgets('country flag filters the main list and clear restores it', (
     tester,
   ) async {
-    await _pumpCatalog(tester);
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('catalog-regions-CZ')),
-      400,
-      scrollable: catalogVerticalScrollable(),
+    Challenge row({
+      required String id,
+      required String title,
+      String? region,
+      String? countryCode,
+      String accessMode = 'open',
+      String? difficulty,
+    }) {
+      return challengeFromRow({
+        'id': id,
+        'slug': id,
+        'access_mode': accessMode,
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'region': region,
+        'country_code': countryCode,
+        'difficulty': difficulty,
+        'challenge_i18n': [
+          {'locale': 'en', 'title': title, 'description': ''},
+        ],
+      });
+    }
+
+    final beskydy = row(
+      id: 'beskydy',
+      title: 'Beskydy ridge',
+      region: 'Beskydy',
+      accessMode: 'story',
+      difficulty: 'easy',
     );
+    final tatry = row(
+      id: 'tatry',
+      title: 'Tatra path',
+      region: 'Tatry',
+      difficulty: 'hard',
+    );
+    final alps = row(id: 'alps', title: 'Alpine unknown', region: 'Alps');
+    expect(beskydy.countryCode, 'CZ');
+    expect(tatry.countryCode, 'SK');
+    expect(alps.countryCode, isNull);
+
+    await _pumpCatalog(
+      tester,
+      challenges: [beskydy, tatry, alps],
+      details: [
+        for (final challenge in [beskydy, tatry, alps])
+          ChallengeDetail(challenge: challenge, waypoints: const []),
+      ],
+      promos: const [],
+    );
+
+    expect(find.text('Beskydy ridge'), findsAtLeastNWidgets(1));
+    expect(find.text('Tatra path'), findsAtLeastNWidgets(1));
+    expect(find.text('Alpine unknown'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-regions')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-results')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-alps')), findsOneWidget);
+    expect(find.text('Výzvy ve vybrané zemi'), findsNothing);
+    final featuredBottom = tester
+        .getRect(find.byKey(const Key('catalog-featured')))
+        .bottom;
+    final countryTop = tester
+        .getRect(find.byKey(const Key('catalog-regions')))
+        .top;
+    expect(countryTop - featuredBottom, closeTo(16, 1));
+
     await tester.tap(find.byKey(const Key('catalog-regions-CZ')));
+    await tester.pumpAndSettle();
+    expect(find.text('Beskydy ridge'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-beskydy')), findsOneWidget);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-filter-region-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(find.text('Tatra path'), findsNothing);
+    expect(find.text('Alpine unknown'), findsNothing);
+    expect(find.byKey(const Key('catalog-hero-tatry')), findsNothing);
+    expect(find.byKey(const Key('catalog-featured-alps')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-alps')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-featured-beskydy')), findsOneWidget);
+
+    await _revealChip(tester, const Key('catalog-filter-difficulty-hard'));
+    await tester.tap(find.byKey(const Key('catalog-filter-difficulty-hard')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-no-matches')), findsOneWidget);
+    expect(find.text('Beskydy ridge'), findsNothing);
+    expect(find.byKey(const Key('catalog-regions')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-results')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-difficulty-hard')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-featured-beskydy')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    expect(find.text('Beskydy ridge'), findsAtLeastNWidgets(1));
+    expect(find.text('Tatra path'), findsNothing);
+    expect(find.text('Alpine unknown'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
+    await tester.pumpAndSettle();
+    expect(find.text('Tatra path'), findsAtLeastNWidgets(1));
+    expect(find.text('Alpine unknown'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('catalog-hero-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-alps')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-beskydy')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-alps')), findsOneWidget);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isFalse,
+    );
+  });
+
+  testWidgets('country flag filters featured by country_code', (tester) async {
+    await _pumpCatalog(tester);
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
     await tester.pumpAndSettle();
     expect(find.text('Open trail'), findsAtLeastNWidgets(1));
     expect(find.text('Story trail'), findsNothing);
@@ -1102,6 +1431,172 @@ void main() {
       find.byKey(const Key('catalog-filter-region-CZ')),
     );
     expect(filterChip.selected, isTrue);
+    expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-featured-story-1')), findsNothing);
+    expect(find.byKey(const Key('catalog-country-open-1')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-story-1')), findsNothing);
+    expect(
+      tester
+          .widget<CatalogFilterChip>(
+            find.byKey(const Key('catalog-regions-CZ')),
+          )
+          .selected,
+      isTrue,
+    );
+    final promoBottom = tester
+        .getRect(find.byKey(const Key('promo-widget')))
+        .bottom;
+    final countryTop = tester
+        .getRect(find.byKey(const Key('catalog-regions')))
+        .top;
+    expect(countryTop - promoBottom, closeTo(16, 1));
+    final resultsTop = tester
+        .getRect(find.byKey(const Key('catalog-country-results')))
+        .top;
+    expect(
+      resultsTop -
+          tester.getRect(find.byKey(const Key('catalog-regions'))).bottom,
+      closeTo(16, 1),
+    );
+  });
+
+  testWidgets('CZ flag keeps resolved CZ rows in the list under the flags', (
+    tester,
+  ) async {
+    Challenge row({
+      required String id,
+      required String title,
+      String? region,
+      String? countryCode,
+    }) {
+      return challengeFromRow({
+        'id': id,
+        'slug': id,
+        'access_mode': 'open',
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'region': region,
+        'country_code': countryCode,
+        'challenge_i18n': [
+          {'locale': 'en', 'title': title, 'description': ''},
+        ],
+      });
+    }
+
+    final stored = row(id: 'stored', title: 'Stored CZ', countryCode: 'CZ');
+    final inferred = row(
+      id: 'inferred',
+      title: 'Inferred CZ',
+      region: 'Morava',
+    );
+    final slovak = row(
+      id: 'slovak',
+      title: 'Stored SK',
+      region: 'Beskydy',
+      countryCode: 'SK',
+    );
+    await _pumpCatalog(
+      tester,
+      challenges: [stored, inferred, slovak],
+      details: [
+        for (final challenge in [stored, inferred, slovak])
+          ChallengeDetail(challenge: challenge, waypoints: const []),
+      ],
+      promos: const [],
+    );
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-country-stored')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-inferred')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-slovak')), findsNothing);
+    expect(find.text('Stored SK'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-regions-CZ')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('catalog-country-stored')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-inferred')), findsOneWidget);
+    expect(find.byKey(const Key('catalog-country-slovak')), findsOneWidget);
+  });
+
+  testWidgets('CZ,AT challenge stays under both the CZ and AT flags', (
+    tester,
+  ) async {
+    Challenge row({
+      required String id,
+      required String title,
+      String? region,
+      String? countryCode,
+    }) {
+      return challengeFromRow({
+        'id': id,
+        'slug': id,
+        'access_mode': 'open',
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'region': region,
+        'country_code': countryCode,
+        'challenge_i18n': [
+          {'locale': 'en', 'title': title, 'description': ''},
+        ],
+      });
+    }
+
+    final palava = row(
+      id: 'toulky-palavou',
+      title: 'Toulky Palavou',
+      region: 'Morava',
+      countryCode: 'CZ,AT',
+    );
+    final tatry = row(
+      id: 'tatry',
+      title: 'Tatra path',
+      region: 'Morava',
+      countryCode: 'SK',
+    );
+    expect(palava.countryCode, 'CZ,AT');
+
+    await _pumpCatalog(
+      tester,
+      challenges: [palava, tatry],
+      details: [
+        for (final challenge in [palava, tatry])
+          ChallengeDetail(challenge: challenge, waypoints: const []),
+      ],
+      promos: const [],
+    );
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('catalog-country-toulky-palavou')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-regions-AT')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('catalog-country-toulky-palavou')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-regions-AT')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-regions-SK')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('catalog-country-toulky-palavou')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
   });
 
   testWidgets('featured follows the same chips as the rest of the catalog', (
@@ -1111,7 +1606,7 @@ void main() {
     expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
     expect(find.byKey(const Key('catalog-featured-story-1')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('catalog-filter-price-paid')));
+    await tester.tap(find.byKey(const Key('catalog-filter-mode-story')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('catalog-featured-open-1')), findsNothing);
     expect(find.byKey(const Key('catalog-featured-story-1')), findsOneWidget);
@@ -1142,26 +1637,42 @@ void main() {
     );
   });
 
-  testWidgets('length chip filters featured and clear-all restores it', (
+  testWidgets('null country_code stays listed until a flag is selected', (
     tester,
   ) async {
-    await _pumpCatalog(tester);
-    await _revealChip(tester, const Key('catalog-filter-length-long'));
-    await tester.tap(find.byKey(const Key('catalog-filter-length-long')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('catalog-no-matches')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-featured-open-1')), findsNothing);
-
-    await tester.fling(
-      find.byKey(const Key('catalog-filter-primary-chips')),
-      const Offset(-400, 0),
-      1000,
+    final unset = _challenge(
+      id: 'unset-country',
+      title: 'No country',
+      region: 'Beskydy',
     );
+    final named = _challenge(
+      id: 'named',
+      title: 'Named range',
+      region: 'Promo',
+      countryCode: 'PL',
+    );
+    await _pumpCatalog(
+      tester,
+      challenges: [unset, named],
+      details: [
+        ChallengeDetail(challenge: unset, waypoints: const []),
+        ChallengeDetail(challenge: named, waypoints: const []),
+      ],
+      promos: const [],
+    );
+    expect(find.text('No country'), findsAtLeastNWidgets(1));
+    expect(find.text('Named range'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('catalog-filter-region-PL')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-PL')));
     await tester.pumpAndSettle();
+    expect(find.text('Named range'), findsAtLeastNWidgets(1));
+    expect(find.text('No country'), findsNothing);
+
     await tester.tap(find.byKey(const Key('catalog-clear-filters')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('catalog-featured-open-1')), findsOneWidget);
-    expect(find.byKey(const Key('catalog-featured-story-1')), findsOneWidget);
+    expect(find.text('No country'), findsAtLeastNWidgets(1));
+    expect(find.text('Named range'), findsAtLeastNWidgets(1));
   });
 
   testWidgets(
@@ -1179,11 +1690,7 @@ void main() {
         difficulty: CatalogDifficulty.hard,
         countryCode: 'SK',
       );
-      final unset = _challenge(
-        id: 'unset-1',
-        title: 'No grade',
-        countryCode: 'AT',
-      );
+      final unset = _challenge(id: 'unset-1', title: 'No grade');
       await _pumpCatalog(
         tester,
         challenges: [easy, hard, unset],
@@ -1228,7 +1735,7 @@ void main() {
       expect(find.text('No grade'), findsAtLeastNWidgets(1));
 
       await tester.fling(
-        find.byKey(const Key('catalog-filter-primary-chips')),
+        find.byKey(const Key('catalog-filter-access-chips')),
         const Offset(-400, 0),
         1000,
       );
