@@ -436,8 +436,9 @@ class MemoryPhotos implements PhotoStorage {
     required Uint8List bytes,
     required String mimeType,
   }) async {
-    if (bytes.isEmpty) throw StateError('empty photo');
-    final path = '$userId/$challengeId/$waypointId/photo.jpg';
+    requireWaypointPhoto(bytes: bytes, mimeType: mimeType);
+    final ext = waypointPhotoFileExtension(mimeType);
+    final path = '$userId/$challengeId/$waypointId/photo.$ext';
     uploaded.add(path);
     return path;
   }

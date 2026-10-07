@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/auth_redirect.dart';
 import '../domain/challenge_photos.dart';
+import '../domain/photo_verify.dart';
 import '../models/models.dart';
 import 'auth_identity.dart';
 import 'challenge_mapping.dart';
@@ -557,8 +558,10 @@ class SupabasePhotoStorage implements PhotoStorage {
     required Uint8List bytes,
     required String mimeType,
   }) async {
+    requireWaypointPhoto(bytes: bytes, mimeType: mimeType);
     final id = const Uuid().v4();
-    final path = '$userId/$challengeId/$waypointId/$id.jpg';
+    final ext = waypointPhotoFileExtension(mimeType);
+    final path = '$userId/$challengeId/$waypointId/$id.$ext';
     await _client.storage
         .from(bucket)
         .uploadBinary(
