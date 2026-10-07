@@ -98,7 +98,9 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
   }
 
   void _retry() {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
   }
 
   Future<void> _buy(RewardVariant variant) async {

@@ -174,6 +174,70 @@ void main() {
     await tester.pumpAndSettle();
     expect(shared, ['vyslapni-diplom-open-trail.png']);
   });
+
+  testWidgets('retry after a failed diploma load does not return a Future', (
+    tester,
+  ) async {
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      completionLabel: 'dokončeno dne 07.10.2026',
+      imageError: 'error',
+    );
+    final previousProvider = diplomaImageProvider;
+    diplomaImageProvider = (_) => MemoryImage(Uint8List.fromList(_tinyPng));
+    addTearDown(() => diplomaImageProvider = previousProvider);
+
+    final open = sampleOpenChallenge();
+    final services = AppServices(
+      config: const AppConfig(
+        supabaseUrl: 'https://example.supabase.co',
+        supabaseAnonKey: 'anon',
+        stripePublishableKey: 'pk_test',
+      ),
+      auth: MemoryAuth(
+        user: const Profile(id: 'user-1', locale: 'cs', displayName: 'Ada'),
+      ),
+      catalog: MemoryCatalog(challenges: [open.challenge], details: [open]),
+      progress: MemoryProgress(details: [open]),
+      purchases: MemoryPurchases(),
+      photos: MemoryPhotos(),
+      photoCapture: MemoryCapture(),
+      diplomas: diplomas,
+    );
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'en'),
+          ),
+          Provider.value(value: services),
+        ],
+        child: const MaterialApp(home: DiplomaScreen(challengeId: 'open-1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('dokončeno dne 07.10.2026'), findsOneWidget);
+    expect(find.byKey(const Key('diploma-error')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('diploma-retry')));
+    expect(find.byKey(const Key('diploma-retry')), findsOneWidget);
+
+    diplomas.imageError = null;
+    diplomas.imageUrl = 'https://example.test/diploma.png';
+    await tester.tap(find.byKey(const Key('diploma-retry')));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('diploma-image')), findsOneWidget);
+    expect(find.byKey(const Key('diploma-error')), findsNothing);
+    expect(diplomas.imageRequests, ['open-1', 'open-1']);
+  });
 }
 
 const _tinyPng = <int>[
