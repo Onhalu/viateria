@@ -246,6 +246,60 @@ void main() {
       ]);
     });
 
+    test('comma-separated country_code matches each listed code', () {
+      final palava = _challenge(
+        id: 'toulky-palavou',
+        title: 'Toulky Pálavou',
+        region: 'Morava',
+        countryCode: 'CZ,AT',
+      );
+      final spaced = _challenge(
+        id: 'spaced',
+        title: 'Spaced codes',
+        region: 'Tatry',
+        countryCode: 'cz, at, pl',
+      );
+      final single = _challenge(
+        id: 'single',
+        title: 'Single CZ',
+        countryCode: 'CZ',
+      );
+      final inferred = _challenge(
+        id: 'inferred',
+        title: 'Inferred CZ',
+        region: 'Beskydy',
+      );
+      final rows = [palava, spaced, single, inferred];
+
+      expect(
+        filterCatalogChallenges(
+          rows,
+          const CatalogFilter(countryCodes: {'CZ'}),
+        ).map((c) => c.id),
+        ['toulky-palavou', 'spaced', 'single', 'inferred'],
+      );
+      expect(
+        filterCatalogChallenges(
+          rows,
+          const CatalogFilter(countryCodes: {'AT'}),
+        ).map((c) => c.id),
+        ['toulky-palavou', 'spaced'],
+      );
+      expect(
+        filterCatalogChallenges(
+          rows,
+          const CatalogFilter(countryCodes: {'SK'}),
+        ),
+        isEmpty,
+      );
+      expect(
+        filterCatalogChallenges([
+          inferred,
+        ], const CatalogFilter(countryCodes: {'AT'})),
+        isEmpty,
+      );
+    });
+
     test('country chip matches resolved country, and stored code wins', () {
       final hills = _challenge(id: 's', title: 'Hills', region: 'Česko');
       final labeledSk = _challenge(
@@ -457,6 +511,23 @@ void main() {
       expect(parseCountryCode('US'), isNull);
       expect(parseCountryCode(''), isNull);
       expect(parseCountryCode(null), isNull);
+      expect(parseCountryCode('CZ,AT'), isNull);
+    });
+
+    test('parses a comma-separated country_code list', () {
+      expect(parseCountryCodes('CZ,AT'), ['CZ', 'AT']);
+      expect(parseCountryCodes(' cz, at , pl '), ['CZ', 'AT', 'PL']);
+      expect(parseCountryCodes('CZ,CZ,AT'), ['CZ', 'AT']);
+      expect(parseCountryCodes('CZ,US'), ['CZ']);
+      expect(parseCountryCodes(''), isEmpty);
+      expect(parseCountryCodes(null), isEmpty);
+      expect(resolveCountryCodes(countryCode: 'CZ,AT', region: 'Tatry'), [
+        'CZ',
+        'AT',
+      ]);
+      expect(resolveCountryCodes(countryCode: null, region: 'Morava'), ['CZ']);
+      expect(resolveCountryCodes(countryCode: '  ', region: 'Beskydy'), ['CZ']);
+      expect(resolveCountryCode(countryCode: 'cz, at'), 'CZ,AT');
     });
 
     test('infers CZ from known Czech region labels', () {
@@ -493,6 +564,40 @@ void main() {
       });
       expect(withCode.region, 'České středohoří');
       expect(withCode.countryCode, 'SK');
+
+      final palava = challengeFromRow({
+        'id': 'toulky-palavou',
+        'slug': 'toulky-palavou',
+        'access_mode': 'open',
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'region': 'Morava',
+        'country_code': 'CZ,AT',
+        'challenge_i18n': [
+          {'locale': 'cs', 'title': 'Toulky Pálavou', 'description': ''},
+        ],
+      });
+      expect(palava.countryCode, 'CZ,AT');
+      expect(
+        filterCatalogChallenges([
+          palava,
+        ], const CatalogFilter(countryCodes: {'CZ'})),
+        [palava],
+      );
+      expect(
+        filterCatalogChallenges([
+          palava,
+        ], const CatalogFilter(countryCodes: {'AT'})),
+        [palava],
+      );
+      expect(
+        filterCatalogChallenges([
+          palava,
+        ], const CatalogFilter(countryCodes: {'SK'})),
+        isEmpty,
+      );
 
       final regionOnly = challengeFromRow({
         'id': 'c2',
@@ -1414,6 +1519,84 @@ void main() {
     expect(find.byKey(const Key('catalog-country-stored')), findsOneWidget);
     expect(find.byKey(const Key('catalog-country-inferred')), findsOneWidget);
     expect(find.byKey(const Key('catalog-country-slovak')), findsOneWidget);
+  });
+
+  testWidgets('CZ,AT challenge stays under both the CZ and AT flags', (
+    tester,
+  ) async {
+    Challenge row({
+      required String id,
+      required String title,
+      String? region,
+      String? countryCode,
+    }) {
+      return challengeFromRow({
+        'id': id,
+        'slug': id,
+        'access_mode': 'open',
+        'pricing_type': 'free',
+        'price_cents': 0,
+        'currency': 'eur',
+        'status': 'published',
+        'region': region,
+        'country_code': countryCode,
+        'challenge_i18n': [
+          {'locale': 'en', 'title': title, 'description': ''},
+        ],
+      });
+    }
+
+    final palava = row(
+      id: 'toulky-palavou',
+      title: 'Toulky Palavou',
+      region: 'Morava',
+      countryCode: 'CZ,AT',
+    );
+    final tatry = row(
+      id: 'tatry',
+      title: 'Tatra path',
+      region: 'Morava',
+      countryCode: 'SK',
+    );
+    expect(palava.countryCode, 'CZ,AT');
+
+    await _pumpCatalog(
+      tester,
+      challenges: [palava, tatry],
+      details: [
+        for (final challenge in [palava, tatry])
+          ChallengeDetail(challenge: challenge, waypoints: const []),
+      ],
+      promos: const [],
+    );
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('catalog-country-toulky-palavou')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-filter-region-CZ')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-regions-AT')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('catalog-country-toulky-palavou')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('catalog-country-tatry')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('catalog-regions-AT')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('catalog-regions-SK')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('catalog-country-toulky-palavou')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('catalog-country-tatry')), findsOneWidget);
   });
 
   testWidgets('featured follows the same chips as the rest of the catalog', (

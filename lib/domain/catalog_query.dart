@@ -78,8 +78,9 @@ class CatalogFilter {
   final String query;
   final Set<AccessMode> accessModes;
 
-  /// Exact country codes (CZ, SK, AT, DE, PL).
+  /// Selected flag codes (CZ, SK, AT, DE, PL).
   /// Empty means every country, including unresolved ones.
+  /// A challenge matches when any selected code is in its parsed list.
   final Set<String> countryCodes;
   final Set<CatalogDifficulty> difficulties;
 
@@ -111,11 +112,25 @@ class CatalogFilter {
 }
 
 /// Keep ISO codes the flag chips understand. Anything else is unknown.
+///
+/// One token only. A comma-separated value is handled by [parseCountryCodes].
 String? parseCountryCode(String? raw) {
   if (raw == null) return null;
   final code = raw.trim().toUpperCase();
   if (code.isEmpty) return null;
   return catalogCountryCodes.contains(code) ? code : null;
+}
+
+/// Codes in a `country_code` cell. Split on commas, trim, uppercase.
+/// Unknown tokens are dropped. Order is kept and duplicates collapse.
+List<String> parseCountryCodes(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return const [];
+  final out = <String>[];
+  for (final part in raw.split(',')) {
+    final code = parseCountryCode(part);
+    if (code != null && !out.contains(code)) out.add(code);
+  }
+  return out;
 }
 
 /// Best-effort map from the free-text [region] display string.
@@ -158,9 +173,22 @@ String? inferCountryCodeFromRegion(String? region) {
   return null;
 }
 
-/// Prefer the stored `country_code`. Fall back to a known region label.
+/// Prefer the stored `country_code` list. An empty cell falls back to one
+/// known region label. A stored list wins even when region text names
+/// another country.
+List<String> resolveCountryCodes({String? countryCode, String? region}) {
+  final parsed = parseCountryCodes(countryCode);
+  if (parsed.isNotEmpty) return parsed;
+  final inferred = inferCountryCodeFromRegion(region);
+  if (inferred == null) return const [];
+  return [inferred];
+}
+
+/// Canonical `country_code` for the model: `CZ` or `CZ,AT`, or null.
 String? resolveCountryCode({String? countryCode, String? region}) {
-  return parseCountryCode(countryCode) ?? inferCountryCodeFromRegion(region);
+  final codes = resolveCountryCodes(countryCode: countryCode, region: region);
+  if (codes.isEmpty) return null;
+  return codes.join(',');
 }
 
 /// Case- and diacritic-insensitive haystack for catalog search.
@@ -175,9 +203,10 @@ String foldCatalogText(String input) {
 /// Mode OR, country OR, difficulty OR; groups AND search AND chips.
 ///
 /// Search matches any locale's title + description on the challenge.
-/// Country chips match [resolveCountryCode] exactly. An explicit
-/// `country_code` wins over region text. A challenge with no resolved
-/// country stays in the list only when no country chip is selected.
+/// Country chips match when the selected code is in [resolveCountryCodes].
+/// An explicit `country_code` list wins over region text. A challenge with
+/// no resolved country stays in the list only when no country chip is
+/// selected.
 /// A null CMS difficulty does not exclude a challenge when a difficulty
 /// chip is active — only challenges that have a value are filtered.
 List<Challenge> filterCatalogChallenges(
@@ -202,11 +231,11 @@ bool _matchesChallenge(
     return false;
   }
   if (filter.countryCodes.isNotEmpty) {
-    final code = resolveCountryCode(
+    final codes = resolveCountryCodes(
       countryCode: challenge.countryCode,
       region: challenge.region,
     );
-    if (code == null || !filter.countryCodes.contains(code)) {
+    if (codes.isEmpty || !codes.any(filter.countryCodes.contains)) {
       return false;
     }
   }

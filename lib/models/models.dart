@@ -90,8 +90,9 @@ class Challenge {
   /// Catalog country chips use [countryCode], not this string.
   final String? region;
 
-  /// ISO code from `challenges.country_code`, or inferred from [region]
-  /// when that column is null. Catalog flags match this value exactly.
+  /// ISO codes from `challenges.country_code` (`CZ` or `CZ,AT`), or one
+  /// code inferred from [region] when that column is empty. Catalog flags
+  /// match when the selected code is in this list.
   final String? countryCode;
 
   /// CMS `easy` / `normal` / `hard`. Null hides the catalog label.
