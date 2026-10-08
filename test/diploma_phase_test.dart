@@ -61,6 +61,55 @@ void main() {
     );
   });
 
+  test('reward panel uses the payment rule without requiring completion', () {
+    expect(
+      ChallengeReward.isRewardAccessible(
+        purchasePaid: false,
+        diplomaPriceCents: 499,
+        requiresPurchase: true,
+      ),
+      isFalse,
+    );
+    expect(
+      ChallengeReward.isRewardAccessible(
+        purchasePaid: true,
+        diplomaPriceCents: 499,
+      ),
+      isTrue,
+    );
+    expect(
+      ChallengeReward.isRewardAccessible(
+        purchasePaid: false,
+        diplomaPriceCents: 0,
+        requiresPurchase: true,
+      ),
+      isTrue,
+    );
+    expect(
+      ChallengeReward.isRewardAccessible(
+        purchasePaid: false,
+        diplomaPriceCents: null,
+        requiresPurchase: false,
+      ),
+      isTrue,
+    );
+    expect(
+      ChallengeReward.isDiplomaEntitled(
+        challengeCompleted: false,
+        purchasePaid: true,
+        diplomaPriceCents: 499,
+      ),
+      isFalse,
+    );
+    expect(
+      ChallengeReward.isRewardAccessible(
+        purchasePaid: true,
+        diplomaPriceCents: 499,
+      ),
+      isTrue,
+    );
+  });
+
   test('remote diploma_status wins over the local guess', () {
     expect(
       resolveDiplomaPhase(

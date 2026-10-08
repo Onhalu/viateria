@@ -495,9 +495,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             .auth
             .currentUser
             ?.displayName;
-        final rewardVariant = ChallengeReward.variant(
-          purchase: data.purchase,
-          productVariant: challenge.rewardVariant,
+        final rewardLocked = !ChallengeReward.isRewardAccessible(
+          purchasePaid: purchasePaid,
+          diplomaPriceCents: challenge.diplomaPriceCents,
+          requiresPurchase: challenge.isPaid,
         );
         final gallery = data.photos;
         return CustomScrollView(
@@ -656,8 +657,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     strings: strings,
                     completed: isComplete,
                     entitled: diplomaEntitled,
-                    paid: purchasePaid,
-                    variant: rewardVariant,
+                    locked: rewardLocked,
                     challengeId: challenge.id,
                     diplomas: context.read<AppServices>().diplomas,
                     hasDisplayName:

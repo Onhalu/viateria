@@ -1025,37 +1025,47 @@ void main() {
       expect(purchases.purchases.containsKey('story-1'), isFalse);
     });
 
-    testWidgets(
-      'locked unpaid reward shows both placeholders and is not tappable',
-      (tester) async {
-        useTallView(tester);
-        final strings = AppStrings('cs');
-        await tester.pumpWidget(wrapScreen(buildServices()));
-        await tester.pumpAndSettle();
+    testWidgets('free challenge reward shows only the diploma and no lock', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final strings = AppStrings('cs');
+      await tester.pumpWidget(wrapScreen(buildServices()));
+      await tester.pumpAndSettle();
 
-        await tester.ensureVisible(
-          find.byKey(const Key('challenge-reward-section')),
-        );
-        expect(find.text(strings.rewardTitle), findsOneWidget);
-        expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
-        expect(
-          find.byKey(const Key('challenge-reward-incomplete')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const Key('challenge-reward-diploma-blur')),
-          findsNothing,
-        );
-        expect(
-          find.byKey(const Key('challenge-reward-diploma')),
-          findsOneWidget,
-        );
-        expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
-        expect(find.text(strings.rewardUnlocksAfterComplete), findsOneWidget);
-        expect(find.text(strings.rewardDependsOnPaidOption), findsOneWidget);
-        expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
-      },
-    );
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-section')),
+      );
+      expect(find.text(strings.rewardTitle), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsNothing,
+      );
+      expect(find.byIcon(Icons.lock_outline), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-incomplete')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('challenge-reward-diploma-blur')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+      expect(find.byIcon(Icons.workspace_premium_outlined), findsNothing);
+      expect(find.text(strings.rewardUnlocksAfterComplete), findsOneWidget);
+      expect(find.text(strings.diplomaLabel), findsOneWidget);
+      expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+      expect(
+        tester
+            .widget<IgnorePointer>(
+              find.byKey(const Key('challenge-reward-guard')),
+            )
+            .ignoring,
+        isFalse,
+      );
+    });
 
     testWidgets('paid diploma-only locked reward hides the medal slot', (
       tester,
@@ -1082,7 +1092,7 @@ void main() {
       );
       expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
       expect(
-        find.byKey(const Key('challenge-reward-unpaid-hint')),
+        find.byKey(const Key('challenge-reward-lock-overlay')),
         findsNothing,
       );
     });
@@ -1120,12 +1130,13 @@ void main() {
           findsNothing,
         );
         expect(find.text(strings.saveDiploma), findsOneWidget);
-        expect(find.text(strings.woodenMedal), findsOneWidget);
-        expect(find.byKey(const Key('challenge-reward-medal')), findsOneWidget);
+        expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+        expect(find.byIcon(Icons.workspace_premium_outlined), findsNothing);
         expect(
           find.byKey(const Key('challenge-reward-diploma')),
           findsOneWidget,
         );
+        expect(find.text(strings.diplomaLabel), findsOneWidget);
 
         final cta = tester.widget<FilledButton>(
           find.byKey(const Key('challenge-save-diploma')),
@@ -1142,34 +1153,296 @@ void main() {
       },
     );
 
-    testWidgets(
-      'completed unpaid reward blurs the diploma and does not request the file',
-      (tester) async {
-        useTallView(tester);
-        final story = sampleStoryChallenge();
-        final diplomas = MemoryDiplomaClient();
-        await tester.pumpWidget(
-          wrapScreen(
-            buildServices(
-              detail: story,
-              progress: completedProgress(story),
-              diplomas: diplomas,
-            ),
-            locale: 'cs',
-            challengeId: 'story-1',
+    testWidgets('unpaid paid challenge covers the reward and ignores taps', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final semantics = tester.ensureSemantics();
+      final strings = AppStrings('cs');
+      final story = sampleStoryChallenge();
+      final diplomas = MemoryDiplomaClient();
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(
+            detail: story,
+            progress: completedProgress(story),
+            diplomas: diplomas,
           ),
-        );
-        await tester.pumpAndSettle();
+          locale: 'cs',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await tester.ensureVisible(
-          find.byKey(const Key('challenge-reward-diploma-blur')),
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-lock')),
+      );
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsOneWidget,
+      );
+      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-diploma-blur')),
+        findsNothing,
+      );
+      expect(diplomas.imageRequests, isEmpty);
+      expect(find.bySemanticsLabel(strings.rewardLockedLabel), findsOneWidget);
+
+      final lockSize = tester.getSize(
+        find.byKey(const Key('challenge-reward-lock')),
+      );
+      expect(lockSize.width, greaterThanOrEqualTo(44));
+      expect(lockSize.height, greaterThanOrEqualTo(44));
+      expect(
+        tester
+            .widget<IgnorePointer>(
+              find.byKey(const Key('challenge-reward-guard')),
+            )
+            .ignoring,
+        isTrue,
+      );
+      final scrim = tester.widget<ColoredBox>(
+        find.byKey(const Key('challenge-reward-lock-scrim')),
+      );
+      expect(scrim.color, BrandColors.cream.withValues(alpha: 0.35));
+      final icon = tester.widget<Icon>(
+        find.descendant(
+          of: find.byKey(const Key('challenge-reward-section')),
+          matching: find.byIcon(Icons.lock_outline),
+        ),
+      );
+      expect(icon.color, BrandColors.forest);
+      expect(icon.size, 32);
+      final clip = tester.widget<ClipRRect>(
+        find.byKey(const Key('challenge-reward-clip')),
+      );
+      expect(clip.borderRadius, BorderRadius.circular(16));
+
+      final diplomaCenter = tester.getCenter(
+        find.byKey(const Key('challenge-reward-diploma')),
+      );
+      expect(
+        tester
+            .getRect(find.byKey(const Key('challenge-reward-lock-overlay')))
+            .contains(diplomaCenter),
+        isTrue,
+      );
+
+      await tester.tap(find.byKey(const Key('challenge-reward-lock')));
+      await tester.pumpAndSettle();
+      await tester.tapAt(diplomaCenter);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('challenge-title')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+      expect(diplomas.imageRequests, isEmpty);
+      semantics.dispose();
+    });
+
+    testWidgets('zero-price paid challenge shows the reward without a lock', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final story = sampleStoryChallenge();
+      final challenge = story.challenge;
+      final zero = ChallengeDetail(
+        challenge: Challenge(
+          id: challenge.id,
+          slug: challenge.slug,
+          accessMode: challenge.accessMode,
+          pricingType: PricingType.paid,
+          priceCents: challenge.priceCents,
+          diplomaPriceCents: 0,
+          medalPriceCents: challenge.medalPriceCents,
+          currency: challenge.currency,
+          status: challenge.status,
+          translations: challenge.translations,
+          fapiFormUrlDiploma: challenge.fapiFormUrlDiploma,
+          fapiFormUrlMedal: challenge.fapiFormUrlMedal,
+        ),
+        waypoints: story.waypoints,
+      );
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: zero),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-section')),
+      );
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+    });
+
+    testWidgets('purchased paid challenge shows the reward without a lock', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final story = sampleStoryChallenge();
+      final purchases = MemoryPurchases()
+        ..pay(
+          'story-1',
+          paidAt: DateTime(2026, 3, 11),
+          rewardVariant: RewardVariant.medalAndDiploma,
         );
-        expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
-        expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
-        expect(find.text(AppStrings('cs').diplomaBlurred), findsOneWidget);
-        expect(diplomas.imageRequests, isEmpty);
-      },
-    );
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story, purchases: purchases),
+          locale: 'de',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-section')),
+      );
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('challenge-reward-section')),
+          matching: find.byIcon(Icons.lock_outline),
+        ),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+      expect(find.text(AppStrings('de').rewardLockedLabel), findsNothing);
+    });
+  });
+
+  group('reward widget', () {
+    test('lock label is localized', () {
+      expect(
+        AppStrings('cs').rewardLockedLabel,
+        'Odměna se odemkne po zaplacení výzvy',
+      );
+      expect(
+        AppStrings('en').rewardLockedLabel,
+        'The reward unlocks after you pay for the challenge',
+      );
+      expect(
+        AppStrings('de').rewardLockedLabel,
+        'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
+      );
+    });
+
+    testWidgets('locked overlay hides the medal and blocks the diploma CTA', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final semantics = tester.ensureSemantics();
+      var taps = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ChallengeRewardSection(
+              strings: AppStrings('en'),
+              completed: true,
+              entitled: true,
+              locked: true,
+              hasDisplayName: true,
+              onSaveDiploma: () => taps++,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+      expect(find.byIcon(Icons.workspace_premium_outlined), findsNothing);
+      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsOneWidget,
+      );
+      expect(find.byType(BackdropFilter), findsWidgets);
+      final lockSize = tester.getSize(
+        find.byKey(const Key('challenge-reward-lock')),
+      );
+      expect(lockSize.width, greaterThanOrEqualTo(44));
+      expect(lockSize.height, greaterThanOrEqualTo(44));
+      expect(
+        find.bySemanticsLabel(AppStrings('en').rewardLockedLabel),
+        findsOneWidget,
+      );
+
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('challenge-save-diploma')),
+      );
+      expect(button.onPressed, isNull);
+      expect(
+        tester
+            .widget<IgnorePointer>(
+              find.byKey(const Key('challenge-reward-guard')),
+            )
+            .ignoring,
+        isTrue,
+      );
+
+      await tester.tap(find.byKey(const Key('challenge-reward-lock')));
+      await tester.pump();
+      await tester.tapAt(
+        tester.getCenter(find.byKey(const Key('challenge-save-diploma'))),
+      );
+      await tester.pump();
+      expect(taps, 0);
+      semantics.dispose();
+    });
+
+    testWidgets('unlocked reward has no overlay and the diploma CTA works', (
+      tester,
+    ) async {
+      useTallView(tester);
+      var taps = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ChallengeRewardSection(
+              strings: AppStrings('en'),
+              completed: true,
+              entitled: true,
+              locked: false,
+              hasDisplayName: true,
+              onSaveDiploma: () => taps++,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsNothing,
+      );
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(
+        tester
+            .widget<IgnorePointer>(
+              find.byKey(const Key('challenge-reward-guard')),
+            )
+            .ignoring,
+        isFalse,
+      );
+      await tester.tap(find.byKey(const Key('challenge-save-diploma')));
+      expect(taps, 1);
+    });
   });
 
   test(

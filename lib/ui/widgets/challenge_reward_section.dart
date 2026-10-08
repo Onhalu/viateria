@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../data/diploma_client.dart';
 import '../../domain/challenge_reward.dart';
 import '../../l10n/app_strings.dart';
-import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
 
@@ -99,19 +98,22 @@ class ChallengeRewardSection extends StatelessWidget {
     required this.strings,
     required this.completed,
     required this.entitled,
-    required this.paid,
-    this.variant,
+    required this.locked,
     this.challengeId,
     this.diplomas,
     this.hasDisplayName = true,
     this.onSaveDiploma,
   });
 
+  static const double panelRadius = 16;
+
   final AppStrings strings;
   final bool completed;
   final bool entitled;
-  final bool paid;
-  final RewardVariant? variant;
+
+  /// Paywall over the whole card. Free, zero-price, and paid purchases
+  /// leave this false — the same payment rule as [ChallengeReward.isRewardAccessible].
+  final bool locked;
   final String? challengeId;
   final DiplomaClient? diplomas;
   final bool hasDisplayName;
@@ -119,13 +121,9 @@ class ChallengeRewardSection extends StatelessWidget {
 
   bool get _blurPreview => completed && !entitled;
 
-  bool get _showMedalAndDiploma {
-    if (variant == null) return true;
-    return variant == RewardVariant.medalAndDiploma;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(panelRadius);
     return Column(
       key: const Key('challenge-reward-section'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,24 +137,32 @@ class ChallengeRewardSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        DecoratedBox(
-          decoration: challengeBrandPanel(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-            child: _body(),
+        ClipRRect(
+          key: const Key('challenge-reward-clip'),
+          borderRadius: radius,
+          child: Stack(
+            children: [
+              ExcludeSemantics(
+                excluding: locked,
+                child: IgnorePointer(
+                  key: const Key('challenge-reward-guard'),
+                  ignoring: locked,
+                  child: DecoratedBox(
+                    decoration: challengeBrandPanel(),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                      child: _body(),
+                    ),
+                  ),
+                ),
+              ),
+              if (locked)
+                Positioned.fill(
+                  child: _RewardLockOverlay(label: strings.rewardLockedLabel),
+                ),
+            ],
           ),
         ),
-        if (!paid) ...[
-          const SizedBox(height: 8),
-          Text(
-            strings.rewardDependsOnPaidOption,
-            key: const Key('challenge-reward-unpaid-hint'),
-            style: TextStyle(
-              color: BrandColors.bark.withValues(alpha: 0.55),
-              fontSize: 13,
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -166,7 +172,20 @@ class ChallengeRewardSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _placeholders(includeLabels: true, woodenMedal: showFile),
+        _DiplomaPlaceholder(
+          label: strings.diplomaLabel,
+          blur: _blurPreview && !locked,
+          image:
+              entitled &&
+                  hasDisplayName &&
+                  diplomas != null &&
+                  challengeId != null
+              ? _ServerDiplomaPreview(
+                  client: diplomas!,
+                  challengeId: challengeId!,
+                )
+              : null,
+        ),
         if (!completed) ...[
           const SizedBox(height: 12),
           Text(
@@ -176,7 +195,7 @@ class ChallengeRewardSection extends StatelessWidget {
             style: const TextStyle(color: BrandColors.bark, fontSize: 13),
           ),
         ],
-        if (_blurPreview) ...[
+        if (_blurPreview && !locked) ...[
           const SizedBox(height: 12),
           Text(
             strings.diplomaBlurred,
@@ -198,7 +217,7 @@ class ChallengeRewardSection extends StatelessWidget {
           const SizedBox(height: 14),
           FilledButton(
             key: const Key('challenge-save-diploma'),
-            onPressed: onSaveDiploma,
+            onPressed: locked ? null : onSaveDiploma,
             style: FilledButton.styleFrom(
               backgroundColor: BrandColors.forest,
               foregroundColor: BrandColors.cream,
@@ -209,32 +228,65 @@ class ChallengeRewardSection extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _placeholders({
-    required bool includeLabels,
-    bool woodenMedal = false,
-  }) {
-    final diploma = _DiplomaPlaceholder(
-      label: includeLabels ? strings.diplomaLabel : null,
-      blur: _blurPreview,
-      image:
-          entitled && hasDisplayName && diplomas != null && challengeId != null
-          ? _ServerDiplomaPreview(client: diplomas!, challengeId: challengeId!)
-          : null,
-    );
-    if (!_showMedalAndDiploma) return diploma;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _MedalPlaceholder(
-            label: includeLabels ? strings.woodenMedal : null,
-            wooden: woodenMedal && entitled,
+/// Frosted cover until the challenge is paid. The lock absorbs taps.
+class _RewardLockOverlay extends StatelessWidget {
+  const _RewardLockOverlay({required this.label});
+
+  final String label;
+
+  static const double _sigma = 8;
+  static const double _lockSize = 64;
+  static const double _iconSize = 32;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      container: true,
+      excludeSemantics: true,
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        behavior: HitTestBehavior.opaque,
+        onTap: () {},
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(
+            ChallengeRewardSection.panelRadius,
+          ),
+          child: BackdropFilter(
+            key: const Key('challenge-reward-lock-overlay'),
+            filter: ImageFilter.blur(sigmaX: _sigma, sigmaY: _sigma),
+            child: ColoredBox(
+              key: const Key('challenge-reward-lock-scrim'),
+              color: BrandColors.cream.withValues(alpha: 0.35),
+              child: Center(
+                child: SizedBox(
+                  key: const Key('challenge-reward-lock'),
+                  width: _lockSize,
+                  height: _lockSize,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: BrandColors.cream,
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(color: BrandColors.beige),
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.lock_outline,
+                        size: _iconSize,
+                        color: BrandColors.forest,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(child: diploma),
-      ],
+      ),
     );
   }
 }
@@ -331,53 +383,6 @@ class _ServerDiplomaPreviewState extends State<_ServerDiplomaPreview> {
       image: diplomaImageProvider(url),
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => const ColoredBox(color: BrandColors.cream),
-    );
-  }
-}
-
-class _MedalPlaceholder extends StatelessWidget {
-  const _MedalPlaceholder({this.label, this.wooden = false});
-
-  final String? label;
-  final bool wooden;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const Key('challenge-reward-medal'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AspectRatio(
-          aspectRatio: 1,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: wooden ? BrandColors.beige : BrandColors.cream,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: wooden ? BrandColors.bark : BrandColors.beige,
-                width: wooden ? 3 : 1,
-              ),
-            ),
-            child: Icon(
-              Icons.workspace_premium_outlined,
-              size: 36,
-              color: wooden ? BrandColors.bark : BrandColors.forest,
-            ),
-          ),
-        ),
-        if (label != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            label!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: BrandColors.bark,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

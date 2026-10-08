@@ -185,7 +185,7 @@ class AppStrings {
     'deadlineAfterPayment',
     'rewardTitle',
     'rewardUnlocksAfterComplete',
-    'rewardDependsOnPaidOption',
+    'rewardLockedLabel',
     'saveDiploma',
     'diplomaBlurred',
     'diplomaNeedName',
@@ -195,7 +195,6 @@ class AppStrings {
     'diplomaError',
     'diplomaRevoked',
     'diplomaIncomplete',
-    'woodenMedal',
     'diplomaLabel',
     'payDigitalDiploma',
     'payMedalAndDiploma',
@@ -418,7 +417,7 @@ class AppStrings {
   String get deadlineAfterPayment => t('deadlineAfterPayment');
   String get rewardTitle => t('rewardTitle');
   String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
-  String get rewardDependsOnPaidOption => t('rewardDependsOnPaidOption');
+  String get rewardLockedLabel => t('rewardLockedLabel');
   String get saveDiploma => t('saveDiploma');
   String get diplomaBlurred => t('diplomaBlurred');
   String get diplomaNeedName => t('diplomaNeedName');
@@ -428,7 +427,6 @@ class AppStrings {
   String get diplomaError => t('diplomaError');
   String get diplomaRevoked => t('diplomaRevoked');
   String get diplomaIncomplete => t('diplomaIncomplete');
-  String get woodenMedal => t('woodenMedal');
   String get diplomaLabel => t('diplomaLabel');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
@@ -723,7 +721,7 @@ class AppStrings {
       'deadlineAfterPayment': 'Deadline after payment',
       'rewardTitle': 'Reward',
       'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
-      'rewardDependsOnPaidOption': 'Reward depends on your paid option',
+      'rewardLockedLabel': 'The reward unlocks after you pay for the challenge',
       'saveDiploma': 'Save diploma',
       'diplomaBlurred': 'Preview stays blurred until the diploma is unlocked.',
       'diplomaNeedName': 'Add your name in your profile.',
@@ -733,7 +731,6 @@ class AppStrings {
       'diplomaError': 'The diploma could not be created.',
       'diplomaRevoked': 'This diploma was revoked.',
       'diplomaIncomplete': 'The diploma opens after you finish the challenge.',
-      'woodenMedal': 'Wooden medal',
       'diplomaLabel': 'Diploma',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
@@ -966,7 +963,7 @@ class AppStrings {
       'deadlineAfterPayment': 'Termín po zaplacení',
       'rewardTitle': 'Odměna',
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
-      'rewardDependsOnPaidOption': 'Odměna podle zvolené varianty po zaplacení',
+      'rewardLockedLabel': 'Odměna se odemkne po zaplacení výzvy',
       'saveDiploma': 'Uložit diplom',
       'diplomaBlurred': 'Náhled je rozmazaný, dokud diplom není odemčený.',
       'diplomaNeedName': 'Doplň jméno v profilu.',
@@ -976,7 +973,6 @@ class AppStrings {
       'diplomaError': 'Diplom se nepodařilo vytvořit.',
       'diplomaRevoked': 'Diplom byl odebrán.',
       'diplomaIncomplete': 'Diplom se otevře po dokončení výzvy.',
-      'woodenMedal': 'Dřevěná medaile',
       'diplomaLabel': 'Diplom',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
@@ -1210,7 +1206,8 @@ class AppStrings {
       'deadlineAfterPayment': 'Frist nach Zahlung',
       'rewardTitle': 'Belohnung',
       'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
-      'rewardDependsOnPaidOption': 'Belohnung je nach gewählter Variante',
+      'rewardLockedLabel':
+          'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
       'saveDiploma': 'Diplom speichern',
       'diplomaBlurred':
           'Die Vorschau bleibt unscharf, bis das Diplom freigeschaltet ist.',
@@ -1222,7 +1219,6 @@ class AppStrings {
       'diplomaRevoked': 'Dieses Diplom wurde entzogen.',
       'diplomaIncomplete':
           'Das Diplom öffnet sich nach Abschluss der Challenge.',
-      'woodenMedal': 'Holzmedaille',
       'diplomaLabel': 'Diplom',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
