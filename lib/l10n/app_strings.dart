@@ -196,6 +196,13 @@ class AppStrings {
     'diplomaRevoked',
     'diplomaIncomplete',
     'diplomaLabel',
+    'diplomaEditName',
+    'diplomaNameFromProfile',
+    'diplomaNameEdited',
+    'diplomaNameConfirm',
+    'diplomaNameInvalid',
+    'diplomaNameSave',
+    'diplomaNameCancel',
     'payDigitalDiploma',
     'payMedalAndDiploma',
     'paymentTitle',
@@ -428,6 +435,13 @@ class AppStrings {
   String get diplomaRevoked => t('diplomaRevoked');
   String get diplomaIncomplete => t('diplomaIncomplete');
   String get diplomaLabel => t('diplomaLabel');
+  String get diplomaEditName => t('diplomaEditName');
+  String get diplomaNameFromProfile => t('diplomaNameFromProfile');
+  String get diplomaNameEdited => t('diplomaNameEdited');
+  String get diplomaNameConfirm => t('diplomaNameConfirm');
+  String get diplomaNameInvalid => t('diplomaNameInvalid');
+  String get diplomaNameSave => t('diplomaNameSave');
+  String get diplomaNameCancel => t('diplomaNameCancel');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
   String get paymentTitle => t('paymentTitle');
@@ -732,6 +746,13 @@ class AppStrings {
       'diplomaRevoked': 'This diploma was revoked.',
       'diplomaIncomplete': 'The diploma opens after you finish the challenge.',
       'diplomaLabel': 'Diploma',
+      'diplomaEditName': 'Edit name',
+      'diplomaNameFromProfile': 'The name is loaded from the display name in your profile. You can edit it on the diploma once.',
+      'diplomaNameEdited': 'The name has been edited',
+      'diplomaNameConfirm': "This change can't be made again.",
+      'diplomaNameInvalid': 'Enter 1–40 characters and no control characters.',
+      'diplomaNameSave': 'Save',
+      'diplomaNameCancel': 'Cancel',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
       'paymentTitle': 'Payment',
@@ -974,6 +995,13 @@ class AppStrings {
       'diplomaRevoked': 'Diplom byl odebrán.',
       'diplomaIncomplete': 'Diplom se otevře po dokončení výzvy.',
       'diplomaLabel': 'Diplom',
+      'diplomaEditName': 'Upravit jméno',
+      'diplomaNameFromProfile': 'Jméno se načítá z tvého zobrazovaného jména v profilu. Na diplomu ho můžeš jednou upravit.',
+      'diplomaNameEdited': 'Jméno bylo upraveno',
+      'diplomaNameConfirm': 'Tuhle změnu už nepůjde zopakovat.',
+      'diplomaNameInvalid': 'Zadej 1–40 znaků bez řídicích znaků.',
+      'diplomaNameSave': 'Uložit',
+      'diplomaNameCancel': 'Zrušit',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
       'paymentTitle': 'Platba',
@@ -1220,6 +1248,13 @@ class AppStrings {
       'diplomaIncomplete':
           'Das Diplom öffnet sich nach Abschluss der Challenge.',
       'diplomaLabel': 'Diplom',
+      'diplomaEditName': 'Namen bearbeiten',
+      'diplomaNameFromProfile': 'Der Name wird aus deinem Anzeigenamen im Profil geladen. Auf dem Diplom kannst du ihn einmal ändern.',
+      'diplomaNameEdited': 'Der Name wurde geändert',
+      'diplomaNameConfirm': 'Diese Änderung lässt sich nicht wiederholen.',
+      'diplomaNameInvalid': 'Gib 1–40 Zeichen ohne Steuerzeichen ein.',
+      'diplomaNameSave': 'Speichern',
+      'diplomaNameCancel': 'Abbrechen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
       'paymentTitle': 'Zahlung',

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
-import '../../data/diploma_client.dart';
 import '../../domain/challenge_reward.dart';
 import '../../domain/diploma_phase.dart';
 import '../../l10n/app_strings.dart';
@@ -45,55 +44,39 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
       requiresPurchase: detail.challenge.isPaid,
     );
     final name = services.auth.currentUser?.displayName;
-    final phase = resolveDiplomaPhase(
+    var phase = resolveDiplomaPhase(
       completed: completed,
       entitled: entitled,
       hasDisplayName: hasDiplomaDisplayName(name),
       remoteState: access.state == 'unavailable' ? null : access.state,
     );
-    DiplomaImageResult? image;
+    String? imageUrl;
+    var failed = false;
     if (shouldRequestDiplomaFile(phase)) {
-      image = await services.diplomas.fetchImage(widget.challengeId);
+      final image = await services.diplomas.fetchImage(widget.challengeId);
       if (image.error == 'not_entitled') {
-        return _DiplomaViewData(
-          detail: detail,
-          phase: DiplomaPhase.blurred,
-          completionLine: diplomaCompletionLine(
-            remoteLabel: access.completionLabel,
-            completedAt: progress?.completedAt,
-          ),
-        );
-      }
-      if (image.error == 'need_name') {
-        return _DiplomaViewData(
-          detail: detail,
-          phase: DiplomaPhase.needName,
-          completionLine: diplomaCompletionLine(
-            remoteLabel: access.completionLabel,
-            completedAt: progress?.completedAt,
-          ),
-        );
-      }
-      if (!image.ok) {
-        return _DiplomaViewData(
-          detail: detail,
-          phase: DiplomaPhase.ready,
-          failed: true,
-          completionLine: diplomaCompletionLine(
-            remoteLabel: access.completionLabel,
-            completedAt: progress?.completedAt,
-          ),
-        );
+        phase = DiplomaPhase.blurred;
+      } else if (image.error == 'need_name') {
+        phase = DiplomaPhase.needName;
+      } else if (!image.ok) {
+        failed = true;
+      } else {
+        imageUrl = image.url;
       }
     }
     return _DiplomaViewData(
       detail: detail,
       phase: phase,
-      imageUrl: image?.url,
+      imageUrl: imageUrl,
+      failed: failed,
       completionLine: diplomaCompletionLine(
         remoteLabel: access.completionLabel,
         completedAt: progress?.completedAt,
       ),
+      diplomaId: access.diplomaId,
+      recipientNameDisplay: access.recipientNameDisplay,
+      nameEditable: access.nameEditable,
+      nameSource: access.nameSource,
     );
   }
 
@@ -115,6 +98,110 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
 
   Future<void> _share(String url, String filename) async {
     await downloadOrShareDiploma(url: url, filename: filename);
+  }
+
+  Future<void> _editName(String diplomaId, String current) async {
+    final strings = context.read<LocaleController>().strings;
+    final controller = TextEditingController(text: current);
+    var invalid = false;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              key: const Key('diploma-name-dialog'),
+              backgroundColor: BrandColors.cream,
+              title: Text(strings.diplomaEditName),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    key: const Key('diploma-name-field'),
+                    controller: controller,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  if (invalid) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      strings.diplomaNameInvalid,
+                      key: const Key('diploma-name-invalid'),
+                      style: const TextStyle(color: BrandColors.forest),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  key: const Key('diploma-name-cancel'),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(strings.diplomaNameCancel),
+                ),
+                FilledButton(
+                  key: const Key('diploma-name-save'),
+                  onPressed: () {
+                    final normalized = normalizeDiplomaEditedName(
+                      controller.text,
+                    );
+                    if (normalized == null) {
+                      setDialogState(() => invalid = true);
+                      return;
+                    }
+                    Navigator.pop(ctx, normalized);
+                  },
+                  child: Text(strings.diplomaNameSave),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
+    if (!mounted || name == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          key: const Key('diploma-name-confirm-dialog'),
+          backgroundColor: BrandColors.cream,
+          title: Text(strings.diplomaEditName),
+          content: Text(
+            strings.diplomaNameConfirm,
+            key: const Key('diploma-name-confirm'),
+          ),
+          actions: [
+            TextButton(
+              key: const Key('diploma-name-confirm-cancel'),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(strings.diplomaNameCancel),
+            ),
+            FilledButton(
+              key: const Key('diploma-name-confirm-save'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(strings.diplomaNameSave),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await context.read<AppServices>().diplomas.editName(diplomaId, name);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(strings.diplomaError)));
+      return;
+    }
+    if (!mounted) return;
+    _retry();
   }
 
   @override
@@ -146,6 +233,7 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
             onRetry: _retry,
             onBuy: _buy,
             onShare: _share,
+            onEditName: _editName,
           );
         },
       ),
@@ -160,6 +248,7 @@ class _DiplomaBody extends StatelessWidget {
     required this.onRetry,
     required this.onBuy,
     required this.onShare,
+    required this.onEditName,
   });
 
   final _DiplomaViewData data;
@@ -167,11 +256,13 @@ class _DiplomaBody extends StatelessWidget {
   final VoidCallback onRetry;
   final Future<void> Function(RewardVariant variant) onBuy;
   final Future<void> Function(String url, String filename) onShare;
+  final Future<void> Function(String diplomaId, String currentName) onEditName;
 
   @override
   Widget build(BuildContext context) {
     final challenge = data.detail.challenge;
     final filename = diplomaFileName(challenge.slug);
+    final nameSection = _nameSection();
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -191,6 +282,10 @@ class _DiplomaBody extends StatelessWidget {
                   style: const TextStyle(color: BrandColors.bark),
                 ),
               ],
+              if (nameSection != null) ...[
+                const SizedBox(height: 16),
+                nameSection,
+              ],
               const SizedBox(height: 16),
               _actions(context, challenge, filename),
             ],
@@ -198,6 +293,38 @@ class _DiplomaBody extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget? _nameSection() {
+    if (data.nameEditable && data.diplomaId != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            strings.diplomaNameFromProfile,
+            key: const Key('diploma-name-info'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: BrandColors.bark),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            key: const Key('diploma-edit-name'),
+            onPressed: () =>
+                onEditName(data.diplomaId!, data.recipientNameDisplay ?? ''),
+            child: Text(strings.diplomaEditName),
+          ),
+        ],
+      );
+    }
+    if (data.nameSource == 'edited') {
+      return Text(
+        strings.diplomaNameEdited,
+        key: const Key('diploma-name-edited'),
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: BrandColors.bark),
+      );
+    }
+    return null;
   }
 
   Widget _preview() {
@@ -334,6 +461,10 @@ class _DiplomaViewData {
     this.imageUrl,
     this.completionLine,
     this.failed = false,
+    this.diplomaId,
+    this.recipientNameDisplay,
+    this.nameEditable = false,
+    this.nameSource = 'profile',
   });
 
   final ChallengeDetail detail;
@@ -341,4 +472,8 @@ class _DiplomaViewData {
   final String? imageUrl;
   final String? completionLine;
   final bool failed;
+  final String? diplomaId;
+  final String? recipientNameDisplay;
+  final bool nameEditable;
+  final String nameSource;
 }

@@ -1,11 +1,30 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../domain/diploma_phase.dart';
+
 class DiplomaAccess {
-  const DiplomaAccess({required this.state, this.completionLabel});
+  const DiplomaAccess({
+    required this.state,
+    this.completionLabel,
+    this.diplomaId,
+    this.recipientNameDisplay,
+    this.nameEditable = false,
+    this.nameSource = 'profile',
+  });
 
   /// `locked` | `buy` | `need_name` | `render` | `ready` | `revoked` | `unavailable`.
   final String state;
   final String? completionLabel;
+  final String? diplomaId;
+
+  /// Name exactly as printed. Profile diplomas are already declined.
+  final String? recipientNameDisplay;
+
+  /// True until the owner uses the one-time edit.
+  final bool nameEditable;
+
+  /// `profile` while the name follows `profiles.display_name`, else `edited`.
+  final String nameSource;
 }
 
 class DiplomaImageResult {
@@ -21,6 +40,7 @@ class DiplomaImageResult {
 abstract class DiplomaClient {
   Future<DiplomaAccess> access(String challengeId);
   Future<DiplomaImageResult> fetchImage(String challengeId);
+  Future<DiplomaAccess> editName(String diplomaId, String name);
 }
 
 class MemoryDiplomaClient implements DiplomaClient {
@@ -29,17 +49,46 @@ class MemoryDiplomaClient implements DiplomaClient {
     this.completionLabel,
     this.imageUrl,
     this.imageError,
+    this.diplomaId,
+    this.recipientNameDisplay,
+    this.nameEditable = false,
+    this.nameSource = 'profile',
   });
 
   String accessState;
   String? completionLabel;
   String? imageUrl;
   String? imageError;
+  String? diplomaId;
+  String? recipientNameDisplay;
+  bool nameEditable;
+  String nameSource;
   final List<String> imageRequests = [];
+  final List<String> nameEdits = [];
+
+  DiplomaAccess get _access => DiplomaAccess(
+    state: accessState,
+    completionLabel: completionLabel,
+    diplomaId: diplomaId,
+    recipientNameDisplay: recipientNameDisplay,
+    nameEditable: nameEditable,
+    nameSource: nameSource,
+  );
 
   @override
-  Future<DiplomaAccess> access(String challengeId) async {
-    return DiplomaAccess(state: accessState, completionLabel: completionLabel);
+  Future<DiplomaAccess> access(String challengeId) async => _access;
+
+  @override
+  Future<DiplomaAccess> editName(String diplomaId, String name) async {
+    final printed = normalizeDiplomaEditedName(name);
+    if (printed == null || this.diplomaId != diplomaId || !nameEditable) {
+      throw StateError('diploma name');
+    }
+    nameEdits.add(printed);
+    recipientNameDisplay = printed;
+    nameEditable = false;
+    nameSource = 'edited';
+    return _access;
   }
 
   @override
@@ -61,13 +110,7 @@ class SupabaseDiplomaClient implements DiplomaClient {
         'diploma_status',
         params: {'p_challenge_id': challengeId},
       );
-      if (raw is! Map) return const DiplomaAccess(state: 'unavailable');
-      final map = Map<String, dynamic>.from(raw);
-      final state = map['state'] as String? ?? 'unavailable';
-      return DiplomaAccess(
-        state: state,
-        completionLabel: map['completion_day_label'] as String?,
-      );
+      return _accessFrom(raw);
     } on PostgrestException catch (error) {
       final message = error.message.toLowerCase();
       if (error.code == 'PGRST202' ||
@@ -78,6 +121,15 @@ class SupabaseDiplomaClient implements DiplomaClient {
       }
       rethrow;
     }
+  }
+
+  @override
+  Future<DiplomaAccess> editName(String diplomaId, String name) async {
+    final raw = await _client.rpc(
+      'edit_diploma_name',
+      params: {'p_diploma_id': diplomaId, 'p_name': name},
+    );
+    return _accessFrom(raw);
   }
 
   @override
@@ -101,6 +153,19 @@ class SupabaseDiplomaClient implements DiplomaClient {
       return DiplomaImageResult(error: _functionError(error));
     }
   }
+}
+
+DiplomaAccess _accessFrom(Object? raw) {
+  if (raw is! Map) return const DiplomaAccess(state: 'unavailable');
+  final map = Map<String, dynamic>.from(raw);
+  return DiplomaAccess(
+    state: map['state'] as String? ?? 'unavailable',
+    completionLabel: map['completion_day_label'] as String?,
+    diplomaId: map['diploma_id'] as String?,
+    recipientNameDisplay: map['recipient_name_display'] as String?,
+    nameEditable: map['name_editable'] == true,
+    nameSource: map['name_source'] as String? ?? 'profile',
+  );
 }
 
 String _functionError(FunctionException error) {

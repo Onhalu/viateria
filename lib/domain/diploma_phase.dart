@@ -36,6 +36,20 @@ DiplomaPhase resolveDiplomaPhase({
 bool shouldRequestDiplomaFile(DiplomaPhase phase) =>
     phase == DiplomaPhase.ready;
 
+/// Final printed form for a one-time diploma edit.
+/// Null when the trimmed text is empty, longer than 40 characters, or
+/// contains an ASCII control character.
+String? normalizeDiplomaEditedName(String raw) {
+  final name = raw.trim();
+  if (name.isEmpty || name.runes.length > 40) return null;
+  for (final rune in name.runes) {
+    if (rune <= 31 || rune == 127 || (rune >= 128 && rune <= 159)) {
+      return null;
+    }
+  }
+  return name;
+}
+
 /// `vyslapni-diplom-{slug}.png`
 String diplomaFileName(String slug) {
   final clean = slug

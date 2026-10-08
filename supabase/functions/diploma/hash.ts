@@ -17,7 +17,9 @@ export type RenderHashInput = {
 /**
  * sha256 of the SPEC §3 fields, separated by U+001F so a value cannot
  * shift the next field. `completedOn` is the Europe/Prague calendar date
- * (`YYYY-MM-DD`) of `completed_at`.
+ * (`YYYY-MM-DD`) of `completed_at`. `recipientNameDisplay` is the final
+ * printed name, so a profile rename or a one-time edit changes the hash
+ * and forces a re-render. Layout version stays on [RENDERER_VERSION].
  */
 export async function renderHash(input: RenderHashInput): Promise<string> {
   const payload = [

@@ -8,6 +8,7 @@ import 'package:viateria/data/app_services.dart';
 import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/domain/challenge_reward.dart';
 import 'package:viateria/domain/diploma_phase.dart';
+import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/diploma_share.dart';
@@ -287,6 +288,175 @@ void main() {
     expect(find.byKey(const Key('diploma-error')), findsNothing);
     expect(diplomas.imageRequests, ['open-1', 'open-1']);
   });
+
+  test('edited diploma names are trimmed and reject controls', () {
+    expect(
+      normalizeDiplomaEditedName('  Janu Svobodovou  '),
+      'Janu Svobodovou',
+    );
+    expect(normalizeDiplomaEditedName('A' * 40), 'A' * 40);
+    expect(normalizeDiplomaEditedName(''), isNull);
+    expect(normalizeDiplomaEditedName('   '), isNull);
+    expect(normalizeDiplomaEditedName('A' * 41), isNull);
+    expect(normalizeDiplomaEditedName('Jan\nNovák'), isNull);
+    expect(normalizeDiplomaEditedName('A\u0001B'), isNull);
+    expect(
+      AppStrings('cs').diplomaNameFromProfile,
+      'Jméno se načítá z tvého zobrazovaného jména v profilu. Na diplomu ho můžeš jednou upravit.',
+    );
+    expect(AppStrings('cs').diplomaEditName, 'Upravit jméno');
+    expect(AppStrings('cs').diplomaNameEdited, 'Jméno bylo upraveno');
+    expect(AppStrings('en').diplomaNameFromProfile, contains('once'));
+    expect(AppStrings('de').diplomaNameFromProfile, contains('einmal'));
+  });
+
+  testWidgets('diploma name can be edited once from the printed form', (
+    tester,
+  ) async {
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      completionLabel: 'dokončeno dne 07.09.2026',
+      imageUrl: 'https://example.test/diploma.png',
+      diplomaId: 'diploma-1',
+      recipientNameDisplay: 'Pavla Novák',
+      nameEditable: true,
+    );
+    await _pumpDiploma(tester, diplomas: diplomas, displayName: 'Ada');
+
+    expect(
+      find.text(
+        'Jméno se načítá z tvého zobrazovaného jména v profilu. Na diplomu ho můžeš jednou upravit.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('diploma-edit-name')), findsOneWidget);
+    expect(find.byKey(const Key('diploma-name-edited')), findsNothing);
+
+    await tester.ensureVisible(find.byKey(const Key('diploma-edit-name')));
+    await tester.tap(find.byKey(const Key('diploma-edit-name')));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('diploma-name-field')),
+    );
+    expect(field.controller?.text, 'Pavla Novák');
+    expect(find.text('Ada'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('diploma-name-field')),
+      '  Janu Svobodovou  ',
+    );
+    await tester.tap(find.byKey(const Key('diploma-name-save')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('diploma-name-confirm')), findsOneWidget);
+    expect(diplomas.nameEdits, isEmpty);
+    await tester.tap(find.byKey(const Key('diploma-name-confirm-save')));
+    await tester.pumpAndSettle();
+
+    expect(diplomas.nameEdits, ['Janu Svobodovou']);
+    expect(find.byKey(const Key('diploma-edit-name')), findsNothing);
+    expect(find.byKey(const Key('diploma-name-info')), findsNothing);
+    expect(find.text('Jméno bylo upraveno'), findsOneWidget);
+    expect(diplomas.imageRequests, ['open-1', 'open-1']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an invalid diploma name is not saved', (tester) async {
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      imageUrl: 'https://example.test/diploma.png',
+      diplomaId: 'diploma-1',
+      recipientNameDisplay: 'Pavla Novák',
+      nameEditable: true,
+    );
+    await _pumpDiploma(tester, diplomas: diplomas);
+
+    await tester.ensureVisible(find.byKey(const Key('diploma-edit-name')));
+    await tester.tap(find.byKey(const Key('diploma-edit-name')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('diploma-name-field')), '   ');
+    await tester.tap(find.byKey(const Key('diploma-name-save')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('diploma-name-invalid')), findsOneWidget);
+    expect(find.byKey(const Key('diploma-name-confirm')), findsNothing);
+    expect(diplomas.nameEdits, isEmpty);
+
+    await tester.enterText(
+      find.byKey(const Key('diploma-name-field')),
+      'A' * 41,
+    );
+    await tester.tap(find.byKey(const Key('diploma-name-save')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('diploma-name-invalid')), findsOneWidget);
+    expect(diplomas.nameEdits, isEmpty);
+
+    await tester.tap(find.byKey(const Key('diploma-name-cancel')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('diploma-edit-name')), findsOneWidget);
+  });
+
+  testWidgets('a diploma that was already edited hides the action', (
+    tester,
+  ) async {
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      imageUrl: 'https://example.test/diploma.png',
+      diplomaId: 'diploma-1',
+      recipientNameDisplay: 'Janu Svobodovou',
+      nameEditable: false,
+      nameSource: 'edited',
+    );
+    await _pumpDiploma(tester, diplomas: diplomas);
+
+    expect(find.byKey(const Key('diploma-edit-name')), findsNothing);
+    expect(find.byKey(const Key('diploma-name-info')), findsNothing);
+    expect(find.text('Jméno bylo upraveno'), findsOneWidget);
+    expect(diplomas.imageRequests, ['open-1']);
+  });
+}
+
+Future<void> _pumpDiploma(
+  WidgetTester tester, {
+  required MemoryDiplomaClient diplomas,
+  String displayName = 'Ada',
+}) async {
+  final previousProvider = diplomaImageProvider;
+  diplomaImageProvider = (_) => MemoryImage(Uint8List.fromList(_tinyPng));
+  addTearDown(() => diplomaImageProvider = previousProvider);
+  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  final open = sampleOpenChallenge();
+  final services = AppServices(
+    config: const AppConfig(
+      supabaseUrl: 'https://example.supabase.co',
+      supabaseAnonKey: 'anon',
+      stripePublishableKey: 'pk_test',
+    ),
+    auth: MemoryAuth(
+      user: Profile(id: 'user-1', locale: 'cs', displayName: displayName),
+    ),
+    catalog: MemoryCatalog(challenges: [open.challenge], details: [open]),
+    progress: MemoryProgress(details: [open]),
+    purchases: MemoryPurchases(),
+    photos: MemoryPhotos(),
+    photoCapture: MemoryCapture(),
+    diplomas: diplomas,
+  );
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
+        Provider.value(value: services),
+      ],
+      child: const MaterialApp(home: DiplomaScreen(challengeId: 'open-1')),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 const _tinyPng = <int>[

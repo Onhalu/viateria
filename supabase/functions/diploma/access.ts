@@ -111,6 +111,8 @@ export function diplomaCopy(row: IssuedDiplomaRow): {
   return {
     headline: (row.headline ?? "").trim() || "DIPLOM",
     preposition: "pro",
+    // Already final: profile accusative from diploma_status, or a one-time
+    // edit stored verbatim. Do not run csAccusative on this string.
     name: (row.recipient_name_display ?? "").trim(),
     body: (row.body ?? "").trim() || "za zdolání výzvy",
     title: (row.challenge_title ?? "").trim(),

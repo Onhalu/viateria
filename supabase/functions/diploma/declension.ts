@@ -1,7 +1,9 @@
 /**
  * Czech accusative of the first name. 1:1 with `private.cs_accusative`
  * (migration 0026) and the original sklonovani() heuristic.
- * Surname is unchanged. The product does not let the user edit the result.
+ * Surname is unchanged. SQL applies this only while the diploma still
+ * follows the profile. A one-time edit is stored already final and must
+ * not be passed through this function again.
  */
 const IRREGULAR: Record<string, string> = {
   pavel: "pavla",

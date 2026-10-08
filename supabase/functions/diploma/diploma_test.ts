@@ -165,6 +165,17 @@ Deno.test("render hash is stable and changes with the Prague date", async () => 
   assert(copy.preposition === "pro", "preposition");
 });
 
+Deno.test("an edited name is hashed verbatim and is not declined again", async () => {
+  const edited = "Janu";
+  const copy = diplomaCopy(row({ recipient_name_display: edited }));
+  assert(copy.name === edited, "printed form stays");
+  const declined = csAccusative(edited);
+  assert(declined !== edited, "declension would change Janu");
+  const hash = await hashForRow(row({ recipient_name_display: edited }));
+  const ifDeclined = await hashForRow(row({ recipient_name_display: declined }));
+  assert(hash !== ifDeclined, "hash uses the stored final name");
+});
+
 Deno.test("v4 long titles wrap to two lines and shrink", () => {
   const short = layoutTitle("Pálava");
   assert(short.fontSize === 60 && short.lines.length === 1, "short");
