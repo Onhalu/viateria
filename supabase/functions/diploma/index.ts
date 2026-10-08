@@ -13,7 +13,7 @@ import {
   type PriceSnapshot,
 } from "./access.ts";
 import { RENDERER_VERSION } from "./hash.ts";
-import { LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
+import { ITALIC_FONT_ASSET, LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -181,7 +181,13 @@ async function loadRenderAssets(admin: SupabaseClient, variant: number) {
     "fonts/PlayfairDisplay.ttf",
     "fonts/PlayfairDisplay.ttf",
   );
-  return { background, logo, font };
+  let fontItalic: Uint8Array | null = null;
+  try {
+    fontItalic = await assetOrBundle(admin, ITALIC_FONT_ASSET, ITALIC_FONT_ASSET);
+  } catch {
+    fontItalic = null; // layout B then renders its italic lines in Regular
+  }
+  return { background, logo, font, fontItalic };
 }
 
 async function assetOrBundle(

@@ -12,7 +12,9 @@ import { csAccusative } from "./declension.ts";
 import { RENDERER_VERSION, renderHash } from "./hash.ts";
 import { completionLabel, pragueIsoDate } from "./prague.ts";
 import { decodeRgbaPng, pixelAlpha } from "./png.ts";
-import { loadBundledRenderAssets, renderDiploma } from "./render.ts";
+import { DIPLOMA_LAYOUT, loadBundledRenderAssets, renderDiploma } from "./render.ts";
+import { fitName, fitTitle, layoutVariant } from "./layouts.ts";
+import { createMeasure, FALLBACK_EM_PER_CHAR } from "./measure.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -163,7 +165,7 @@ Deno.test("render hash is stable and changes with the Prague date", async () => 
   assert(copy.preposition === "pro", "preposition");
 });
 
-Deno.test("long titles wrap to two lines and shrink", () => {
+Deno.test("v4 long titles wrap to two lines and shrink", () => {
   const short = layoutTitle("Pálava");
   assert(short.fontSize === 60 && short.lines.length === 1, "short");
   const long = layoutTitle(
@@ -184,4 +186,46 @@ Deno.test("T1 render is a rounded 1080 PNG under 1.5s", async () => {
   assert(image.width === 1080 && image.height === 1080, "1080 square");
   assert(pixelAlpha(image, 0, 0) === 0, "rounded corner is transparent");
   assert(pixelAlpha(image, 540, 540) > 0, "center is opaque");
+});
+
+Deno.test("layout B is the default and keeps every line inside the panel", async () => {
+  assert(DIPLOMA_LAYOUT === "B", "B is active");
+  const assets = await loadBundledRenderAssets(4);
+  assert(assets.fontItalic && assets.fontItalic.byteLength > 0, "italic font bundled");
+  const measure = createMeasure(assets.font);
+  const maxW = 720 - 2 * 72;
+  for (
+    const [name, title] of [
+      ["Ondřeje", "Toulky Vysočinou"],
+      ["Ondrej_test", "Wandering Through the Vysočina Region"],
+      ["Maxmiliána Svatopluka Hradeckého-Kostelníka", "Hrady a zámky Libereckého kraje: velký okruh kolem Ještědu a Bezdězu přes Máchův kraj"],
+    ]
+  ) {
+    const copy = diplomaCopy(row({ recipient_name_display: name, challenge_title: title }));
+    const result = layoutVariant("B", copy, measure, true);
+    assert(result.panel.opacity === 0.62, "B panel 62 %");
+    for (const op of result.ops) {
+      if (op.kind !== "text") continue;
+      const w = measure(op.text, op.size, op.letterSpacing ?? 0);
+      assert(w <= maxW, `${op.text} fits (${w.toFixed(0)} > ${maxW})`);
+      assert(op.y > result.panel.y + 40 && op.y < result.panel.y + result.panel.h - 40, `${op.text} inside panel`);
+    }
+    const italic = result.ops.filter((op) => op.kind === "text" && op.italic);
+    assert(italic.length === 2, "pro + body italic");
+  }
+});
+
+Deno.test("measured titles and names: short = 1 line, long = 2 lines without ellipsis, names shrink", async () => {
+  const assets = await loadBundledRenderAssets(1);
+  const measure = createMeasure(assets.font);
+  const short = fitTitle(measure, "Tajemství Českého středohoří", [42, 38, 32], 576);
+  assert(short.lines.length === 1, "short title one line");
+  const long = fitTitle(measure, "Hrady a zámky Libereckého kraje: velký okruh kolem Ještědu", [42, 38, 32], 576);
+  assert(long.lines.length === 2 && !long.lines.join("").includes("…"), "long title two lines, no ellipsis");
+  const name = fitName(measure, "Ondřeje", 76, 48, 576);
+  assert(name.size === 76 && name.lines.length === 1, "short name keeps 76");
+  const longName = fitName(measure, "Maxmiliána Svatopluka Hradeckého-Kostelníka", 76, 48, 576);
+  assert(longName.size === 48 && longName.lines.length === 2, "extreme name wraps at min");
+  const fallback = createMeasure(new Uint8Array([0, 1, 2]));
+  assert(fallback("abcd", 10) === 4 * 10 * FALLBACK_EM_PER_CHAR, "estimate fallback 0.52");
 });

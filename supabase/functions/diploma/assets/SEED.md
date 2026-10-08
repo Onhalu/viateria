@@ -14,6 +14,7 @@ Upload with the service role (the bucket has no client policies):
 | `bg/4.png` | `assets/bg/4.png` |
 | `logo/vandery-lockup.png` | `assets/logo/vandery-lockup.png` (= `assets/brand/vandery-lockup@3x.png`) |
 | `fonts/PlayfairDisplay.ttf` | `assets/fonts/PlayfairDisplay.ttf` |
+| `fonts/PlayfairDisplay-Italic.ttf` | `assets/fonts/PlayfairDisplay-Italic.ttf` (OFL, google/fonts `PlayfairDisplay-Italic[wght].ttf`) |
 
 The Edge function reads the bucket first and falls back to these bundled copies
 so a render still works before the upload. `background_variant` is chosen once
