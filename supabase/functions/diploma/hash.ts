@@ -1,7 +1,7 @@
 import { encodeHex } from "jsr:@std/encoding@1.0.10/hex";
 
 /** Bump when the layout, defaults, or font change. Included in [renderHash]. */
-export const RENDERER_VERSION = 2;
+export const RENDERER_VERSION = 3;
 
 export type RenderHashInput = {
   rendererVersion: number;

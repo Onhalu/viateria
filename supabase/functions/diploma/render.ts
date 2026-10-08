@@ -90,6 +90,8 @@ const PANEL_X = (CANVAS - PANEL_W) / 2;
 const PANEL_Y = (CANVAS - PANEL_H) / 2;
 const PANEL_RADIUS = 34;
 const PANEL_OPACITY = 0.55;
+/** Date line baseline sits this far above the panel's bottom edge. */
+const DATE_BOTTOM_PADDING = 56;
 const LOGO_W = 250;
 const LOGO_H = Math.round(LOGO_W * LOGO_ASPECT);
 const CX = CANVAS / 2;
@@ -133,8 +135,11 @@ export async function renderDiploma(
 
   const logoY = top;
   let y = logoY + LOGO_H + logoToHeadline;
+  const lastIndex = lines.length - 1;
   const texts = lines.map((line, index) => {
     if (index > 0) y += line.gapBefore;
+    // The date is anchored to the panel bottom; the block above keeps its place.
+    if (index === lastIndex) y = PANEL_Y + PANEL_H - DATE_BOTTOM_PADDING;
     return `<text x="${CX}" y="${Math.round(y)}" font-size="${line.size}" font-family="Playfair Display" text-anchor="middle" fill="#000000">${xml(line.text)}</text>`;
   }).join("\n    ");
 
