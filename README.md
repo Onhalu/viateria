@@ -1,6 +1,6 @@
 # Viateria
 
-Gamified tourist challenges (SPEC v1). Hikers and cyclists pick a published challenge, follow OSM-mapped waypoints, verify each stop with a **live camera photo**, and earn a 9:16 diploma.
+Gamified tourist challenges (SPEC v1). Hikers and cyclists pick a published challenge, follow OSM-mapped waypoints, verify each stop with a **live camera photo**, and earn a square diploma.
 
 Catalog content is **not** hardcoded in the app. Challenges, waypoints, and promo stripes are authored in **Supabase** (`draft` | `published` | `archived`). The client only renders `published` rows.
 
@@ -11,7 +11,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 - **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
 - Promo widget on the catalog welcome, between Featured and Regions. DB-driven stripes with audience targeting. Exclusive `is_promo` challenges stay out of the ordinary catalog.
-- Diploma **9:16** with confetti and medals on complete
+- Diploma **1080×1080 PNG** rendered by the `diploma` Edge Function (cs copy). Confetti still plays on a successful verify.
 - Custom i18n: **cs / en / de**
 - Secrets via environment — never committed
 - **Mapa tab**: MapLibre OSM basemap, památky by type, search/filters/list/locate
@@ -178,12 +178,18 @@ Dashboard checklist (providers, redirect URLs, Google web client, Apple Services
 
 ### FAPI
 
-1. Create two sales forms in FAPI (digital diploma, medal + diploma). Do not invent URLs in the repo — paste each public form-page URL into `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` when ready. A null/empty URL disables that pay CTA.
+1. Create sales forms in FAPI (digital diploma, medal + diploma) per locale. Do not invent URLs in the repo. After migrations 0023+, the checkout source of truth is `challenge_sale_forms` (locale → cs → en → de). `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` stay as the legacy fallback until a later contract migration. A null/empty URL disables that pay CTA.
 2. Create custom fields named `user_id`, `challenge_id`, `reward_variant` and add them to both forms (see `supabase/functions/fapi-webhook/README.md`).
 3. Deploy `start-fapi-checkout` and `fapi-webhook`.
 4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`. The secret is required; an empty value rejects the notification.
 
-Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price.
+Prices under the CTAs come from the active `challenge_prices` row when that table exists, otherwise `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price. The catalog reads `challenge_catalog_v` when the view is present and falls back to `challenges` + `challenge_i18n` until then. Signed-in copy uses `profiles.locale` (fallback cs → en → de).
+
+### Challenge architecture migrations (not applied on prod)
+
+Draft only. Apply order on prod, after an explicit OK, is **0018 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026**. `0018_verify_waypoint_challenge_readable.sql` is already in `main` and may not be applied on prod yet. W0 (`0020` / history `20261005125735`) is already on prod. W4 (`0027`, dropping legacy columns) is not in this change. Do not `db push` these files to production from a pull request.
+
+`20261006190006_diploma_generation.sql` is the DBA file synced on 2026-10-07 (no `set_diploma_name` / `name_edits`, PNG paths, buckets `diplomas` and `diploma-assets`). It is not applied on prod. The `diploma` Edge Function (`POST`, user JWT) checks entitlement, caches by `render_hash`, and returns a one-hour signed URL. Without entitlement it responds `402 not_entitled` and does not write the file. The app shows a blurred preview until then. Temporary backgrounds, the VANDERY mark, and Playfair live under `supabase/functions/diploma/assets/` (see `SEED.md`). The Flutter client never receives `service_role`.
 
 ### Stripe (unused by CTAs)
 

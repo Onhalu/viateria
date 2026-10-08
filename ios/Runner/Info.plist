@@ -47,6 +47,7 @@
 	<array>
 		<string>https</string>
 		<string>http</string>
+		<string>instagram-stories</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

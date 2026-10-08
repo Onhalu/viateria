@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/auth_redirect.dart';
 import '../domain/challenge_photos.dart';
+import '../l10n/locale_controller.dart';
 import '../models/models.dart';
 import 'auth_identity.dart';
 import 'challenge_mapping.dart';
@@ -255,20 +256,27 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> updateLocale(String locale) async {
-    await _client.auth.updateUser(UserAttributes(data: {'locale': locale}));
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return;
+    // Profile first: the auth listener re-reads profiles.locale and would
+    // otherwise restore the previous value.
     await _client
         .from('profiles')
         .update({
           'locale': locale,
           'updated_at': DateTime.now().toIso8601String(),
         })
-        .eq('id', _client.auth.currentUser!.id);
+        .eq('id', userId);
+    await _client.auth.updateUser(UserAttributes(data: {'locale': locale}));
   }
 }
 
 /// Published challenge plus stops. Place coordinates come from the 0013 FK.
+/// Used when `challenge_catalog_v` is not in the local schema yet.
 const publishedChallengeDetailSelect =
     '*, challenge_i18n(*), waypoints(*, waypoint_i18n(*), $waypointPlaceEmbed), $storyStepEmbed';
+
+const _waypointSelect = '*, waypoint_i18n(*), $waypointPlaceEmbed';
 
 class SupabaseCatalogRepository implements CatalogRepository {
   SupabaseCatalogRepository(this._client);
@@ -277,14 +285,8 @@ class SupabaseCatalogRepository implements CatalogRepository {
 
   @override
   Future<List<Challenge>> fetchPublishedChallenges() async {
-    final rows = await _client
-        .from('challenges')
-        .select('*, challenge_i18n(*)')
-        .eq('status', 'published')
-        .eq('is_promo', false)
-        .order('created_at');
-    return (rows as List)
-        .whereType<Map<String, dynamic>>()
+    final loaded = await _publishedRows();
+    return loaded.rows
         .map(challengeFromRow)
         .where((c) => isPubliclyVisible(c.status) && !c.isPromo)
         .toList();
@@ -292,15 +294,25 @@ class SupabaseCatalogRepository implements CatalogRepository {
 
   @override
   Future<List<ChallengeDetail>> fetchPublishedDetails() async {
-    final rows = await _client
-        .from('challenges')
-        .select(publishedChallengeDetailSelect)
-        .eq('status', 'published')
-        .eq('is_promo', false)
-        .order('created_at');
-    return (rows as List)
-        .whereType<Map<String, dynamic>>()
-        .map(_detailFromRow)
+    final loaded = await _publishedRows();
+    final ids = [
+      for (final row in loaded.rows)
+        if (row['id'] is String) row['id'] as String,
+    ];
+    final waypoints = loaded.fromView ? await _waypointsFor(ids) : null;
+    final storySteps = loaded.fromView ? await _storyStepsFor(ids) : null;
+    return [
+          for (final row in loaded.rows)
+            _detailFromRow(
+              row,
+              waypoints: loaded.fromView
+                  ? waypoints![row['id']] ?? const []
+                  : null,
+              storySteps: loaded.fromView
+                  ? storySteps![row['id']] ?? const []
+                  : null,
+            ),
+        ]
         .where(
           (detail) =>
               isPubliclyVisible(detail.challenge.status) &&
@@ -311,6 +323,16 @@ class SupabaseCatalogRepository implements CatalogRepository {
 
   @override
   Future<ChallengeDetail> fetchChallenge(String id) async {
+    final fromView = await _catalogViewRow(id);
+    if (fromView != null) {
+      final waypoints = await _waypointsFor([id]);
+      final storySteps = await _storyStepsFor([id]);
+      return _detailFromRow(
+        fromView,
+        waypoints: waypoints[id] ?? const [],
+        storySteps: storySteps[id] ?? const [],
+      );
+    }
     late final Map<String, dynamic> map;
     try {
       final row = await _client
@@ -326,20 +348,185 @@ class SupabaseCatalogRepository implements CatalogRepository {
       }
       rethrow;
     }
-    return _detailFromRow(map);
+    final overlaid = await _overlayLegacy([map]);
+    return _detailFromRow(overlaid.single);
   }
 
-  ChallengeDetail _detailFromRow(Map<String, dynamic> map) {
-    final challenge = challengeFromRow(map);
-    final waypointRows = (map['waypoints'] as List?) ?? const [];
-    final waypoints = waypointRows
-        .whereType<Map<String, dynamic>>()
-        .map(waypointFromRow)
+  /// `challenge_catalog_v` when the migration is applied. Null when the
+  /// view is missing so callers can read `challenges` + satellites.
+  Future<Map<String, dynamic>?> _catalogViewRow(String id) async {
+    try {
+      final row = await _client
+          .from('challenge_catalog_v')
+          .select()
+          .eq('id', id)
+          .eq('status', 'published')
+          .maybeSingle();
+      if (row == null) throw ChallengeMissing(id);
+      return Map<String, dynamic>.from(row);
+    } on ChallengeMissing {
+      rethrow;
+    } on PostgrestException catch (error) {
+      if (isMissingSchemaObject(code: error.code, message: error.message)) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<({List<Map<String, dynamic>> rows, bool fromView})>
+  _publishedRows() async {
+    try {
+      final rows = await _client
+          .from('challenge_catalog_v')
+          .select()
+          .eq('status', 'published')
+          .eq('is_promo', false)
+          .order('created_at');
+      final maps = (rows as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+      return (rows: maps, fromView: true);
+    } on PostgrestException catch (error) {
+      if (!isMissingSchemaObject(code: error.code, message: error.message)) {
+        rethrow;
+      }
+    }
+    final rows = await _client
+        .from('challenges')
+        .select(publishedChallengeDetailSelect)
+        .eq('status', 'published')
+        .eq('is_promo', false)
+        .order('created_at');
+    final maps = (rows as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
         .toList();
+    return (rows: await _overlayLegacy(maps), fromView: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _overlayLegacy(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    if (rows.isEmpty) return rows;
+    final ids = [
+      for (final row in rows)
+        if (row['id'] is String) row['id'] as String,
+    ];
+    final forms = await _publishedSatellite(
+      'challenge_sale_forms',
+      'challenge_id, locale, reward_variant, fapi_form_url, status, valid_from, valid_to',
+      ids,
+    );
+    final prices = await _publishedSatellite(
+      'challenge_prices',
+      'challenge_id, diploma_price_cents, medal_price_cents, currency, status, valid_from, valid_to',
+      ids,
+    );
+    if (forms == null && prices == null) return rows;
+    final locale = await _profileLocale();
+    return [
+      for (final row in rows)
+        overlayChallengeSatellites(
+          row,
+          locale: locale,
+          saleForms: forms ?? const [],
+          prices: prices ?? const [],
+        ),
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>?> _publishedSatellite(
+    String table,
+    String columns,
+    List<String> ids,
+  ) async {
+    if (ids.isEmpty) return const [];
+    try {
+      final rows = await _client
+          .from(table)
+          .select(columns)
+          .inFilter('challenge_id', ids)
+          .eq('status', 'published');
+      return (rows as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+    } on PostgrestException catch (error) {
+      if (isMissingSchemaObject(code: error.code, message: error.message)) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> _profileLocale() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) return 'cs';
+    try {
+      final row = await _client
+          .from('profiles')
+          .select('locale')
+          .eq('id', userId)
+          .maybeSingle();
+      return resolveSessionLocale(
+        signedIn: true,
+        profileLocale: row?['locale'] as String?,
+      );
+    } catch (_) {
+      return 'cs';
+    }
+  }
+
+  Future<Map<String, List<Waypoint>>> _waypointsFor(List<String> ids) async {
+    if (ids.isEmpty) return const {};
+    final rows = await _client
+        .from('waypoints')
+        .select(_waypointSelect)
+        .inFilter('challenge_id', ids)
+        .order('sort_order');
+    final grouped = <String, List<Waypoint>>{};
+    for (final row in (rows as List).whereType<Map>()) {
+      final waypoint = waypointFromRow(Map<String, dynamic>.from(row));
+      grouped.putIfAbsent(waypoint.challengeId, () => []).add(waypoint);
+    }
+    return grouped;
+  }
+
+  Future<Map<String, List<StoryStep>>> _storyStepsFor(List<String> ids) async {
+    if (ids.isEmpty) return const {};
+    final rows = await _client
+        .from('challenge_story_steps')
+        .select('*, challenge_story_step_i18n(*)')
+        .inFilter('challenge_id', ids)
+        .order('sort_order');
+    final grouped = <String, List<StoryStep>>{};
+    for (final row in (rows as List).whereType<Map>()) {
+      final step = storyStepFromRow(Map<String, dynamic>.from(row));
+      if (step == null) continue;
+      grouped.putIfAbsent(step.challengeId, () => []).add(step);
+    }
+    return grouped;
+  }
+
+  ChallengeDetail _detailFromRow(
+    Map<String, dynamic> map, {
+    List<Waypoint>? waypoints,
+    List<StoryStep>? storySteps,
+  }) {
+    final challenge = challengeFromRow(map);
+    final resolved =
+        waypoints ??
+        ((map['waypoints'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((row) => waypointFromRow(Map<String, dynamic>.from(row)))
+            .toList();
     return ChallengeDetail(
       challenge: challenge,
-      waypoints: waypoints,
-      storySteps: storyStepsFromRows(map['challenge_story_steps']),
+      waypoints: resolved,
+      storySteps:
+          storySteps ?? storyStepsFromRows(map['challenge_story_steps']),
     );
   }
 
@@ -369,12 +556,7 @@ class SupabaseProgressRepository implements ProgressRepository {
   Future<ChallengeProgress?> fetchProgress(String challengeId) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return null;
-    final runRows = await _client
-        .from('challenge_progress')
-        .select()
-        .eq('user_id', userId)
-        .eq('challenge_id', challengeId)
-        .maybeSingle();
+    final run = await _runRow(userId, challengeId);
     final waypointRows = await _client
         .from('waypoint_progress')
         .select('waypoint_id, waypoints!inner(challenge_id)')
@@ -385,16 +567,11 @@ class SupabaseProgressRepository implements ProgressRepository {
         in (waypointRows as List).whereType<Map<String, dynamic>>()) {
       completed.add(row['waypoint_id'] as String);
     }
-    if (runRows == null && completed.isEmpty) return null;
-    return ChallengeProgress(
-      challengeId: challengeId,
-      status: runStatusFromWire(
-        (runRows?['status'] as String?) ?? 'in_progress',
-      ),
+    if (run == null && completed.isEmpty) return null;
+    return progressFromRunRow(
+      challengeId,
+      run,
       completedWaypointIds: completed,
-      completedAt: runRows?['completed_at'] == null
-          ? null
-          : DateTime.parse(runRows!['completed_at'] as String),
     );
   }
 
@@ -402,22 +579,130 @@ class SupabaseProgressRepository implements ProgressRepository {
   Future<List<ChallengeProgress>> fetchCompleted() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return const [];
-    final rows = await _client
-        .from('challenge_progress')
-        .select('challenge_id, status, completed_at')
-        .eq('user_id', userId)
-        .eq('status', 'completed');
+    final participations = await _completedRows(
+      'challenge_participations',
+      'challenge_id, status, started_at, completed_at, duration',
+      userId,
+    );
+    if (participations != null && participations.isNotEmpty) {
+      return [
+        for (final row in participations)
+          progressFromRunRow(row['challenge_id'] as String, row),
+      ];
+    }
+    final legacy = await _completedRows(
+      'challenge_progress',
+      'challenge_id, status, started_at, completed_at',
+      userId,
+    );
+    final rows = legacy ?? participations ?? const <Map<String, dynamic>>[];
     return [
-      for (final row in (rows as List).whereType<Map<String, dynamic>>())
-        ChallengeProgress(
-          challengeId: row['challenge_id'] as String,
-          status: ChallengeRunStatus.completed,
-          completedWaypointIds: const {},
-          completedAt: row['completed_at'] == null
-              ? null
-              : DateTime.parse(row['completed_at'] as String),
-        ),
+      for (final row in rows)
+        progressFromRunRow(row['challenge_id'] as String, row),
     ];
+  }
+
+  @override
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+    const selects = [
+      'headline, body, recipient_name, recipient_name_display, challenge_title, completed_at, duration, lang, period_days, revoked_at',
+      'headline, body, recipient_name, challenge_title, completed_at, duration, lang, revoked_at',
+    ];
+    for (var i = 0; i < selects.length; i++) {
+      try {
+        final row = await _client
+            .from('challenge_diplomas')
+            .select(selects[i])
+            .eq('user_id', userId)
+            .eq('challenge_id', challengeId)
+            .filter('revoked_at', 'is', null)
+            .maybeSingle();
+        if (row == null) return null;
+        return issuedDiplomaFromRow(
+          challengeId,
+          Map<String, dynamic>.from(row),
+        );
+      } on PostgrestException catch (error) {
+        final missingRelation = isMissingSchemaObject(
+          code: error.code,
+          message: error.message,
+        );
+        final missingColumn = isMissingColumn(
+          code: error.code,
+          message: error.message,
+        );
+        if (missingRelation || (missingColumn && i < selects.length - 1)) {
+          if (missingRelation && !missingColumn) return null;
+          continue;
+        }
+        rethrow;
+      }
+    }
+    return null;
+  }
+
+  /// Participation row when the table exists, otherwise `challenge_progress`.
+  /// A missing participation row still checks progress (pre-backfill).
+  Future<Map<String, dynamic>?> _runRow(
+    String userId,
+    String challengeId,
+  ) async {
+    try {
+      final row = await _client
+          .from('challenge_participations')
+          .select('status, started_at, completed_at, joined_at, duration')
+          .eq('user_id', userId)
+          .eq('challenge_id', challengeId)
+          .maybeSingle();
+      if (row != null) return Map<String, dynamic>.from(row);
+    } on PostgrestException catch (error) {
+      if (!isMissingSchemaObject(code: error.code, message: error.message)) {
+        rethrow;
+      }
+      return _progressRow(userId, challengeId);
+    }
+    return _progressRow(userId, challengeId);
+  }
+
+  Future<Map<String, dynamic>?> _progressRow(
+    String userId,
+    String challengeId,
+  ) async {
+    final row = await _client
+        .from('challenge_progress')
+        .select()
+        .eq('user_id', userId)
+        .eq('challenge_id', challengeId)
+        .maybeSingle();
+    if (row == null) return null;
+    return Map<String, dynamic>.from(row);
+  }
+
+  /// Null when the relation is missing. Empty when the user has no rows.
+  Future<List<Map<String, dynamic>>?> _completedRows(
+    String table,
+    String columns,
+    String userId,
+  ) async {
+    try {
+      final rows = await _client
+          .from(table)
+          .select(columns)
+          .eq('user_id', userId)
+          .eq('status', 'completed');
+      return (rows as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+    } on PostgrestException catch (error) {
+      if (isMissingSchemaObject(code: error.code, message: error.message) ||
+          isMissingColumn(code: error.code, message: error.message)) {
+        return null;
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -436,7 +721,9 @@ class SupabaseProgressRepository implements ProgressRepository {
       challengeId: progress.challengeId,
       status: progress.status,
       completedWaypointIds: progress.completedWaypointIds,
+      startedAt: progress.startedAt,
       completedAt: progress.completedAt,
+      duration: progress.duration,
       nextStoryStepId: _rpcId(payload['next_story_step_id']),
       closingStoryStepId: _rpcId(payload['closing_story_step_id']),
       unlockedWaypointId: _rpcId(payload['unlocked_waypoint_id']),

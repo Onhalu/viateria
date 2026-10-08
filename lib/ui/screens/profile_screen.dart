@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   var _started = false;
   List<Place> _places = const [];
   List<Challenge> _completed = const [];
+  Map<String, String> _completedOn = const {};
   LeaderboardEntry? _score;
 
   @override
@@ -68,6 +69,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         published: published,
         completedProgress: completed,
       );
+      _completedOn = {
+        for (final progress in completed)
+          if (progress.completedAt != null)
+            progress.challengeId: formatDiplomaCompletedOn(
+              progress.completedAt!,
+            ),
+      };
     });
   }
 
@@ -131,6 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     verifiedIds: services.verifiedPlaces.ids,
                   ),
                   completed: _completed,
+                  completedOn: _completedOn,
                   score: _score,
                 );
               },
@@ -192,6 +201,7 @@ class _ProfileStatsBody extends StatelessWidget {
     required this.locale,
     required this.counts,
     required this.completed,
+    required this.completedOn,
     required this.score,
   });
 
@@ -199,6 +209,7 @@ class _ProfileStatsBody extends StatelessWidget {
   final String locale;
   final List<CategoryVisitCount> counts;
   final List<Challenge> completed;
+  final Map<String, String> completedOn;
   final LeaderboardEntry? score;
 
   static const _gridGap = 12.0;
@@ -273,6 +284,14 @@ class _ProfileStatsBody extends StatelessWidget {
                           challenge.copyFor(locale).title,
                           style: const TextStyle(color: BrandColors.forest),
                         ),
+                        subtitle: completedOn[challenge.id] == null
+                            ? null
+                            : Text(
+                                completedOn[challenge.id]!,
+                                key: Key(
+                                  'profile-completed-date-${challenge.id}',
+                                ),
+                              ),
                         trailing: const Icon(
                           Icons.chevron_right,
                           color: BrandColors.forest,

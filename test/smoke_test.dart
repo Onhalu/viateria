@@ -10,8 +10,8 @@ import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/ui/screens/catalog_screen.dart';
+import 'package:viateria/domain/diploma_phase.dart';
 import 'package:viateria/ui/screens/missing_config_screen.dart';
-import 'package:viateria/ui/widgets/diploma_view.dart';
 
 import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
@@ -175,30 +175,8 @@ void main() {
     expect(find.text(AppStrings('en').missingConfig), findsOneWidget);
   });
 
-  testWidgets('diploma is 9:16 with medals', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 180,
-              child: DiplomaView(
-                challengeTitle: 'Open trail',
-                explorerName: 'Ada',
-                completedAt: DateTime.utc(2026, 9, 7),
-                medalCount: 3,
-                strings: AppStrings('en'),
-                showConfetti: false,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final sized = tester.getSize(find.byType(DiplomaView));
-    expect(sized.width / sized.height, closeTo(9 / 16, 0.02));
-    expect(find.text('Open trail'), findsOneWidget);
-    expect(find.byIcon(Icons.military_tech), findsNWidgets(3));
+  test('diploma download uses a square png name', () {
+    expect(diplomaFileName('Open Trail'), 'vyslapni-diplom-open-trail.png');
+    expect(diplomaFileName(''), 'vyslapni-diplom-vyzva.png');
   });
 }

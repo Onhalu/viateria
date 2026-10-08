@@ -97,6 +97,9 @@ class UnconfiguredProgress implements ProgressRepository {
   Future<List<ChallengeProgress>> fetchCompleted() async => const [];
 
   @override
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId) async => null;
+
+  @override
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,
     required String waypointId,
