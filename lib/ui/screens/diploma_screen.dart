@@ -96,8 +96,34 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
     await services.openUrl(Uri.parse(session.url));
   }
 
-  Future<void> _share(String url, String filename) async {
+  Future<void> _saveFile(String url, String filename) async {
     await downloadOrShareDiploma(url: url, filename: filename);
+  }
+
+  Future<void> _shareTarget({
+    required DiplomaShareTarget target,
+    required String url,
+    required String filename,
+    required String title,
+  }) async {
+    final strings = context.read<LocaleController>().strings;
+    final bytes = await diplomaBytesLoader(url);
+    if (!mounted) return;
+    final outcome = await runDiplomaShare(
+      target: target,
+      bytes: bytes,
+      filename: filename,
+      caption: strings.diplomaShareCaption(title),
+    );
+    if (!mounted || !outcome.showUploadHint) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          strings.diplomaShareDownloadedHint,
+          key: const Key('diploma-share-hint'),
+        ),
+      ),
+    );
   }
 
   Future<void> _editName(String diplomaId, String current) async {
@@ -232,7 +258,8 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
             strings: strings,
             onRetry: _retry,
             onBuy: _buy,
-            onShare: _share,
+            onSave: _saveFile,
+            onShare: _shareTarget,
             onEditName: _editName,
           );
         },
@@ -247,6 +274,7 @@ class _DiplomaBody extends StatelessWidget {
     required this.strings,
     required this.onRetry,
     required this.onBuy,
+    required this.onSave,
     required this.onShare,
     required this.onEditName,
   });
@@ -255,7 +283,14 @@ class _DiplomaBody extends StatelessWidget {
   final AppStrings strings;
   final VoidCallback onRetry;
   final Future<void> Function(RewardVariant variant) onBuy;
-  final Future<void> Function(String url, String filename) onShare;
+  final Future<void> Function(String url, String filename) onSave;
+  final Future<void> Function({
+    required DiplomaShareTarget target,
+    required String url,
+    required String filename,
+    required String title,
+  })
+  onShare;
   final Future<void> Function(String diplomaId, String currentName) onEditName;
 
   @override
@@ -431,26 +466,102 @@ class _DiplomaBody extends StatelessWidget {
           );
         }
         final url = data.imageUrl!;
-        return Row(
+        final title = challenge.copyFor(strings.locale).title;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: OutlinedButton(
-                key: const Key('diploma-download'),
-                onPressed: () => onShare(url, filename),
-                child: Text(strings.diplomaDownload),
-              ),
+            OutlinedButton(
+              key: const Key('diploma-download'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(44, 44)),
+              onPressed: () => onSave(url, filename),
+              child: Text(strings.diplomaDownload),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton(
-                key: const Key('diploma-share'),
-                onPressed: () => onShare(url, filename),
-                child: Text(strings.diplomaShare),
-              ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _ShareOption(
+                  buttonKey: const Key('diploma-share'),
+                  label: strings.diplomaShare,
+                  icon: Icons.share_outlined,
+                  onPressed: () => onShare(
+                    target: DiplomaShareTarget.generic,
+                    url: url,
+                    filename: filename,
+                    title: title,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _ShareOption(
+                  buttonKey: const Key('diploma-share-instagram'),
+                  label: strings.diplomaShareInstagram,
+                  icon: Icons.photo_camera_outlined,
+                  onPressed: () => onShare(
+                    target: DiplomaShareTarget.instagram,
+                    url: url,
+                    filename: filename,
+                    title: title,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _ShareOption(
+                  buttonKey: const Key('diploma-share-facebook'),
+                  label: strings.diplomaShareFacebook,
+                  icon: Icons.facebook_outlined,
+                  onPressed: () => onShare(
+                    target: DiplomaShareTarget.facebook,
+                    url: url,
+                    filename: filename,
+                    title: title,
+                  ),
+                ),
+              ],
             ),
           ],
         );
     }
+  }
+}
+
+class _ShareOption extends StatelessWidget {
+  const _ShareOption({
+    required this.buttonKey,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final Key buttonKey;
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: OutlinedButton(
+        key: buttonKey,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(44, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          foregroundColor: BrandColors.forest,
+          side: const BorderSide(color: BrandColors.beige),
+        ),
+        onPressed: onPressed,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: BrandColors.forest),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: BrandColors.forest),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

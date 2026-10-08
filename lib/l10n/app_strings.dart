@@ -192,6 +192,10 @@ class AppStrings {
     'diplomaGenerating',
     'diplomaDownload',
     'diplomaShare',
+    'diplomaShareInstagram',
+    'diplomaShareFacebook',
+    'diplomaShareCaption',
+    'diplomaShareDownloadedHint',
     'diplomaError',
     'diplomaRevoked',
     'diplomaIncomplete',
@@ -431,6 +435,11 @@ class AppStrings {
   String get diplomaGenerating => t('diplomaGenerating');
   String get diplomaDownload => t('diplomaDownload');
   String get diplomaShare => t('diplomaShare');
+  String get diplomaShareInstagram => t('diplomaShareInstagram');
+  String get diplomaShareFacebook => t('diplomaShareFacebook');
+  String diplomaShareCaption(String title) =>
+      t('diplomaShareCaption').replaceAll('{title}', title);
+  String get diplomaShareDownloadedHint => t('diplomaShareDownloadedHint');
   String get diplomaError => t('diplomaError');
   String get diplomaRevoked => t('diplomaRevoked');
   String get diplomaIncomplete => t('diplomaIncomplete');
@@ -742,6 +751,11 @@ class AppStrings {
       'diplomaGenerating': 'Creating the diploma…',
       'diplomaDownload': 'Download',
       'diplomaShare': 'Share',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption': 'I completed the {title} challenge with VANDERY',
+      'diplomaShareDownloadedHint':
+          'The image is downloaded. Upload it to Instagram / Facebook.',
       'diplomaError': 'The diploma could not be created.',
       'diplomaRevoked': 'This diploma was revoked.',
       'diplomaIncomplete': 'The diploma opens after you finish the challenge.',
@@ -991,6 +1005,11 @@ class AppStrings {
       'diplomaGenerating': 'Generuji diplom…',
       'diplomaDownload': 'Stáhnout',
       'diplomaShare': 'Sdílet',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption': 'Zdolal(a) jsem výzvu {title} s VANDERY',
+      'diplomaShareDownloadedHint':
+          'Obrázek je stažený, nahraj ho na Instagram / Facebook',
       'diplomaError': 'Diplom se nepodařilo vytvořit.',
       'diplomaRevoked': 'Diplom byl odebrán.',
       'diplomaIncomplete': 'Diplom se otevře po dokončení výzvy.',
@@ -1243,6 +1262,11 @@ class AppStrings {
       'diplomaGenerating': 'Diplom wird erstellt…',
       'diplomaDownload': 'Herunterladen',
       'diplomaShare': 'Teilen',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption':
+          'Ich habe die Challenge {title} mit VANDERY geschafft',
+      'diplomaShareDownloadedHint': 'Das Bild wurde heruntergeladen. Lade es auf Instagram / Facebook hoch.',
       'diplomaError': 'Das Diplom konnte nicht erstellt werden.',
       'diplomaRevoked': 'Dieses Diplom wurde entzogen.',
       'diplomaIncomplete':

@@ -11,6 +11,7 @@ import 'package:viateria/domain/diploma_phase.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
+import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/diploma_share.dart';
 import 'package:viateria/ui/screens/diploma_screen.dart';
 
@@ -415,6 +416,212 @@ void main() {
     expect(find.text('Jméno bylo upraveno'), findsOneWidget);
     expect(diplomas.imageRequests, ['open-1']);
   });
+
+  test('share caption names the challenge in cs, en, and de', () {
+    expect(
+      AppStrings('cs').diplomaShareCaption('Pálava'),
+      'Zdolal(a) jsem výzvu Pálava s VANDERY',
+    );
+    expect(
+      AppStrings('en').diplomaShareCaption('Pálava'),
+      'I completed the Pálava challenge with VANDERY',
+    );
+    expect(
+      AppStrings('de').diplomaShareCaption('Pálava'),
+      'Ich habe die Challenge Pálava mit VANDERY geschafft',
+    );
+    expect(
+      AppStrings('cs').diplomaShareDownloadedHint,
+      'Obrázek je stažený, nahraj ho na Instagram / Facebook',
+    );
+  });
+
+  test('instagram uses stories only when an app id is configured', () async {
+    final events = <String>[];
+    final previous = diplomaShareEffects;
+    addTearDown(() => diplomaShareEffects = previous);
+
+    diplomaShareEffects = _shareEffects(
+      events,
+      canShare: true,
+      appId: '12345',
+      storiesSupported: true,
+    );
+    final story = await runDiplomaShare(
+      target: DiplomaShareTarget.instagram,
+      bytes: Uint8List.fromList([1, 2, 3]),
+      filename: 'diplom.png',
+      caption: 'Zdolal(a) jsem výzvu Pálava s VANDERY',
+    );
+    expect(story.route, DiplomaShareRoute.stories);
+    expect(story.showUploadHint, isFalse);
+    expect(events, ['stories:12345:3']);
+
+    events.clear();
+    diplomaShareEffects = _shareEffects(
+      events,
+      canShare: true,
+      appId: '12345',
+      storiesSupported: true,
+      storiesOk: false,
+    );
+    final sheet = await runDiplomaShare(
+      target: DiplomaShareTarget.instagram,
+      bytes: Uint8List.fromList([1]),
+      filename: 'diplom.png',
+      caption: 'caption',
+    );
+    expect(sheet.route, DiplomaShareRoute.sheet);
+    expect(events, ['stories:12345:1', 'sheet:diplom.png:caption']);
+
+    events.clear();
+    diplomaShareEffects = _shareEffects(
+      events,
+      canShare: true,
+      storiesSupported: true,
+    );
+    final missingId = await runDiplomaShare(
+      target: DiplomaShareTarget.instagram,
+      bytes: Uint8List.fromList([1]),
+      filename: 'diplom.png',
+      caption: 'caption',
+    );
+    expect(missingId.route, DiplomaShareRoute.sheet);
+    expect(events, ['sheet:diplom.png:caption']);
+  });
+
+  test('desktop web downloads the png and opens the social site', () async {
+    final events = <String>[];
+    final previous = diplomaShareEffects;
+    addTearDown(() => diplomaShareEffects = previous);
+    diplomaShareEffects = _shareEffects(events, canShare: false);
+
+    final instagram = await runDiplomaShare(
+      target: DiplomaShareTarget.instagram,
+      bytes: Uint8List.fromList([9]),
+      filename: 'diplom.png',
+      caption: 'caption',
+    );
+    expect(instagram.route, DiplomaShareRoute.download);
+    expect(instagram.showUploadHint, isTrue);
+    expect(events, ['download:diplom.png:1', 'url:https://www.instagram.com/']);
+
+    events.clear();
+    final facebook = await runDiplomaShare(
+      target: DiplomaShareTarget.facebook,
+      bytes: Uint8List.fromList([9]),
+      filename: 'diplom.png',
+      caption: 'caption',
+    );
+    expect(facebook.showUploadHint, isTrue);
+    expect(events, ['download:diplom.png:1', 'url:https://www.facebook.com/']);
+
+    events.clear();
+    final generic = await runDiplomaShare(
+      target: DiplomaShareTarget.generic,
+      bytes: Uint8List.fromList([9]),
+      filename: 'diplom.png',
+      caption: 'caption',
+    );
+    expect(generic.showUploadHint, isFalse);
+    expect(events, ['download:diplom.png:1']);
+  });
+
+  testWidgets('diploma share offers Instagram and Facebook', (tester) async {
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      imageUrl: 'https://example.test/diploma.png',
+    );
+    await _pumpDiploma(tester, diplomas: diplomas);
+
+    for (final key in const [
+      'diploma-share',
+      'diploma-share-instagram',
+      'diploma-share-facebook',
+    ]) {
+      final size = tester.getSize(find.byKey(Key(key)));
+      expect(size.width, greaterThanOrEqualTo(44), reason: key);
+      expect(size.height, greaterThanOrEqualTo(44), reason: key);
+    }
+    expect(find.text('Sdílet'), findsOneWidget);
+    expect(find.text('Instagram'), findsOneWidget);
+    expect(find.text('Facebook'), findsOneWidget);
+
+    final camera = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const Key('diploma-share-instagram')),
+        matching: find.byIcon(Icons.photo_camera_outlined),
+      ),
+    );
+    final facebook = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const Key('diploma-share-facebook')),
+        matching: find.byIcon(Icons.facebook_outlined),
+      ),
+    );
+    expect(camera.color, BrandColors.forest);
+    expect(facebook.color, BrandColors.forest);
+  });
+
+  testWidgets('instagram falls back to the share sheet without an app id', (
+    tester,
+  ) async {
+    final events = <String>[];
+    final previous = diplomaShareEffects;
+    diplomaShareEffects = _shareEffects(events, canShare: true);
+    addTearDown(() => diplomaShareEffects = previous);
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      imageUrl: 'https://example.test/diploma.png',
+    );
+    await _pumpDiploma(tester, diplomas: diplomas);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('diploma-share-instagram')),
+    );
+    await tester.tap(find.byKey(const Key('diploma-share-instagram')));
+    await tester.pumpAndSettle();
+
+    expect(events, [
+      'sheet:vyslapni-diplom-open-trail.png:'
+          'Zdolal(a) jsem výzvu Otevřená stezka s VANDERY',
+    ]);
+    expect(find.byKey(const Key('diploma-share-hint')), findsNothing);
+  });
+
+  testWidgets('desktop instagram downloads the png and shows the hint', (
+    tester,
+  ) async {
+    final events = <String>[];
+    final previous = diplomaShareEffects;
+    diplomaShareEffects = _shareEffects(events, canShare: false);
+    addTearDown(() => diplomaShareEffects = previous);
+    final diplomas = MemoryDiplomaClient(
+      accessState: 'ready',
+      imageUrl: 'https://example.test/diploma.png',
+    );
+    await _pumpDiploma(tester, diplomas: diplomas);
+
+    await tester.ensureVisible(find.byKey(const Key('diploma-share-facebook')));
+    await tester.tap(find.byKey(const Key('diploma-share-facebook')));
+    await tester.pumpAndSettle();
+
+    expect(events, [
+      'download:vyslapni-diplom-open-trail.png:${_tinyPng.length}',
+      'url:https://www.facebook.com/',
+    ]);
+    expect(
+      find.text('Obrázek je stažený, nahraj ho na Instagram / Facebook'),
+      findsOneWidget,
+    );
+
+    events.clear();
+    await tester.tap(find.byKey(const Key('diploma-share')));
+    await tester.pumpAndSettle();
+    expect(events, [
+      'download:vyslapni-diplom-open-trail.png:${_tinyPng.length}',
+    ]);
+  });
 }
 
 Future<void> _pumpDiploma(
@@ -423,8 +630,13 @@ Future<void> _pumpDiploma(
   String displayName = 'Ada',
 }) async {
   final previousProvider = diplomaImageProvider;
+  final previousLoader = diplomaBytesLoader;
   diplomaImageProvider = (_) => MemoryImage(Uint8List.fromList(_tinyPng));
-  addTearDown(() => diplomaImageProvider = previousProvider);
+  diplomaBytesLoader = (_) async => Uint8List.fromList(_tinyPng);
+  addTearDown(() {
+    diplomaImageProvider = previousProvider;
+    diplomaBytesLoader = previousLoader;
+  });
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -457,6 +669,33 @@ Future<void> _pumpDiploma(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+DiplomaShareEffects _shareEffects(
+  List<String> events, {
+  required bool canShare,
+  String appId = '',
+  bool storiesSupported = false,
+  bool storiesOk = true,
+}) {
+  return DiplomaShareEffects(
+    canShareFiles: () async => canShare,
+    facebookAppId: () => appId,
+    storiesSupported: () => storiesSupported,
+    stories: (bytes, id) async {
+      events.add('stories:$id:${bytes.length}');
+      return storiesOk;
+    },
+    sheet: (bytes, filename, caption) async {
+      events.add('sheet:$filename:$caption');
+    },
+    download: (bytes, filename) async {
+      events.add('download:$filename:${bytes.length}');
+    },
+    openUrl: (uri) async {
+      events.add('url:$uri');
+    },
+  );
 }
 
 const _tinyPng = <int>[
