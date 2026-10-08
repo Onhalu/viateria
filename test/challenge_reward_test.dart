@@ -1048,8 +1048,12 @@ void main() {
         findsOneWidget,
       );
       expect(
+        find.byKey(const Key('challenge-reward-diploma-texture')),
+        findsOneWidget,
+      );
+      expect(
         find.byKey(const Key('challenge-reward-diploma-blur')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
@@ -1188,6 +1192,10 @@ void main() {
       expect(
         find.byKey(const Key('challenge-reward-diploma-blur')),
         findsNothing,
+      );
+      expect(
+        find.byKey(const Key('challenge-reward-diploma-texture')),
+        findsOneWidget,
       );
       expect(diplomas.imageRequests, isEmpty);
       expect(find.bySemanticsLabel(strings.rewardLockedLabel), findsOneWidget);

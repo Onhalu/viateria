@@ -121,6 +121,11 @@ class ChallengeRewardSection extends StatelessWidget {
 
   bool get _blurPreview => completed && !entitled;
 
+  /// Generated diploma when the server file is not on screen: locked,
+  /// completed but unpaid, and every other not-yet-entitled card (free
+  /// challenges and unlocked challenges that are not finished).
+  bool get _texturedDiploma => locked || !entitled;
+
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(panelRadius);
@@ -174,7 +179,12 @@ class ChallengeRewardSection extends StatelessWidget {
       children: [
         _DiplomaPlaceholder(
           label: strings.diplomaLabel,
-          blur: _blurPreview && !locked,
+          // Locked cards are smeared by the overlay's BackdropFilter.
+          // Every other textured card (free, unlocked-but-incomplete,
+          // completed-but-unpaid without the paywall) blurs itself and
+          // shows no lock.
+          blur: _texturedDiploma && !locked,
+          textured: _texturedDiploma,
           image:
               entitled &&
                   hasDisplayName &&
@@ -236,8 +246,8 @@ class _RewardLockOverlay extends StatelessWidget {
 
   final String label;
 
-  static const double _sigma = 8;
-  static const double _lockSize = 64;
+  static const double _sigma = _diplomaBlurSigma;
+  static const double _lockSize = 48;
   static const double _iconSize = 32;
 
   @override
@@ -265,15 +275,18 @@ class _RewardLockOverlay extends StatelessWidget {
                   key: const Key('challenge-reward-lock'),
                   width: _lockSize,
                   height: _lockSize,
-                  child: const DecoratedBox(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: BrandColors.cream,
+                      color: BrandColors.cream.withValues(alpha: 0.55),
                       shape: BoxShape.circle,
                       border: Border.fromBorderSide(
-                        BorderSide(color: BrandColors.beige),
+                        BorderSide(
+                          color: BrandColors.forest.withValues(alpha: 0.85),
+                          width: 1.5,
+                        ),
                       ),
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Icon(
                         Icons.lock_outline,
                         size: _iconSize,
@@ -291,11 +304,24 @@ class _RewardLockOverlay extends StatelessWidget {
   }
 }
 
+/// Shared by the lock overlay and the no-lock texture blur.
+/// High enough to smear detail, low enough that the diploma still reads
+/// on web and mobile (the cream scrim sits on top of this blur).
+const _diplomaBlurSigma = 6.0;
+
 class _DiplomaPlaceholder extends StatelessWidget {
-  const _DiplomaPlaceholder({this.label, this.blur = false, this.image});
+  const _DiplomaPlaceholder({
+    this.label,
+    this.blur = false,
+    this.textured = false,
+    this.image,
+  });
 
   final String? label;
   final bool blur;
+
+  /// Paint [_DiplomaTexture] instead of the plain doc-icon schematic.
+  final bool textured;
   final Widget? image;
 
   @override
@@ -314,11 +340,15 @@ class _DiplomaPlaceholder extends StatelessWidget {
         ),
       ),
     );
-    Widget art = AspectRatio(aspectRatio: 1, child: image ?? schematic);
+    final fallback = textured ? const _DiplomaTexture() : schematic;
+    Widget art = AspectRatio(aspectRatio: 1, child: image ?? fallback);
     if (blur) {
       art = ImageFiltered(
         key: const Key('challenge-reward-diploma-blur'),
-        imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        imageFilter: ImageFilter.blur(
+          sigmaX: _diplomaBlurSigma,
+          sigmaY: _diplomaBlurSigma,
+        ),
         child: art,
       );
     }
@@ -385,4 +415,71 @@ class _ServerDiplomaPreviewState extends State<_ServerDiplomaPreview> {
       errorBuilder: (_, _, _) => const ColoredBox(color: BrandColors.cream),
     );
   }
+}
+
+/// Generated faux-diploma (frame, mark, title, name, text lines, date).
+/// Shown blurred behind the paywall and on cards with no server preview.
+/// Needs no asset and no network.
+class _DiplomaTexture extends StatelessWidget {
+  const _DiplomaTexture();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CustomPaint(
+      key: Key('challenge-reward-diploma-texture'),
+      painter: _DiplomaTexturePainter(),
+      child: SizedBox.expand(),
+    );
+  }
+}
+
+class _DiplomaTexturePainter extends CustomPainter {
+  const _DiplomaTexturePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final forest = Paint()..color = BrandColors.forest;
+    // Filled border, not a hairline. A thin stroke vanishes under sigma ~6
+    // plus the cream scrim and the card reads as blank cream.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)),
+      forest,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(w * 0.07, h * 0.07, w * 0.93, h * 0.93),
+        const Radius.circular(8),
+      ),
+      Paint()..color = BrandColors.beige,
+    );
+
+    void bar(double cy, double width, double thick) {
+      final rect = Rect.fromCenter(
+        center: Offset(w / 2, h * cy),
+        width: w * width,
+        height: h * thick,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(h * thick / 2)),
+        forest,
+      );
+    }
+
+    final seal = Offset(w / 2, h * 0.19);
+    canvas.drawCircle(seal, w * 0.078, forest);
+    canvas.drawCircle(seal, w * 0.042, Paint()..color = BrandColors.beige);
+    canvas.drawCircle(seal, w * 0.020, forest);
+    bar(0.32, 0.40, 0.046); // DIPLOM label
+    bar(0.40, 0.62, 0.016); // rule
+    bar(0.51, 0.76, 0.085); // recipient name
+    bar(0.61, 0.62, 0.016); // rule
+    bar(0.70, 0.72, 0.040); // body
+    bar(0.78, 0.62, 0.040);
+    bar(0.86, 0.36, 0.034); // date
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
