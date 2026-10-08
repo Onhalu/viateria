@@ -218,14 +218,28 @@ Deno.test("layout B is the default and keeps every line inside the panel", async
 Deno.test("measured titles and names: short = 1 line, long = 2 lines without ellipsis, names shrink", async () => {
   const assets = await loadBundledRenderAssets(1);
   const measure = createMeasure(assets.font);
+  // Real TTF metrics, not the 0.52 estimate (estimate would give 434.7 / 611.5).
+  const nameWidth = measure("Ondrej_test", 76);
+  assert(Math.abs(nameWidth - 409.6) < 2, `opentype metrics in use (got ${nameWidth.toFixed(1)})`);
   const short = fitTitle(measure, "Tajemství Českého středohoří", [42, 38, 32], 576);
-  assert(short.lines.length === 1, "short title one line");
+  assert(short.lines.length === 1 && short.size === 42, "short title one line at 42 (estimate would drop to 38)");
   const long = fitTitle(measure, "Hrady a zámky Libereckého kraje: velký okruh kolem Ještědu", [42, 38, 32], 576);
   assert(long.lines.length === 2 && !long.lines.join("").includes("…"), "long title two lines, no ellipsis");
   const name = fitName(measure, "Ondřeje", 76, 48, 576);
   assert(name.size === 76 && name.lines.length === 1, "short name keeps 76");
   const longName = fitName(measure, "Maxmiliána Svatopluka Hradeckého-Kostelníka", 76, 48, 576);
   assert(longName.size === 48 && longName.lines.length === 2, "extreme name wraps at min");
-  const fallback = createMeasure(new Uint8Array([0, 1, 2]));
-  assert(fallback("abcd", 10) === 4 * 10 * FALLBACK_EM_PER_CHAR, "estimate fallback 0.52");
+  // Deliberately invalid bytes: opentype.js throws, createMeasure warns once and
+  // falls back. Capture the warning so the expected RangeError is not mistaken
+  // for a metrics failure in the test log.
+  const warnings: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    const fallback = createMeasure(new Uint8Array([0, 1, 2]));
+    assert(fallback("abcd", 10) === 4 * 10 * FALLBACK_EM_PER_CHAR, "estimate fallback 0.52");
+  } finally {
+    console.warn = originalWarn;
+  }
+  assert(warnings.length === 1, "invalid font logs exactly one fallback warning");
 });
