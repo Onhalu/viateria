@@ -504,7 +504,20 @@ void main() {
 
     expect(find.widgetWithText(FilledButton, strings.verify), findsNWidgets(2));
     expect(find.byIcon(Icons.check_circle), findsNothing);
-    expect(find.byIcon(Icons.lock_outline), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('waypoint-tile-ow-1')),
+        matching: find.byIcon(Icons.lock_outline),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('waypoint-tile-ow-2')),
+        matching: find.byIcon(Icons.lock_outline),
+      ),
+      findsNothing,
+    );
 
     final startRect = tester.getRect(
       find.byKey(const Key('waypoint-category-ow-1')),

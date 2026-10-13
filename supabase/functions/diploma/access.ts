@@ -61,41 +61,17 @@ export function isCacheHit(
   return row.render_hash === hash && row.image_path === objectPath;
 }
 
-export type PriceSnapshot = {
-  diplomaPriceCents: number;
-  status: string;
-  validFrom: string;
-  validTo: string | null;
-};
-
 /**
- * Same predicate as `private.diploma_entitled`. Promo display prices are
- * not an input. The Edge function cannot rely on PostgREST exposing the
- * `private` schema; `record_diploma_render` re-checks the SQL function.
+ * Same predicate as `private.diploma_entitled`. A zero diploma price and
+ * `pricing_type = free` do not unlock the file. The Edge function cannot
+ * rely on PostgREST exposing the `private` schema; `record_diploma_render`
+ * re-checks the SQL function.
  */
 export function entitledFromRows(input: {
   completed: boolean;
   paid: boolean;
-  prices: PriceSnapshot[];
-  pricingType: string | null;
-  now: Date;
 }): boolean {
-  if (!input.completed) return false;
-  if (input.paid) return true;
-  const active = input.prices.filter((row) =>
-    row.status === "published" && priceWindowContains(row, input.now)
-  );
-  if (active.some((row) => row.diplomaPriceCents === 0)) return true;
-  return input.pricingType === "free" && active.length === 0;
-}
-
-function priceWindowContains(row: PriceSnapshot, now: Date): boolean {
-  const from = Date.parse(row.validFrom);
-  if (Number.isNaN(from) || now.getTime() < from) return false;
-  if (!row.validTo) return true;
-  const to = Date.parse(row.validTo);
-  if (Number.isNaN(to)) return false;
-  return now.getTime() < to;
+  return input.completed && input.paid;
 }
 
 export function diplomaCopy(row: IssuedDiplomaRow): {

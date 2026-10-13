@@ -210,6 +210,10 @@ class AppStrings {
     'diplomaNameCancel',
     'payDigitalDiploma',
     'payMedalAndDiploma',
+    'payPriceFree',
+    'payPriceLoading',
+    'payPriceUnavailable',
+    'payTerms',
     'paymentTitle',
     'paymentLoadingForm',
     'paymentProcessingTitle',
@@ -460,6 +464,10 @@ class AppStrings {
   String get diplomaNameCancel => t('diplomaNameCancel');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
+  String get payPriceFree => t('payPriceFree');
+  String get payPriceLoading => t('payPriceLoading');
+  String get payPriceUnavailable => t('payPriceUnavailable');
+  String get payTerms => t('payTerms');
   String get paymentTitle => t('paymentTitle');
   String get paymentLoadingForm => t('paymentLoadingForm');
   String get paymentProcessingTitle => t('paymentProcessingTitle');
@@ -782,6 +790,10 @@ class AppStrings {
       'diplomaNameCancel': 'Cancel',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
+      'payPriceFree': 'Free',
+      'payPriceLoading': 'Loading price…',
+      'payPriceUnavailable': 'Price unavailable',
+      'payTerms': 'Terms',
       'paymentTitle': 'Payment',
       'paymentLoadingForm': 'Loading payment form…',
       'paymentProcessingTitle': 'Processing payment',
@@ -1042,6 +1054,10 @@ class AppStrings {
       'diplomaNameCancel': 'Zrušit',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
+      'payPriceFree': 'Zdarma',
+      'payPriceLoading': 'Načítám cenu…',
+      'payPriceUnavailable': 'Cena není k dispozici',
+      'payTerms': 'Podmínky',
       'paymentTitle': 'Platba',
       'paymentLoadingForm': 'Načítám platební formulář…',
       'paymentProcessingTitle': 'Platba se zpracovává',
@@ -1306,6 +1322,10 @@ class AppStrings {
       'diplomaNameCancel': 'Abbrechen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
+      'payPriceFree': 'Kostenlos',
+      'payPriceLoading': 'Preis wird geladen…',
+      'payPriceUnavailable': 'Preis nicht verfügbar',
+      'payTerms': 'Bedingungen',
       'paymentTitle': 'Zahlung',
       'paymentLoadingForm': 'Zahlungsformular wird geladen…',
       'paymentProcessingTitle': 'Zahlung wird verarbeitet',

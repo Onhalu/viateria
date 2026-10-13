@@ -20,12 +20,11 @@ import 'helpers/fake_payment_webview.dart';
 import 'helpers/fakes.dart';
 
 void main() {
-  test('entitlement is paid, a zero price, or a free challenge', () {
+  test('entitlement requires a completed challenge and a paid purchase', () {
     expect(
       ChallengeReward.isDiplomaEntitled(
         challengeCompleted: true,
         purchasePaid: true,
-        diplomaPriceCents: 499,
       ),
       isTrue,
     );
@@ -33,7 +32,6 @@ void main() {
       ChallengeReward.isDiplomaEntitled(
         challengeCompleted: false,
         purchasePaid: true,
-        diplomaPriceCents: 0,
       ),
       isFalse,
     );
@@ -41,76 +39,20 @@ void main() {
       ChallengeReward.isDiplomaEntitled(
         challengeCompleted: true,
         purchasePaid: false,
-        diplomaPriceCents: 499,
       ),
       isFalse,
-    );
-    expect(
-      ChallengeReward.isDiplomaEntitled(
-        challengeCompleted: true,
-        purchasePaid: false,
-        diplomaPriceCents: 0,
-        requiresPurchase: true,
-      ),
-      isTrue,
-    );
-    expect(
-      ChallengeReward.isDiplomaEntitled(
-        challengeCompleted: true,
-        purchasePaid: false,
-        diplomaPriceCents: null,
-        requiresPurchase: false,
-      ),
-      isTrue,
     );
   });
 
-  test('reward panel uses the payment rule without requiring completion', () {
-    expect(
-      ChallengeReward.isRewardAccessible(
-        purchasePaid: false,
-        diplomaPriceCents: 499,
-        requiresPurchase: true,
-      ),
-      isFalse,
-    );
-    expect(
-      ChallengeReward.isRewardAccessible(
-        purchasePaid: true,
-        diplomaPriceCents: 499,
-      ),
-      isTrue,
-    );
-    expect(
-      ChallengeReward.isRewardAccessible(
-        purchasePaid: false,
-        diplomaPriceCents: 0,
-        requiresPurchase: true,
-      ),
-      isTrue,
-    );
-    expect(
-      ChallengeReward.isRewardAccessible(
-        purchasePaid: false,
-        diplomaPriceCents: null,
-        requiresPurchase: false,
-      ),
-      isTrue,
-    );
+  test('reward panel stays locked until the purchase is paid', () {
+    expect(ChallengeReward.isRewardAccessible(purchasePaid: false), isFalse);
+    expect(ChallengeReward.isRewardAccessible(purchasePaid: true), isTrue);
     expect(
       ChallengeReward.isDiplomaEntitled(
         challengeCompleted: false,
         purchasePaid: true,
-        diplomaPriceCents: 499,
       ),
       isFalse,
-    );
-    expect(
-      ChallengeReward.isRewardAccessible(
-        purchasePaid: true,
-        diplomaPriceCents: 499,
-      ),
-      isTrue,
     );
   });
 

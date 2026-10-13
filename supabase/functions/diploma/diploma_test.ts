@@ -85,50 +85,10 @@ Deno.test("not entitled refuses before a name or cache check", () => {
   assert(ready.ok, "entitled with a name may render");
 });
 
-Deno.test("entitlement matches paid, zero price, or free without a price row", () => {
-  const now = new Date("2026-06-01T12:00:00.000Z");
-  const price = {
-    diplomaPriceCents: 499,
-    status: "published",
-    validFrom: "2026-01-01T00:00:00.000Z",
-    validTo: null,
-  };
-  assert(
-    entitledFromRows({ completed: true, paid: true, prices: [price], pricingType: "paid", now }),
-    "paid",
-  );
-  assert(
-    !entitledFromRows({ completed: false, paid: true, prices: [], pricingType: "free", now }),
-    "incomplete",
-  );
-  assert(
-    !entitledFromRows({ completed: true, paid: false, prices: [price], pricingType: "paid", now }),
-    "unpaid",
-  );
-  assert(
-    entitledFromRows({
-      completed: true,
-      paid: false,
-      prices: [{ ...price, diplomaPriceCents: 0 }],
-      pricingType: "paid",
-      now,
-    }),
-    "zero price",
-  );
-  assert(
-    entitledFromRows({ completed: true, paid: false, prices: [], pricingType: "free", now }),
-    "free",
-  );
-  assert(
-    entitledFromRows({
-      completed: true,
-      paid: false,
-      prices: [{ ...price, validTo: "2026-05-01T00:00:00.000Z" }],
-      pricingType: "free",
-      now,
-    }),
-    "expired price does not block the free path",
-  );
+Deno.test("entitlement is completed and paid, never a zero or free price", () => {
+  assert(entitledFromRows({ completed: true, paid: true }), "paid");
+  assert(!entitledFromRows({ completed: false, paid: true }), "incomplete");
+  assert(!entitledFromRows({ completed: true, paid: false }), "unpaid");
 });
 
 Deno.test("render hash is stable and changes with the Prague date", async () => {

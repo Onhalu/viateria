@@ -9,6 +9,8 @@ import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
 import 'package:viateria/data/challenge_mapping.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
+import 'package:viateria/domain/challenge_reward.dart';
+import 'package:viateria/domain/fapi_offer.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/domain/story_feed.dart';
 import 'package:viateria/domain/story_fog.dart';
@@ -630,23 +632,55 @@ void main() {
     },
   );
 
-  testWidgets('free story keeps the blurred diploma and no lock', (
+  testWidgets('free story shows the pay buttons and stays locked until paid', (
     tester,
   ) async {
+    debugPaymentWebViewBuilder = fakePaymentWebViewBuilder();
+    addTearDown(() => debugPaymentWebViewBuilder = null);
     final strings = AppStrings('cs');
-    await _pumpStory(tester, progressIds: const {});
+    final base = _story();
+    final detail = ChallengeDetail(
+      challenge: Challenge(
+        id: base.challenge.id,
+        slug: base.challenge.slug,
+        accessMode: base.challenge.accessMode,
+        pricingType: PricingType.free,
+        priceCents: 99900,
+        diplomaPriceCents: 99900,
+        medalPriceCents: 99900,
+        currency: 'czk',
+        status: base.challenge.status,
+        countryCode: base.challenge.countryCode,
+        translations: base.challenge.translations,
+        fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
+        fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
+      ),
+      waypoints: base.waypoints,
+      storySteps: base.storySteps,
+    );
+    final purchases = MemoryPurchases(completeOnRefresh: false)
+      ..offer = const FapiOffer(
+        diploma: FapiOfferVariant(
+          priceCents: 0,
+          currency: 'czk',
+          termsUrl: 'https://form.fapi.cz/terms',
+        ),
+        medal: FapiOfferVariant(priceCents: 0, currency: 'czk'),
+      );
+    await _pumpDetail(tester, detail, purchases: purchases);
 
     expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
-    expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+    expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+    expect(find.text(strings.payDigitalDiploma), findsOneWidget);
+    expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
+    expect(find.text(strings.payPriceFree), findsNWidgets(2));
+    expect(find.text('999${priceThinSpace}Kč'), findsNothing);
     expect(find.text(strings.challengeLockedPaid), findsNothing);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('challenge-reward-section')),
-    );
-    expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('challenge-reward-lock')));
     expect(
       find.byKey(const Key('challenge-reward-lock-overlay')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const Key('challenge-reward-diploma-texture')),
@@ -654,10 +688,17 @@ void main() {
     );
     expect(
       find.byKey(const Key('challenge-reward-diploma-blur')),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
     expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('challenge-reward-lock')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('payment-checkout-dialog')), findsOneWidget);
+    expect(
+      purchases.purchases['story-mock']!.rewardVariant,
+      RewardVariant.diploma,
+    );
   });
 
   testWidgets('chapter auto-expands once, and reduce-motion stays closed', (

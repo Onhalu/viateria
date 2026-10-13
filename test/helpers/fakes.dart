@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/challenge_photos.dart';
+import 'package:viateria/domain/fapi_offer.dart';
 import 'package:viateria/domain/photo_verify.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/domain/story_feed.dart';
@@ -355,6 +356,9 @@ class MemoryPurchases implements PurchaseRepository {
   MemoryPurchases({
     Map<String, Purchase>? purchases,
     this.completeOnRefresh = true,
+    this.offer = memoryFapiOffer,
+    this.offerFails = false,
+    this.offerGate,
   }) : purchases = purchases ?? {};
 
   final Map<String, Purchase> purchases;
@@ -363,6 +367,15 @@ class MemoryPurchases implements PurchaseRepository {
   /// Widget tests that need the pay CTAs to stay visible after a tap
   /// set this to false. Default true matches the previous auto-pay refresh.
   final bool completeOnRefresh;
+
+  /// Successful `fapi-offer` payload. CMS cents on the challenge are ignored.
+  FapiOffer offer;
+
+  /// The Edge function is missing or failed.
+  bool offerFails;
+
+  /// While set, [fetchOffer] waits so the pay buttons can show a loading price.
+  Completer<FapiOffer>? offerGate;
 
   @override
   Future<Purchase?> fetchPurchase(String challengeId) async =>
@@ -419,7 +432,40 @@ class MemoryPurchases implements PurchaseRepository {
     );
     return session;
   }
+
+  @override
+  Future<FapiOffer> fetchOffer(String challengeId, {String? locale}) {
+    final gate = offerGate;
+    if (gate != null) return gate.future;
+    if (offerFails) {
+      return Future<FapiOffer>.delayed(
+        Duration.zero,
+        () => throw StateError('fapi-offer unavailable'),
+      );
+    }
+    return Future.value(offer);
+  }
 }
+
+/// Default FAPI offer used by widget tests. Not a CMS price.
+const memoryFapiOffer = FapiOffer(
+  diploma: FapiOfferVariant(
+    priceCents: 499,
+    currency: 'eur',
+    termsUrl: 'https://form.fapi.cz/terms',
+    terms: [
+      FapiOfferTerm(
+        text: 'Obchodní podmínky',
+        url: 'https://form.fapi.cz/terms',
+      ),
+    ],
+  ),
+  medal: FapiOfferVariant(
+    priceCents: 900,
+    currency: 'eur',
+    termsUrl: 'https://form.fapi.cz/terms',
+  ),
+);
 
 /// Fake FAPI form URLs returned by [MemoryPurchases.startCheckout].
 String fapiCheckoutUrlFor(RewardVariant variant) => switch (variant) {

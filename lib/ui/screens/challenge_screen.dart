@@ -9,6 +9,7 @@ import '../../data/repositories.dart';
 import '../../data/route_services.dart';
 import '../../domain/challenge_photos.dart';
 import '../../domain/challenge_reward.dart';
+import '../../domain/fapi_offer.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/story_feed.dart';
 import '../../domain/story_fog.dart';
@@ -48,6 +49,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   static const _rules = UnlockRules();
 
   Future<_ChallengePageData>? _future;
+  Future<FapiOffer?>? _offerFuture;
   final _startController = TextEditingController();
 
   String? _destinationId;
@@ -66,7 +68,16 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
+    _offerFuture ??= _loadOffer();
     context.read<LastOpenedChallengeStore>().remember(widget.challengeId);
+  }
+
+  @override
+  void didUpdateWidget(ChallengeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.challengeId == widget.challengeId) return;
+    _future = _load();
+    _offerFuture = _loadOffer();
   }
 
   @override
@@ -121,8 +132,22 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   Future<void> _reload() async {
     setState(() {
       _future = _load();
+      _offerFuture = _loadOffer();
     });
     await _future;
+  }
+
+  Future<FapiOffer?> _loadOffer() async {
+    final services = context.read<AppServices>();
+    final locale = context.read<LocaleController>().locale;
+    try {
+      return await services.purchases.fetchOffer(
+        widget.challengeId,
+        locale: locale,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _unlockPaid(RewardVariant variant) async {
@@ -484,8 +509,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         final diplomaEntitled = ChallengeReward.isDiplomaEntitled(
           challengeCompleted: isComplete,
           purchasePaid: purchasePaid,
-          diplomaPriceCents: challenge.diplomaPriceCents,
-          requiresPurchase: challenge.isPaid,
         );
         final diplomaName = context
             .read<AppServices>()
@@ -494,8 +517,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             ?.displayName;
         final rewardLocked = !ChallengeReward.isRewardAccessible(
           purchasePaid: purchasePaid,
-          diplomaPriceCents: challenge.diplomaPriceCents,
-          requiresPurchase: challenge.isPaid,
         );
         final gallery = data.photos;
         return CustomScrollView(
@@ -590,18 +611,36 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       strings.challengeLockedPaid,
                       key: const Key('challenge-unlock-cta'),
                     ),
-                    const SizedBox(height: 8),
-                    _ChallengePayCtas(
-                      strings: strings,
-                      challenge: challenge,
-                      onPay: _unlockPaid,
-                    ),
-                    if (data.purchase?.status == PurchaseStatus.pending)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(strings.purchasePending),
-                      ),
                   ],
+                  const SizedBox(height: 16),
+                  FutureBuilder<FapiOffer?>(
+                    future: _offerFuture,
+                    builder: (context, offerSnapshot) {
+                      final loading =
+                          _offerFuture == null ||
+                          offerSnapshot.connectionState != ConnectionState.done;
+                      return _ChallengePayCtas(
+                        strings: strings,
+                        challenge: challenge,
+                        offer: offerSnapshot.data,
+                        loading: loading,
+                        failed:
+                            offerSnapshot.hasError ||
+                            (!loading && offerSnapshot.data == null),
+                        onPay: _unlockPaid,
+                        onOpenUrl: (url) {
+                          final uri = Uri.tryParse(url);
+                          if (uri == null) return;
+                          context.read<AppServices>().openUrl(uri);
+                        },
+                      );
+                    },
+                  ),
+                  if (data.purchase?.status == PurchaseStatus.pending)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(strings.purchasePending),
+                    ),
                   const SizedBox(height: 16),
                   Text(
                     strings.waypoints,
@@ -712,7 +751,11 @@ class _ChallengePayCtas extends StatelessWidget {
   const _ChallengePayCtas({
     required this.strings,
     required this.challenge,
+    required this.offer,
+    required this.loading,
+    required this.failed,
     required this.onPay,
+    required this.onOpenUrl,
   });
 
   static const gap = 10.0;
@@ -727,7 +770,11 @@ class _ChallengePayCtas extends StatelessWidget {
 
   final AppStrings strings;
   final Challenge challenge;
+  final FapiOffer? offer;
+  final bool loading;
+  final bool failed;
   final ValueChanged<RewardVariant> onPay;
+  final ValueChanged<String> onOpenUrl;
 
   static Color _ctaTone(Color color, Set<WidgetState> states) {
     if (states.contains(WidgetState.disabled)) {
@@ -779,13 +826,11 @@ class _ChallengePayCtas extends StatelessWidget {
     final diploma = _payButton(
       key: const Key('challenge-pay-diploma'),
       priceKey: const Key('challenge-pay-diploma-price'),
+      loadingKey: const Key('challenge-pay-diploma-price-loading'),
+      fallbackKey: const Key('challenge-pay-diploma-price-fallback'),
       outlined: true,
       label: strings.payDigitalDiploma,
-      price: formatChallengePrice(
-        challenge.displayPriceCents(RewardVariant.diploma),
-        challenge.currency,
-        strings.locale,
-      ),
+      variant: offer?.diploma,
       onPressed: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
           ? null
           : () => onPay(RewardVariant.diploma),
@@ -793,47 +838,77 @@ class _ChallengePayCtas extends StatelessWidget {
     final medal = _payButton(
       key: const Key('challenge-pay-medal'),
       priceKey: const Key('challenge-pay-medal-price'),
+      loadingKey: const Key('challenge-pay-medal-price-loading'),
+      fallbackKey: const Key('challenge-pay-medal-price-fallback'),
       outlined: false,
       label: strings.payMedalAndDiploma,
-      price: formatChallengePrice(
-        challenge.displayPriceCents(RewardVariant.medalAndDiploma),
-        challenge.currency,
-        strings.locale,
-      ),
+      variant: offer?.medal,
       onPressed: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
           ? null
           : () => onPay(RewardVariant.medalAndDiploma),
     );
-    if (stack) {
-      return Column(
-        key: const Key('challenge-pay-ctas'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          diploma,
-          const SizedBox(height: gap),
-          medal,
-        ],
-      );
-    }
-    return IntrinsicHeight(
-      child: Row(
-        key: const Key('challenge-pay-ctas'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(flex: 1, child: diploma),
-          const SizedBox(width: gap),
-          Expanded(flex: 1, child: medal),
-        ],
-      ),
+    final buttons = stack
+        ? Column(
+            key: const Key('challenge-pay-ctas'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              diploma,
+              const SizedBox(height: gap),
+              medal,
+            ],
+          )
+        : IntrinsicHeight(
+            child: Row(
+              key: const Key('challenge-pay-ctas'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 1, child: diploma),
+                const SizedBox(width: gap),
+                Expanded(flex: 1, child: medal),
+              ],
+            ),
+          );
+    final terms = _terms();
+    if (terms.isEmpty) return buttons;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        buttons,
+        _PayTerms(terms: terms, onOpenUrl: onOpenUrl),
+      ],
     );
+  }
+
+  List<FapiOfferTerm> _terms() {
+    if (loading || failed || offer == null) return const [];
+    final seen = <String>{};
+    final terms = <FapiOfferTerm>[];
+    void add(String text, String? url) {
+      final clean = text.trim();
+      final link = httpUrlOrNull(url);
+      if (clean.isEmpty && link == null) return;
+      final key = link ?? 'text:$clean';
+      if (!seen.add(key)) return;
+      terms.add(FapiOfferTerm(text: clean, url: link));
+    }
+
+    for (final variant in [offer!.diploma, offer!.medal]) {
+      for (final term in variant.terms) {
+        add(term.text, term.url);
+      }
+      if (variant.termsUrl != null) add(strings.payTerms, variant.termsUrl);
+    }
+    return terms;
   }
 
   Widget _payButton({
     required Key key,
     required Key priceKey,
+    required Key loadingKey,
+    required Key fallbackKey,
     required bool outlined,
     required String label,
-    required String? price,
+    required FapiOfferVariant? variant,
     required VoidCallback? onPressed,
   }) {
     final states = <WidgetState>{if (onPressed == null) WidgetState.disabled};
@@ -841,6 +916,15 @@ class _ChallengePayCtas extends StatelessWidget {
       outlined ? BrandColors.forest : BrandColors.cream,
       states,
     );
+    final price = loading || failed
+        ? null
+        : formatPayButtonPrice(
+            cents: variant?.priceCents,
+            currency: variant?.currency ?? '',
+            locale: strings.locale,
+            freeLabel: strings.payPriceFree,
+          );
+    final showFallback = !loading && (failed || price == null);
     final child = Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -857,7 +941,33 @@ class _ChallengePayCtas extends StatelessWidget {
             color: ink,
           ),
         ),
-        if (price != null) ...[
+        if (loading) ...[
+          const SizedBox(height: priceGap),
+          Semantics(
+            label: strings.payPriceLoading,
+            child: SizedBox(
+              key: loadingKey,
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: ink),
+            ),
+          ),
+        ] else if (showFallback) ...[
+          const SizedBox(height: priceGap),
+          Text(
+            strings.payPriceUnavailable,
+            key: fallbackKey,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+              color: ink,
+            ),
+          ),
+        ] else if (price != null) ...[
           const SizedBox(height: priceGap),
           Text(
             price,
@@ -889,6 +999,47 @@ class _ChallengePayCtas extends StatelessWidget {
       onPressed: onPressed,
       style: style,
       child: child,
+    );
+  }
+}
+
+class _PayTerms extends StatelessWidget {
+  const _PayTerms({required this.terms, required this.onOpenUrl});
+
+  final List<FapiOfferTerm> terms;
+  final ValueChanged<String> onOpenUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        key: const Key('challenge-pay-terms'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final term in terms)
+            TextButton(
+              key: Key('challenge-pay-terms-link-${term.url ?? term.text}'),
+              style: TextButton.styleFrom(
+                foregroundColor: BrandColors.forest,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                minimumSize: const Size(44, 44),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: term.url == null ? null : () => onOpenUrl(term.url!),
+              child: Text(
+                term.text.isEmpty ? term.url! : term.text,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                  color: BrandColors.forest,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.start-fapi-checkout]
 verify_jwt = true
 
+[functions.fapi-offer]
+verify_jwt = true
+
 [functions.fapi-webhook]
 verify_jwt = false
 

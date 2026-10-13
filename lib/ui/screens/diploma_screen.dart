@@ -41,8 +41,6 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
     final entitled = ChallengeReward.isDiplomaEntitled(
       challengeCompleted: completed,
       purchasePaid: purchase?.isPaid ?? false,
-      diplomaPriceCents: detail.challenge.diplomaPriceCents,
-      requiresPurchase: detail.challenge.isPaid,
     );
     final name = services.auth.currentUser?.displayName;
     var phase = resolveDiplomaPhase(
@@ -443,20 +441,18 @@ class _DiplomaBody extends StatelessWidget {
               key: const Key('diploma-blurred-hint'),
               textAlign: TextAlign.center,
             ),
-            if (challenge.isPaid) ...[
-              const SizedBox(height: 12),
-              OutlinedButton(
-                key: const Key('diploma-buy'),
-                onPressed: () => onBuy(RewardVariant.diploma),
-                child: Text(strings.payDigitalDiploma),
-              ),
-              const SizedBox(height: 8),
-              FilledButton(
-                key: const Key('diploma-buy-medal'),
-                onPressed: () => onBuy(RewardVariant.medalAndDiploma),
-                child: Text(strings.payMedalAndDiploma),
-              ),
-            ],
+            const SizedBox(height: 12),
+            OutlinedButton(
+              key: const Key('diploma-buy'),
+              onPressed: () => onBuy(RewardVariant.diploma),
+              child: Text(strings.payDigitalDiploma),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              key: const Key('diploma-buy-medal'),
+              onPressed: () => onBuy(RewardVariant.medalAndDiploma),
+              child: Text(strings.payMedalAndDiploma),
+            ),
           ],
         );
       case DiplomaPhase.ready:

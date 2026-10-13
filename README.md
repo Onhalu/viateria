@@ -142,7 +142,8 @@ Author content in the dashboard. Only `status = published` is visible. Publish t
 
 Edge functions:
 
-- `start-fapi-checkout` — authenticated; calls `challenge_readable` (same promo gate as the catalog) before upserting a pending purchase and returning the FAPI form URL
+- `fapi-offer` — authenticated; reads the public FAPI form resource for both reward variants and returns price cents plus terms. Not deployed until `supabase functions deploy fapi-offer`. The app never reads `challenge_prices` for the pay buttons.
+- `start-fapi-checkout` — authenticated; calls `challenge_readable` (same promo gate as the catalog) before upserting a pending purchase and returning the FAPI form URL. Free challenges are accepted. Redeploy so a zero-price form can start checkout.
 - `fapi-webhook` — requires `FAPI_WEBHOOK_SECURITY`; marks an existing pending `purchases` row `paid` on a verified FAPI paid-invoice notification
 - `send-email` — Auth Send Email hook; requires `SEND_EMAIL_HOOK_SECRET` and a valid webhook signature before it sends
 - `create-checkout-session` / `stripe-webhook` — leftover Stripe path; not used by the Flutter pay CTAs
@@ -180,10 +181,10 @@ Dashboard checklist (providers, redirect URLs, Google web client, Apple Services
 
 1. Create sales forms in FAPI (digital diploma, medal + diploma) per locale. Do not invent URLs in the repo. After migrations 0023+, the checkout source of truth is `challenge_sale_forms` (locale → cs → en → de). `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` stay as the legacy fallback until a later contract migration. A null/empty URL disables that pay CTA.
 2. Create custom fields named `user_id`, `challenge_id`, `reward_variant` and add them to both forms (see `supabase/functions/fapi-webhook/README.md`).
-3. Deploy `start-fapi-checkout` and `fapi-webhook`.
+3. Deploy `fapi-offer`, `start-fapi-checkout`, and `fapi-webhook`. `fapi-offer` is the price and terms source for every challenge. `sync-fapi-prices` does not exist.
 4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`. The secret is required; an empty value rejects the notification.
 
-Prices under the CTAs come from the active `challenge_prices` row when that table exists, otherwise `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price. The catalog reads `challenge_catalog_v` when the view is present and falls back to `challenges` + `challenge_i18n` until then. Signed-in copy uses `profiles.locale` (fallback cs → en → de).
+Prices and terms under the CTAs come from `fapi-offer` (the public FAPI form resource for the active sale-form URL). A FAPI price of 0 is shown as free. While that call is in flight the buttons stay visible with a loading price; if the function is missing or the form cannot be read, the buttons show a fallback and do not use `challenge_prices` or `diploma_price_cents`. The pending purchase row prefers that same form price and falls back to the CMS cache only when the form cannot be read; `fapi-webhook` replaces the amount from the paid invoice. An active **discount** promo stripe still overrides that CMS placeholder with `promo_diploma_price_cents` / `promo_medal_price_cents` when the form price was not read. Exclusive stripes do not change the price. The catalog reads `challenge_catalog_v` when the view is present and falls back to `challenges` + `challenge_i18n` until then. Signed-in copy uses `profiles.locale` (fallback cs → en → de).
 
 ### Challenge architecture migrations (not applied on prod)
 

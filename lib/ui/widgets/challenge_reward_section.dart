@@ -112,8 +112,8 @@ class ChallengeRewardSection extends StatelessWidget {
   final bool completed;
   final bool entitled;
 
-  /// Paywall over the whole card. Free, zero-price, and paid purchases
-  /// leave this false — the same payment rule as [ChallengeReward.isRewardAccessible].
+  /// Paywall over the whole card until the FAPI purchase is paid.
+  /// A zero diploma price does not clear it.
   final bool locked;
   final String? challengeId;
   final DiplomaClient? diplomas;
@@ -125,9 +125,8 @@ class ChallengeRewardSection extends StatelessWidget {
 
   bool get _blurPreview => completed && !entitled;
 
-  /// Generated diploma when the server file is not on screen: locked,
-  /// completed but unpaid, and every other not-yet-entitled card (free
-  /// challenges and unlocked challenges that are not finished).
+  /// Generated diploma when the server file is not on screen: locked
+  /// until paid, or paid but not finished yet.
   bool get _texturedDiploma => locked || !entitled;
 
   @override
@@ -187,8 +186,7 @@ class ChallengeRewardSection extends StatelessWidget {
         _DiplomaPlaceholder(
           label: strings.diplomaLabel,
           // Locked cards are smeared by the overlay's BackdropFilter.
-          // Every other textured card (free, unlocked-but-incomplete,
-          // completed-but-unpaid without the paywall) blurs itself and
+          // A paid challenge that is not finished yet blurs itself and
           // shows no lock.
           blur: _texturedDiploma && !locked,
           textured: _texturedDiploma,
