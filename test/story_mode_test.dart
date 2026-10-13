@@ -257,11 +257,13 @@ void main() {
       'place:w0:true',
       'place:w1:false',
       'place:w2:false',
+      'chapter:s-close',
     ]);
     expect(
       storyPlaceTitle(
         mode: AccessMode.story,
         unlocked: false,
+        completed: false,
         waypoint: detail.orderedWaypoints[1],
         locale: 'cs',
         lockedTitle: AppStrings('cs').storyNextStop,
@@ -272,6 +274,7 @@ void main() {
       storyPlaceTitle(
         mode: AccessMode.story,
         unlocked: true,
+        completed: false,
         waypoint: detail.orderedWaypoints[0],
         locale: 'cs',
         lockedTitle: 'Další zastávka',
@@ -279,6 +282,47 @@ void main() {
       'Adršpašské skály',
     );
   });
+
+  test(
+    'unpaid story keeps the intro and closing, and reveals a verified stop',
+    () {
+      final detail = _story();
+      final feed = buildChallengeFeed(
+        mode: AccessMode.story,
+        hasAccess: false,
+        ordered: detail.orderedWaypoints,
+        steps: detail.orderedStorySteps,
+        completedIds: const {'w0'},
+      );
+      expect(_labels(feed, 'cs'), [
+        'chapter:s-open',
+        'place:w0:false',
+        'place:w1:false',
+        'place:w2:false',
+        'chapter:s-close',
+      ]);
+      expect(
+        storyPlaceTitle(
+          mode: AccessMode.story,
+          unlocked: false,
+          completed: true,
+          waypoint: detail.orderedWaypoints[0],
+          locale: 'cs',
+          lockedTitle: 'Další zastávka',
+        ),
+        'Adršpašské skály',
+      );
+      expect(
+        storyHiddenWaypointIds(
+          mode: AccessMode.story,
+          hasAccess: false,
+          ordered: detail.orderedWaypoints,
+          completedIds: const {'w0'},
+        ),
+        {'w1', 'w2'},
+      );
+    },
+  );
 
   test('after the first verify the next chapter and place unlock', () {
     final detail = _story();
@@ -296,6 +340,7 @@ void main() {
       'chapter:s-b1',
       'place:w1:true',
       'place:w2:false',
+      'chapter:s-close',
     ]);
     final hints = storyStepIdsAfterVerify(
       detail: detail,
@@ -307,8 +352,16 @@ void main() {
     expect(hints.closingStoryStepId, isNull);
   });
 
-  test('closing appears only after every stop, and empty media is skipped', () {
+  test('closing is always last, and empty media is skipped', () {
     final detail = _story();
+    final early = buildChallengeFeed(
+      mode: AccessMode.story,
+      hasAccess: true,
+      ordered: detail.orderedWaypoints,
+      steps: detail.orderedStorySteps,
+      completedIds: const {},
+    );
+    expect(early.whereType<StoryFeedChapter>().last.step.id, 's-close');
     final feed = buildChallengeFeed(
       mode: AccessMode.story,
       hasAccess: true,
@@ -361,6 +414,7 @@ void main() {
       storyPlaceTitle(
         mode: open.accessMode,
         unlocked: true,
+        completed: false,
         waypoint: detail.orderedWaypoints[2],
         locale: 'en',
         lockedTitle: 'Next stop',
@@ -554,7 +608,8 @@ void main() {
     expect(find.text('Propast Macocha'), findsNothing);
     expect(find.text('Zámek Kroměříž'), findsNothing);
     expect(find.text('Cesta k Macoše'), findsNothing);
-    expect(find.text('Závěr výzvy'), findsNothing);
+    expect(find.text('Závěr výzvy'), findsOneWidget);
+    expect(find.text('Hotovo. Příběh končí.'), findsNothing);
     expect(find.byKey(const Key('waypoint-mystery-w1')), findsOneWidget);
 
     final card = tester.widget<Card>(
@@ -595,8 +650,16 @@ void main() {
       expect(find.text(strings.payDigitalDiploma), findsOneWidget);
       expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
       expect(find.text(strings.challengeLockedPaid), findsOneWidget);
-      expect(find.byKey(const Key('story-chapter-s-open')), findsNothing);
-      expect(find.text('Další zastávka'), findsWidgets);
+      expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
+      expect(find.text('Úvod výzvy'), findsOneWidget);
+      expect(find.text('Vítej v příběhové výpravě.'), findsOneWidget);
+      expect(
+        find.byKey(const Key('story-youtube-dQw4w9WgXcQ')),
+        findsOneWidget,
+      );
+      expect(find.text('Před Adršpachem'), findsNothing);
+      expect(find.text('Závěr výzvy'), findsOneWidget);
+      expect(find.text('Další zastávka'), findsNWidgets(3));
 
       await tester.ensureVisible(
         find.byKey(const Key('challenge-reward-lock')),
@@ -631,6 +694,233 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'pending story shows intro then gated places then closing, and a verified stop',
+    (tester) async {
+      final strings = AppStrings('cs');
+      final base = _paidStory();
+      final detail = ChallengeDetail(
+        challenge: Challenge(
+          id: base.challenge.id,
+          slug: base.challenge.slug,
+          accessMode: AccessMode.story,
+          pricingType: PricingType.paid,
+          priceCents: 69700,
+          diplomaPriceCents: 69700,
+          currency: 'czk',
+          status: base.challenge.status,
+          countryCode: base.challenge.countryCode,
+          translations: base.challenge.translations,
+          fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
+        ),
+        waypoints: base.waypoints,
+        storySteps: base.storySteps,
+      );
+      final progress = MemoryProgress(details: [detail]);
+      progress.completed[detail.challenge.id] = {'w0'};
+      final purchases =
+          MemoryPurchases(
+              completeOnRefresh: false,
+              purchases: {
+                detail.challenge.id: Purchase(
+                  challengeId: detail.challenge.id,
+                  status: PurchaseStatus.pending,
+                  rewardVariant: RewardVariant.diploma,
+                ),
+              },
+            )
+            ..offer = const FapiOffer(
+              diploma: FapiOfferVariant(
+                priceCents: 19700,
+                currency: 'czk',
+                termsUrl: 'https://vyslapni.cz/obchodni-podminky/',
+                terms: [
+                  FapiOfferTerm(
+                    text: 'Souhlasím se',
+                    url: 'https://vyslapni.cz/obchodni-podminky/',
+                  ),
+                ],
+              ),
+              medal: FapiOfferVariant.unknown,
+            );
+      await _pumpDetail(
+        tester,
+        detail,
+        progress: progress,
+        purchases: purchases,
+        height: 5200,
+      );
+
+      expect(
+        tester.getTopLeft(find.byKey(const Key('story-chapter-s-open'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('waypoint-tile-w0'))).dy,
+        ),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const Key('waypoint-tile-w0'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('waypoint-tile-w1'))).dy,
+        ),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const Key('waypoint-tile-w2'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('story-chapter-s-close'))).dy,
+        ),
+      );
+      expect(find.text('Před Adršpachem'), findsNothing);
+      expect(find.text('Cesta k Macoše'), findsNothing);
+      expect(find.byKey(const Key('waypoint-category-w0')), findsOneWidget);
+      expect(find.byKey(const Key('waypoint-mystery-w0')), findsNothing);
+      expect(find.byKey(const Key('waypoint-mystery-w1')), findsOneWidget);
+      expect(find.byKey(const Key('waypoint-mystery-w2')), findsOneWidget);
+      expect(find.text('Propast Macocha'), findsNothing);
+      expect(find.text('Zámek Kroměříž'), findsNothing);
+      expect(find.text('Další zastávka'), findsNWidgets(2));
+      expect(find.text(strings.verified), findsWidgets);
+      expect(find.text('Souhlasím se'), findsNothing);
+      expect(find.text('https://vyslapni.cz/obchodni-podminky/'), findsNothing);
+      expect(find.byKey(const Key('challenge-pay-terms')), findsNothing);
+      expect(find.text('197${priceThinSpace}Kč'), findsOneWidget);
+      expect(find.text(strings.payPriceUnavailable), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('challenge-pay-medal')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<Text>(
+              find.descendant(
+                of: find.byKey(const Key('challenge-pay-medal')),
+                matching: find.text(strings.payMedalAndDiploma),
+              ),
+            )
+            .style
+            ?.color,
+        BrandColors.bark,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('challenge-pay-diploma')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+
+  testWidgets('paid story sequence is intro, chapter, place, then closing', (
+    tester,
+  ) async {
+    final detail = _paidStory();
+    final progress = MemoryProgress(details: [detail]);
+    progress.completed[detail.challenge.id] = {'w0', 'w1', 'w2'};
+    final purchases = MemoryPurchases(
+      purchases: {
+        detail.challenge.id: Purchase(
+          challengeId: detail.challenge.id,
+          status: PurchaseStatus.paid,
+          paidAt: DateTime.utc(2026, 10, 1),
+        ),
+      },
+    );
+    await _pumpDetail(
+      tester,
+      detail,
+      progress: progress,
+      purchases: purchases,
+      height: 5200,
+    );
+
+    final ordered = [
+      const Key('story-chapter-s-open'),
+      const Key('story-chapter-s-b0'),
+      const Key('waypoint-tile-w0'),
+      const Key('story-chapter-s-b1'),
+      const Key('waypoint-tile-w1'),
+      const Key('waypoint-tile-w2'),
+      const Key('story-chapter-s-close'),
+    ];
+    for (var i = 0; i < ordered.length - 1; i++) {
+      expect(
+        tester.getTopLeft(find.byKey(ordered[i])).dy,
+        lessThan(tester.getTopLeft(find.byKey(ordered[i + 1])).dy),
+        reason: '${ordered[i]} before ${ordered[i + 1]}',
+      );
+    }
+    expect(find.text('Bez média'), findsNothing);
+    expect(find.byKey(const Key('waypoint-mystery-w0')), findsNothing);
+    expect(find.byKey(const Key('waypoint-mystery-w1')), findsNothing);
+    expect(find.byKey(const Key('waypoint-mystery-w2')), findsNothing);
+    expect(find.byKey(const Key('story-youtube-dQw4w9WgXcQ')), findsOneWidget);
+    expect(find.text('Vítej v příběhové výpravě.'), findsOneWidget);
+  });
+
+  testWidgets('before and closing chapters embed YouTube with their text', (
+    tester,
+  ) async {
+    const before = StoryStep(
+      id: 'yt-before',
+      challengeId: 'story-mock',
+      sortOrder: 1,
+      kind: StoryStepKind.beforeWaypoint,
+      waypointId: 'w1',
+      youtubeUrl: 'https://youtu.be/abcdefghijk',
+      translations: [
+        LocalizedText(
+          locale: 'cs',
+          title: 'Mezi zastávkami',
+          description: 'Text před dalším místem.',
+        ),
+      ],
+    );
+    const closing = StoryStep(
+      id: 'yt-close',
+      challengeId: 'story-mock',
+      sortOrder: 2,
+      kind: StoryStepKind.closing,
+      youtubeUrl: 'https://www.youtube.com/watch?v=zzzzzzzzzzz',
+      translations: [
+        LocalizedText(
+          locale: 'cs',
+          title: 'Závěr s videem',
+          description: 'Text závěru.',
+        ),
+      ],
+    );
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                StoryChapterCard(step: before, locale: 'cs', expandOnce: true),
+                StoryChapterCard(step: closing, locale: 'cs', expandOnce: true),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('story-youtube-abcdefghijk')), findsOneWidget);
+    expect(find.text('Text před dalším místem.'), findsOneWidget);
+    expect(find.byKey(const Key('story-youtube-zzzzzzzzzzz')), findsOneWidget);
+    expect(find.text('Text závěru.'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Mezi zastávkami')).dy,
+      lessThan(tester.getTopLeft(find.text('Závěr s videem')).dy),
+    );
+  });
 
   testWidgets('free story shows the pay buttons and stays locked until paid', (
     tester,
@@ -746,7 +1036,7 @@ void main() {
       ),
     );
     expect(find.byKey(const Key('story-youtube-dQw4w9WgXcQ')), findsOneWidget);
-    expect(find.text('Vítej v příběhové výpravě.'), findsNothing);
+    expect(find.text('Vítej v příběhové výpravě.'), findsOneWidget);
     expect(
       tester.widget<Card>(find.byKey(const Key('story-chapter-s-open'))).color,
       BrandColors.cream,
@@ -894,8 +1184,9 @@ Future<void> _pumpDetail(
   ChallengeDetail detail, {
   MemoryProgress? progress,
   MemoryPurchases? purchases,
+  double height = 2400,
 }) async {
-  tester.view.physicalSize = const Size(800, 2400);
+  tester.view.physicalSize = Size(800, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);

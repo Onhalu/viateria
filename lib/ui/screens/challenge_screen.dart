@@ -628,11 +628,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                             offerSnapshot.hasError ||
                             (!loading && offerSnapshot.data == null),
                         onPay: _unlockPaid,
-                        onOpenUrl: (url) {
-                          final uri = Uri.tryParse(url);
-                          if (uri == null) return;
-                          context.read<AppServices>().openUrl(uri);
-                        },
                       );
                     },
                   ),
@@ -654,6 +649,8 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                         child: StoryChapterCard(
                           step: item.step,
                           locale: locale,
+                          initiallyExpanded:
+                              item.step.kind == StoryStepKind.opening,
                           expandOnce: _pendingRevealId == item.step.id,
                         ),
                       )
@@ -666,16 +663,18 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                         completed: item.completed,
                         mystery:
                             challenge.accessMode == AccessMode.story &&
-                            !item.unlocked,
+                            !item.unlocked &&
+                            !item.completed,
                         displayTitle: storyPlaceTitle(
                           mode: challenge.accessMode,
                           unlocked: item.unlocked,
+                          completed: item.completed,
                           waypoint: item.waypoint,
                           locale: locale,
                           lockedTitle: strings.storyNextStop,
                         ),
                         strings: strings,
-                        onSelect: item.unlocked
+                        onSelect: item.unlocked || item.completed
                             ? () => _setDestination(item.waypoint)
                             : _rejectLockedPlace,
                         onVerify: () =>
@@ -755,7 +754,6 @@ class _ChallengePayCtas extends StatelessWidget {
     required this.loading,
     required this.failed,
     required this.onPay,
-    required this.onOpenUrl,
   });
 
   static const gap = 10.0;
@@ -774,21 +772,30 @@ class _ChallengePayCtas extends StatelessWidget {
   final bool loading;
   final bool failed;
   final ValueChanged<RewardVariant> onPay;
-  final ValueChanged<String> onOpenUrl;
 
-  static Color _ctaTone(Color color, Set<WidgetState> states) {
+  /// Disabled variant stays a solid beige button with bark type so the
+  /// label stays readable when that reward has no sale form.
+  static ({Color background, Color foreground, Color border}) _colors({
+    required bool outlined,
+    required Set<WidgetState> states,
+  }) {
     if (states.contains(WidgetState.disabled)) {
-      return color.withValues(alpha: 0.38);
+      return (
+        background: outlined ? BrandColors.cream : BrandColors.beige,
+        foreground: BrandColors.bark,
+        border: BrandColors.bark,
+      );
     }
-    if (states.contains(WidgetState.pressed)) {
-      return color.withValues(alpha: 0.85);
-    }
-    return color;
+    final pressed = states.contains(WidgetState.pressed);
+    Color tone(Color color) => pressed ? color.withValues(alpha: 0.85) : color;
+    return (
+      background: tone(outlined ? BrandColors.cream : BrandColors.forest),
+      foreground: tone(outlined ? BrandColors.forest : BrandColors.cream),
+      border: tone(BrandColors.forest),
+    );
   }
 
   ButtonStyle _ctaStyle({required bool outlined}) {
-    final background = outlined ? BrandColors.cream : BrandColors.forest;
-    final foreground = outlined ? BrandColors.forest : BrandColors.cream;
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(0, minHeight)),
       padding: const WidgetStatePropertyAll(padding),
@@ -805,15 +812,15 @@ class _ChallengePayCtas extends StatelessWidget {
         ),
       ),
       backgroundColor: WidgetStateProperty.resolveWith(
-        (states) => _ctaTone(background, states),
+        (states) => _colors(outlined: outlined, states: states).background,
       ),
       foregroundColor: WidgetStateProperty.resolveWith(
-        (states) => _ctaTone(foreground, states),
+        (states) => _colors(outlined: outlined, states: states).foreground,
       ),
       side: WidgetStateProperty.resolveWith((states) {
         if (!outlined) return BorderSide.none;
         return BorderSide(
-          color: _ctaTone(BrandColors.forest, states),
+          color: _colors(outlined: outlined, states: states).border,
           width: borderWidth,
         );
       }),
@@ -868,37 +875,7 @@ class _ChallengePayCtas extends StatelessWidget {
               ],
             ),
           );
-    final terms = _terms();
-    if (terms.isEmpty) return buttons;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        buttons,
-        _PayTerms(terms: terms, onOpenUrl: onOpenUrl),
-      ],
-    );
-  }
-
-  List<FapiOfferTerm> _terms() {
-    if (loading || failed || offer == null) return const [];
-    final seen = <String>{};
-    final terms = <FapiOfferTerm>[];
-    void add(String text, String? url) {
-      final clean = text.trim();
-      final link = httpUrlOrNull(url);
-      if (clean.isEmpty && link == null) return;
-      final key = link ?? 'text:$clean';
-      if (!seen.add(key)) return;
-      terms.add(FapiOfferTerm(text: clean, url: link));
-    }
-
-    for (final variant in [offer!.diploma, offer!.medal]) {
-      for (final term in variant.terms) {
-        add(term.text, term.url);
-      }
-      if (variant.termsUrl != null) add(strings.payTerms, variant.termsUrl);
-    }
-    return terms;
+    return buttons;
   }
 
   Widget _payButton({
@@ -912,10 +889,7 @@ class _ChallengePayCtas extends StatelessWidget {
     required VoidCallback? onPressed,
   }) {
     final states = <WidgetState>{if (onPressed == null) WidgetState.disabled};
-    final ink = _ctaTone(
-      outlined ? BrandColors.forest : BrandColors.cream,
-      states,
-    );
+    final ink = _colors(outlined: outlined, states: states).foreground;
     final price = loading || failed
         ? null
         : formatPayButtonPrice(
@@ -924,7 +898,9 @@ class _ChallengePayCtas extends StatelessWidget {
             locale: strings.locale,
             freeLabel: strings.payPriceFree,
           );
-    final showFallback = !loading && (failed || price == null);
+    // A successful offer with no price (no sale form for this variant) omits
+    // the price line. "Price unavailable" is only for a failed offer fetch.
+    final showFallback = !loading && failed;
     final child = Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -999,47 +975,6 @@ class _ChallengePayCtas extends StatelessWidget {
       onPressed: onPressed,
       style: style,
       child: child,
-    );
-  }
-}
-
-class _PayTerms extends StatelessWidget {
-  const _PayTerms({required this.terms, required this.onOpenUrl});
-
-  final List<FapiOfferTerm> terms;
-  final ValueChanged<String> onOpenUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        key: const Key('challenge-pay-terms'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final term in terms)
-            TextButton(
-              key: Key('challenge-pay-terms-link-${term.url ?? term.text}'),
-              style: TextButton.styleFrom(
-                foregroundColor: BrandColors.forest,
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                minimumSize: const Size(44, 44),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                alignment: Alignment.centerLeft,
-              ),
-              onPressed: term.url == null ? null : () => onOpenUrl(term.url!),
-              child: Text(
-                term.text.isEmpty ? term.url! : term.text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
-                  color: BrandColors.forest,
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

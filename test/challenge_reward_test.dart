@@ -766,14 +766,9 @@ void main() {
           ),
           medal: FapiOfferVariant(priceCents: 0, currency: 'czk'),
         );
-      final opened = <Uri>[];
       await tester.pumpWidget(
         wrapScreen(
-          buildServices(
-            detail: priced,
-            purchases: purchases,
-            openUrl: (uri) async => opened.add(uri),
-          ),
+          buildServices(detail: priced, purchases: purchases),
           locale: 'cs',
           challengeId: 'story-1',
         ),
@@ -784,14 +779,8 @@ void main() {
       expect(find.text(strings.payPriceFree), findsNWidgets(2));
       expect(find.text('199${priceThinSpace}Kč'), findsNothing);
       expect(find.text('399${priceThinSpace}Kč'), findsNothing);
-      expect(find.text(strings.payTerms), findsOneWidget);
-      await tester.tap(
-        find.byKey(
-          const Key('challenge-pay-terms-link-https://form.fapi.cz/terms'),
-        ),
-      );
-      await tester.pump();
-      expect(opened, [Uri.parse('https://form.fapi.cz/terms')]);
+      expect(find.byKey(const Key('challenge-pay-terms')), findsNothing);
+      expect(find.text('https://form.fapi.cz/terms'), findsNothing);
     });
 
     testWidgets('pay CTAs show a fallback when fapi-offer fails', (
@@ -814,7 +803,6 @@ void main() {
       expect(find.text(strings.payPriceUnavailable), findsNWidgets(2));
       expect(find.text('€4.99'), findsNothing);
       expect(find.text('€9.00'), findsNothing);
-      expect(find.byKey(const Key('challenge-pay-terms')), findsNothing);
     });
 
     testWidgets('pay CTAs show a loading price until fapi-offer returns', (
@@ -1119,7 +1107,7 @@ void main() {
             .widget<Text>(find.byKey(const Key('challenge-pay-medal-price')))
             .style
             ?.color,
-        BrandColors.cream.withValues(alpha: 0.38),
+        BrandColors.bark,
       );
 
       await tester.ensureVisible(find.byKey(const Key('challenge-pay-medal')));

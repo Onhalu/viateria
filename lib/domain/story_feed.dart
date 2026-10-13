@@ -29,9 +29,13 @@ class StoryFeedPlace extends ChallengeFeedItem {
 /// List order for a challenge.
 ///
 /// Open mode is the waypoint list alone — story steps are ignored.
-/// Story mode is opening → (chapter for a stop, once that chapter is
-/// unlocked) → the stop, repeating → closing after the last verify.
+/// Story mode is a vertical sequence:
+/// opening (always, including before payment) → each unlocked
+/// `before_waypoint` chapter immediately before the stop it introduces →
+/// that stop, repeating → closing (always last).
 /// A step with no YouTube, image, or body is skipped. The place stays.
+/// Unverified stops stay in the list; the paywall and the n+1 rule decide
+/// whether they are locked. A verified stop stays revealed.
 List<ChallengeFeedItem> buildChallengeFeed({
   required AccessMode mode,
   required bool hasAccess,
@@ -132,14 +136,13 @@ bool _chapterVisible({
   required List<Waypoint> ordered,
   required Set<String> completedIds,
 }) {
-  if (!hasAccess || !step.hasChapterMedia) return false;
+  if (!step.hasChapterMedia) return false;
   switch (step.kind) {
     case StoryStepKind.opening:
-      return true;
     case StoryStepKind.closing:
-      if (ordered.isEmpty) return false;
-      return ordered.every((waypoint) => completedIds.contains(waypoint.id));
+      return true;
     case StoryStepKind.beforeWaypoint:
+      if (!hasAccess) return false;
       final index = ordered.indexWhere(
         (waypoint) => waypoint.id == step.waypointId,
       );
@@ -149,16 +152,19 @@ bool _chapterVisible({
   }
 }
 
-/// Generic locked label in story mode. Open mode and unlocked stops keep
-/// the authored place name.
+/// Generic locked label in story mode.
+///
+/// Open mode, unlocked stops, and verified stops keep the authored place
+/// name. A verified stop stays revealed even when the purchase is unpaid.
 String storyPlaceTitle({
   required AccessMode mode,
   required bool unlocked,
+  required bool completed,
   required Waypoint waypoint,
   required String locale,
   required String lockedTitle,
 }) {
-  if (mode == AccessMode.story && !unlocked) return lockedTitle;
+  if (mode == AccessMode.story && !unlocked && !completed) return lockedTitle;
   return waypoint.copyFor(locale).title;
 }
 
