@@ -22,8 +22,10 @@ import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/screens/verify_waypoint_screen.dart';
+import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
 import 'package:viateria/ui/widgets/story_chapter_card.dart';
 
+import 'helpers/fake_payment_webview.dart';
 import 'helpers/fakes.dart';
 import 'helpers/map_harness.dart';
 
@@ -167,6 +169,30 @@ ChallengeDetail _story() {
     challenge: challenge,
     waypoints: waypoints,
     storySteps: steps,
+  );
+}
+
+/// Same intro, chapters, and closing as [_story], sold as a paid challenge.
+ChallengeDetail _paidStory() {
+  final base = _story();
+  return ChallengeDetail(
+    challenge: Challenge(
+      id: base.challenge.id,
+      slug: base.challenge.slug,
+      accessMode: AccessMode.story,
+      pricingType: PricingType.paid,
+      priceCents: 499,
+      diplomaPriceCents: 499,
+      medalPriceCents: 900,
+      currency: 'eur',
+      status: base.challenge.status,
+      countryCode: base.challenge.countryCode,
+      translations: base.challenge.translations,
+      fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
+      fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
+    ),
+    waypoints: base.waypoints,
+    storySteps: base.storySteps,
   );
 }
 
@@ -554,6 +580,86 @@ void main() {
     expect(find.text('Propast Macocha'), findsNothing);
   });
 
+  testWidgets(
+    'paid unpaid story shows pay buttons and the lock opens checkout',
+    (tester) async {
+      debugPaymentWebViewBuilder = fakePaymentWebViewBuilder();
+      addTearDown(() => debugPaymentWebViewBuilder = null);
+      final strings = AppStrings('cs');
+      final purchases = MemoryPurchases(completeOnRefresh: false);
+      await _pumpDetail(tester, _paidStory(), purchases: purchases);
+
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+      expect(find.text(strings.payDigitalDiploma), findsOneWidget);
+      expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
+      expect(find.text(strings.challengeLockedPaid), findsOneWidget);
+      expect(find.byKey(const Key('story-chapter-s-open')), findsNothing);
+      expect(find.text('Další zastávka'), findsWidgets);
+
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-lock')),
+      );
+      expect(
+        find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('challenge-reward-diploma-texture')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+      expect(
+        find.byKey(const Key('challenge-reward-diploma-blur')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('challenge-reward-lock')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('payment-checkout-dialog')), findsOneWidget);
+      expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      expect(
+        find.text(fapiCheckoutUrlFor(RewardVariant.diploma)),
+        findsOneWidget,
+      );
+      expect(purchases.purchases['story-mock']!.status, PurchaseStatus.pending);
+      expect(
+        purchases.purchases['story-mock']!.rewardVariant,
+        RewardVariant.diploma,
+      );
+    },
+  );
+
+  testWidgets('free story keeps the blurred diploma and no lock', (
+    tester,
+  ) async {
+    final strings = AppStrings('cs');
+    await _pumpStory(tester, progressIds: const {});
+
+    expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
+    expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+    expect(find.text(strings.challengeLockedPaid), findsNothing);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('challenge-reward-section')),
+    );
+    expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+    expect(
+      find.byKey(const Key('challenge-reward-lock-overlay')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('challenge-reward-diploma-texture')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('challenge-reward-diploma-blur')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
+    expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
+  });
+
   testWidgets('chapter auto-expands once, and reduce-motion stays closed', (
     tester,
   ) async {
@@ -701,7 +807,11 @@ void main() {
   });
 }
 
-AppServices _services(ChallengeDetail detail, {MemoryProgress? progress}) {
+AppServices _services(
+  ChallengeDetail detail, {
+  MemoryProgress? progress,
+  MemoryPurchases? purchases,
+}) {
   return AppServices(
     config: const AppConfig(
       supabaseUrl: 'https://example.supabase.co',
@@ -713,7 +823,7 @@ AppServices _services(ChallengeDetail detail, {MemoryProgress? progress}) {
     ),
     catalog: MemoryCatalog(challenges: [detail.challenge], details: [detail]),
     progress: progress ?? MemoryProgress(details: [detail]),
-    purchases: MemoryPurchases(),
+    purchases: purchases ?? MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     routing: MemoryRoutingClient(),
@@ -742,6 +852,7 @@ Future<void> _pumpDetail(
   WidgetTester tester,
   ChallengeDetail detail, {
   MemoryProgress? progress,
+  MemoryPurchases? purchases,
 }) async {
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
@@ -759,7 +870,9 @@ Future<void> _pumpDetail(
             create: (_) =>
                 LastOpenedChallengeStore(initialId: detail.challenge.id),
           ),
-          Provider.value(value: _services(detail, progress: progress)),
+          Provider.value(
+            value: _services(detail, progress: progress, purchases: purchases),
+          ),
         ],
         child: MaterialApp(
           home: ChallengeScreen(challengeId: detail.challenge.id),
