@@ -476,6 +476,94 @@ export function checkoutAmountCents(options: {
   return promo ?? fallback;
 }
 
+/** Table or function not in this database yet (expand migration not applied). */
+export function isMissingSchemaObject(
+  error: { code?: string; message?: string } | null | undefined,
+): boolean {
+  if (!error) return false;
+  const code = error.code ?? "";
+  if (
+    code === "42P01" ||
+    code === "42883" ||
+    code === "PGRST202" ||
+    code === "PGRST205"
+  ) {
+    return true;
+  }
+  const message = (error.message ?? "").toLowerCase();
+  return message.includes("does not exist") ||
+    message.includes("could not find the function") ||
+    message.includes("could not find the table") ||
+    message.includes("schema cache");
+}
+
+export type SaleFormRow = {
+  locale: string;
+  reward_variant: string;
+  fapi_form_url: string;
+  status?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
+};
+
+export type PriceRow = {
+  diploma_price_cents?: number | null;
+  medal_price_cents?: number | null;
+  currency?: string | null;
+  status?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
+};
+
+function versionIsActive(
+  row: { status?: string; valid_from?: string | null; valid_to?: string | null },
+  now: Date,
+): boolean {
+  if (row.status != null && row.status !== "published") return false;
+  if (row.valid_from && Date.parse(row.valid_from) > now.getTime()) return false;
+  if (row.valid_to && Date.parse(row.valid_to) <= now.getTime()) return false;
+  return true;
+}
+
+/** preferred → cs → en → de, then newer valid_from. */
+export function saleFormLocaleRank(locale: string, preferred: string): number {
+  if (locale === preferred) return 0;
+  if (locale === "cs") return 1;
+  if (locale === "en") return 2;
+  return 3;
+}
+
+export function selectSaleFormUrl(
+  forms: SaleFormRow[],
+  rewardVariant: string,
+  preferredLocale: string,
+  now = new Date(),
+): string | null {
+  const matches = forms.filter((form) =>
+    form.reward_variant === rewardVariant &&
+    versionIsActive(form, now) &&
+    httpUrlOrNull(form.fapi_form_url) != null
+  );
+  matches.sort((a, b) => {
+    const rank = saleFormLocaleRank(a.locale, preferredLocale) -
+      saleFormLocaleRank(b.locale, preferredLocale);
+    if (rank !== 0) return rank;
+    return (b.valid_from ?? "").localeCompare(a.valid_from ?? "");
+  });
+  return httpUrlOrNull(matches[0]?.fapi_form_url);
+}
+
+export function selectActivePrice(
+  rows: PriceRow[],
+  now = new Date(),
+): PriceRow | null {
+  const matches = rows.filter((row) => versionIsActive(row, now));
+  matches.sort((a, b) =>
+    (b.valid_from ?? "").localeCompare(a.valid_from ?? "")
+  );
+  return matches[0] ?? null;
+}
+
 export function webhookTokenFromRequest(req: Request): string | null {
   const url = new URL(req.url);
   return (

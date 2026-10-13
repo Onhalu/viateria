@@ -11,6 +11,7 @@ import {
   invoiceCurrencyCode,
   invoiceTotalCents,
   isInvoiceSecurityValid,
+  isMissingSchemaObject,
   isWebhookTokenValid,
   parseNotification,
   parseRewardVariant,
@@ -122,13 +123,20 @@ Deno.serve(async (req) => {
     console.error("fapi-webhook invoice lookup failed", appliedError.message);
     return json({ status: "FAILED", message: "purchase lookup failed" }, 500);
   }
-  if (applied) {
+    if (applied) {
     const profileError = await linkProfileFapiClient(
       admin,
       keys.userId,
       clientId,
     );
     if (profileError) return profileError;
+    const joinedError = await stampParticipationJoined(
+      admin,
+      keys.userId,
+      keys.challengeId,
+      new Date().toISOString(),
+    );
+    if (joinedError) return joinedError;
     return json({ status: "OK", message: "already applied" });
   }
 
@@ -148,12 +156,20 @@ Deno.serve(async (req) => {
   // Do not insert a paid row for a user/challenge that never started checkout.
   const plan = purchaseUnlockPlan(existing);
   if (plan === "already_paid") {
+    const joinedError = await stampParticipationJoined(
+      admin,
+      keys.userId,
+      keys.challengeId,
+      new Date().toISOString(),
+    );
+    if (joinedError) return joinedError;
     return json({ status: "OK", message: "already paid" });
   }
   if (plan !== "mark_paid") {
     return json({ status: "FAILED", message: "no pending purchase" }, 409);
   }
 
+  const paidAt = new Date().toISOString();
   const rewardVariant = keys.rewardVariant ??
     (existing?.reward_variant
       ? parseRewardVariant(existing.reward_variant)
@@ -163,7 +179,7 @@ Deno.serve(async (req) => {
     .from("purchases")
     .update({
       status: "paid",
-      paid_at: new Date().toISOString(),
+      paid_at: paidAt,
       reward_variant: rewardVariant,
       amount_cents: amountCents,
       currency,
@@ -183,6 +199,13 @@ Deno.serve(async (req) => {
         clientId,
       );
       if (profileError) return profileError;
+      const joinedError = await stampParticipationJoined(
+        admin,
+        keys.userId,
+        keys.challengeId,
+        paidAt,
+      );
+      if (joinedError) return joinedError;
       return json({ status: "OK", message: "already applied" });
     }
     console.error("fapi-webhook purchase update failed", updateError.message);
@@ -200,6 +223,13 @@ Deno.serve(async (req) => {
       return json({ status: "FAILED", message: "purchase lookup failed" }, 500);
     }
     if (again?.fapi_invoice_id === invoiceId || again?.status === "paid") {
+      const joinedError = await stampParticipationJoined(
+        admin,
+        keys.userId,
+        keys.challengeId,
+        paidAt,
+      );
+      if (joinedError) return joinedError;
       return json({ status: "OK", message: "already applied" });
     }
     return json({ status: "FAILED", message: "no pending purchase" }, 409);
@@ -207,9 +237,79 @@ Deno.serve(async (req) => {
 
   const profileError = await linkProfileFapiClient(admin, keys.userId, clientId);
   if (profileError) return profileError;
+  const joinedError = await stampParticipationJoined(
+    admin,
+    keys.userId,
+    keys.challengeId,
+    paidAt,
+  );
+  if (joinedError) return joinedError;
 
   return json({ status: "OK" });
 });
+
+/**
+ * Sets `challenge_participations.joined_at` from the paid invoice.
+ * Inserts `joined` only when the user has no row yet. Does not rewind
+ * `in_progress` / `completed`. Missing table (pre-0024) is ignored.
+ */
+async function stampParticipationJoined(
+  admin: SupabaseClient,
+  userId: string,
+  challengeId: string,
+  joinedAt: string,
+): Promise<Response | null> {
+  const { data: existing, error: readError } = await admin
+    .from("challenge_participations")
+    .select("id, joined_at")
+    .eq("user_id", userId)
+    .eq("challenge_id", challengeId)
+    .maybeSingle();
+  if (readError) {
+    if (isMissingSchemaObject(readError)) {
+      console.error(
+        "challenge_participations not available yet",
+        readError.message,
+      );
+      return null;
+    }
+    console.error(
+      "fapi-webhook participation lookup failed",
+      readError.message,
+    );
+    return json({ status: "FAILED", message: "participation lookup failed" }, 500);
+  }
+  if (!existing) {
+    const { error: insertError } = await admin
+      .from("challenge_participations")
+      .insert({
+        user_id: userId,
+        challenge_id: challengeId,
+        status: "joined",
+        joined_at: joinedAt,
+      });
+    if (!insertError) return null;
+    if (isUniqueViolation(insertError) || isMissingSchemaObject(insertError)) {
+      return null;
+    }
+    console.error(
+      "fapi-webhook participation insert failed",
+      insertError.message,
+    );
+    return json({ status: "FAILED", message: "participation insert failed" }, 500);
+  }
+  if (existing.joined_at) return null;
+  const { error: updateError } = await admin
+    .from("challenge_participations")
+    .update({ joined_at: joinedAt })
+    .eq("id", existing.id);
+  if (!updateError) return null;
+  console.error(
+    "fapi-webhook participation update failed",
+    updateError.message,
+  );
+  return json({ status: "FAILED", message: "participation update failed" }, 500);
+}
 
 function isUniqueViolation(error: { code?: string; message?: string }): boolean {
   return error.code === "23505" ||

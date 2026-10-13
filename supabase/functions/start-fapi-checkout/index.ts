@@ -9,8 +9,13 @@ import {
   checkoutAmountCents,
   fapiPrefillParams,
   httpUrlOrNull,
+  isMissingSchemaObject,
   parseRewardVariant,
   selectActiveDiscountStripe,
+  selectActivePrice,
+  selectSaleFormUrl,
+  type PriceRow,
+  type SaleFormRow,
   type DiscountStripe,
   type PromoAssignment,
   type PromoTargetType,
@@ -92,7 +97,13 @@ Deno.serve(async (req) => {
   }
 
   const isMedal = rewardVariant === "medal_and_diploma";
-  const formUrl = httpUrlOrNull(
+  const locale = await profileLocale(admin, user.id);
+  const formUrl = await activeSaleFormUrl(
+    admin,
+    challengeId,
+    rewardVariant,
+    locale,
+  ) ?? httpUrlOrNull(
     isMedal ? challenge.fapi_form_url_medal : challenge.fapi_form_url_diploma,
   );
   if (!formUrl) {
@@ -106,9 +117,12 @@ Deno.serve(async (req) => {
     .eq("challenge_id", challengeId)
     .maybeSingle();
   if (existing?.status === "paid") {
-    return json({ error: "already paid" }, 409);
+    // One purchase per challenge. medal_and_diploma already includes the
+    // diploma, so a second buy is rejected rather than upgraded.
+    return json({ error: "already_purchased" }, 409);
   }
 
+  const prices = await activeChallengePrice(admin, challengeId);
   const promoPrices = await activeDiscountPrices(
     admin,
     user.id,
@@ -116,8 +130,10 @@ Deno.serve(async (req) => {
   );
   const amountCents = checkoutAmountCents({
     isMedal,
-    diplomaPriceCents: challenge.diploma_price_cents ?? challenge.price_cents,
-    medalPriceCents: challenge.medal_price_cents ?? challenge.price_cents,
+    diplomaPriceCents: prices?.diploma_price_cents ??
+      challenge.diploma_price_cents ?? challenge.price_cents,
+    medalPriceCents: prices?.medal_price_cents ??
+      challenge.medal_price_cents ?? challenge.price_cents,
     promoDiplomaPriceCents: promoPrices?.diploma ?? null,
     promoMedalPriceCents: promoPrices?.medal ?? null,
   });
@@ -128,7 +144,7 @@ Deno.serve(async (req) => {
       challenge_id: challengeId,
       status: "pending",
       amount_cents: amountCents,
-      currency: challenge.currency ?? "eur",
+      currency: prices?.currency ?? challenge.currency ?? "eur",
       reward_variant: rewardVariant,
     },
     { onConflict: "user_id,challenge_id" },
@@ -156,6 +172,62 @@ Deno.serve(async (req) => {
 
   return json({ url });
 });
+
+async function profileLocale(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<string> {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("locale")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return "cs";
+  const locale = (data as { locale?: string }).locale;
+  if (locale === "cs" || locale === "en" || locale === "de") return locale;
+  return "cs";
+}
+
+async function activeSaleFormUrl(
+  admin: SupabaseClient,
+  challengeId: string,
+  rewardVariant: string,
+  locale: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("challenge_sale_forms")
+    .select(
+      "locale, reward_variant, fapi_form_url, status, valid_from, valid_to",
+    )
+    .eq("challenge_id", challengeId)
+    .eq("reward_variant", rewardVariant)
+    .eq("status", "published");
+  if (error) {
+    if (isMissingSchemaObject(error)) return null;
+    console.error("sale form lookup failed", error.message);
+    return null;
+  }
+  return selectSaleFormUrl((data ?? []) as SaleFormRow[], rewardVariant, locale);
+}
+
+async function activeChallengePrice(
+  admin: SupabaseClient,
+  challengeId: string,
+): Promise<PriceRow | null> {
+  const { data, error } = await admin
+    .from("challenge_prices")
+    .select(
+      "diploma_price_cents, medal_price_cents, currency, status, valid_from, valid_to",
+    )
+    .eq("challenge_id", challengeId)
+    .eq("status", "published");
+  if (error) {
+    if (isMissingSchemaObject(error)) return null;
+    console.error("challenge price lookup failed", error.message);
+    return null;
+  }
+  return selectActivePrice((data ?? []) as PriceRow[]);
+}
 
 async function activeDiscountPrices(
   admin: SupabaseClient,

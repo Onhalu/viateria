@@ -126,9 +126,13 @@ abstract class ProgressRepository {
 
   /// Completed runs for the signed-in user. Empty when signed out.
   ///
-  /// Reads `challenge_progress` with `user_id = auth.uid()` so existing
-  /// RLS (`own progress readable`) still applies — no extra policy.
+  /// Prefers `challenge_participations` (own-row RLS). Falls back to
+  /// `challenge_progress` when that table is absent or still empty.
   Future<List<ChallengeProgress>> fetchCompleted();
+
+  /// Issued diploma for the signed-in user, or null when the table or row
+  /// is absent. Templates (`user_id` null) are not returned.
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId);
 
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,

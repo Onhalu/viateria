@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../domain/photo_verify.dart';
 import '../map/place_catalog.dart';
+import 'diploma_client.dart';
 import 'memory_leaderboard.dart';
 import 'repositories.dart';
 import 'route_services.dart';
@@ -35,6 +36,7 @@ class AppServices {
     VerifiedPlacesStore? verifiedPlaces,
     PlaceCatalog? places,
     LeaderboardRepository? leaderboard,
+    DiplomaClient? diplomas,
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
@@ -44,7 +46,8 @@ class AppServices {
        // Tests omit this and keep the bundled GeoJSON catalog. Production
        // main.dart passes the Supabase catalog instead.
        places = places ?? const AssetPlaceCatalog(),
-       leaderboard = leaderboard ?? MemoryLeaderboardRepository();
+       leaderboard = leaderboard ?? MemoryLeaderboardRepository(),
+       diplomas = diplomas ?? MemoryDiplomaClient();
 
   final AppConfig config;
   final AuthRepository auth;
@@ -65,4 +68,7 @@ class AppServices {
 
   /// Live leaderboard RPCs. The default memory repo does not call the network.
   final LeaderboardRepository leaderboard;
+
+  /// Signed diploma PNG. The default memory client never calls the Edge function.
+  final DiplomaClient diplomas;
 }

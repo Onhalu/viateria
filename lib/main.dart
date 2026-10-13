@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'config/app_config.dart';
 import 'data/app_services.dart';
+import 'data/diploma_client.dart';
 import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
 import 'data/place_visit_hydrate.dart';
@@ -16,6 +17,32 @@ import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
 import 'data/verified_places.dart';
 import 'l10n/locale_controller.dart';
+
+Future<void> syncLocaleFromProfile(
+  LocaleController controller,
+  SupabaseClient client,
+) async {
+  final userId = client.auth.currentUser?.id;
+  if (userId == null || userId.isEmpty) {
+    await controller.load();
+    return;
+  }
+  try {
+    final row = await client
+        .from('profiles')
+        .select('locale')
+        .eq('id', userId)
+        .maybeSingle();
+    controller.adoptResolvedLocale(
+      resolveSessionLocale(
+        signedIn: true,
+        profileLocale: row?['locale'] as String?,
+      ),
+    );
+  } catch (_) {
+    // Keep the SharedPreferences locale loaded before sign-in.
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +77,7 @@ Future<void> main() async {
       verifiedPlaces: verifiedPlaces,
       places: resolvePlaceCatalog(config: config, client: client),
       leaderboard: leaderboard,
+      diplomas: SupabaseDiplomaClient(client),
     );
     if (userId != null && userId.isNotEmpty) {
       await refreshVerifiedPlacesOnLogin(
@@ -58,8 +86,10 @@ Future<void> main() async {
         leaderboard: leaderboard,
       );
     }
+    await syncLocaleFromProfile(localeController, client);
     services.auth.authState().listen((profile) {
       unawaited(() async {
+        await syncLocaleFromProfile(localeController, client);
         await verifiedPlaces.bindUser(profile?.id);
         await lastOpened.bindUser(profile?.id);
         final id = profile?.id;

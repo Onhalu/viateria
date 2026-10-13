@@ -22,6 +22,10 @@ enum Difficulty { easy, moderate, hard, expert }
 /// Null on the challenge means the catalog hides the label.
 enum CatalogDifficulty { easy, normal, hard }
 
+/// CMS catalog length (`challenges.length`): short | medium | long.
+/// Null until the dashboard fills it; the catalog then uses hike time.
+enum ChallengeLength { short, medium, long }
+
 enum ChallengeRunStatus { inProgress, completed }
 
 enum PurchaseStatus { pending, paid, failed, refunded }
@@ -81,6 +85,13 @@ CatalogDifficulty? catalogDifficultyFromWire(String? value) => switch (value) {
   'easy' => CatalogDifficulty.easy,
   'normal' => CatalogDifficulty.normal,
   'hard' => CatalogDifficulty.hard,
+  _ => null,
+};
+
+ChallengeLength? challengeLengthFromWire(String? value) => switch (value) {
+  'short' => ChallengeLength.short,
+  'medium' => ChallengeLength.medium,
+  'long' => ChallengeLength.long,
   _ => null,
 };
 

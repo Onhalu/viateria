@@ -185,10 +185,28 @@ class AppStrings {
     'deadlineAfterPayment',
     'rewardTitle',
     'rewardUnlocksAfterComplete',
-    'rewardDependsOnPaidOption',
+    'rewardLockedLabel',
     'saveDiploma',
-    'woodenMedal',
+    'diplomaBlurred',
+    'diplomaNeedName',
+    'diplomaGenerating',
+    'diplomaDownload',
+    'diplomaShare',
+    'diplomaShareInstagram',
+    'diplomaShareFacebook',
+    'diplomaShareCaption',
+    'diplomaShareDownloadedHint',
+    'diplomaError',
+    'diplomaRevoked',
+    'diplomaIncomplete',
     'diplomaLabel',
+    'diplomaEditName',
+    'diplomaNameFromProfile',
+    'diplomaNameEdited',
+    'diplomaNameConfirm',
+    'diplomaNameInvalid',
+    'diplomaNameSave',
+    'diplomaNameCancel',
     'payDigitalDiploma',
     'payMedalAndDiploma',
     'paymentTitle',
@@ -410,10 +428,29 @@ class AppStrings {
   String get deadlineAfterPayment => t('deadlineAfterPayment');
   String get rewardTitle => t('rewardTitle');
   String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
-  String get rewardDependsOnPaidOption => t('rewardDependsOnPaidOption');
+  String get rewardLockedLabel => t('rewardLockedLabel');
   String get saveDiploma => t('saveDiploma');
-  String get woodenMedal => t('woodenMedal');
+  String get diplomaBlurred => t('diplomaBlurred');
+  String get diplomaNeedName => t('diplomaNeedName');
+  String get diplomaGenerating => t('diplomaGenerating');
+  String get diplomaDownload => t('diplomaDownload');
+  String get diplomaShare => t('diplomaShare');
+  String get diplomaShareInstagram => t('diplomaShareInstagram');
+  String get diplomaShareFacebook => t('diplomaShareFacebook');
+  String diplomaShareCaption(String title) =>
+      t('diplomaShareCaption').replaceAll('{title}', title);
+  String get diplomaShareDownloadedHint => t('diplomaShareDownloadedHint');
+  String get diplomaError => t('diplomaError');
+  String get diplomaRevoked => t('diplomaRevoked');
+  String get diplomaIncomplete => t('diplomaIncomplete');
   String get diplomaLabel => t('diplomaLabel');
+  String get diplomaEditName => t('diplomaEditName');
+  String get diplomaNameFromProfile => t('diplomaNameFromProfile');
+  String get diplomaNameEdited => t('diplomaNameEdited');
+  String get diplomaNameConfirm => t('diplomaNameConfirm');
+  String get diplomaNameInvalid => t('diplomaNameInvalid');
+  String get diplomaNameSave => t('diplomaNameSave');
+  String get diplomaNameCancel => t('diplomaNameCancel');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
   String get paymentTitle => t('paymentTitle');
@@ -707,10 +744,29 @@ class AppStrings {
       'deadlineAfterPayment': 'Deadline after payment',
       'rewardTitle': 'Reward',
       'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
-      'rewardDependsOnPaidOption': 'Reward depends on your paid option',
+      'rewardLockedLabel': 'The reward unlocks after you pay for the challenge',
       'saveDiploma': 'Save diploma',
-      'woodenMedal': 'Wooden medal',
+      'diplomaBlurred': 'Preview stays blurred until the diploma is unlocked.',
+      'diplomaNeedName': 'Add your name in your profile.',
+      'diplomaGenerating': 'Creating the diploma…',
+      'diplomaDownload': 'Download',
+      'diplomaShare': 'Share',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption': 'I completed the {title} challenge with VANDERY',
+      'diplomaShareDownloadedHint':
+          'The image is downloaded. Upload it to Instagram / Facebook.',
+      'diplomaError': 'The diploma could not be created.',
+      'diplomaRevoked': 'This diploma was revoked.',
+      'diplomaIncomplete': 'The diploma opens after you finish the challenge.',
       'diplomaLabel': 'Diploma',
+      'diplomaEditName': 'Edit name',
+      'diplomaNameFromProfile': 'The name is loaded from the display name in your profile. You can edit it on the diploma once.',
+      'diplomaNameEdited': 'The name has been edited',
+      'diplomaNameConfirm': "This change can't be made again.",
+      'diplomaNameInvalid': 'Enter 1–40 characters and no control characters.',
+      'diplomaNameSave': 'Save',
+      'diplomaNameCancel': 'Cancel',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
       'paymentTitle': 'Payment',
@@ -942,10 +998,29 @@ class AppStrings {
       'deadlineAfterPayment': 'Termín po zaplacení',
       'rewardTitle': 'Odměna',
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
-      'rewardDependsOnPaidOption': 'Odměna podle zvolené varianty po zaplacení',
+      'rewardLockedLabel': 'Odměna se odemkne po zaplacení výzvy',
       'saveDiploma': 'Uložit diplom',
-      'woodenMedal': 'Dřevěná medaile',
+      'diplomaBlurred': 'Náhled je rozmazaný, dokud diplom není odemčený.',
+      'diplomaNeedName': 'Doplň jméno v profilu.',
+      'diplomaGenerating': 'Generuji diplom…',
+      'diplomaDownload': 'Stáhnout',
+      'diplomaShare': 'Sdílet',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption': 'Zdolal(a) jsem výzvu {title} s VANDERY',
+      'diplomaShareDownloadedHint':
+          'Obrázek je stažený, nahraj ho na Instagram / Facebook',
+      'diplomaError': 'Diplom se nepodařilo vytvořit.',
+      'diplomaRevoked': 'Diplom byl odebrán.',
+      'diplomaIncomplete': 'Diplom se otevře po dokončení výzvy.',
       'diplomaLabel': 'Diplom',
+      'diplomaEditName': 'Upravit jméno',
+      'diplomaNameFromProfile': 'Jméno se načítá z tvého zobrazovaného jména v profilu. Na diplomu ho můžeš jednou upravit.',
+      'diplomaNameEdited': 'Jméno bylo upraveno',
+      'diplomaNameConfirm': 'Tuhle změnu už nepůjde zopakovat.',
+      'diplomaNameInvalid': 'Zadej 1–40 znaků bez řídicích znaků.',
+      'diplomaNameSave': 'Uložit',
+      'diplomaNameCancel': 'Zrušit',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
       'paymentTitle': 'Platba',
@@ -1178,10 +1253,32 @@ class AppStrings {
       'deadlineAfterPayment': 'Frist nach Zahlung',
       'rewardTitle': 'Belohnung',
       'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
-      'rewardDependsOnPaidOption': 'Belohnung je nach gewählter Variante',
+      'rewardLockedLabel':
+          'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
       'saveDiploma': 'Diplom speichern',
-      'woodenMedal': 'Holzmedaille',
+      'diplomaBlurred':
+          'Die Vorschau bleibt unscharf, bis das Diplom freigeschaltet ist.',
+      'diplomaNeedName': 'Ergänze den Namen im Profil.',
+      'diplomaGenerating': 'Diplom wird erstellt…',
+      'diplomaDownload': 'Herunterladen',
+      'diplomaShare': 'Teilen',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption':
+          'Ich habe die Challenge {title} mit VANDERY geschafft',
+      'diplomaShareDownloadedHint': 'Das Bild wurde heruntergeladen. Lade es auf Instagram / Facebook hoch.',
+      'diplomaError': 'Das Diplom konnte nicht erstellt werden.',
+      'diplomaRevoked': 'Dieses Diplom wurde entzogen.',
+      'diplomaIncomplete':
+          'Das Diplom öffnet sich nach Abschluss der Challenge.',
       'diplomaLabel': 'Diplom',
+      'diplomaEditName': 'Namen bearbeiten',
+      'diplomaNameFromProfile': 'Der Name wird aus deinem Anzeigenamen im Profil geladen. Auf dem Diplom kannst du ihn einmal ändern.',
+      'diplomaNameEdited': 'Der Name wurde geändert',
+      'diplomaNameConfirm': 'Diese Änderung lässt sich nicht wiederholen.',
+      'diplomaNameInvalid': 'Gib 1–40 Zeichen ohne Steuerzeichen ein.',
+      'diplomaNameSave': 'Speichern',
+      'diplomaNameCancel': 'Abbrechen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
       'paymentTitle': 'Zahlung',

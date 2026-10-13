@@ -12,11 +12,12 @@ enum CatalogLengthBand { short, medium, long }
 
 /// Haversine + hike-time summary derived from loaded waypoints.
 ///
-/// There is no CMS duration/distance column. Stats come from ordered
-/// waypoint coordinates via [RoutePlanner] (hike / Naismith). When the
-/// row includes a joined place, those coordinates are the place's.
-/// Null when a challenge has fewer than two waypoints or time rounds to
-/// nothing — callers must hide the length label.
+/// CMS `challenges.length` wins when set ([catalogLengthBandForChallenge]).
+/// Otherwise stats come from ordered waypoint coordinates via
+/// [RoutePlanner] (hike / Naismith). When the row includes a joined
+/// place, those coordinates are the place's. Null when a challenge has
+/// fewer than two waypoints or time rounds to nothing — callers must
+/// hide the length label.
 class CatalogRouteStats {
   const CatalogRouteStats({this.distanceKm, this.estimatedDuration});
 
@@ -35,6 +36,22 @@ CatalogLengthBand catalogLengthBandFor(Duration duration) {
   if (hours < 3) return CatalogLengthBand.short;
   if (hours < 6) return CatalogLengthBand.medium;
   return CatalogLengthBand.long;
+}
+
+/// CMS `short|medium|long` when [Challenge.length] is set, else hike time.
+CatalogLengthBand? catalogLengthBandForChallenge(
+  Challenge challenge,
+  CatalogRouteStats? stats,
+) {
+  final cms = challenge.length;
+  if (cms != null) {
+    return switch (cms) {
+      ChallengeLength.short => CatalogLengthBand.short,
+      ChallengeLength.medium => CatalogLengthBand.medium,
+      ChallengeLength.long => CatalogLengthBand.long,
+    };
+  }
+  return stats?.lengthBand;
 }
 
 /// Route length and hike time from stored waypoint coordinates.

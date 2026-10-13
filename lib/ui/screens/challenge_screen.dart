@@ -484,14 +484,21 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         final completeBy = ChallengeCompletionWindow.completeBy(
           data.purchase?.paidAt,
         );
-        final rewardUnlocked = ChallengeReward.isUnlocked(
+        final diplomaEntitled = ChallengeReward.isDiplomaEntitled(
           challengeCompleted: isComplete,
           purchasePaid: purchasePaid,
+          diplomaPriceCents: challenge.diplomaPriceCents,
           requiresPurchase: challenge.isPaid,
         );
-        final rewardVariant = ChallengeReward.variant(
-          purchase: data.purchase,
-          productVariant: challenge.rewardVariant,
+        final diplomaName = context
+            .read<AppServices>()
+            .auth
+            .currentUser
+            ?.displayName;
+        final rewardLocked = !ChallengeReward.isRewardAccessible(
+          purchasePaid: purchasePaid,
+          diplomaPriceCents: challenge.diplomaPriceCents,
+          requiresPurchase: challenge.isPaid,
         );
         final gallery = data.photos;
         return CustomScrollView(
@@ -648,10 +655,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   const SizedBox(height: 16),
                   ChallengeRewardSection(
                     strings: strings,
-                    unlocked: rewardUnlocked,
-                    paid: purchasePaid,
-                    variant: rewardVariant,
-                    onSaveDiploma: rewardUnlocked
+                    completed: isComplete,
+                    entitled: diplomaEntitled,
+                    locked: rewardLocked,
+                    challengeId: challenge.id,
+                    diplomas: context.read<AppServices>().diplomas,
+                    hasDisplayName:
+                        diplomaName != null && diplomaName.trim().isNotEmpty,
+                    onSaveDiploma: diplomaEntitled
                         ? () => context.push(
                             '/diploma/${challenge.id}',
                             extra: data,
