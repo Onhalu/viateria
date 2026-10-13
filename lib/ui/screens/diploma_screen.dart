@@ -11,6 +11,8 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
+import '../widgets/app_network_image.dart';
+import '../widgets/error_state.dart';
 
 class DiplomaScreen extends StatefulWidget {
   const DiplomaScreen({super.key, required this.challengeId});
@@ -239,19 +241,33 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 12),
-                  Text(strings.diplomaGenerating),
-                ],
-              ),
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 48),
+                const Center(
+                  child: AppSkeleton(width: 280, height: 360, radius: 12),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  strings.diplomaGenerating,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: BrandColors.forest,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             );
           }
-          if (!snapshot.hasData) {
-            return Center(child: Text(strings.errorGeneric));
+          if (snapshot.hasError || !snapshot.hasData) {
+            return ErrorState(
+              title: strings.errorGeneric,
+              hint: strings.errorOfflineHint,
+              retryLabel: strings.retry,
+              onRetry: _retry,
+            );
           }
           return _DiplomaBody(
             data: snapshot.data!,
@@ -382,14 +398,28 @@ class _DiplomaBody extends StatelessWidget {
       ),
     );
     if (data.imageUrl != null) {
-      return AspectRatio(
-        aspectRatio: 1,
-        child: Image(
-          key: const Key('diploma-image'),
-          image: diplomaImageProvider(data.imageUrl!),
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
-        ),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final logical = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 420.0;
+          final cache = cachePixelsFor(
+            logical,
+            MediaQuery.devicePixelRatioOf(context),
+          );
+          final provider = diplomaImageProvider(data.imageUrl!);
+          return AspectRatio(
+            aspectRatio: 1,
+            child: Image(
+              key: const Key('diploma-image'),
+              image: cache == null
+                  ? provider
+                  : ResizeImage(provider, width: cache),
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+            ),
+          );
+        },
       );
     }
     if (blurred) {

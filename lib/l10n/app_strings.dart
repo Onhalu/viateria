@@ -248,6 +248,13 @@ class AppStrings {
     'pointsOne',
     'pointsFew',
     'pointsMany',
+    'buyChallenge',
+    'paymentTrust',
+    'challengeProgressFormat',
+    'verifyDistanceAway',
+    'openSettings',
+    'errorOfflineHint',
+    'continueChallenge',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -491,6 +498,18 @@ class AppStrings {
   String get pointsOne => t('pointsOne');
   String get pointsFew => t('pointsFew');
   String get pointsMany => t('pointsMany');
+  String get buyChallenge => t('buyChallenge');
+  String get paymentTrust => t('paymentTrust');
+  String get openSettings => t('openSettings');
+  String get errorOfflineHint => t('errorOfflineHint');
+  String get continueChallenge => t('continueChallenge');
+
+  String challengeProgress(int done, int total) => t('challengeProgressFormat')
+      .replaceAll('{done}', '$done')
+      .replaceAll('{total}', '$total');
+
+  String verifyDistanceAway(int meters) =>
+      t('verifyDistanceAway').replaceAll('{n}', '$meters');
 
   String leaderboardBreakdown(int places, int challenges) =>
       t('leaderboardBreakdown')
@@ -810,6 +829,13 @@ class AppStrings {
       'pointsOne': 'point',
       'pointsFew': 'points',
       'pointsMany': 'points',
+      'buyChallenge': 'Buy challenge',
+      'paymentTrust': 'Payment via FAPI · card/transfer',
+      'challengeProgressFormat': '{done}/{total} places',
+      'verifyDistanceAway': 'You are {n} m from this place',
+      'openSettings': 'Open settings',
+      'errorOfflineHint': 'Check your connection and try again.',
+      'continueChallenge': 'Continue',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -1064,6 +1090,13 @@ class AppStrings {
       'pointsOne': 'bod',
       'pointsFew': 'body',
       'pointsMany': 'bodů',
+      'buyChallenge': 'Koupit výzvu',
+      'paymentTrust': 'Platba přes FAPI · karta/převod',
+      'challengeProgressFormat': '{done}/{total} míst',
+      'verifyDistanceAway': 'Jsi {n} m od místa',
+      'openSettings': 'Otevřít nastavení',
+      'errorOfflineHint': 'Zkontrolujte připojení a zkuste to znovu.',
+      'continueChallenge': 'Pokračovat',
     },
     'de': {
       'appName': 'VANDERY',
@@ -1321,6 +1354,13 @@ class AppStrings {
       'pointsOne': 'Punkt',
       'pointsFew': 'Punkte',
       'pointsMany': 'Punkte',
+      'buyChallenge': 'Challenge kaufen',
+      'paymentTrust': 'Zahlung über FAPI · Karte/Überweisung',
+      'challengeProgressFormat': '{done}/{total} Orte',
+      'verifyDistanceAway': 'Du bist {n} m vom Ort entfernt',
+      'openSettings': 'Einstellungen öffnen',
+      'errorOfflineHint': 'Prüfe die Verbindung und versuche es erneut.',
+      'continueChallenge': 'Weiter',
     },
   };
 }

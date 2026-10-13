@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/locale_controller.dart';
-import '../../theme/brand_colors.dart';
+import '../../theme/app_theme.dart';
+import '../layout/breakpoints.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -51,9 +52,43 @@ class AppShell extends StatelessWidget {
       ),
     ];
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: SafeArea(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final rail = Breakpoints.usesNavigationRail(constraints.maxWidth);
+        if (rail) {
+          final compactRail =
+              Breakpoints.ofWidth(constraints.maxWidth) == WindowClass.medium;
+          return Scaffold(
+            body: Row(
+              children: [
+                _NavRail(
+                  destinations: destinations,
+                  selectedIndex: navigationShell.currentIndex,
+                  compact: compactRail,
+                  onSelected: (index) {
+                    navigationShell.goBranch(
+                      index,
+                      initialLocation: index == navigationShell.currentIndex,
+                    );
+                  },
+                ),
+                Expanded(child: navigationShell),
+              ],
+            ),
+          );
+        }
+        return Scaffold(
+          body: navigationShell,
+          bottomNavigationBar: _bottomBar(destinations),
+        );
+      },
+    );
+  }
+
+  Widget _bottomBar(
+    List<({IconData icon, IconData selectedIcon, String label})> destinations,
+  ) {
+    return SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -97,7 +132,58 @@ class AppShell extends StatelessWidget {
             ),
           ),
         ),
+    );
+  }
+}
+
+class _NavRail extends StatelessWidget {
+  const _NavRail({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.compact,
+    required this.onSelected,
+  });
+
+  final List<({IconData icon, IconData selectedIcon, String label})>
+  destinations;
+  final int selectedIndex;
+  final bool compact;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationRail(
+      key: const Key('app-nav-rail'),
+      backgroundColor: BrandColors.shellFill,
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onSelected,
+      labelType: compact
+          ? NavigationRailLabelType.none
+          : NavigationRailLabelType.all,
+      minWidth: AppTheme.minTap + 16,
+      minExtendedWidth: 180,
+      indicatorColor: BrandColors.creamPill,
+      selectedIconTheme: const IconThemeData(color: BrandColors.cream),
+      unselectedIconTheme: IconThemeData(color: AppShell.unselectedForeground),
+      selectedLabelTextStyle: const TextStyle(
+        color: BrandColors.cream,
+        fontSize: AppTheme.labelSize,
+        fontWeight: FontWeight.w600,
       ),
+      unselectedLabelTextStyle: TextStyle(
+        color: AppShell.unselectedForeground,
+        fontSize: AppTheme.labelSize,
+        fontWeight: FontWeight.w500,
+      ),
+      destinations: [
+        for (final destination in destinations)
+          NavigationRailDestination(
+            icon: Icon(destination.icon),
+            selectedIcon: Icon(destination.selectedIcon),
+            label: Text(destination.label),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+          ),
+      ],
     );
   }
 }
@@ -175,7 +261,7 @@ class _SageNavDestinationState extends State<_SageNavDestination> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12,
+                  fontSize: AppTheme.labelSize,
                   fontWeight: widget.selected
                       ? FontWeight.w600
                       : FontWeight.w500,

@@ -142,4 +142,18 @@ abstract final class MapStyleConfig {
     selectedMarkerIconSize,
     markerIconSize,
   ];
+
+  /// Selection paint that does not require rewriting the GeoJSON source.
+  static List<Object> idInExpression(Set<String> ids, Object whenIn, Object whenOut) {
+    return [
+      'case',
+      [
+        'in',
+        [Expressions.get, 'id'],
+        ['literal', ids.toList()],
+      ],
+      whenIn,
+      whenOut,
+    ];
+  }
 }

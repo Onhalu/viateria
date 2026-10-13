@@ -90,7 +90,6 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
 
   void _onController() {
     _syncChallengeMembership();
-    if (mounted) setState(() {});
   }
 
   @override
@@ -107,56 +106,61 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
-    final selected = _controller.selected;
-    final viewMode = _controller.viewMode;
-    final sheetOpen = selected != null && viewMode == MapViewMode.map;
     final embed = MapRuntime.shouldEmbed(context) && !_mapFailed;
     final compact = widget.compact;
     final inset = MapChromeSizes.inset(compact);
     final locateSize = MapChromeSizes.circleButton(compact);
     final locateIcon = MapChromeSizes.circleIcon(compact);
-    final bottomLift = sheetOpen ? (compact ? 148.0 : 200.0) : inset;
 
     final body = Stack(
       fit: StackFit.expand,
       children: [
-        embed
-            ? ListenableBuilder(
-                listenable: context.read<AppServices>().verifiedPlaces,
-                builder: (context, _) {
-                  return PlacesMapHost(
-                    places: _controller.filtered,
-                    initialCamera:
-                        widget.initialCamera ?? MapStyleConfig.defaultCamera,
-                    geometry: widget.geometry,
-                    selectedPlaceId: selected?.id,
-                    verifiedPlaceIds: context
-                        .read<AppServices>()
-                        .verifiedPlaces
-                        .ids,
-                    onWaypointTap: widget.onWaypointTap,
-                    onFogTap: widget.onFogTap,
-                    onReady: (controller) {
-                      _map = controller;
-                      widget.onReady?.call(controller);
-                    },
-                    onLayersReady: widget.onLayersReady,
-                    onMapFailed: () {
-                      if (mounted) setState(() => _mapFailed = true);
-                    },
-                    onPlaceTap: _controller.select,
-                    onBackgroundTap: () => _controller.select(null),
-                    onViewportChanged: _controller.setViewport,
-                  );
-                },
-              )
-            : const MapFallbackCanvas(),
+        RepaintBoundary(
+          key: const Key('places-map-repaint'),
+          child: embed
+              ? PlacesMapHost(
+                  places: _controller.filtered,
+                  placesController: _controller,
+                  initialCamera:
+                      widget.initialCamera ?? MapStyleConfig.defaultCamera,
+                  geometry: widget.geometry,
+                  selectedPlaceId: _controller.selected?.id,
+                  verifiedPlaceIds: context
+                      .read<AppServices>()
+                      .verifiedPlaces
+                      .ids,
+                  onWaypointTap: widget.onWaypointTap,
+                  onFogTap: widget.onFogTap,
+                  onReady: (controller) {
+                    _map = controller;
+                    widget.onReady?.call(controller);
+                  },
+                  onLayersReady: widget.onLayersReady,
+                  onMapFailed: () {
+                    if (mounted) setState(() => _mapFailed = true);
+                  },
+                  onPlaceTap: _controller.select,
+                  onBackgroundTap: () => _controller.select(null),
+                  onViewportChanged: _controller.setViewport,
+                )
+              : const MapFallbackCanvas(),
+        ),
         if (_mapFailed)
           _ErrorPanel(
             message: strings.mapLoadError,
             retryLabel: strings.retry,
             onRetry: () => setState(() => _mapFailed = false),
           ),
+        ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) {
+            final selected = _controller.selected;
+            final viewMode = _controller.viewMode;
+            final sheetOpen = selected != null && viewMode == MapViewMode.map;
+            final bottomLift = sheetOpen ? (compact ? 148.0 : 200.0) : inset;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -400,6 +404,10 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
               onVerify: () => _onVerify(selected),
             ),
           ),
+              ],
+            );
+          },
+        ),
       ],
     );
 

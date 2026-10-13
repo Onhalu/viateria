@@ -7,6 +7,7 @@ import '../../domain/challenge_reward.dart';
 import '../../l10n/app_strings.dart';
 import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
+import 'app_network_image.dart';
 
 /// Cream panel with a 1pt beige stroke and 16pt corners.
 BoxDecoration challengeBrandPanel() {
@@ -408,11 +409,23 @@ class _ServerDiplomaPreviewState extends State<_ServerDiplomaPreview> {
     if (url == null || url.isEmpty) {
       return const ColoredBox(color: BrandColors.cream);
     }
-    return Image(
-      key: const Key('challenge-reward-diploma-image'),
-      image: diplomaImageProvider(url),
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const ColoredBox(color: BrandColors.cream),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final logical = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 320.0;
+        final cache = cachePixelsFor(
+          logical,
+          MediaQuery.devicePixelRatioOf(context),
+        );
+        final provider = diplomaImageProvider(url);
+        return Image(
+          key: const Key('challenge-reward-diploma-image'),
+          image: cache == null ? provider : ResizeImage(provider, width: cache),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+        );
+      },
     );
   }
 }

@@ -124,6 +124,21 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    final view = TestWidgetsFlutterBinding
+        .instance
+        .platformDispatcher
+        .implicitView!;
+    view.physicalSize = const Size(390, 844);
+    view.devicePixelRatio = 1.0;
+  });
+
+  tearDown(() {
+    final view = TestWidgetsFlutterBinding
+        .instance
+        .platformDispatcher
+        .implicitView!;
+    view.resetPhysicalSize();
+    view.resetDevicePixelRatio();
   });
 
   testWidgets('signed-in shell shows four bottom destinations', (tester) async {
@@ -215,7 +230,7 @@ void main() {
     'bottom nav floats above the home indicator without painting sage edge-to-edge',
     (tester) async {
       const homeIndicator = 34.0;
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(390, 1600);
       tester.view.devicePixelRatio = 1.0;
       tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
       tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
@@ -277,7 +292,7 @@ void main() {
   ) async {
     final strings = AppStrings('en');
     final store = LastOpenedChallengeStore();
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
@@ -528,7 +543,7 @@ void main() {
     tester,
   ) async {
     final strings = AppStrings('en');
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
@@ -820,7 +835,7 @@ void main() {
     'catalog welcome header stays cream in the status bar and inset below it',
     (tester) async {
       const statusBar = 47.0;
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(390, 1600);
       tester.view.devicePixelRatio = 1.0;
       tester.view.padding = const FakeViewPadding(top: statusBar);
       tester.view.viewPadding = const FakeViewPadding(top: statusBar);
@@ -932,5 +947,24 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('expanded width uses a labeled navigation rail', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('app-nav-rail')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsNothing);
+    final rail = tester.widget<NavigationRail>(
+      find.byKey(const Key('app-nav-rail')),
+    );
+    expect(rail.backgroundColor, BrandColors.shellFill);
+    expect(rail.labelType, NavigationRailLabelType.all);
+    expect(find.text(AppStrings('en').navMap), findsOneWidget);
   });
 }

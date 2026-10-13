@@ -1093,7 +1093,7 @@ void main() {
       find.byKey(const Key('catalog-featured')),
     );
     final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
-    final list = tester.widget<ListView>(
+    final list = tester.widget<CustomScrollView>(
       find.byKey(const Key('catalog-results')),
     );
     _expectAccessAndDifficultyAboveCountries(tester);
@@ -1112,7 +1112,15 @@ void main() {
       find.byKey(const Key('catalog-country-results')),
     );
     expect(resultsRect.top - countryRect.bottom, closeTo(16, 1));
-    expect(list.padding, const EdgeInsets.fromLTRB(16, 8, 16, 16));
+    expect(list.scrollDirection, Axis.vertical);
+    expect(
+      tester
+          .widget<SliverPadding>(
+            find.byKey(const Key('catalog-results-padding')),
+          )
+          .padding,
+      const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    );
     expect(
       tester
           .widget<Material>(find.byKey(const Key('promo-surface-promo-1')))

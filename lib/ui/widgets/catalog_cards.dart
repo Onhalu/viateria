@@ -6,6 +6,7 @@ import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import 'app_network_image.dart';
 
 class ChallengeCard extends StatelessWidget {
   const ChallengeCard({
@@ -42,14 +43,7 @@ class ChallengeCard extends StatelessWidget {
                         color: scheme.onPrimaryContainer,
                       ),
                     )
-                  : Image.network(
-                      challenge.coverImageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => ColoredBox(
-                        color: BrandColors.beige,
-                        child: const Icon(Icons.landscape, size: 48),
-                      ),
-                    ),
+                  : AppNetworkImage(url: challenge.coverImageUrl),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -340,28 +334,43 @@ class CatalogCountryResults extends StatelessWidget {
   final Map<String, CatalogRouteStats> routeStats;
   final ValueChanged<Challenge> onOpen;
 
-  @override
-  Widget build(BuildContext context) {
-    if (challenges.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      key: const Key('catalog-country-results'),
-      height: 196,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        primary: false,
-        itemCount: challenges.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
+  /// Virtualized result grid. The zero-height marker keeps a render box for
+  /// layout tests that measure the section's top edge.
+  List<Widget> slivers({required int columns, required double width}) {
+    if (challenges.isEmpty) return const [];
+    final cell = columns <= 1
+        ? width
+        : (width - 12 * (columns - 1)) / columns;
+    // 16:9 cover plus two title lines and a 14px meta row.
+    final extent = cell * 9 / 16 + 96;
+    return [
+      const SliverToBoxAdapter(
+        child: SizedBox(key: Key('catalog-country-results'), height: 1),
+      ),
+      SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          mainAxisExtent: extent,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
           final challenge = challenges[index];
           return CatalogFeaturedCard(
             challenge: challenge,
             stats: routeStats[challenge.id],
             onTap: () => onOpen(challenge),
             cardKeyPrefix: 'catalog-country',
+            expand: true,
           );
-        },
+        }, childCount: challenges.length),
       ),
-    );
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
   }
 }
 
@@ -372,12 +381,14 @@ class CatalogFeaturedCard extends StatelessWidget {
     required this.onTap,
     this.stats,
     this.cardKeyPrefix = 'catalog-featured',
+    this.expand = false,
   });
 
   final Challenge challenge;
   final CatalogRouteStats? stats;
   final VoidCallback onTap;
   final String cardKeyPrefix;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
@@ -386,7 +397,7 @@ class CatalogFeaturedCard extends StatelessWidget {
     final title = challenge.copyFor(locale).title;
     return SizedBox(
       key: Key('$cardKeyPrefix-${challenge.id}'),
-      width: 196,
+      width: expand ? null : 196,
       child: Material(
         color: BrandColors.cream,
         shape: RoundedRectangleBorder(
@@ -461,14 +472,7 @@ class CatalogCoverImage extends StatelessWidget {
         child: Icon(Icons.landscape, size: 48, color: BrandColors.forest),
       );
     }
-    return Image.network(
-      url!,
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const ColoredBox(
-        color: BrandColors.beige,
-        child: Icon(Icons.landscape, size: 48, color: BrandColors.forest),
-      ),
-    );
+    return AppNetworkImage(url: url);
   }
 }
 
@@ -514,7 +518,7 @@ class CatalogChallengeMeta extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: color,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: FontWeight.w500,
         height: 1.2,
       ),

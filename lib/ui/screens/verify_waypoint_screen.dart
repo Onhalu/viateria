@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -17,6 +18,8 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
+import '../../map/place_query.dart';
+import '../../theme/app_theme.dart';
 import '../widgets/place_presentation.dart';
 import '../widgets/verify_success_confetti.dart';
 
@@ -73,6 +76,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
   bool _gpsChecking = true;
   String? _error;
   String? _fallbackHint;
+  int? _distanceMeters;
   LivePhoto? _photo;
   GeoPoint? _target;
   Place? _catalogPlace;
@@ -154,6 +158,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
       }
       setState(() {
         _gpsChecking = false;
+        _distanceMeters = (distanceKm(at, target) * 1000).round();
         _fallbackHint = strings.gpsTooFarFallback;
       });
     } on LocationFailure catch (error) {
@@ -420,10 +425,25 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (_fallbackHint != null)
-                          Text(
-                            _fallbackHint!,
-                            key: const Key('verify-gps-status'),
+                        if (_fallbackHint != null || _error != null)
+                          _VerifyIssueCard(
+                            title: _distanceMeters != null
+                                ? strings.verifyDistanceAway(_distanceMeters!)
+                                : (_error ?? _fallbackHint!),
+                            body: _distanceMeters != null
+                                ? _fallbackHint
+                                : (_error != null ? _fallbackHint : null),
+                            retryLabel: strings.retry,
+                            settingsLabel: _error == strings.cameraDenied ||
+                                    _fallbackHint == strings.gpsDeniedFallback
+                                ? strings.openSettings
+                                : null,
+                            onRetry: _error == strings.cameraDenied
+                                ? _capture
+                                : _tryGps,
+                            onOpenSettings: () {
+                              unawaited(Geolocator.openAppSettings());
+                            },
                           ),
                         const SizedBox(height: 16),
                         Expanded(
@@ -443,15 +463,6 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
                                   ),
                           ),
                         ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            _error!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: 16),
                         OutlinedButton.icon(
                           onPressed: _busy ? null : _capture,
@@ -469,6 +480,83 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
                       ],
                     ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VerifyIssueCard extends StatelessWidget {
+  const _VerifyIssueCard({
+    required this.title,
+    required this.retryLabel,
+    required this.onRetry,
+    this.body,
+    this.settingsLabel,
+    this.onOpenSettings,
+  });
+
+  final String title;
+  final String? body;
+  final String retryLabel;
+  final VoidCallback onRetry;
+  final String? settingsLabel;
+  final VoidCallback? onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('verify-issue-card'),
+      color: BrandColors.neutral,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(Icons.place_outlined, color: BrandColors.bark, size: 36),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 72,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: BrandColors.beige.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                ),
+                child: const Icon(Icons.map_outlined, color: BrandColors.bark),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: BrandColors.error,
+                fontSize: AppTheme.bodySize,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (body != null && body!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                body!,
+                key: const Key('verify-gps-status'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: BrandColors.forest,
+                  fontSize: AppTheme.labelSize,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onRetry, child: Text(retryLabel)),
+            if (settingsLabel != null && onOpenSettings != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: onOpenSettings,
+                child: Text(settingsLabel!),
+              ),
+            ],
           ],
         ),
       ),

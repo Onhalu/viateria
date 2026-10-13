@@ -527,23 +527,21 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(strings.unlockWithStripe), findsNothing);
-        expect(infoY, lessThan(diploma.top));
-        expect(medal.bottom, lessThan(waypointsY));
-        expect(diploma.left, lessThan(medal.left));
-        expect((diploma.center.dy - medal.center.dy).abs(), lessThan(1));
-        expect(medal.left - diploma.right, inInclusiveRange(8, 12));
-        expect(diploma.height, greaterThanOrEqualTo(52));
+        expect(infoY, lessThan(medal.top));
+        expect(diploma.bottom, lessThan(waypointsY));
+        expect(medal.bottom, lessThanOrEqualTo(diploma.top));
+        expect(diploma.top - medal.bottom, inInclusiveRange(8, 12));
         expect(medal.height, greaterThanOrEqualTo(52));
-        expect((diploma.height - medal.height).abs(), lessThan(1));
-        expect((diploma.width - medal.width).abs(), lessThan(1));
+        expect(diploma.height, greaterThanOrEqualTo(48));
         expect(waypointsY, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
+        expect(find.byKey(const Key('challenge-pay-trust')), findsOneWidget);
         expect(
           tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
-          isA<Row>(),
+          isA<Column>(),
         );
 
-        final diplomaButton = tester.widget<OutlinedButton>(
+        final diplomaButton = tester.widget<TextButton>(
           find.byKey(const Key('challenge-pay-diploma')),
         );
         final medalButton = tester.widget<FilledButton>(
@@ -569,44 +567,27 @@ void main() {
         );
         expect(diplomaLabel.maxLines, 2);
         expect(diplomaLabel.textAlign, TextAlign.center);
-        expect(diplomaLabel.style?.fontSize, 15.5);
+        expect(diplomaLabel.style?.fontSize, 14);
         expect(diplomaLabel.style?.fontWeight, FontWeight.w600);
         expect(diplomaLabel.style?.color, BrandColors.forest);
         expect(medalLabel.maxLines, 2);
         expect(medalLabel.textAlign, TextAlign.center);
-        expect(medalLabel.style?.fontSize, 15.5);
+        expect(medalLabel.style?.fontSize, 14);
         expect(medalLabel.style?.fontWeight, FontWeight.w600);
         expect(medalLabel.style?.color, BrandColors.cream);
         expect(diplomaPrice.data, '€4.99');
-        expect(diplomaPrice.style?.fontSize, 16.5);
+        expect(diplomaPrice.style?.fontSize, 14);
         expect(diplomaPrice.style?.fontWeight, FontWeight.w700);
         expect(diplomaPrice.style?.color, BrandColors.forest);
         expect(medalPrice.data, '€9.00');
-        expect(medalPrice.style?.fontSize, 16.5);
+        expect(medalPrice.style?.fontSize, 16);
         expect(medalPrice.style?.fontWeight, FontWeight.w700);
         expect(medalPrice.style?.color, BrandColors.cream);
         expect(diplomaPrice.textAlign, TextAlign.center);
         expect(medalPrice.textAlign, TextAlign.center);
         expect(
-          diplomaButton.style?.backgroundColor?.resolve(const {}),
-          BrandColors.cream,
-        );
-        expect(
           diplomaButton.style?.foregroundColor?.resolve(const {}),
           BrandColors.forest,
-        );
-        expect(
-          diplomaButton.style?.side?.resolve(const {}),
-          const BorderSide(color: BrandColors.forest, width: 2),
-        );
-        expect(diplomaButton.style?.elevation?.resolve(const {}), 0);
-        expect(
-          diplomaButton.style?.overlayColor?.resolve({WidgetState.pressed}),
-          Colors.transparent,
-        );
-        expect(
-          diplomaButton.style?.backgroundColor?.resolve({WidgetState.pressed}),
-          BrandColors.cream.withValues(alpha: 0.85),
         );
         expect(
           medalButton.style?.backgroundColor?.resolve(const {}),
@@ -630,21 +611,13 @@ void main() {
           medalButton.style?.backgroundColor?.resolve(const {}),
           isNot(BrandColors.sage),
         );
-        final diplomaShape = diplomaButton.style?.shape?.resolve(
-          const {},
-        ) as RoundedRectangleBorder?;
-        final medalShape = medalButton.style?.shape?.resolve(
-          const {},
-        ) as RoundedRectangleBorder?;
-        expect(diplomaShape?.borderRadius, BorderRadius.circular(16));
-        expect(medalShape?.borderRadius, BorderRadius.circular(16));
         expect(
-          diplomaButton.style?.padding?.resolve(const {}),
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          medalButton.style?.shape?.resolve(const {}),
+          isA<StadiumBorder>(),
         );
         expect(
-          medalButton.style?.padding?.resolve(const {}),
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          medalButton.style?.minimumSize?.resolve(const {})?.height,
+          52,
         );
       },
     );
@@ -773,10 +746,10 @@ void main() {
       expect(find.text('Medaille + Diplom'), findsOneWidget);
     });
 
-    testWidgets('pay CTAs stack only when the viewport is under 320 dp', (
+    testWidgets('pay CTAs stay a primary pill above the diploma link', (
       tester,
     ) async {
-      useView(tester, width: 319);
+      useView(tester, width: 390);
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
@@ -797,36 +770,9 @@ void main() {
       final medal = tester.getRect(
         find.byKey(const Key('challenge-pay-medal')),
       );
-      expect(diploma.bottom, lessThanOrEqualTo(medal.top));
-      expect(medal.top - diploma.bottom, inInclusiveRange(8, 12));
-      expect(diploma.height, greaterThanOrEqualTo(52));
+      expect(medal.bottom, lessThanOrEqualTo(diploma.top));
       expect(medal.height, greaterThanOrEqualTo(52));
-    });
-
-    testWidgets('pay CTAs stay side-by-side at 320 dp', (tester) async {
-      useView(tester, width: 320);
-      final story = sampleStoryChallenge();
-      await tester.pumpWidget(
-        wrapScreen(
-          buildServices(detail: story),
-          locale: 'en',
-          challengeId: 'story-1',
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
-        isA<Row>(),
-      );
-      final diploma = tester.getRect(
-        find.byKey(const Key('challenge-pay-diploma')),
-      );
-      final medal = tester.getRect(
-        find.byKey(const Key('challenge-pay-medal')),
-      );
-      expect(diploma.left, lessThan(medal.left));
-      expect((diploma.height - medal.height).abs(), lessThan(1));
-      expect((diploma.width - medal.width).abs(), lessThan(1));
+      expect(diploma.height, greaterThanOrEqualTo(48));
     });
 
     testWidgets('tapping a pay CTA opens in-app checkout for that variant', (
@@ -993,7 +939,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final diploma = tester.widget<OutlinedButton>(
+      final diploma = tester.widget<TextButton>(
         find.byKey(const Key('challenge-pay-diploma')),
       );
       final medal = tester.widget<FilledButton>(

@@ -262,6 +262,28 @@ Place? catalogPlaceAt(Iterable<Place> places, double lat, double lng) {
   return null;
 }
 
+/// Feature ids that should read as selected, including neighbours within 200 m.
+Set<String> selectedFeatureIds(
+  Iterable<Place> places, {
+  String? selectedId,
+}) {
+  if (selectedId == null) return const {};
+  Place? selected;
+  for (final place in places) {
+    if (place.id == selectedId) {
+      selected = place;
+      break;
+    }
+  }
+  if (selected == null) return {selectedId};
+  return {
+    for (final place in places)
+      if (place.id == selected.id ||
+          distanceKm(place.location, selected.location) <= 0.2)
+        place.id,
+  };
+}
+
 Map<String, dynamic> featureCollectionOf(
   Iterable<Place> places, {
   String? selectedId,

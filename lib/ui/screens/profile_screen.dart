@@ -12,6 +12,7 @@ import '../../map/place_catalog.dart';
 import '../../models/models.dart';
 import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
+import '../layout/breakpoints.dart';
 import '../navigation.dart';
 import 'leaderboard_screen.dart';
 
@@ -98,7 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bottom: false,
       child: Material(
         color: BrandColors.cream,
-        child: ListView(
+        child: AppContentWidth(
+          maxWidth: Breakpoints.profileMaxWidth,
+          child: ListView(
           children: [
             const SizedBox(height: 24),
             const Center(child: BrandMark(size: 48)),
@@ -181,6 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

@@ -278,7 +278,7 @@ void main() {
     );
     expect(
       google.style?.side?.resolve(<WidgetState>{}),
-      const BorderSide(color: BrandColors.forest, width: 1),
+      const BorderSide(color: BrandColors.forest, width: 1.5),
     );
     expect(
       google.style?.backgroundColor?.resolve(<WidgetState>{}),
@@ -290,13 +290,17 @@ void main() {
     final passwordRect = tester.getRect(find.byKey(const Key('auth-password')));
     expect(forgotRect.right, closeTo(passwordRect.right, 12));
     expect(forgotRect.width, lessThan(passwordRect.width * 0.7));
-    expect(forgotRect.left, greaterThan(passwordRect.center.dx));
+    expect(forgotRect.height, greaterThanOrEqualTo(48));
+    expect(
+      forgotRect.left,
+      greaterThan(passwordRect.left + passwordRect.width * 0.35),
+    );
     final forgot = tester.widget<TextButton>(
       find.byKey(const Key('auth-forgot-password')),
     );
     expect(
       forgot.style?.foregroundColor?.resolve(<WidgetState>{}),
-      BrandColors.bark,
+      BrandColors.forest,
     );
     expect(
       forgot.style?.foregroundColor?.resolve(<WidgetState>{
@@ -317,7 +321,7 @@ void main() {
     );
     expect(
       eye.style?.minimumSize?.resolve(<WidgetState>{}),
-      const Size(44, 44),
+      const Size(48, 48),
     );
     final decoration = Theme.of(
       tester.element(find.byKey(const Key('auth-email'))),
