@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +10,7 @@ import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/data/challenge_mapping.dart';
 import 'package:viateria/domain/challenge_reward.dart';
+import 'package:viateria/domain/fapi_offer.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
@@ -146,9 +149,8 @@ void main() {
         ChallengeReward.isUnlocked(
           challengeCompleted: true,
           purchasePaid: false,
-          requiresPurchase: false,
         ),
-        isTrue,
+        isFalse,
       );
     });
 
@@ -473,7 +475,14 @@ void main() {
         expect(waypointsY, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
         expect(find.byKey(const Key('challenge-unlock-cta')), findsNothing);
-        expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+        expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+        expect(find.text(strings.payDigitalDiploma), findsOneWidget);
+        expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
+        final payY = tester
+            .getTopLeft(find.byKey(const Key('challenge-pay-ctas')))
+            .dy;
+        expect(infoY, lessThan(payY));
+        expect(payY, lessThan(waypointsY));
         expect(find.text('Visit any stop'), findsOneWidget);
         expect(find.text('Open trail'), findsOneWidget);
         expect(find.text(strings.waypoints), findsOneWidget);
@@ -666,7 +675,7 @@ void main() {
       expect(find.text('9,00$priceThinSpace€'), findsOneWidget);
     });
 
-    testWidgets('pay CTAs format CZK prices from challenge data', (
+    testWidgets('pay CTAs format the FAPI offer and ignore CMS cents', (
       tester,
     ) async {
       useTallView(tester);
@@ -676,11 +685,11 @@ void main() {
           id: story.challenge.id,
           slug: story.challenge.slug,
           accessMode: story.challenge.accessMode,
-          pricingType: story.challenge.pricingType,
-          priceCents: 19900,
-          diplomaPriceCents: 124900,
-          medalPriceCents: 39900,
-          currency: 'czk',
+          pricingType: PricingType.free,
+          priceCents: 1,
+          diplomaPriceCents: 1,
+          medalPriceCents: 1,
+          currency: 'eur',
           status: story.challenge.status,
           translations: story.challenge.translations,
           fapiFormUrlDiploma: story.challenge.fapiFormUrlDiploma,
@@ -688,9 +697,14 @@ void main() {
         ),
         waypoints: story.waypoints,
       );
+      final purchases = MemoryPurchases()
+        ..offer = const FapiOffer(
+          diploma: FapiOfferVariant(priceCents: 124900, currency: 'czk'),
+          medal: FapiOfferVariant(priceCents: 39900, currency: 'czk'),
+        );
       await tester.pumpWidget(
         wrapScreen(
-          buildServices(detail: czk),
+          buildServices(detail: czk, purchases: purchases),
           locale: 'cs',
           challengeId: 'story-1',
         ),
@@ -701,6 +715,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('399${priceThinSpace}Kč'), findsOneWidget);
+      expect(find.text('0,01$priceThinSpace€'), findsNothing);
       expect(find.text('Digitální diplom'), findsOneWidget);
       expect(find.text('Medaile + diplom'), findsOneWidget);
       expect(
@@ -719,29 +734,41 @@ void main() {
       );
     });
 
-    testWidgets('pay CTAs hide a price line when the SKU is missing or zero', (
+    testWidgets('a FAPI price of 0 is shown as free on both buttons', (
       tester,
     ) async {
       useTallView(tester);
+      final strings = AppStrings('cs');
       final story = sampleStoryChallenge();
-      final missing = ChallengeDetail(
+      final priced = ChallengeDetail(
         challenge: Challenge(
           id: story.challenge.id,
           slug: story.challenge.slug,
           accessMode: story.challenge.accessMode,
-          pricingType: story.challenge.pricingType,
-          priceCents: 0,
-          diplomaPriceCents: 0,
-          medalPriceCents: null,
+          pricingType: PricingType.free,
+          priceCents: 19900,
+          diplomaPriceCents: 19900,
+          medalPriceCents: 39900,
           currency: 'czk',
           status: story.challenge.status,
           translations: story.challenge.translations,
+          fapiFormUrlDiploma: story.challenge.fapiFormUrlDiploma,
+          fapiFormUrlMedal: story.challenge.fapiFormUrlMedal,
         ),
         waypoints: story.waypoints,
       );
+      final purchases = MemoryPurchases()
+        ..offer = const FapiOffer(
+          diploma: FapiOfferVariant(
+            priceCents: 0,
+            currency: 'czk',
+            termsUrl: 'https://form.fapi.cz/terms',
+          ),
+          medal: FapiOfferVariant(priceCents: 0, currency: 'czk'),
+        );
       await tester.pumpWidget(
         wrapScreen(
-          buildServices(detail: missing),
+          buildServices(detail: priced, purchases: purchases),
           locale: 'cs',
           challengeId: 'story-1',
         ),
@@ -749,13 +776,71 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('challenge-pay-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-pay-medal')), findsOneWidget);
-      expect(find.text('Digitální diplom'), findsOneWidget);
-      expect(find.text('Medaile + diplom'), findsOneWidget);
+      expect(find.text(strings.payPriceFree), findsNWidgets(2));
+      expect(find.text('199${priceThinSpace}Kč'), findsNothing);
+      expect(find.text('399${priceThinSpace}Kč'), findsNothing);
+      expect(find.byKey(const Key('challenge-pay-terms')), findsNothing);
+      expect(find.text('https://form.fapi.cz/terms'), findsNothing);
+    });
+
+    testWidgets('pay CTAs show a fallback when fapi-offer fails', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final strings = AppStrings('en');
+      final story = sampleStoryChallenge();
+      final purchases = MemoryPurchases()..offerFails = true;
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story, purchases: purchases),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('challenge-pay-diploma')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-pay-medal')), findsOneWidget);
+      expect(find.text(strings.payPriceUnavailable), findsNWidgets(2));
+      expect(find.text('€4.99'), findsNothing);
+      expect(find.text('€9.00'), findsNothing);
+    });
+
+    testWidgets('pay CTAs show a loading price until fapi-offer returns', (
+      tester,
+    ) async {
+      useTallView(tester);
+      final strings = AppStrings('en');
+      final story = sampleStoryChallenge();
+      final gate = Completer<FapiOffer>();
+      final purchases = MemoryPurchases()..offerGate = gate;
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story, purchases: purchases),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
       expect(
-        find.byKey(const Key('challenge-pay-diploma-price')),
+        find.byKey(const Key('challenge-pay-diploma-price-loading')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('challenge-pay-medal-price-loading')),
+        findsOneWidget,
+      );
+      expect(find.text('€4.99'), findsNothing);
+      expect(find.text(strings.payPriceLoading), findsNothing);
+
+      gate.complete(memoryFapiOffer);
+      await tester.pumpAndSettle();
+      expect(find.text('€4.99'), findsOneWidget);
+      expect(find.text('€9.00'), findsOneWidget);
+      expect(
+        find.byKey(const Key('challenge-pay-diploma-price-loading')),
         findsNothing,
       );
-      expect(find.byKey(const Key('challenge-pay-medal-price')), findsNothing);
     });
 
     testWidgets('pay CTAs use German product labels', (tester) async {
@@ -901,7 +986,14 @@ void main() {
         RewardVariant.diploma,
       );
       expect(opened, isEmpty);
+      expect(find.byKey(const Key('payment-checkout-dialog')), findsOneWidget);
+      expect(find.byKey(const Key('payment-checkout-close')), findsOneWidget);
       expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      final dialog = tester.getSize(
+        find.byKey(const Key('payment-checkout-dialog')),
+      );
+      expect(dialog.width, 560);
+      expect(dialog.height, 860);
       expect(
         find.text(fapiCheckoutUrlFor(RewardVariant.diploma)),
         findsOneWidget,
@@ -945,7 +1037,7 @@ void main() {
       await tester.tap(find.byKey(const Key('payment-back-to-challenge')));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
       expect(find.text(strings.purchasePending), findsNothing);
       expect(find.text(strings.congratulations), findsNothing);
       expect(find.text(strings.deadlineCompleteBy), findsOneWidget);
@@ -1015,7 +1107,7 @@ void main() {
             .widget<Text>(find.byKey(const Key('challenge-pay-medal-price')))
             .style
             ?.color,
-        BrandColors.cream.withValues(alpha: 0.38),
+        BrandColors.bark,
       );
 
       await tester.ensureVisible(find.byKey(const Key('challenge-pay-medal')));
@@ -1025,7 +1117,7 @@ void main() {
       expect(purchases.purchases.containsKey('story-1'), isFalse);
     });
 
-    testWidgets('free challenge reward shows only the diploma and no lock', (
+    testWidgets('free challenge shows pay buttons and a locked diploma', (
       tester,
     ) async {
       useTallView(tester);
@@ -1037,12 +1129,14 @@ void main() {
         find.byKey(const Key('challenge-reward-section')),
       );
       expect(find.text(strings.rewardTitle), findsOneWidget);
-      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+      expect(find.text(strings.payDigitalDiploma), findsOneWidget);
+      expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
       expect(
         find.byKey(const Key('challenge-reward-lock-overlay')),
-        findsNothing,
+        findsOneWidget,
       );
-      expect(find.byIcon(Icons.lock_outline), findsNothing);
       expect(
         find.byKey(const Key('challenge-reward-incomplete')),
         findsOneWidget,
@@ -1053,7 +1147,7 @@ void main() {
       );
       expect(
         find.byKey(const Key('challenge-reward-diploma-blur')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
@@ -1067,7 +1161,7 @@ void main() {
               find.byKey(const Key('challenge-reward-guard')),
             )
             .ignoring,
-        isFalse,
+        isTrue,
       );
     });
 
@@ -1165,12 +1259,14 @@ void main() {
       final strings = AppStrings('cs');
       final story = sampleStoryChallenge();
       final diplomas = MemoryDiplomaClient();
+      final purchases = MemoryPurchases(completeOnRefresh: false);
       await tester.pumpWidget(
         wrapScreen(
           buildServices(
             detail: story,
             progress: completedProgress(story),
             diplomas: diplomas,
+            purchases: purchases,
           ),
           locale: 'cs',
           challengeId: 'story-1',
@@ -1198,7 +1294,18 @@ void main() {
         findsOneWidget,
       );
       expect(diplomas.imageRequests, isEmpty);
-      expect(find.bySemanticsLabel(strings.rewardLockedLabel), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(strings.rewardUnlockDiploma),
+        findsOneWidget,
+      );
+      final unlock = tester.widget<InkWell>(
+        find.descendant(
+          of: find.byKey(const Key('challenge-reward-section')),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(unlock.onTap, isNotNull);
+      expect(unlock.mouseCursor, SystemMouseCursors.click);
 
       final lockSize = tester.getSize(
         find.byKey(const Key('challenge-reward-lock')),
@@ -1242,15 +1349,39 @@ void main() {
 
       await tester.tap(find.byKey(const Key('challenge-reward-lock')));
       await tester.pumpAndSettle();
-      await tester.tapAt(diplomaCenter);
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('challenge-title')), findsOneWidget);
+      expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      expect(purchases.purchases['story-1']!.status, PurchaseStatus.pending);
+      expect(
+        purchases.purchases['story-1']!.rewardVariant,
+        RewardVariant.diploma,
+      );
+      expect(
+        find.text(fapiCheckoutUrlFor(RewardVariant.diploma)),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
       expect(diplomas.imageRequests, isEmpty);
+
+      final freePurchases = MemoryPurchases();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        wrapScreen(buildServices(purchases: freePurchases)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-lock')),
+      );
+      await tester.tap(find.byKey(const Key('challenge-reward-lock')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('payment-checkout-screen')), findsNothing);
+      expect(freePurchases.purchases, isEmpty);
       semantics.dispose();
     });
 
-    testWidgets('zero-price paid challenge shows the reward without a lock', (
+    testWidgets('a zero CMS diploma price still locks the reward', (
       tester,
     ) async {
       useTallView(tester);
@@ -1285,9 +1416,14 @@ void main() {
       await tester.ensureVisible(
         find.byKey(const Key('challenge-reward-section')),
       );
-      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
       expect(
         find.byKey(const Key('challenge-reward-lock-overlay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('challenge-reward-diploma-blur')),
         findsNothing,
       );
       expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
@@ -1349,6 +1485,9 @@ void main() {
         AppStrings('de').rewardLockedLabel,
         'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
       );
+      expect(AppStrings('cs').rewardUnlockDiploma, 'Odemknout diplom');
+      expect(AppStrings('en').rewardUnlockDiploma, 'Unlock diploma');
+      expect(AppStrings('de').rewardUnlockDiploma, 'Diplom freischalten');
     });
 
     testWidgets('locked overlay hides the medal and blocks the diploma CTA', (
@@ -1386,7 +1525,7 @@ void main() {
       expect(lockSize.width, greaterThanOrEqualTo(44));
       expect(lockSize.height, greaterThanOrEqualTo(44));
       expect(
-        find.bySemanticsLabel(AppStrings('en').rewardLockedLabel),
+        find.bySemanticsLabel(AppStrings('en').rewardUnlockDiploma),
         findsOneWidget,
       );
 

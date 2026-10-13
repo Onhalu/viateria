@@ -63,7 +63,9 @@ class _FapiCheckoutEmbedState extends State<FapiCheckoutEmbed> {
       ..style.width = '100%'
       ..style.height = '100%'
       ..style.display = 'block'
+      ..style.overflow = 'auto'
       ..style.backgroundColor = BrandColors.creamHex;
+    iframe.setAttribute('scrolling', 'yes');
     _loadListener = ((web.Event event) {
       _onIFrameLoad(event);
     }).toJS;

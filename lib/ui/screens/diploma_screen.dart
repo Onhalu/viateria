@@ -11,6 +11,7 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
+import '../fapi_checkout_window.dart';
 
 class DiplomaScreen extends StatefulWidget {
   const DiplomaScreen({super.key, required this.challengeId});
@@ -40,8 +41,6 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
     final entitled = ChallengeReward.isDiplomaEntitled(
       challengeCompleted: completed,
       purchasePaid: purchase?.isPaid ?? false,
-      diplomaPriceCents: detail.challenge.diplomaPriceCents,
-      requiresPurchase: detail.challenge.isPaid,
     );
     final name = services.auth.currentUser?.displayName;
     var phase = resolveDiplomaPhase(
@@ -93,7 +92,18 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
       rewardVariant: variant,
     );
     if (!mounted) return;
-    await services.openUrl(Uri.parse(session.url));
+    final checkoutUrl = httpUrlOrNull(session.url);
+    if (checkoutUrl == null) return;
+    await showInAppFapiCheckout(
+      context,
+      challengeId: widget.challengeId,
+      checkoutUrl: checkoutUrl,
+    );
+    if (!mounted) return;
+    setState(() {
+      _future = _load();
+    });
+    await _future;
   }
 
   Future<void> _saveFile(String url, String filename) async {
@@ -431,20 +441,18 @@ class _DiplomaBody extends StatelessWidget {
               key: const Key('diploma-blurred-hint'),
               textAlign: TextAlign.center,
             ),
-            if (challenge.isPaid) ...[
-              const SizedBox(height: 12),
-              OutlinedButton(
-                key: const Key('diploma-buy'),
-                onPressed: () => onBuy(RewardVariant.diploma),
-                child: Text(strings.payDigitalDiploma),
-              ),
-              const SizedBox(height: 8),
-              FilledButton(
-                key: const Key('diploma-buy-medal'),
-                onPressed: () => onBuy(RewardVariant.medalAndDiploma),
-                child: Text(strings.payMedalAndDiploma),
-              ),
-            ],
+            const SizedBox(height: 12),
+            OutlinedButton(
+              key: const Key('diploma-buy'),
+              onPressed: () => onBuy(RewardVariant.diploma),
+              child: Text(strings.payDigitalDiploma),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              key: const Key('diploma-buy-medal'),
+              onPressed: () => onBuy(RewardVariant.medalAndDiploma),
+              child: Text(strings.payMedalAndDiploma),
+            ),
           ],
         );
       case DiplomaPhase.ready:

@@ -34,12 +34,13 @@ Set<String> storyHiddenWaypointIds({
   };
   return {
     for (var i = 0; i < ordered.length; i++)
-      if (!rules.isWaypointUnlocked(
-        mode: mode,
-        hasAccess: hasAccess,
-        waypointIndex: i,
-        completedIndexes: completedIndexes,
-      ))
+      if (!completedIds.contains(ordered[i].id) &&
+          !rules.isWaypointUnlocked(
+            mode: mode,
+            hasAccess: hasAccess,
+            waypointIndex: i,
+            completedIndexes: completedIndexes,
+          ))
         ordered[i].id,
   };
 }

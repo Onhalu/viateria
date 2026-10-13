@@ -22,43 +22,29 @@ abstract final class ChallengeCompletionWindow {
 
 /// Locked/unlocked reward rules for challenge detail.
 abstract final class ChallengeReward {
-  /// Reward panel is open: paid purchase, a zero diploma price, or a free
-  /// challenge with no price row. Completion is not required.
-  static bool isRewardAccessible({
-    required bool purchasePaid,
-    int? diplomaPriceCents,
-    bool requiresPurchase = true,
-  }) {
-    if (purchasePaid) return true;
-    if (diplomaPriceCents == 0) return true;
-    if (!requiresPurchase) return true;
-    return false;
+  /// Reward panel is open only after the FAPI purchase is paid.
+  ///
+  /// A zero diploma price and `pricing_type = free` do not unlock it.
+  /// Completion is not required for the panel; the file still is.
+  static bool isRewardAccessible({required bool purchasePaid}) {
+    return purchasePaid;
   }
 
   /// Full diploma file: completed, and [isRewardAccessible].
   static bool isDiplomaEntitled({
     required bool challengeCompleted,
     required bool purchasePaid,
-    int? diplomaPriceCents,
-    bool requiresPurchase = true,
   }) {
     if (!challengeCompleted) return false;
-    return isRewardAccessible(
-      purchasePaid: purchasePaid,
-      diplomaPriceCents: diplomaPriceCents,
-      requiresPurchase: requiresPurchase,
-    );
+    return isRewardAccessible(purchasePaid: purchasePaid);
   }
 
   /// Unlocked when the run is complete and the purchase is paid.
-  /// Free challenges have no purchase — complete is enough.
   static bool isUnlocked({
     required bool challengeCompleted,
     required bool purchasePaid,
-    bool requiresPurchase = true,
   }) {
     if (!challengeCompleted) return false;
-    if (!requiresPurchase) return true;
     return purchasePaid;
   }
 
@@ -91,7 +77,22 @@ const _enShortMonths = [
 /// Narrow no-break space for CS grouping and the currency gap (`1 249 Kč`).
 const priceThinSpace = '\u202F';
 
-/// Catalog / pay-CTA amount from minor units + UI locale.
+/// Pay-button amount from a FAPI offer.
+///
+/// `0` is the localized free label. Null or a negative amount means the
+/// offer did not include a price.
+String? formatPayButtonPrice({
+  required int? cents,
+  required String currency,
+  required String locale,
+  required String freeLabel,
+}) {
+  if (cents == null || cents < 0) return null;
+  if (cents == 0) return freeLabel;
+  return formatChallengePrice(cents, currency, locale);
+}
+
+/// Catalog amount from minor units + UI locale.
 /// CS CZK → `1 249 Kč` (thin-space grouping). Null / ≤0 → no display string.
 String? formatChallengePrice(
   int? cents,

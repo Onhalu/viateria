@@ -20,6 +20,7 @@ import {
   type PromoAssignment,
   type PromoTargetType,
 } from "../_shared/fapi.ts";
+import { fetchOfferForFormUrl } from "../_shared/fapi_offer.ts";
 
 /**
  * Authenticated start of a FAPI sales-form checkout.
@@ -92,9 +93,6 @@ Deno.serve(async (req) => {
   if (error || !challenge) {
     return json({ error: "challenge not available" }, 404);
   }
-  if (challenge.pricing_type !== "paid") {
-    return json({ error: "challenge is free" }, 400);
-  }
 
   const isMedal = rewardVariant === "medal_and_diploma";
   const locale = await profileLocale(admin, user.id);
@@ -128,7 +126,7 @@ Deno.serve(async (req) => {
     user.id,
     challengeId,
   );
-  const amountCents = checkoutAmountCents({
+  const listedCents = checkoutAmountCents({
     isMedal,
     diplomaPriceCents: prices?.diploma_price_cents ??
       challenge.diploma_price_cents ?? challenge.price_cents,
@@ -137,6 +135,21 @@ Deno.serve(async (req) => {
     promoDiplomaPriceCents: promoPrices?.diploma ?? null,
     promoMedalPriceCents: promoPrices?.medal ?? null,
   });
+  // The form is what the customer pays. Use its price when the public
+  // form resource can be read, including 0. The CMS cache is only a
+  // placeholder for the pending row if that read fails; fapi-webhook
+  // replaces amount_cents from the paid invoice.
+  let amountCents = listedCents;
+  let currency = prices?.currency ?? challenge.currency ?? "eur";
+  try {
+    const offer = await fetchOfferForFormUrl(formUrl);
+    if (offer?.price_cents != null) {
+      amountCents = offer.price_cents;
+      if (offer.currency) currency = offer.currency;
+    }
+  } catch (offerError) {
+    console.error("fapi offer price lookup failed", offerError);
+  }
 
   const { error: purchaseError } = await admin.from("purchases").upsert(
     {
@@ -144,7 +157,7 @@ Deno.serve(async (req) => {
       challenge_id: challengeId,
       status: "pending",
       amount_cents: amountCents,
-      currency: prices?.currency ?? challenge.currency ?? "eur",
+      currency,
       reward_variant: rewardVariant,
     },
     { onConflict: "user_id,challenge_id" },

@@ -10,7 +10,6 @@ import {
   hashForRow,
   isCacheHit,
   type IssuedDiplomaRow,
-  type PriceSnapshot,
 } from "./access.ts";
 import { RENDERER_VERSION } from "./hash.ts";
 import { ITALIC_FONT_ASSET, LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
@@ -141,32 +140,7 @@ async function loadEntitled(
     .eq("status", "paid")
     .limit(1);
   const paid = !purchase.error && (purchase.data?.length ?? 0) > 0;
-
-  const prices = await admin
-    .from("challenge_prices")
-    .select("diploma_price_cents, status, valid_from, valid_to")
-    .eq("challenge_id", challengeId)
-    .eq("status", "published");
-  const challenge = await admin
-    .from("challenges")
-    .select("pricing_type")
-    .eq("id", challengeId)
-    .maybeSingle();
-  if (prices.error || challenge.error) return paid;
-
-  const snapshots: PriceSnapshot[] = (prices.data ?? []).map((row) => ({
-    diplomaPriceCents: Number(row.diploma_price_cents ?? 0),
-    status: String(row.status ?? ""),
-    validFrom: String(row.valid_from),
-    validTo: row.valid_to == null ? null : String(row.valid_to),
-  }));
-  return entitledFromRows({
-    completed: true,
-    paid,
-    prices: snapshots,
-    pricingType: (challenge.data?.pricing_type as string | null) ?? null,
-    now: new Date(),
-  });
+  return entitledFromRows({ completed: true, paid });
 }
 
 async function loadRenderAssets(admin: SupabaseClient, variant: number) {

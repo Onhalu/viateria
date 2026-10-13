@@ -186,6 +186,7 @@ class AppStrings {
     'rewardTitle',
     'rewardUnlocksAfterComplete',
     'rewardLockedLabel',
+    'rewardUnlockDiploma',
     'saveDiploma',
     'diplomaBlurred',
     'diplomaNeedName',
@@ -209,6 +210,10 @@ class AppStrings {
     'diplomaNameCancel',
     'payDigitalDiploma',
     'payMedalAndDiploma',
+    'payPriceFree',
+    'payPriceLoading',
+    'payPriceUnavailable',
+    'payTerms',
     'paymentTitle',
     'paymentLoadingForm',
     'paymentProcessingTitle',
@@ -221,6 +226,11 @@ class AppStrings {
     'paymentLeaveConfirm',
     'paymentLeave',
     'paymentStay',
+    'paymentClose',
+    'paymentPopupTitle',
+    'paymentPopupBody',
+    'paymentPopupBlocked',
+    'paymentPopupRetry',
     'visitedPlaces',
     'profileCatCity',
     'profileCatNature',
@@ -429,6 +439,7 @@ class AppStrings {
   String get rewardTitle => t('rewardTitle');
   String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
   String get rewardLockedLabel => t('rewardLockedLabel');
+  String get rewardUnlockDiploma => t('rewardUnlockDiploma');
   String get saveDiploma => t('saveDiploma');
   String get diplomaBlurred => t('diplomaBlurred');
   String get diplomaNeedName => t('diplomaNeedName');
@@ -453,6 +464,10 @@ class AppStrings {
   String get diplomaNameCancel => t('diplomaNameCancel');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
+  String get payPriceFree => t('payPriceFree');
+  String get payPriceLoading => t('payPriceLoading');
+  String get payPriceUnavailable => t('payPriceUnavailable');
+  String get payTerms => t('payTerms');
   String get paymentTitle => t('paymentTitle');
   String get paymentLoadingForm => t('paymentLoadingForm');
   String get paymentProcessingTitle => t('paymentProcessingTitle');
@@ -465,6 +480,11 @@ class AppStrings {
   String get paymentLeaveConfirm => t('paymentLeaveConfirm');
   String get paymentLeave => t('paymentLeave');
   String get paymentStay => t('paymentStay');
+  String get paymentClose => t('paymentClose');
+  String get paymentPopupTitle => t('paymentPopupTitle');
+  String get paymentPopupBody => t('paymentPopupBody');
+  String get paymentPopupBlocked => t('paymentPopupBlocked');
+  String get paymentPopupRetry => t('paymentPopupRetry');
   String get visitedPlaces => t('visitedPlaces');
   String get profileCatCity => t('profileCatCity');
   String get profileCatNature => t('profileCatNature');
@@ -745,6 +765,7 @@ class AppStrings {
       'rewardTitle': 'Reward',
       'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
       'rewardLockedLabel': 'The reward unlocks after you pay for the challenge',
+      'rewardUnlockDiploma': 'Unlock diploma',
       'saveDiploma': 'Save diploma',
       'diplomaBlurred': 'Preview stays blurred until the diploma is unlocked.',
       'diplomaNeedName': 'Add your name in your profile.',
@@ -769,6 +790,10 @@ class AppStrings {
       'diplomaNameCancel': 'Cancel',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
+      'payPriceFree': 'Free',
+      'payPriceLoading': 'Loading price…',
+      'payPriceUnavailable': 'Price unavailable',
+      'payTerms': 'Terms',
       'paymentTitle': 'Payment',
       'paymentLoadingForm': 'Loading payment form…',
       'paymentProcessingTitle': 'Processing payment',
@@ -782,6 +807,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Payment is still running. Leave anyway?',
       'paymentLeave': 'Leave',
       'paymentStay': 'Stay',
+      'paymentClose': 'Close',
+      'paymentPopupTitle': 'Payment opened in a window',
+      'paymentPopupBody': 'This payment page cannot be embedded, so it opened in a centered window. Finish paying there — the reward unlocks when the payment is confirmed.',
+      'paymentPopupBlocked': 'The browser blocked the payment window. Allow pop-up windows and try again.',
+      'paymentPopupRetry': 'Open payment window',
       'visitedPlaces': 'Visited places',
       'profileCatCity': 'City',
       'profileCatNature': 'Nature',
@@ -999,6 +1029,7 @@ class AppStrings {
       'rewardTitle': 'Odměna',
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
       'rewardLockedLabel': 'Odměna se odemkne po zaplacení výzvy',
+      'rewardUnlockDiploma': 'Odemknout diplom',
       'saveDiploma': 'Uložit diplom',
       'diplomaBlurred': 'Náhled je rozmazaný, dokud diplom není odemčený.',
       'diplomaNeedName': 'Doplň jméno v profilu.',
@@ -1023,6 +1054,10 @@ class AppStrings {
       'diplomaNameCancel': 'Zrušit',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
+      'payPriceFree': 'Zdarma',
+      'payPriceLoading': 'Načítám cenu…',
+      'payPriceUnavailable': 'Cena není k dispozici',
+      'payTerms': 'Podmínky',
       'paymentTitle': 'Platba',
       'paymentLoadingForm': 'Načítám platební formulář…',
       'paymentProcessingTitle': 'Platba se zpracovává',
@@ -1036,6 +1071,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Platba ještě běží. Opravdu odejít?',
       'paymentLeave': 'Odejít',
       'paymentStay': 'Zůstat',
+      'paymentClose': 'Zavřít',
+      'paymentPopupTitle': 'Platba se otevřela v okně',
+      'paymentPopupBody': 'Tuto platební stránku nejde vložit do aplikace, proto se otevřela ve vycentrovaném okně. Dokonči platbu tam — odměna se odemkne po potvrzení platby.',
+      'paymentPopupBlocked': 'Prohlížeč platební okno zablokoval. Povol vyskakovací okna a zkus to znovu.',
+      'paymentPopupRetry': 'Otevřít platební okno',
       'visitedPlaces': 'Navštívená místa',
       'profileCatCity': 'Město',
       'profileCatNature': 'Příroda',
@@ -1255,6 +1295,7 @@ class AppStrings {
       'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
       'rewardLockedLabel':
           'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
+      'rewardUnlockDiploma': 'Diplom freischalten',
       'saveDiploma': 'Diplom speichern',
       'diplomaBlurred':
           'Die Vorschau bleibt unscharf, bis das Diplom freigeschaltet ist.',
@@ -1281,6 +1322,10 @@ class AppStrings {
       'diplomaNameCancel': 'Abbrechen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
+      'payPriceFree': 'Kostenlos',
+      'payPriceLoading': 'Preis wird geladen…',
+      'payPriceUnavailable': 'Preis nicht verfügbar',
+      'payTerms': 'Bedingungen',
       'paymentTitle': 'Zahlung',
       'paymentLoadingForm': 'Zahlungsformular wird geladen…',
       'paymentProcessingTitle': 'Zahlung wird verarbeitet',
@@ -1293,6 +1338,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Die Zahlung läuft noch. Wirklich verlassen?',
       'paymentLeave': 'Verlassen',
       'paymentStay': 'Bleiben',
+      'paymentClose': 'Schließen',
+      'paymentPopupTitle': 'Zahlung in einem Fenster geöffnet',
+      'paymentPopupBody': 'Diese Zahlungsseite lässt sich nicht einbetten und wurde deshalb in einem zentrierten Fenster geöffnet. Schließe die Zahlung dort ab — die Belohnung wird nach der Bestätigung freigeschaltet.',
+      'paymentPopupBlocked': 'Der Browser hat das Zahlungsfenster blockiert. Erlaube Pop-up-Fenster und versuche es erneut.',
+      'paymentPopupRetry': 'Zahlungsfenster öffnen',
       'visitedPlaces': 'Besuchte Orte',
       'profileCatCity': 'Stadt',
       'profileCatNature': 'Natur',

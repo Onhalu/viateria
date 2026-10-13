@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/auth_redirect.dart';
 import '../domain/challenge_photos.dart';
+import '../domain/fapi_offer.dart';
 import '../l10n/locale_controller.dart';
 import '../models/models.dart';
 import 'auth_identity.dart';
@@ -824,6 +825,19 @@ class SupabasePurchaseRepository implements PurchaseRepository {
   @override
   Future<Purchase?> refreshPurchase(String challengeId) =>
       fetchPurchase(challengeId);
+
+  @override
+  Future<FapiOffer> fetchOffer(String challengeId, {String? locale}) async {
+    final response = await _client.functions.invoke(
+      'fapi-offer',
+      body: {'challenge_id': challengeId, 'locale': ?locale},
+    );
+    final data = response.data;
+    if (data is! Map) {
+      throw StateError('fapi-offer returned no offer');
+    }
+    return FapiOffer.fromJson(Map<String, dynamic>.from(data));
+  }
 }
 
 class SupabasePhotoStorage implements PhotoStorage {

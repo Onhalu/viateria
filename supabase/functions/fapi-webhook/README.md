@@ -3,6 +3,35 @@
 Pay CTAs open a FAPI sales form (not Stripe Checkout). Stripe edge
 functions stay in the repo but are unused by the Flutter CTA path.
 
+## Offer (`fapi-offer`)
+
+Pay buttons on every challenge (free, paid, story, open) load price and
+terms from `fapi-offer`. That function is in this repo and is **not
+deployed** until:
+
+```bash
+supabase functions deploy fapi-offer
+```
+
+It does not use `FAPI_API_USERNAME` / `FAPI_API_KEY`. For each variant it
+resolves `challenge_sale_forms` (then the legacy form URL columns) and
+reads the public form resource FAPI embeds at
+`https://form.fapi.cz/script.php?id=<form path>` (`data-form-resource`):
+one_time price (an in-window special_one_time wins), currency,
+`terms_url`, and purpose links. `0` cents is a free price.
+
+`sync-fapi-prices` was only a SQL comment. Authenticated
+`GET /item-templates?form=` is still not implemented. `challenge_prices`
+is not the pay-button source.
+
+Redeploy `start-fapi-checkout` as well. It no longer rejects
+`pricing_type = free`, and the pending `amount_cents` uses the same form
+price when the public resource can be read.
+
+Apply `20261013143000_diploma_entitled_paid_only.sql` so
+`private.diploma_entitled` requires a paid purchase. A diploma price of 0
+no longer unlocks the file.
+
 ## Secrets
 
 ```bash
