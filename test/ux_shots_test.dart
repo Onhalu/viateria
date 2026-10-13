@@ -3,8 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/theme/app_theme.dart';
+import 'package:viateria/ui/screens/challenge_screen.dart';
 
 import 'auth_register_form_test.dart';
 import 'bottom_nav_test.dart';
@@ -85,18 +89,31 @@ void main() {
 
     for (final frame in const [
       (name: 'challenge-mobile', size: Size(390, 1400)),
-      (name: 'challenge-desktop', size: Size(1280, 900)),
+      (name: 'challenge-desktop', size: Size(1280, 1200)),
     ]) {
       useView(tester, frame.size);
       await resetTree();
       await tester.pumpWidget(
-        wrapApp(buildServices(), locale: LocaleController(initial: 'cs')),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => LocaleController(initial: 'cs'),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => LastOpenedChallengeStore(initialId: 'story-1'),
+            ),
+            Provider.value(value: buildServices()),
+          ],
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            home: const ChallengeScreen(challengeId: 'story-1'),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
-      final card = find.byKey(const Key('catalog-hero-open-1'));
-      expect(card, findsOneWidget);
-      await tester.tap(card);
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('challenge-pay-diploma')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-pay-medal')), findsOneWidget);
       await shot(frame.name);
     }
 

@@ -47,11 +47,15 @@ class StoryChapterCard extends StatefulWidget {
     super.key,
     required this.step,
     required this.locale,
+    this.initiallyExpanded = false,
     this.expandOnce = false,
   });
 
   final StoryStep step;
   final String locale;
+
+  /// Opening chapter starts open so the intro text and video are visible.
+  final bool initiallyExpanded;
 
   /// Expand on the first frame. Reduce-motion leaves the card collapsed;
   /// the parent still scrolls it into view.
@@ -62,8 +66,14 @@ class StoryChapterCard extends StatefulWidget {
 }
 
 class _StoryChapterCardState extends State<StoryChapterCard> {
-  var _expanded = false;
+  late bool _expanded;
   var _appliedExpand = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
 
   @override
   void didChangeDependencies() {
@@ -163,8 +173,9 @@ class _StoryChapterCardState extends State<StoryChapterCard> {
                         ),
                       ),
                     ),
-                  if (videoId == null && body.isNotEmpty) ...[
-                    if (imageUrl != null) const SizedBox(height: 12),
+                  if (body.isNotEmpty) ...[
+                    if (videoId != null || imageUrl != null)
+                      const SizedBox(height: 12),
                     Text(
                       body,
                       key: Key('story-chapter-text-${widget.step.id}'),

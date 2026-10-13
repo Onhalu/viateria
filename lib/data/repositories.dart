@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../domain/fapi_offer.dart';
 import '../domain/leaderboard_score.dart';
 import '../models/models.dart';
 
@@ -154,6 +155,11 @@ abstract class PurchaseRepository {
     RewardVariant? rewardVariant,
   });
   Future<Purchase?> refreshPurchase(String challengeId);
+
+  /// Live diploma and medal prices plus terms from the `fapi-offer`
+  /// Edge function. Throws when that function is missing or fails so the
+  /// pay buttons can show a fallback instead of a CMS price.
+  Future<FapiOffer> fetchOffer(String challengeId, {String? locale});
 }
 
 /// Live leaderboard. Scores are not cached on device.

@@ -104,6 +104,7 @@ class ChallengeRewardSection extends StatelessWidget {
     this.diplomas,
     this.hasDisplayName = true,
     this.onSaveDiploma,
+    this.onUnlock,
   });
 
   static const double panelRadius = 16;
@@ -112,19 +113,21 @@ class ChallengeRewardSection extends StatelessWidget {
   final bool completed;
   final bool entitled;
 
-  /// Paywall over the whole card. Free, zero-price, and paid purchases
-  /// leave this false — the same payment rule as [ChallengeReward.isRewardAccessible].
+  /// Paywall over the whole card until the FAPI purchase is paid.
+  /// A zero diploma price does not clear it.
   final bool locked;
   final String? challengeId;
   final DiplomaClient? diplomas;
   final bool hasDisplayName;
   final VoidCallback? onSaveDiploma;
 
+  /// Same checkout the challenge pay buttons use. Only set while [locked].
+  final VoidCallback? onUnlock;
+
   bool get _blurPreview => completed && !entitled;
 
-  /// Generated diploma when the server file is not on screen: locked,
-  /// completed but unpaid, and every other not-yet-entitled card (free
-  /// challenges and unlocked challenges that are not finished).
+  /// Generated diploma when the server file is not on screen: locked
+  /// until paid, or paid but not finished yet.
   bool get _texturedDiploma => locked || !entitled;
 
   @override
@@ -164,7 +167,10 @@ class ChallengeRewardSection extends StatelessWidget {
               ),
               if (locked)
                 Positioned.fill(
-                  child: _RewardLockOverlay(label: strings.rewardLockedLabel),
+                  child: _RewardLockOverlay(
+                    label: strings.rewardUnlockDiploma,
+                    onTap: onUnlock,
+                  ),
                 ),
             ],
           ),
@@ -181,8 +187,7 @@ class ChallengeRewardSection extends StatelessWidget {
         _DiplomaPlaceholder(
           label: strings.diplomaLabel,
           // Locked cards are smeared by the overlay's BackdropFilter.
-          // Every other textured card (free, unlocked-but-incomplete,
-          // completed-but-unpaid without the paywall) blurs itself and
+          // A paid challenge that is not finished yet blurs itself and
           // shows no lock.
           blur: _texturedDiploma && !locked,
           textured: _texturedDiploma,
@@ -241,11 +246,12 @@ class ChallengeRewardSection extends StatelessWidget {
   }
 }
 
-/// Frosted cover until the challenge is paid. The lock absorbs taps.
+/// Frosted cover until the challenge is paid. A tap starts checkout.
 class _RewardLockOverlay extends StatelessWidget {
-  const _RewardLockOverlay({required this.label});
+  const _RewardLockOverlay({required this.label, this.onTap});
 
   final String label;
+  final VoidCallback? onTap;
 
   static const double _sigma = _diplomaBlurSigma;
   static const double _lockSize = 48;
@@ -255,43 +261,46 @@ class _RewardLockOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: label,
+      button: true,
       container: true,
       excludeSemantics: true,
-      child: GestureDetector(
-        excludeFromSemantics: true,
-        behavior: HitTestBehavior.opaque,
-        onTap: () {},
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(
-            ChallengeRewardSection.panelRadius,
-          ),
-          child: BackdropFilter(
-            key: const Key('challenge-reward-lock-overlay'),
-            filter: ImageFilter.blur(sigmaX: _sigma, sigmaY: _sigma),
-            child: ColoredBox(
-              key: const Key('challenge-reward-lock-scrim'),
-              color: BrandColors.cream.withValues(alpha: 0.35),
-              child: Center(
-                child: SizedBox(
-                  key: const Key('challenge-reward-lock'),
-                  width: _lockSize,
-                  height: _lockSize,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: BrandColors.cream.withValues(alpha: 0.55),
-                      shape: BoxShape.circle,
-                      border: Border.fromBorderSide(
-                        BorderSide(
-                          color: BrandColors.forest.withValues(alpha: 0.85),
-                          width: 1.5,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: () => onTap?.call(),
+          mouseCursor: SystemMouseCursors.click,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(
+              ChallengeRewardSection.panelRadius,
+            ),
+            child: BackdropFilter(
+              key: const Key('challenge-reward-lock-overlay'),
+              filter: ImageFilter.blur(sigmaX: _sigma, sigmaY: _sigma),
+              child: ColoredBox(
+                key: const Key('challenge-reward-lock-scrim'),
+                color: BrandColors.cream.withValues(alpha: 0.35),
+                child: Center(
+                  child: SizedBox(
+                    key: const Key('challenge-reward-lock'),
+                    width: _lockSize,
+                    height: _lockSize,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: BrandColors.cream.withValues(alpha: 0.55),
+                        shape: BoxShape.circle,
+                        border: Border.fromBorderSide(
+                          BorderSide(
+                            color: BrandColors.forest.withValues(alpha: 0.85),
+                            width: 1.5,
+                          ),
                         ),
                       ),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.lock_outline,
-                        size: _iconSize,
-                        color: BrandColors.forest,
+                      child: const Center(
+                        child: Icon(
+                          Icons.lock_outline,
+                          size: _iconSize,
+                          color: BrandColors.forest,
+                        ),
                       ),
                     ),
                   ),

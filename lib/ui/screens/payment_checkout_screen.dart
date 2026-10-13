@@ -11,9 +11,12 @@ import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../widgets/fapi_checkout_webview.dart';
 
-/// Full-screen in-app FAPI checkout. Body is the sales-form embed
-/// (`webview_flutter` on iOS/Android, iframe on Flutter web); cream overlays
-/// cover loading, processing, timeout, and confirmed-paid success.
+/// In-app FAPI checkout. Body is the sales-form embed (`webview_flutter` on
+/// iOS/Android, iframe on Flutter web); cream overlays cover loading,
+/// processing, timeout, and confirmed-paid success.
+///
+/// Entry points present this inside the reduced checkout dialog. Widget
+/// tests can still pump it as a full page.
 class PaymentCheckoutScreen extends StatefulWidget {
   const PaymentCheckoutScreen({
     super.key,
@@ -22,6 +25,7 @@ class PaymentCheckoutScreen extends StatefulWidget {
     this.controller,
     this.webViewBuilder,
     this.autoPopAfterSuccess = kPaymentSuccessAutoPop,
+    this.showAppBar = true,
   });
 
   final String challengeId;
@@ -29,6 +33,10 @@ class PaymentCheckoutScreen extends StatefulWidget {
   final PaymentCheckoutController? controller;
   final PaymentWebViewBuilder? webViewBuilder;
   final Duration? autoPopAfterSuccess;
+
+  /// Full-page tests keep the back arrow. The checkout dialog supplies its
+  /// own close button and passes false.
+  final bool showAppBar;
 
   @override
   State<PaymentCheckoutScreen> createState() => _PaymentCheckoutScreenState();
@@ -140,17 +148,20 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
       child: Scaffold(
         key: const Key('payment-checkout-screen'),
         backgroundColor: BrandColors.cream,
-        appBar: AppBar(
-          backgroundColor: BrandColors.cream,
-          foregroundColor: BrandColors.forest,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          title: Text(strings.paymentTitle),
-          leading: BackButton(
-            color: BrandColors.forest,
-            onPressed: () => Navigator.maybePop(context),
-          ),
-        ),
+        primary: widget.showAppBar,
+        appBar: widget.showAppBar
+            ? AppBar(
+                backgroundColor: BrandColors.cream,
+                foregroundColor: BrandColors.forest,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                title: Text(strings.paymentTitle),
+                leading: BackButton(
+                  color: BrandColors.forest,
+                  onPressed: () => Navigator.maybePop(context),
+                ),
+              )
+            : null,
         body: Stack(
           children: [
             Positioned.fill(child: builder(host)),
