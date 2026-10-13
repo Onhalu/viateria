@@ -668,6 +668,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                             extra: data,
                           )
                         : null,
+                    onUnlock: rewardLocked
+                        ? () => _unlockPaid(RewardVariant.diploma)
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   ChallengePhotosHeader(title: strings.challengePhotosTitle),

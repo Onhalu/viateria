@@ -186,6 +186,7 @@ class AppStrings {
     'rewardTitle',
     'rewardUnlocksAfterComplete',
     'rewardLockedLabel',
+    'rewardUnlockDiploma',
     'saveDiploma',
     'diplomaBlurred',
     'diplomaNeedName',
@@ -429,6 +430,7 @@ class AppStrings {
   String get rewardTitle => t('rewardTitle');
   String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
   String get rewardLockedLabel => t('rewardLockedLabel');
+  String get rewardUnlockDiploma => t('rewardUnlockDiploma');
   String get saveDiploma => t('saveDiploma');
   String get diplomaBlurred => t('diplomaBlurred');
   String get diplomaNeedName => t('diplomaNeedName');
@@ -745,6 +747,7 @@ class AppStrings {
       'rewardTitle': 'Reward',
       'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
       'rewardLockedLabel': 'The reward unlocks after you pay for the challenge',
+      'rewardUnlockDiploma': 'Unlock diploma',
       'saveDiploma': 'Save diploma',
       'diplomaBlurred': 'Preview stays blurred until the diploma is unlocked.',
       'diplomaNeedName': 'Add your name in your profile.',
@@ -999,6 +1002,7 @@ class AppStrings {
       'rewardTitle': 'Odměna',
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
       'rewardLockedLabel': 'Odměna se odemkne po zaplacení výzvy',
+      'rewardUnlockDiploma': 'Odemknout diplom',
       'saveDiploma': 'Uložit diplom',
       'diplomaBlurred': 'Náhled je rozmazaný, dokud diplom není odemčený.',
       'diplomaNeedName': 'Doplň jméno v profilu.',
@@ -1255,6 +1259,7 @@ class AppStrings {
       'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
       'rewardLockedLabel':
           'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
+      'rewardUnlockDiploma': 'Diplom freischalten',
       'saveDiploma': 'Diplom speichern',
       'diplomaBlurred':
           'Die Vorschau bleibt unscharf, bis das Diplom freigeschaltet ist.',

@@ -1165,12 +1165,14 @@ void main() {
       final strings = AppStrings('cs');
       final story = sampleStoryChallenge();
       final diplomas = MemoryDiplomaClient();
+      final purchases = MemoryPurchases(completeOnRefresh: false);
       await tester.pumpWidget(
         wrapScreen(
           buildServices(
             detail: story,
             progress: completedProgress(story),
             diplomas: diplomas,
+            purchases: purchases,
           ),
           locale: 'cs',
           challengeId: 'story-1',
@@ -1198,7 +1200,18 @@ void main() {
         findsOneWidget,
       );
       expect(diplomas.imageRequests, isEmpty);
-      expect(find.bySemanticsLabel(strings.rewardLockedLabel), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(strings.rewardUnlockDiploma),
+        findsOneWidget,
+      );
+      final unlock = tester.widget<InkWell>(
+        find.descendant(
+          of: find.byKey(const Key('challenge-reward-section')),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(unlock.onTap, isNotNull);
+      expect(unlock.mouseCursor, SystemMouseCursors.click);
 
       final lockSize = tester.getSize(
         find.byKey(const Key('challenge-reward-lock')),
@@ -1242,11 +1255,34 @@ void main() {
 
       await tester.tap(find.byKey(const Key('challenge-reward-lock')));
       await tester.pumpAndSettle();
-      await tester.tapAt(diplomaCenter);
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('challenge-title')), findsOneWidget);
+      expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      expect(purchases.purchases['story-1']!.status, PurchaseStatus.pending);
+      expect(
+        purchases.purchases['story-1']!.rewardVariant,
+        RewardVariant.diploma,
+      );
+      expect(
+        find.text(fapiCheckoutUrlFor(RewardVariant.diploma)),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);
       expect(diplomas.imageRequests, isEmpty);
+
+      final freePurchases = MemoryPurchases();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        wrapScreen(buildServices(purchases: freePurchases)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+      await tester.ensureVisible(
+        find.byKey(const Key('challenge-reward-diploma')),
+      );
+      await tester.tap(find.byKey(const Key('challenge-reward-diploma')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('payment-checkout-screen')), findsNothing);
+      expect(freePurchases.purchases, isEmpty);
       semantics.dispose();
     });
 
@@ -1349,6 +1385,9 @@ void main() {
         AppStrings('de').rewardLockedLabel,
         'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
       );
+      expect(AppStrings('cs').rewardUnlockDiploma, 'Odemknout diplom');
+      expect(AppStrings('en').rewardUnlockDiploma, 'Unlock diploma');
+      expect(AppStrings('de').rewardUnlockDiploma, 'Diplom freischalten');
     });
 
     testWidgets('locked overlay hides the medal and blocks the diploma CTA', (
@@ -1386,7 +1425,7 @@ void main() {
       expect(lockSize.width, greaterThanOrEqualTo(44));
       expect(lockSize.height, greaterThanOrEqualTo(44));
       expect(
-        find.bySemanticsLabel(AppStrings('en').rewardLockedLabel),
+        find.bySemanticsLabel(AppStrings('en').rewardUnlockDiploma),
         findsOneWidget,
       );
 
