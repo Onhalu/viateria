@@ -14,7 +14,9 @@ import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/diploma_share.dart';
 import 'package:viateria/ui/screens/diploma_screen.dart';
+import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
 
+import 'helpers/fake_payment_webview.dart';
 import 'helpers/fakes.dart';
 
 void main() {
@@ -288,6 +290,60 @@ void main() {
     expect(find.byKey(const Key('diploma-image')), findsOneWidget);
     expect(find.byKey(const Key('diploma-error')), findsNothing);
     expect(diplomas.imageRequests, ['open-1', 'open-1']);
+  });
+
+  testWidgets('diploma buy opens in-app checkout and does not launch a tab', (
+    tester,
+  ) async {
+    debugPaymentWebViewBuilder = fakePaymentWebViewBuilder();
+    addTearDown(() => debugPaymentWebViewBuilder = null);
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final opened = <Uri>[];
+    final story = sampleStoryChallenge();
+    final services = AppServices(
+      config: const AppConfig(
+        supabaseUrl: 'https://example.supabase.co',
+        supabaseAnonKey: 'anon',
+        stripePublishableKey: 'pk_test',
+      ),
+      auth: MemoryAuth(
+        user: const Profile(id: 'user-1', locale: 'cs', displayName: 'Ada'),
+      ),
+      catalog: MemoryCatalog(challenges: [story.challenge], details: [story]),
+      progress: MemoryProgress(details: [story]),
+      purchases: MemoryPurchases(completeOnRefresh: false),
+      photos: MemoryPhotos(),
+      photoCapture: MemoryCapture(),
+      openUrl: (uri) async => opened.add(uri),
+      diplomas: MemoryDiplomaClient(accessState: 'buy'),
+    );
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'cs'),
+          ),
+          Provider.value(value: services),
+        ],
+        child: const MaterialApp(home: DiplomaScreen(challengeId: 'story-1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('diploma-buy')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('diploma-buy')));
+    await tester.tap(find.byKey(const Key('diploma-buy')));
+    await tester.pumpAndSettle();
+
+    expect(opened, isEmpty);
+    expect(find.byKey(const Key('payment-checkout-dialog')), findsOneWidget);
+    expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+    expect(find.text('https://form.fapi.cz/diploma-test'), findsOneWidget);
+    expect(find.text(AppStrings('cs').paymentTitle), findsOneWidget);
   });
 
   test('edited diploma names are trimmed and reject controls', () {

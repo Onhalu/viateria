@@ -11,6 +11,7 @@ import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
+import '../fapi_checkout_window.dart';
 
 class DiplomaScreen extends StatefulWidget {
   const DiplomaScreen({super.key, required this.challengeId});
@@ -93,7 +94,18 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
       rewardVariant: variant,
     );
     if (!mounted) return;
-    await services.openUrl(Uri.parse(session.url));
+    final checkoutUrl = httpUrlOrNull(session.url);
+    if (checkoutUrl == null) return;
+    await showInAppFapiCheckout(
+      context,
+      challengeId: widget.challengeId,
+      checkoutUrl: checkoutUrl,
+    );
+    if (!mounted) return;
+    setState(() {
+      _future = _load();
+    });
+    await _future;
   }
 
   Future<void> _saveFile(String url, String filename) async {

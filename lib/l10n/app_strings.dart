@@ -222,6 +222,11 @@ class AppStrings {
     'paymentLeaveConfirm',
     'paymentLeave',
     'paymentStay',
+    'paymentClose',
+    'paymentPopupTitle',
+    'paymentPopupBody',
+    'paymentPopupBlocked',
+    'paymentPopupRetry',
     'visitedPlaces',
     'profileCatCity',
     'profileCatNature',
@@ -467,6 +472,11 @@ class AppStrings {
   String get paymentLeaveConfirm => t('paymentLeaveConfirm');
   String get paymentLeave => t('paymentLeave');
   String get paymentStay => t('paymentStay');
+  String get paymentClose => t('paymentClose');
+  String get paymentPopupTitle => t('paymentPopupTitle');
+  String get paymentPopupBody => t('paymentPopupBody');
+  String get paymentPopupBlocked => t('paymentPopupBlocked');
+  String get paymentPopupRetry => t('paymentPopupRetry');
   String get visitedPlaces => t('visitedPlaces');
   String get profileCatCity => t('profileCatCity');
   String get profileCatNature => t('profileCatNature');
@@ -785,6 +795,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Payment is still running. Leave anyway?',
       'paymentLeave': 'Leave',
       'paymentStay': 'Stay',
+      'paymentClose': 'Close',
+      'paymentPopupTitle': 'Payment opened in a window',
+      'paymentPopupBody': 'This payment page cannot be embedded, so it opened in a centered window. Finish paying there — the reward unlocks when the payment is confirmed.',
+      'paymentPopupBlocked': 'The browser blocked the payment window. Allow pop-up windows and try again.',
+      'paymentPopupRetry': 'Open payment window',
       'visitedPlaces': 'Visited places',
       'profileCatCity': 'City',
       'profileCatNature': 'Nature',
@@ -1040,6 +1055,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Platba ještě běží. Opravdu odejít?',
       'paymentLeave': 'Odejít',
       'paymentStay': 'Zůstat',
+      'paymentClose': 'Zavřít',
+      'paymentPopupTitle': 'Platba se otevřela v okně',
+      'paymentPopupBody': 'Tuto platební stránku nejde vložit do aplikace, proto se otevřela ve vycentrovaném okně. Dokonči platbu tam — odměna se odemkne po potvrzení platby.',
+      'paymentPopupBlocked': 'Prohlížeč platební okno zablokoval. Povol vyskakovací okna a zkus to znovu.',
+      'paymentPopupRetry': 'Otevřít platební okno',
       'visitedPlaces': 'Navštívená místa',
       'profileCatCity': 'Město',
       'profileCatNature': 'Příroda',
@@ -1298,6 +1318,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Die Zahlung läuft noch. Wirklich verlassen?',
       'paymentLeave': 'Verlassen',
       'paymentStay': 'Bleiben',
+      'paymentClose': 'Schließen',
+      'paymentPopupTitle': 'Zahlung in einem Fenster geöffnet',
+      'paymentPopupBody': 'Diese Zahlungsseite lässt sich nicht einbetten und wurde deshalb in einem zentrierten Fenster geöffnet. Schließe die Zahlung dort ab — die Belohnung wird nach der Bestätigung freigeschaltet.',
+      'paymentPopupBlocked': 'Der Browser hat das Zahlungsfenster blockiert. Erlaube Pop-up-Fenster und versuche es erneut.',
+      'paymentPopupRetry': 'Zahlungsfenster öffnen',
       'visitedPlaces': 'Besuchte Orte',
       'profileCatCity': 'Stadt',
       'profileCatNature': 'Natur',

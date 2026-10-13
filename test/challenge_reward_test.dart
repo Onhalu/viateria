@@ -901,7 +901,14 @@ void main() {
         RewardVariant.diploma,
       );
       expect(opened, isEmpty);
+      expect(find.byKey(const Key('payment-checkout-dialog')), findsOneWidget);
+      expect(find.byKey(const Key('payment-checkout-close')), findsOneWidget);
       expect(find.byKey(const Key('payment-checkout-screen')), findsOneWidget);
+      final dialog = tester.getSize(
+        find.byKey(const Key('payment-checkout-dialog')),
+      );
+      expect(dialog.width, 560);
+      expect(dialog.height, 860);
       expect(
         find.text(fapiCheckoutUrlFor(RewardVariant.diploma)),
         findsOneWidget,

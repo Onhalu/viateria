@@ -27,7 +27,7 @@ import '../widgets/map_chrome.dart';
 import '../widgets/place_presentation.dart';
 import '../widgets/route_planner_panel.dart';
 import '../widgets/story_chapter_card.dart';
-import 'payment_checkout_screen.dart';
+import '../fapi_checkout_window.dart';
 
 class ChallengeScreen extends StatefulWidget {
   const ChallengeScreen({
@@ -137,13 +137,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     );
     if (!mounted) return;
     final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
-    await Navigator.of(context, rootNavigator: true).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => PaymentCheckoutScreen(
-          challengeId: widget.challengeId,
-          checkoutUrl: checkoutUrl,
-        ),
-      ),
+    await showInAppFapiCheckout(
+      context,
+      challengeId: widget.challengeId,
+      checkoutUrl: checkoutUrl,
     );
     if (!mounted) return;
     await _reload();
