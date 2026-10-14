@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,7 @@ import 'package:viateria/domain/story_fog.dart';
 import 'package:viateria/domain/youtube_url.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/map/story_fog_icon.dart';
@@ -1043,6 +1045,108 @@ void main() {
     );
   });
 
+  testWidgets('verify stop 1 reveals the next chapter and the next stop', (
+    tester,
+  ) async {
+    final detail = _story();
+    final progress = MemoryProgress(details: [detail]);
+    final services = _services(
+      detail,
+      progress: progress,
+      deviceLocation: MemoryDeviceLocation(
+        point: const RouteEndpoint(lat: 50.611389, lng: 16.115, label: 'GPS'),
+      ),
+    );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = GoRouter(
+      initialLocation: '/challenge/${detail.challenge.id}',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const SizedBox.shrink(),
+          routes: [
+            GoRoute(
+              path: 'challenge/:id',
+              builder: (_, state) =>
+                  ChallengeScreen(challengeId: state.pathParameters['id']!),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/verify/:challengeId/:waypointId',
+          builder: (_, state) => VerifyWaypointScreen(
+            challengeId: state.pathParameters['challengeId'],
+            waypointId: state.pathParameters['waypointId'],
+            place: state.extra is Place ? state.extra as Place : null,
+            places: MemoryPlaceCatalog(const []),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'cs'),
+          ),
+          ChangeNotifierProvider(
+            create: (_) =>
+                LastOpenedChallengeStore(initialId: detail.challenge.id),
+          ),
+          Provider.value(value: services),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final verify = find.descendant(
+      of: find.byKey(const Key('waypoint-tile-w0')),
+      matching: find.byType(FilledButton),
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('waypoint-tile-w0')),
+      500,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('challenge-feed-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('story-chapter-s-b1')), findsNothing);
+    expect(find.byKey(const Key('waypoint-mystery-w1')), findsOneWidget);
+    await tester.tap(verify);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('story-chapter-s-b1')), findsOneWidget);
+    expect(find.byKey(const Key('story-chapter-text-s-b1')), findsOneWidget);
+    expect(find.text('Po skále přichází propast.'), findsOneWidget);
+    expect(find.byKey(const Key('waypoint-tile-w1')), findsOneWidget);
+    expect(find.text('Propast Macocha'), findsWidgets);
+    expect(find.byKey(const Key('waypoint-mystery-w1')), findsNothing);
+    expect(find.byKey(const Key('waypoint-category-w1')), findsOneWidget);
+    final stored = await services.progress.fetchProgress(detail.challenge.id);
+    expect(stored?.completedWaypointIds, contains('w0'));
+    if (Platform.environment['CAPTURE_UX'] == '1') {
+      await tester.runAsync(_loadShotFonts);
+      await tester.ensureVisible(find.byKey(const Key('story-chapter-s-b1')));
+      await tester.pumpAndSettle();
+      goldenFileComparator = _StoryShot();
+      await expectLater(
+        find.byType(MaterialApp),
+        matchesGoldenFile('story-after-verify.png'),
+      );
+    }
+  });
+
   testWidgets('after verify the next place uses its real name', (tester) async {
     await _pumpStory(tester, progressIds: const {'w0'});
     expect(find.text('Cesta k Macoše'), findsOneWidget);
@@ -1142,6 +1246,7 @@ AppServices _services(
   ChallengeDetail detail, {
   MemoryProgress? progress,
   MemoryPurchases? purchases,
+  MemoryDeviceLocation? deviceLocation,
 }) {
   return AppServices(
     config: const AppConfig(
@@ -1159,9 +1264,15 @@ AppServices _services(
     photoCapture: MemoryCapture(),
     routing: MemoryRoutingClient(),
     geocoder: MemoryGeocoder(places: const {}),
-    deviceLocation: MemoryDeviceLocation(
-      point: const RouteEndpoint(lat: 49.300278, lng: 17.393056, label: 'GPS'),
-    ),
+    deviceLocation:
+        deviceLocation ??
+        MemoryDeviceLocation(
+          point: const RouteEndpoint(
+            lat: 49.300278,
+            lng: 17.393056,
+            label: 'GPS',
+          ),
+        ),
     elevation: MemoryElevationLookup(),
     places: MemoryPlaceCatalog(const []),
   );
@@ -1177,6 +1288,53 @@ Future<void> _pumpStory(
     progress.completed[detail.challenge.id] = {...progressIds};
   }
   await _pumpDetail(tester, detail, progress: progress);
+}
+
+Future<void> _loadShotFonts() async {
+  Future<void> family(
+    String name,
+    List<String> paths, {
+    bool fromBundle = false,
+  }) async {
+    final loader = FontLoader(name);
+    for (final path in paths) {
+      final Future<ByteData> data = fromBundle
+          ? rootBundle.load(path)
+          : File(path).readAsBytes().then(
+              (bytes) => ByteData.sublistView(Uint8List.fromList(bytes)),
+            );
+      loader.addFont(data);
+    }
+    await loader.load();
+  }
+
+  await family('Roboto', const [
+    '/usr/share/fonts/truetype/macos/Inter-Regular.ttf',
+    '/usr/share/fonts/truetype/macos/Inter-Medium.ttf',
+    '/usr/share/fonts/truetype/macos/Inter-SemiBold.ttf',
+    '/usr/share/fonts/truetype/macos/Inter-Bold.ttf',
+  ]);
+  await family('Playfair Display', const [
+    'assets/fonts/PlayfairDisplay-Variable.ttf',
+  ], fromBundle: true);
+  await family('MaterialIcons', const [
+    '/home/ubuntu/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+  ]);
+}
+
+class _StoryShot extends GoldenFileComparator {
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final file = File('/opt/cursor/artifacts/${golden.pathSegments.last}');
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(imageBytes, flush: true);
+    return true;
+  }
+
+  @override
+  Future<void> update(Uri golden, Uint8List imageBytes) {
+    return compare(imageBytes, golden);
+  }
 }
 
 Future<void> _pumpDetail(

@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../domain/story_fog.dart';
+import '../../map/place.dart';
 import '../../map/place_catalog.dart';
 import '../../models/models.dart';
 import 'places_map_host.dart';
@@ -18,6 +19,7 @@ class ChallengeMap extends StatefulWidget {
     this.hikeLine = const [],
     this.bikeLine = const [],
     this.onWaypointTap,
+    this.onVerifyWaypoint,
     this.onFogTap,
     this.hiddenWaypointIds = const {},
     this.fogPins = const [],
@@ -34,6 +36,7 @@ class ChallengeMap extends StatefulWidget {
   final List<ll.LatLng> hikeLine;
   final List<ll.LatLng> bikeLine;
   final ValueChanged<Waypoint>? onWaypointTap;
+  final Future<void> Function(Waypoint waypoint, Place place)? onVerifyWaypoint;
   final ValueChanged<String>? onFogTap;
   final Set<String> hiddenWaypointIds;
   final List<StoryFogPin> fogPins;
@@ -155,6 +158,7 @@ class _ChallengeMapState extends State<ChallengeMap> {
           ),
           geometry: _geometry,
           onWaypointTap: widget.onWaypointTap,
+          onVerifyWaypoint: widget.onVerifyWaypoint,
           onFogTap: widget.onFogTap,
           onReady: (controller) => _controller = controller,
           onLayersReady: (controller) {

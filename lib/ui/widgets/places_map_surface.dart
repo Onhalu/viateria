@@ -33,6 +33,7 @@ class PlacesMapSurface extends StatefulWidget {
     this.initialCamera,
     this.geometry,
     this.onWaypointTap,
+    this.onVerifyWaypoint,
     this.onFogTap,
     this.onReady,
     this.onLayersReady,
@@ -46,6 +47,11 @@ class PlacesMapSurface extends StatefulWidget {
   final CameraPosition? initialCamera;
   final ChallengeMapGeometry? geometry;
   final ValueChanged<Waypoint>? onWaypointTap;
+
+  /// Challenge maps own verify so the detail can reload and open the next
+  /// chapter. When null, this surface pushes the verify route itself.
+  final Future<void> Function(Waypoint waypoint, Place place)? onVerifyWaypoint;
+
   final ValueChanged<String>? onFogTap;
   final void Function(MapLibreMapController controller)? onReady;
   final void Function(MapLibreMapController controller)? onLayersReady;
@@ -90,6 +96,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
 
   void _onController() {
     _syncChallengeMembership();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -120,7 +127,6 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
           child: embed
               ? PlacesMapHost(
                   places: _controller.filtered,
-                  placesController: _controller,
                   initialCamera:
                       widget.initialCamera ?? MapStyleConfig.defaultCamera,
                   geometry: widget.geometry,
@@ -161,249 +167,290 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
             return Stack(
               fit: StackFit.expand,
               children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(inset, inset, inset, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.overlayTop != null) ...[
-                    widget.overlayTop!,
-                    SizedBox(height: compact ? 6 : 10),
-                  ],
-                  Row(
-                    children: [
-                      Expanded(child: _searchBar(strings)),
-                      const SizedBox(width: 8),
-                      MapIconButton(
-                        key: const Key('map-filter-button'),
-                        icon: Icons.tune,
-                        tooltip: strings.filtersTitle,
-                        size: locateSize,
-                        iconSize: locateIcon,
-                        onPressed: () => unawaited(_openFilters(strings)),
-                      ),
-                    ],
-                  ),
-                  if (_controller.query.trim().isNotEmpty &&
-                      _controller.searchHits.isNotEmpty)
-                    _searchResults(_controller.searchHits),
-                  if (_controller.challengeOnly &&
-                      _controller.filtered.isEmpty &&
-                      viewMode == MapViewMode.map)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: MapGlass(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                          child: Text(
-                            strings.filterChallengeOnlyEmpty,
-                            key: const Key('map-filter-challenge-only-empty'),
-                            style: const TextStyle(color: MapPalette.forest),
-                          ),
-                        ),
-                      ),
-                    ),
-                  SizedBox(height: compact ? 6 : 10),
-                  Row(
-                    children: [
-                      MapGlass(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: compact ? 8 : 10,
-                            vertical: compact ? 5 : 6,
-                          ),
-                          child: Text(
-                            strings.monumentCount(_controller.visibleCount),
-                            key: const Key('map-poi-count'),
-                            style: TextStyle(
-                              color: MapPalette.bark,
-                              fontWeight: FontWeight.w600,
-                              fontSize: MapChromeSizes.countFont(compact),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      MapGlass(
-                        color: MapOverlayColors.accent,
-                        borderRadius: BorderRadius.circular(
-                          MapChromeSizes.toggleRadius,
-                        ),
-                        onTap: _controller.toggleView,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: compact ? 10 : 12,
-                            vertical: compact ? 6 : 8,
-                          ),
-                          child: Row(
-                            key: const Key('map-view-toggle'),
+                      padding: EdgeInsets.fromLTRB(inset, inset, inset, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.overlayTop != null) ...[
+                            widget.overlayTop!,
+                            SizedBox(height: compact ? 6 : 10),
+                          ],
+                          Row(
                             children: [
-                              Icon(
-                                viewMode == MapViewMode.map
-                                    ? Icons.view_list
-                                    : Icons.map_outlined,
-                                color: MapPalette.cream,
-                                size: MapChromeSizes.toggleIcon(compact),
+                              Expanded(child: _searchBar(strings)),
+                              const SizedBox(width: 8),
+                              MapIconButton(
+                                key: const Key('map-filter-button'),
+                                icon: Icons.tune,
+                                tooltip: strings.filtersTitle,
+                                size: locateSize,
+                                iconSize: locateIcon,
+                                onPressed: () =>
+                                    unawaited(_openFilters(strings)),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                viewMode == MapViewMode.map
-                                    ? strings.viewList
-                                    : strings.viewMap,
-                                style: TextStyle(
-                                  color: MapPalette.cream,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: MapChromeSizes.toggleFont(compact),
+                            ],
+                          ),
+                          if (_controller.query.trim().isNotEmpty &&
+                              _controller.searchHits.isNotEmpty)
+                            _searchResults(_controller.searchHits),
+                          if (_controller.challengeOnly &&
+                              _controller.filtered.isEmpty &&
+                              viewMode == MapViewMode.map)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: MapGlass(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    10,
+                                    12,
+                                    10,
+                                  ),
+                                  child: Text(
+                                    strings.filterChallengeOnlyEmpty,
+                                    key: const Key(
+                                      'map-filter-challenge-only-empty',
+                                    ),
+                                    style: const TextStyle(
+                                      color: MapPalette.forest,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          SizedBox(height: compact ? 6 : 10),
+                          Row(
+                            children: [
+                              MapGlass(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: compact ? 8 : 10,
+                                    vertical: compact ? 5 : 6,
+                                  ),
+                                  child: Text(
+                                    strings.monumentCount(
+                                      _controller.visibleCount,
+                                    ),
+                                    key: const Key('map-poi-count'),
+                                    style: TextStyle(
+                                      color: MapPalette.bark,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: MapChromeSizes.countFont(
+                                        compact,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              MapGlass(
+                                color: MapOverlayColors.accent,
+                                borderRadius: BorderRadius.circular(
+                                  MapChromeSizes.toggleRadius,
+                                ),
+                                onTap: _controller.toggleView,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: compact ? 10 : 12,
+                                    vertical: compact ? 6 : 8,
+                                  ),
+                                  child: Row(
+                                    key: const Key('map-view-toggle'),
+                                    children: [
+                                      Icon(
+                                        viewMode == MapViewMode.map
+                                            ? Icons.view_list
+                                            : Icons.map_outlined,
+                                        color: MapPalette.cream,
+                                        size: MapChromeSizes.toggleIcon(
+                                          compact,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        viewMode == MapViewMode.map
+                                            ? strings.viewList
+                                            : strings.viewMap,
+                                        style: TextStyle(
+                                          color: MapPalette.cream,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: MapChromeSizes.toggleFont(
+                                            compact,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
+                          if (_controller.loading)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: MapGlass(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    10,
+                                    12,
+                                    10,
+                                  ),
+                                  child: Text(
+                                    strings.placesLoading,
+                                    key: const Key('map-catalog-loading'),
+                                    style: const TextStyle(
+                                      color: MapPalette.forest,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (!_controller.loading &&
+                              !_controller.hasError &&
+                              _controller.all.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: MapGlass(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    10,
+                                    12,
+                                    10,
+                                  ),
+                                  child: Text(
+                                    strings.placesEmpty,
+                                    key: const Key('map-places-empty'),
+                                    style: const TextStyle(
+                                      color: MapPalette.forest,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (_controller.hasError)
+                            _Banner(
+                              message: strings.catalogLoadError,
+                              action: strings.retry,
+                              onAction: () => unawaited(_controller.load()),
+                            ),
+                          if (_controller.banner != null)
+                            _Banner(
+                              message: _bannerText(
+                                strings,
+                                _controller.banner!,
+                              ),
+                              action: strings.closeCta,
+                              onAction: () => _controller.setBanner(null),
+                            ),
+                        ],
                       ),
-                    ],
+                    ),
+                    if (viewMode == MapViewMode.list)
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            top: widget.compact ? 6 : 10,
+                          ),
+                          child: PlaceListPanel(
+                            places: _listPlaces,
+                            strings: strings,
+                            userLocation: _controller.userLocation,
+                            compact: widget.compact,
+                            emptyLabel: _listEmptyLabel(strings),
+                            onSelect: _selectFromList,
+                          ),
+                        ),
+                      )
+                    else
+                      const Expanded(
+                        child: IgnorePointer(child: SizedBox.expand()),
+                      ),
+                  ],
+                ),
+                if (viewMode == MapViewMode.map) ...[
+                  Positioned(
+                    left: inset,
+                    bottom: bottomLift,
+                    child: OsmAttributionChip(
+                      label: strings.osmAttribution,
+                      longLabel: strings.osmAttributionLong,
+                    ),
                   ),
-                  if (_controller.loading)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: MapGlass(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                          child: Text(
-                            strings.placesLoading,
-                            key: const Key('map-catalog-loading'),
-                            style: const TextStyle(color: MapPalette.forest),
-                          ),
+                  Positioned(
+                    right: inset,
+                    bottom: bottomLift,
+                    child: Column(
+                      key: const Key('map-zoom-column'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        MapIconButton(
+                          key: const Key('map-zoom-in'),
+                          icon: Icons.add,
+                          tooltip: strings.zoomIn,
+                          size: locateSize,
+                          iconSize: locateIcon,
+                          onPressed: () => unawaited(_zoom(1)),
                         ),
-                      ),
-                    ),
-                  if (!_controller.loading &&
-                      !_controller.hasError &&
-                      _controller.all.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: MapGlass(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                          child: Text(
-                            strings.placesEmpty,
-                            key: const Key('map-places-empty'),
-                            style: const TextStyle(color: MapPalette.forest),
-                          ),
+                        SizedBox(height: compact ? 6 : 8),
+                        MapIconButton(
+                          key: const Key('map-zoom-out'),
+                          icon: Icons.remove,
+                          tooltip: strings.zoomOut,
+                          size: locateSize,
+                          iconSize: locateIcon,
+                          onPressed: () => unawaited(_zoom(-1)),
                         ),
+                        SizedBox(height: compact ? 6 : 8),
+                        MapIconButton(
+                          key: const Key('map-locate-fab'),
+                          icon: Icons.my_location,
+                          tooltip: strings.locateTooltip,
+                          size: locateSize,
+                          iconSize: locateIcon,
+                          onPressed: () => unawaited(_locate()),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (widget.overlayActions.isNotEmpty)
+                    Positioned(
+                      left: inset,
+                      right: inset + locateSize + 8,
+                      bottom: bottomLift,
+                      child: Wrap(
+                        key: const Key('route-map-nav-actions'),
+                        alignment: WrapAlignment.end,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: widget.overlayActions,
                       ),
-                    ),
-                  if (_controller.hasError)
-                    _Banner(
-                      message: strings.catalogLoadError,
-                      action: strings.retry,
-                      onAction: () => unawaited(_controller.load()),
-                    ),
-                  if (_controller.banner != null)
-                    _Banner(
-                      message: _bannerText(strings, _controller.banner!),
-                      action: strings.closeCta,
-                      onAction: () => _controller.setBanner(null),
                     ),
                 ],
-              ),
-            ),
-            if (viewMode == MapViewMode.list)
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: widget.compact ? 6 : 10),
-                  child: PlaceListPanel(
-                    places: _listPlaces,
-                    strings: strings,
-                    userLocation: _controller.userLocation,
-                    compact: widget.compact,
-                    emptyLabel: _listEmptyLabel(strings),
-                    onSelect: _selectFromList,
+                if (selected != null && viewMode == MapViewMode.map)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: PlaceDetailSheet(
+                      place: selected,
+                      strings: strings,
+                      userLocation: _controller.userLocation,
+                      compact: widget.compact,
+                      onClose: () => _controller.select(null),
+                      onVerify: () {
+                        unawaited(_onVerify(selected));
+                      },
+                    ),
                   ),
-                ),
-              )
-            else
-              const Expanded(child: IgnorePointer(child: SizedBox.expand())),
-          ],
-        ),
-        if (viewMode == MapViewMode.map) ...[
-          Positioned(
-            left: inset,
-            bottom: bottomLift,
-            child: OsmAttributionChip(
-              label: strings.osmAttribution,
-              longLabel: strings.osmAttributionLong,
-            ),
-          ),
-          Positioned(
-            right: inset,
-            bottom: bottomLift,
-            child: Column(
-              key: const Key('map-zoom-column'),
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                MapIconButton(
-                  key: const Key('map-zoom-in'),
-                  icon: Icons.add,
-                  tooltip: strings.zoomIn,
-                  size: locateSize,
-                  iconSize: locateIcon,
-                  onPressed: () => unawaited(_zoom(1)),
-                ),
-                SizedBox(height: compact ? 6 : 8),
-                MapIconButton(
-                  key: const Key('map-zoom-out'),
-                  icon: Icons.remove,
-                  tooltip: strings.zoomOut,
-                  size: locateSize,
-                  iconSize: locateIcon,
-                  onPressed: () => unawaited(_zoom(-1)),
-                ),
-                SizedBox(height: compact ? 6 : 8),
-                MapIconButton(
-                  key: const Key('map-locate-fab'),
-                  icon: Icons.my_location,
-                  tooltip: strings.locateTooltip,
-                  size: locateSize,
-                  iconSize: locateIcon,
-                  onPressed: () => unawaited(_locate()),
-                ),
-              ],
-            ),
-          ),
-          if (widget.overlayActions.isNotEmpty)
-            Positioned(
-              left: inset,
-              right: inset + locateSize + 8,
-              bottom: bottomLift,
-              child: Wrap(
-                key: const Key('route-map-nav-actions'),
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: widget.overlayActions,
-              ),
-            ),
-        ],
-        if (selected != null && viewMode == MapViewMode.map)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: PlaceDetailSheet(
-              place: selected,
-              strings: strings,
-              userLocation: _controller.userLocation,
-              compact: widget.compact,
-              onClose: () => _controller.select(null),
-              onVerify: () => _onVerify(selected),
-            ),
-          ),
               ],
             );
           },
@@ -581,16 +628,21 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     );
   }
 
-  void _onVerify(Place place) {
+  Future<void> _onVerify(Place place) async {
     final waypoint = _waypointFor(place);
     if (waypoint != null) {
-      context.push(
+      final handler = widget.onVerifyWaypoint;
+      if (handler != null) {
+        await handler(waypoint, place);
+        return;
+      }
+      await context.push<String?>(
         '/verify/${waypoint.challengeId}/${waypoint.id}',
         extra: place,
       );
       return;
     }
-    context.push('/verify/place/${place.id}', extra: place);
+    await context.push('/verify/place/${place.id}', extra: place);
   }
 
   Waypoint? _waypointFor(Place place) {

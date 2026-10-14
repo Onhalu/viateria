@@ -12,7 +12,6 @@ import '../../map/map_icons.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
-import '../../map/places_controller.dart';
 import '../../map/story_fog_icon.dart';
 import '../../models/models.dart';
 import '../../domain/story_fog.dart';
@@ -109,7 +108,6 @@ class PlacesMapHost extends StatefulWidget {
     this.onFogTap,
     this.selectedPlaceId,
     this.verifiedPlaceIds = const {},
-    this.placesController,
   });
 
   final List<Place> places;
@@ -129,9 +127,6 @@ class PlacesMapHost extends StatefulWidget {
   final String? selectedPlaceId;
   final Set<String> verifiedPlaceIds;
 
-  /// When set, selection and verification update paint without a new source.
-  final PlacesMapController? placesController;
-
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
 }
@@ -143,36 +138,15 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   var _fogLayersReady = false;
   Timer? _moveEnd;
   Timer? _styleTimeout;
-  List<Place> _sourcePlaces = const [];
-  Set<String> _sourceChallengeIds = const {};
-  String? _paintSelected;
-  Set<String> _paintVerified = const {};
-
-  @override
-  void initState() {
-    super.initState();
-    widget.placesController?.addListener(_onPlacesController);
-  }
 
   @override
   void didUpdateWidget(covariant PlacesMapHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.placesController != widget.placesController) {
-      oldWidget.placesController?.removeListener(_onPlacesController);
-      widget.placesController?.addListener(_onPlacesController);
-    }
-    final placesChanged = !_samePlaceList(oldWidget.places, widget.places);
-    final membershipChanged = !_sameChallengeMembership(
-      oldWidget.geometry,
-      widget.geometry,
-    );
-    final paintChanged =
+    if (oldWidget.places != widget.places ||
         oldWidget.selectedPlaceId != widget.selectedPlaceId ||
-        !setEquals(oldWidget.verifiedPlaceIds, widget.verifiedPlaceIds);
-    if (placesChanged || membershipChanged) {
-      unawaited(_pushPlaces(_livePlaces()));
-    } else if (paintChanged) {
-      unawaited(_syncPaint());
+        !_sameChallengeMembership(oldWidget.geometry, widget.geometry) ||
+        !setEquals(oldWidget.verifiedPlaceIds, widget.verifiedPlaceIds)) {
+      unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
         !widget.geometry!.sameAs(oldWidget.geometry)) {
@@ -189,48 +163,9 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
 
   @override
   void dispose() {
-    widget.placesController?.removeListener(_onPlacesController);
     _moveEnd?.cancel();
     _styleTimeout?.cancel();
     super.dispose();
-  }
-
-  List<Place> _livePlaces() => widget.placesController?.filtered ?? widget.places;
-
-  String? _liveSelectedId() =>
-      widget.placesController?.selected?.id ?? widget.selectedPlaceId;
-
-  Set<String> _liveVerifiedIds() =>
-      widget.placesController?.verifiedPlaceIds ?? widget.verifiedPlaceIds;
-
-  void _onPlacesController() {
-    if (!_layersReady) return;
-    final places = _livePlaces();
-    final challengeIds = _challengePlaceIds(places);
-    final dataChanged =
-        !_samePlaceList(_sourcePlaces, places) ||
-        !setEquals(_sourceChallengeIds, challengeIds);
-    if (dataChanged) {
-      unawaited(_pushPlaces(places));
-      return;
-    }
-    final selected = _liveSelectedId();
-    final verified = _liveVerifiedIds();
-    if (selected == _paintSelected && setEquals(verified, _paintVerified)) {
-      return;
-    }
-    unawaited(_syncPaint());
-  }
-
-  bool _samePlaceList(List<Place> a, List<Place> b) {
-    if (identical(a, b)) return true;
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i].id != b[i].id) return false;
-      if (a[i].location.latitude != b[i].location.latitude) return false;
-      if (a[i].location.longitude != b[i].location.longitude) return false;
-    }
-    return true;
   }
 
   @override
@@ -278,7 +213,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         await _ensureChallengeLayers(controller);
       }
       _layersReady = true;
-      await _pushPlaces(_livePlaces());
+      await _pushPlaces(widget.places);
       if (widget.geometry != null) {
         await _syncChallengeSources();
         await _syncFog();
@@ -377,72 +312,16 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   Future<void> _pushPlaces(List<Place> places) async {
     final controller = _controller;
     if (controller == null || !_layersReady) return;
-    final challengeIds = _challengePlaceIds(places);
-    // Selection and verification are paint, not source data.
     await _setSource(
       controller,
       MapStyleConfig.poiSourceId,
-      featureCollectionOf(places, challengePlaceIds: challengeIds),
+      featureCollectionOf(
+        places,
+        selectedId: widget.selectedPlaceId,
+        challengePlaceIds: _challengePlaceIds(places),
+        verifiedPlaceIds: widget.verifiedPlaceIds,
+      ),
     );
-    _sourcePlaces = places;
-    _sourceChallengeIds = challengeIds;
-    await _syncPaint();
-  }
-
-  Future<void> _syncPaint() async {
-    final controller = _controller;
-    if (controller == null || !_layersReady) return;
-    final places = _livePlaces();
-    final selected = _liveSelectedId();
-    final verified = _liveVerifiedIds();
-    final selectedIds = selectedFeatureIds(places, selectedId: selected);
-    try {
-      await controller.setLayerProperties(
-        MapStyleConfig.diskLayerId,
-        CircleLayerProperties(
-          circleRadius: MapStyleConfig.idInExpression(
-            selectedIds,
-            MapStyleConfig.selectedDiskRadius,
-            MapStyleConfig.diskRadius,
-          ),
-          circleColor: MapStyleConfig.idInExpression(
-            verified,
-            MapStyleConfig.verifiedDiskFill,
-            MapStyleConfig.diskFillColor,
-          ),
-          circleStrokeWidth: MapStyleConfig.idInExpression(
-            verified,
-            MapStyleConfig.verifiedDiskStrokeWidth,
-            MapStyleConfig.diskStrokeWidth,
-          ),
-        ),
-      );
-      await controller.setLayerProperties(
-        MapStyleConfig.symbolLayerId,
-        SymbolLayerProperties(
-          iconSize: MapStyleConfig.idInExpression(
-            selectedIds,
-            MapStyleConfig.selectedMarkerIconSize,
-            MapStyleConfig.markerIconSize,
-          ),
-          iconColor: MapStyleConfig.idInExpression(
-            verified,
-            MapStyleConfig.verifiedIconHex,
-            [
-              Expressions.match,
-              [Expressions.get, 'placeState'],
-              MapStyleConfig.placeStateInChallenge,
-              MapStyleConfig.forestHex,
-              MapStyleConfig.sageHex,
-            ],
-          ),
-        ),
-      );
-      _paintSelected = selected;
-      _paintVerified = Set<String>.from(verified);
-    } catch (_) {
-      // Style not ready yet. The next data or selection change retries.
-    }
   }
 
   Set<String> _challengePlaceIds(List<Place> places) {

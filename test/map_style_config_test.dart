@@ -124,6 +124,19 @@ void main() {
         isTrue,
       );
       expect(
+        File(host)
+            .readAsStringSync()
+            .contains('verifiedPlaceIds: widget.verifiedPlaceIds'),
+        isTrue,
+      );
+      expect(File(host).readAsStringSync().contains('_syncPaint'), isFalse);
+      expect(
+        File(host)
+            .readAsStringSync()
+            .contains("iconImage: [Expressions.get, 'icon']"),
+        isTrue,
+      );
+      expect(
         File(host).readAsStringSync().contains('diskStrokeWidthExpression'),
         isTrue,
       );
