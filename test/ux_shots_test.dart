@@ -12,6 +12,7 @@ import 'package:viateria/ui/screens/challenge_screen.dart';
 
 import 'auth_register_form_test.dart';
 import 'bottom_nav_test.dart';
+import 'helpers/fakes.dart';
 
 /// Before/after frames for the UX audit.
 ///
@@ -131,7 +132,65 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await shot(frame.name);
+      await tester.tap(find.byKey(const Key('map-plan-route')));
+      await tester.pumpAndSettle();
+      await shot('${frame.name}-route');
     }
+
+    final story = sampleStoryChallenge(
+      coverImageUrl: 'https://cdn.example/cover.jpg',
+    );
+    final open = sampleOpenChallenge();
+    final purchases = MemoryPurchases()
+      ..pay('story-1', paidAt: DateTime(2026, 4, 14));
+    useView(tester, const Size(390, 1400));
+    await resetTree();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: 'cs'),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => LastOpenedChallengeStore(initialId: 'story-1'),
+          ),
+          Provider.value(
+            value: buildServices(
+              challenges: [open.challenge, story.challenge],
+              details: [open, story],
+              purchases: purchases,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          home: const ChallengeScreen(challengeId: 'story-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await shot('challenge-hero-map');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('challenge-reward-deadline')),
+      400,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('challenge-feed-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    await shot('reward-deadline');
+
+    useView(tester, const Size(1280, 900));
+    await resetTree();
+    await tester.pumpWidget(
+      wrapApp(buildServices(), locale: LocaleController(initial: 'cs')),
+    );
+    await tester.pumpAndSettle();
+    await shot('filters-featured');
     debugDisableShadows = true;
   });
 }

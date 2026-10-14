@@ -563,8 +563,8 @@ ChallengeDetail sampleOpenChallenge() {
   return ChallengeDetail(challenge: challenge, waypoints: waypoints);
 }
 
-ChallengeDetail sampleStoryChallenge() {
-  const challenge = Challenge(
+ChallengeDetail sampleStoryChallenge({String? coverImageUrl}) {
+  final challenge = Challenge(
     id: 'story-1',
     slug: 'story-trail',
     accessMode: AccessMode.story,
@@ -577,6 +577,7 @@ ChallengeDetail sampleStoryChallenge() {
     fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
     status: PublishStatus.published,
     countryCode: 'SK',
+    coverImageUrl: coverImageUrl,
     translations: [
       LocalizedText(
         locale: 'en',

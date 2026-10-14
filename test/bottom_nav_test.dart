@@ -28,6 +28,7 @@ AppServices buildServices({
   List<ChallengeDetail>? details,
   MemoryCatalog? catalog,
   MemoryProgress? progress,
+  MemoryPurchases? purchases,
   Profile? user,
   bool configured = true,
   LeaderboardRepository? leaderboard,
@@ -72,7 +73,7 @@ AppServices buildServices({
           promos: promos ?? [samplePromo()],
         ),
     progress: progress ?? MemoryProgress(details: resolvedDetails),
-    purchases: MemoryPurchases(),
+    purchases: purchases ?? MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     leaderboard: leaderboard,
@@ -124,19 +125,15 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    final view = TestWidgetsFlutterBinding
-        .instance
-        .platformDispatcher
-        .implicitView!;
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
     view.physicalSize = const Size(390, 844);
     view.devicePixelRatio = 1.0;
   });
 
   tearDown(() {
-    final view = TestWidgetsFlutterBinding
-        .instance
-        .platformDispatcher
-        .implicitView!;
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
     view.resetPhysicalSize();
     view.resetDevicePixelRatio();
   });

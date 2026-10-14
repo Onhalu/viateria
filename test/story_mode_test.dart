@@ -1342,7 +1342,7 @@ Future<void> _pumpDetail(
   ChallengeDetail detail, {
   MemoryProgress? progress,
   MemoryPurchases? purchases,
-  double height = 2400,
+  double height = 3200,
 }) async {
   tester.view.physicalSize = Size(800, height);
   tester.view.devicePixelRatio = 1;

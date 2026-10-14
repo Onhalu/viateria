@@ -368,7 +368,7 @@ void main() {
 
       final map = find.byType(ChallengeMap);
       expect(map, findsOneWidget);
-      expect(tester.getSize(map).height, 280);
+      expect(tester.getSize(map).height, 480);
       expect(
         find.descendant(
           of: map,
@@ -465,7 +465,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(tester.getSize(map).height, 280);
+      expect(tester.getSize(map).height, 480);
     },
   );
 

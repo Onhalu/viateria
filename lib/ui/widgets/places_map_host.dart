@@ -13,6 +13,7 @@ import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
 import '../../map/story_fog_icon.dart';
+import '../../map/verified_badge_icon.dart';
 import '../../models/models.dart';
 import '../../domain/story_fog.dart';
 
@@ -108,6 +109,8 @@ class PlacesMapHost extends StatefulWidget {
     this.onFogTap,
     this.selectedPlaceId,
     this.verifiedPlaceIds = const {},
+    this.catalogRoute = const [],
+    this.zoomGesturesEnabled = true,
   });
 
   final List<Place> places;
@@ -126,6 +129,12 @@ class PlacesMapHost extends StatefulWidget {
   final ValueChanged<String>? onFogTap;
   final String? selectedPlaceId;
   final Set<String> verifiedPlaceIds;
+
+  /// Ordered stops for a session route on the main map. Empty hides the line.
+  final List<ll.LatLng> catalogRoute;
+
+  /// Wheel / pinch zoom. Challenge detail on web turns this off.
+  final bool zoomGesturesEnabled;
 
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
@@ -159,6 +168,9 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         _controller != null) {
       unawaited(_ensureChallengeLayers(_controller!));
     }
+    if (!listEquals(oldWidget.catalogRoute, widget.catalogRoute)) {
+      unawaited(_syncCatalogRoute());
+    }
   }
 
   @override
@@ -176,6 +188,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       trackCameraPosition: true,
       compassEnabled: false,
       rotateGesturesEnabled: false,
+      zoomGesturesEnabled: widget.zoomGesturesEnabled,
       myLocationEnabled: widget.myLocationEnabled,
       myLocationTrackingMode: MyLocationTrackingMode.none,
       myLocationRenderMode: MyLocationRenderMode.normal,
@@ -213,6 +226,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         await _ensureChallengeLayers(controller);
       }
       _layersReady = true;
+      await _syncCatalogRoute();
       await _pushPlaces(widget.places);
       if (widget.geometry != null) {
         await _syncChallengeSources();
@@ -232,6 +246,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       final sdf = await sdfSilhouettePng(data.buffer.asUint8List());
       await controller.addImage(name, sdf, true);
     }
+    final badge = await verifiedBadgePng();
+    await controller.addImage(MapStyleConfig.verifiedBadgeIconId, badge);
   }
 
   Future<void> _installLayers(MapLibreMapController controller) async {
@@ -268,6 +284,50 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
+    );
+
+    await controller.addSymbolLayer(
+      MapStyleConfig.poiSourceId,
+      MapStyleConfig.verifiedBadgeLayerId,
+      const SymbolLayerProperties(
+        iconImage: MapStyleConfig.verifiedBadgeIconId,
+        iconSize: 0.28,
+        iconOffset: Offset(0.7, -0.85),
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+      ),
+      filter: const [
+        Expressions.equal,
+        [Expressions.get, 'placeState'],
+        MapStyleConfig.placeStateVerified,
+      ],
+    );
+
+    await controller.addSource(
+      MapStyleConfig.catalogRouteSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addLineLayer(
+      MapStyleConfig.catalogRouteSourceId,
+      MapStyleConfig.catalogRouteLayerId,
+      const LineLayerProperties(
+        lineColor: MapStyleConfig.forestHex,
+        lineWidth: 4,
+        lineOpacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round',
+      ),
+    );
+  }
+
+  Future<void> _syncCatalogRoute() async {
+    final controller = _controller;
+    if (controller == null || !_layersReady) return;
+    final line = widget.catalogRoute;
+    await _setSource(
+      controller,
+      MapStyleConfig.catalogRouteSourceId,
+      line.length > 1 ? _lineCollection(line) : _emptyCollection(),
     );
   }
 

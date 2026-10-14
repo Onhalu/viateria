@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -25,7 +26,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/brand_assets.dart';
 import '../challenge_route_controller.dart';
 import '../layout/breakpoints.dart';
-import '../widgets/app_network_image.dart';
+import '../widgets/challenge_hero.dart';
 import '../widgets/challenge_map.dart';
 import '../widgets/error_state.dart';
 import '../widgets/challenge_photos_section.dart';
@@ -581,6 +582,8 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               constraints.maxWidth,
             );
             final compact = constraints.maxWidth < Breakpoints.compactMax;
+            final cover = challenge.coverImageUrl;
+            final hasCover = cover != null && cover.isNotEmpty;
             final scroll = CustomScrollView(
               key: const Key('challenge-feed-scroll'),
               controller: _feedScroll,
@@ -589,28 +592,15 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      if (challenge.coverImageUrl != null &&
-                          challenge.coverImageUrl!.isNotEmpty) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusCard,
-                          ),
-                          child: AspectRatio(
-                            aspectRatio: 4 / 3,
-                            child: AppNetworkImage(
-                              url: challenge.coverImageUrl,
-                            ),
-                          ),
+                      if (!hasCover) ...[
+                        Text(
+                          copy.title,
+                          key: const Key('challenge-title'),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 12),
                       ],
-                      Text(
-                        copy.title,
-                        key: const Key('challenge-title'),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 12),
                       _ChallengeProgress(
                         done: completed.length,
                         total: waypoints.length,
@@ -732,6 +722,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                         completed: isComplete,
                         entitled: diplomaEntitled,
                         locked: rewardLocked,
+                        locale: locale,
+                        completeBy: completeBy,
+                        showDeadline: purchasePaid,
                         challengeId: challenge.id,
                         diplomas: context.read<AppServices>().diplomas,
                         hasDisplayName:
@@ -811,8 +804,20 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     ],
                   )
                 : scroll;
+            final hero = hasCover
+                ? ChallengeHero(
+                    url: cover,
+                    title: copy.title,
+                    lengthLabel: _lengthLabel(strings, challenge.length),
+                    difficultyLabel: _difficultyLabel(
+                      strings,
+                      challenge.difficulty,
+                    ),
+                  )
+                : null;
             return Column(
               children: [
+                ?hero,
                 Expanded(child: page),
                 if (compact)
                   _ChallengeStickyBar(
@@ -952,8 +957,35 @@ class _ChallengeRouteBlock extends StatelessWidget {
       builder: (context, _) {
         final destination = destinationOf(plannerWaypoints);
         final navigating = route.navigating;
+        final viewport = MediaQuery.sizeOf(context).height;
+        final width = MediaQuery.sizeOf(context).width;
+        final mobileHeight = (viewport * 0.55).clamp(320.0, 480.0);
+        final height = mapOnly ? mapHeight : mobileHeight;
+        final mobile = width < Breakpoints.compactMax;
         final map = ChallengeMap(
-          height: mapHeight,
+          height: height,
+          cooperativeGestures: mobile && !kIsWeb,
+          zoomGesturesEnabled: !kIsWeb,
+          expandLabel: mobile ? strings.expandMap : null,
+          onExpand: mobile
+              ? () => _openExpandedMap(
+                  context,
+                  height: viewport,
+                  waypoints: waypoints,
+                  hidden: hidden,
+                  fog: fog,
+                  destinationId: destination?.id,
+                  start: route.start?.latLng,
+                  hikeLine: route.routes?.hikeLine ?? const <LatLng>[],
+                  bikeLine: route.routes?.bikeLine ?? const <LatLng>[],
+                  onWaypointTap: onWaypointTap,
+                  onVerifyWaypoint: onVerifyWaypoint,
+                  onFogTap: onFogTap,
+                  navigating: navigating,
+                  strings: strings,
+                  onEndNavigation: onEndNavigation,
+                )
+              : null,
           waypoints: waypoints,
           hiddenWaypointIds: hidden,
           fogPins: fog,
@@ -997,7 +1029,7 @@ class _ChallengeRouteBlock extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (includeMap) map,
+            if (includeMap) _LazyChallengeMap(child: map),
             if (includeMap) const SizedBox(height: 12),
             RoutePlannerPanel(
               strings: strings,
@@ -1032,6 +1064,132 @@ class _ChallengeRouteBlock extends StatelessWidget {
       },
     );
   }
+}
+
+void _openExpandedMap(
+  BuildContext context, {
+  required double height,
+  required List<Waypoint> waypoints,
+  required Set<String> hidden,
+  required List<StoryFogPin> fog,
+  required String? destinationId,
+  required LatLng? start,
+  required List<LatLng> hikeLine,
+  required List<LatLng> bikeLine,
+  required ValueChanged<Waypoint> onWaypointTap,
+  required Future<void> Function(Waypoint waypoint, Place place)
+  onVerifyWaypoint,
+  required VoidCallback onFogTap,
+  required TravelMode? navigating,
+  required AppStrings strings,
+  required VoidCallback onEndNavigation,
+}) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return Dialog.fullscreen(
+        backgroundColor: BrandColors.neutral,
+        child: Stack(
+          children: [
+            ChallengeMap(
+              height: height,
+              waypoints: waypoints,
+              hiddenWaypointIds: hidden,
+              fogPins: fog,
+              selectedWaypointId: destinationId,
+              start: start,
+              hikeLine: hikeLine,
+              bikeLine: bikeLine,
+              onWaypointTap: onWaypointTap,
+              onVerifyWaypoint: onVerifyWaypoint,
+              onFogTap: (_) => onFogTap(),
+              navigating: navigating,
+              cooperativeGestures: false,
+              zoomGesturesEnabled: true,
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: IconButton(
+                key: const Key('challenge-expand-map-close'),
+                tooltip: strings.closeCta,
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.close, color: BrandColors.forest),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _LazyChallengeMap extends StatefulWidget {
+  const _LazyChallengeMap({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_LazyChallengeMap> createState() => _LazyChallengeMapState();
+}
+
+class _LazyChallengeMapState extends State<_LazyChallengeMap> {
+  final _key = GlobalKey();
+  var _show = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+  }
+
+  void _check() {
+    if (!mounted || _show) return;
+    final box = _key.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached || !box.hasSize) return;
+    final top = box.localToGlobal(Offset.zero).dy;
+    final bottom = top + box.size.height;
+    final view = MediaQuery.sizeOf(context).height;
+    if (bottom > 0 && top < view) setState(() => _show = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (_) {
+        _check();
+        return false;
+      },
+      child: KeyedSubtree(
+        key: _key,
+        child: _show
+            ? widget.child
+            : const ColoredBox(
+                key: Key('challenge-map-skeleton'),
+                color: Color(0x66D8CDB8),
+                child: SizedBox(height: 320),
+              ),
+      ),
+    );
+  }
+}
+
+String? _lengthLabel(AppStrings strings, ChallengeLength? length) {
+  return switch (length) {
+    ChallengeLength.short => strings.catalogLengthShort,
+    ChallengeLength.medium => strings.catalogLengthMedium,
+    ChallengeLength.long => strings.catalogLengthLong,
+    null => null,
+  };
+}
+
+String? _difficultyLabel(AppStrings strings, CatalogDifficulty? difficulty) {
+  return switch (difficulty) {
+    CatalogDifficulty.easy => strings.catalogDifficultyEasy,
+    CatalogDifficulty.normal => strings.catalogDifficultyNormal,
+    CatalogDifficulty.hard => strings.catalogDifficultyHard,
+    null => null,
+  };
 }
 
 class _ChallengeStickyBar extends StatelessWidget {

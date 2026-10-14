@@ -1001,15 +1001,18 @@ void main() {
       tester,
       const Key('catalog-filter-mode-story'),
     );
-    expect(unselected.color, BrandColors.creamPill);
-    expect((unselected.shape as RoundedRectangleBorder).side, BorderSide.none);
+    expect(unselected.color, BrandColors.cream);
+    expect(
+      (unselected.shape as RoundedRectangleBorder).side,
+      const BorderSide(color: BrandColors.beige),
+    );
     final unselectedLabel = tester.widget<Text>(
       find.descendant(
         of: find.byKey(const Key('catalog-filter-mode-story')),
         matching: find.byType(Text),
       ),
     );
-    expect(unselectedLabel.style?.color, BrandColors.cream);
+    expect(unselectedLabel.style?.color, BrandColors.forest);
     expect(unselectedLabel.style?.fontWeight, FontWeight.w600);
     expect(unselectedLabel.style?.fontSize, CatalogFilterChip.fontSize);
 
@@ -1019,7 +1022,7 @@ void main() {
       tester,
       const Key('catalog-filter-mode-story'),
     );
-    expect(selected.color, BrandColors.cream);
+    expect(selected.color, BrandColors.forest);
     expect((selected.shape as RoundedRectangleBorder).side, BorderSide.none);
     final selectedLabel = tester.widget<Text>(
       find.descendant(
@@ -1027,7 +1030,7 @@ void main() {
         matching: find.byType(Text),
       ),
     );
-    expect(selectedLabel.style?.color, BrandColors.forest);
+    expect(selectedLabel.style?.color, BrandColors.cream);
     expect(selectedLabel.style?.fontWeight, FontWeight.w600);
 
     final clear = tester.widget<TextButton>(

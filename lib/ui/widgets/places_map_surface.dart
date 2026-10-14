@@ -39,6 +39,11 @@ class PlacesMapSurface extends StatefulWidget {
     this.onLayersReady,
     this.overlayTop,
     this.overlayActions = const [],
+    this.waypointsOnly = false,
+    this.catalogRoute = const [],
+    this.onAddToRoute,
+    this.cooperativeGestures = false,
+    this.zoomGesturesEnabled = true,
   });
 
   final PlaceCatalog? catalog;
@@ -57,6 +62,20 @@ class PlacesMapSurface extends StatefulWidget {
   final void Function(MapLibreMapController controller)? onLayersReady;
   final Widget? overlayTop;
   final List<Widget> overlayActions;
+
+  /// Challenge detail draws only that challenge's waypoint places.
+  final bool waypointsOnly;
+
+  /// Session route polyline on the main map.
+  final List<ll.LatLng> catalogRoute;
+
+  /// Secondary popup action. Null hides "Add to route".
+  final void Function(Place place)? onAddToRoute;
+
+  /// One-finger drags scroll the page. Two fingers pan the map.
+  final bool cooperativeGestures;
+
+  final bool zoomGesturesEnabled;
 
   @override
   State<PlacesMapSurface> createState() => _PlacesMapSurfaceState();
@@ -125,29 +144,33 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
         RepaintBoundary(
           key: const Key('places-map-repaint'),
           child: embed
-              ? PlacesMapHost(
-                  places: _controller.filtered,
-                  initialCamera:
-                      widget.initialCamera ?? MapStyleConfig.defaultCamera,
-                  geometry: widget.geometry,
-                  selectedPlaceId: _controller.selected?.id,
-                  verifiedPlaceIds: context
-                      .read<AppServices>()
-                      .verifiedPlaces
-                      .ids,
-                  onWaypointTap: widget.onWaypointTap,
-                  onFogTap: widget.onFogTap,
-                  onReady: (controller) {
-                    _map = controller;
-                    widget.onReady?.call(controller);
-                  },
-                  onLayersReady: widget.onLayersReady,
-                  onMapFailed: () {
-                    if (mounted) setState(() => _mapFailed = true);
-                  },
-                  onPlaceTap: _controller.select,
-                  onBackgroundTap: () => _controller.select(null),
-                  onViewportChanged: _controller.setViewport,
+              ? _maybeCooperative(
+                  PlacesMapHost(
+                    places: _waypointPlaces(_controller.filtered),
+                    initialCamera:
+                        widget.initialCamera ?? MapStyleConfig.defaultCamera,
+                    geometry: widget.geometry,
+                    selectedPlaceId: _controller.selected?.id,
+                    verifiedPlaceIds: context
+                        .read<AppServices>()
+                        .verifiedPlaces
+                        .ids,
+                    catalogRoute: widget.catalogRoute,
+                    zoomGesturesEnabled: widget.zoomGesturesEnabled,
+                    onWaypointTap: widget.onWaypointTap,
+                    onFogTap: widget.onFogTap,
+                    onReady: (controller) {
+                      _map = controller;
+                      widget.onReady?.call(controller);
+                    },
+                    onLayersReady: widget.onLayersReady,
+                    onMapFailed: () {
+                      if (mounted) setState(() => _mapFailed = true);
+                    },
+                    onPlaceTap: _controller.select,
+                    onBackgroundTap: () => _controller.select(null),
+                    onViewportChanged: _controller.setViewport,
+                  ),
                 )
               : const MapFallbackCanvas(),
         ),
@@ -195,8 +218,11 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                             ],
                           ),
                           if (_controller.query.trim().isNotEmpty &&
-                              _controller.searchHits.isNotEmpty)
-                            _searchResults(_controller.searchHits),
+                              _waypointPlaces(_controller.searchHits)
+                                  .isNotEmpty)
+                            _searchResults(
+                              _waypointPlaces(_controller.searchHits),
+                            ),
                           if (_controller.challengeOnly &&
                               _controller.filtered.isEmpty &&
                               viewMode == MapViewMode.map)
@@ -449,6 +475,9 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                       onVerify: () {
                         unawaited(_onVerify(selected));
                       },
+                      onAddToRoute: widget.onAddToRoute == null
+                          ? null
+                          : () => widget.onAddToRoute!(selected),
                     ),
                   ),
               ],
@@ -545,6 +574,23 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
         challengeOnly: next.challengeOnly,
       );
     }
+  }
+
+  List<Place> _waypointPlaces(List<Place> places) {
+    if (!widget.waypointsOnly) return places;
+    final ids = <String>{
+      for (final waypoint in widget.geometry?.revealedWaypoints ?? const [])
+        if (waypoint.placeId != null) waypoint.placeId!,
+    };
+    return [
+      for (final place in places)
+        if (ids.contains(place.id)) place,
+    ];
+  }
+
+  Widget _maybeCooperative(Widget child) {
+    if (!widget.cooperativeGestures) return child;
+    return _CooperativeMapGestures(child: child);
   }
 
   void _syncChallengeMembership() {
@@ -760,7 +806,11 @@ void fitChallengeCamera(
   ]);
 }
 
-void fitMapPoints(MapLibreMapController controller, List<ll.LatLng> points) {
+void fitMapPoints(
+  MapLibreMapController controller,
+  List<ll.LatLng> points, {
+  double padding = 32,
+}) {
   if (points.isEmpty) return;
   if (points.length == 1) {
     unawaited(
@@ -777,13 +827,43 @@ void fitMapPoints(MapLibreMapController controller, List<ll.LatLng> points) {
     controller.animateCamera(
       CameraUpdate.newLatLngBounds(
         boundsOf(points),
-        left: 32,
-        top: 32,
-        right: 32,
-        bottom: 32,
+        left: padding,
+        top: padding,
+        right: padding,
+        bottom: padding,
       ),
     ),
   );
+}
+
+/// One finger scrolls the parent. Two fingers reach the map.
+class _CooperativeMapGestures extends StatefulWidget {
+  const _CooperativeMapGestures({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_CooperativeMapGestures> createState() =>
+      _CooperativeMapGesturesState();
+}
+
+class _CooperativeMapGesturesState extends State<_CooperativeMapGestures> {
+  var _pointers = 0;
+
+  void _change(int delta) {
+    setState(() => _pointers = math.max(0, _pointers + delta));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _change(1),
+      onPointerUp: (_) => _change(-1),
+      onPointerCancel: (_) => _change(-1),
+      child: IgnorePointer(ignoring: _pointers < 2, child: widget.child),
+    );
+  }
 }
 
 LatLngBounds boundsOf(List<ll.LatLng> points) {

@@ -53,20 +53,17 @@ class _AuthScreenState extends State<AuthScreen> {
     vertical: 14,
   );
 
-  static final ButtonStyle _linkStyle =
-      TextButton.styleFrom(
-        minimumSize: const Size(48, AppTheme.minTap),
-        tapTargetSize: MaterialTapTargetSize.padded,
-        textStyle: const TextStyle(
-          fontSize: AppTheme.labelSize,
-          height: 1.2,
-          fontWeight: FontWeight.w600,
-          decoration: TextDecoration.underline,
-          decorationColor: BrandColors.forest,
-        ),
-      ).copyWith(
-        foregroundColor: const WidgetStatePropertyAll(BrandColors.forest),
-      );
+  static final ButtonStyle _linkStyle = TextButton.styleFrom(
+    minimumSize: const Size(48, AppTheme.minTap),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    textStyle: const TextStyle(
+      fontSize: AppTheme.labelSize,
+      height: 1.2,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: BrandColors.forest,
+    ),
+  ).copyWith(foregroundColor: const WidgetStatePropertyAll(BrandColors.forest));
 
   static final ButtonStyle _socialStyle = OutlinedButton.styleFrom(
     backgroundColor: BrandColors.cream,
@@ -86,7 +83,7 @@ class _AuthScreenState extends State<AuthScreen> {
     foregroundColor: BrandColors.forest,
     side: const BorderSide(color: BrandColors.forest, width: 1.5),
     padding: _buttonPadding,
-    minimumSize: const Size.fromHeight(AppTheme.minTap),
+    minimumSize: const Size.fromHeight(AppTheme.ctaHeight),
     textStyle: const TextStyle(
       fontSize: AppTheme.bodySize,
       fontWeight: FontWeight.w600,
@@ -405,8 +402,7 @@ class _AuthScreenState extends State<AuthScreen> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final split =
-                  constraints.maxWidth >= Breakpoints.mediumMax;
+              final split = constraints.maxWidth >= Breakpoints.mediumMax;
               final card = Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
@@ -578,20 +574,20 @@ class _AuthScreenState extends State<AuthScreen> {
       alignment: Alignment.centerRight,
       child: TextButton(
         key: const Key('auth-forgot-password'),
-              style:
-                  TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(48, AppTheme.minTap),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                    alignment: Alignment.centerRight,
-                    textStyle: const TextStyle(
-                      fontSize: AppTheme.labelSize,
-                      height: 1.2,
-                      fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
-                      decorationColor: BrandColors.forest,
-                    ),
-                  ).copyWith(
+        style:
+            TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(48, AppTheme.minTap),
+              tapTargetSize: MaterialTapTargetSize.padded,
+              alignment: Alignment.centerRight,
+              textStyle: const TextStyle(
+                fontSize: AppTheme.labelSize,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: BrandColors.forest,
+              ),
+            ).copyWith(
               foregroundColor: const WidgetStatePropertyAll(BrandColors.forest),
             ),
         onPressed: _busy ? null : () => _goTo(_AuthStep.forgotPassword),
@@ -647,13 +643,14 @@ class _AuthScreenState extends State<AuthScreen> {
             onPressed: _busy ? null : _signIn,
             child: _busyChild(strings.signIn),
           ),
+          const SizedBox(height: 16),
           OutlinedButton(
             key: const Key('auth-open-register'),
             style: _secondaryStyle,
             onPressed: _busy ? null : () => _goTo(_AuthStep.register),
             child: Text(strings.registerAction),
           ),
-          ..._providers(strings),
+          ..._providers(strings, signIn: true),
           TextButton(
             key: const Key('auth-magic-link'),
             style: _linkStyle,
@@ -742,9 +739,12 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  List<Widget> _providers(AppStrings strings) {
+  List<Widget> _providers(AppStrings strings, {bool signIn = false}) {
+    final beforeOr = signIn ? 24.0 : 8.0;
+    final afterOr = signIn ? 16.0 : 8.0;
+    final betweenSocial = signIn ? 12.0 : 8.0;
     return [
-      const SizedBox(height: 8),
+      SizedBox(height: beforeOr),
       Row(
         children: [
           const Expanded(child: Divider(color: BrandColors.beige)),
@@ -752,20 +752,21 @@ class _AuthScreenState extends State<AuthScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               strings.authOrDivider,
+              key: const Key('auth-or-divider'),
               style: const TextStyle(color: BrandColors.bark),
             ),
           ),
           const Expanded(child: Divider(color: BrandColors.beige)),
         ],
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: afterOr),
       OutlinedButton(
         key: const Key('auth-google'),
         style: _socialStyle,
         onPressed: _busy ? null : () => _oauth(AuthProvider.google),
         child: Text(strings.continueWithGoogle),
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: betweenSocial),
       OutlinedButton.icon(
         key: const Key('auth-apple'),
         style: _socialStyle,
@@ -814,10 +815,8 @@ class _AuthForm extends StatelessWidget {
           Text(
             title!,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: BrandColors.forest,
-              fontSize: 28,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(color: BrandColors.forest, fontSize: 28),
           ),
         ],
         const SizedBox(height: 32),

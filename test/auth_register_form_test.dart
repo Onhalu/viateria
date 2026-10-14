@@ -474,4 +474,24 @@ void main() {
     expect(find.byKey(const Key('auth-new-password')), findsOneWidget);
     expect(find.byKey(const Key('auth-sign-in')), findsNothing);
   });
+
+  testWidgets('sign-in gaps and the register outline pill', (tester) async {
+    await pumpAuth(tester);
+    final signIn = tester.getRect(find.byKey(const Key('auth-sign-in')));
+    final register = tester.getRect(
+      find.byKey(const Key('auth-open-register')),
+    );
+    final divider = tester.getRect(find.byKey(const Key('auth-or-divider')));
+    final google = tester.getRect(find.byKey(const Key('auth-google')));
+    final apple = tester.getRect(find.byKey(const Key('auth-apple')));
+    expect(register.top - signIn.bottom, closeTo(16, 1));
+    expect(divider.top - register.bottom, closeTo(24, 1));
+    expect(google.top - divider.bottom, closeTo(16, 1));
+    expect(apple.top - google.bottom, closeTo(12, 1));
+    expect(register.height, greaterThanOrEqualTo(52));
+    expect(signIn.top, lessThan(register.top));
+    expect(register.top, lessThan(divider.top));
+    expect(divider.top, lessThan(google.top));
+    expect(google.top, lessThan(apple.top));
+  });
 }

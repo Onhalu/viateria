@@ -25,10 +25,7 @@ String supabaseRenderUrl(String url, int? width) {
   if (!uri.host.contains('supabase.co')) return url;
   const objectPrefix = '/storage/v1/object/';
   if (!uri.path.contains(objectPrefix)) return url;
-  final path = uri.path.replaceFirst(
-    objectPrefix,
-    '/storage/v1/render/image/',
-  );
+  final path = uri.path.replaceFirst(objectPrefix, '/storage/v1/render/image/');
   final params = Map<String, String>.from(uri.queryParameters);
   params['width'] = '$width';
   params.putIfAbsent('quality', () => '70');
@@ -45,9 +42,7 @@ class AppImagePlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: BrandColors.beige,
-      child: Center(
-        child: Icon(icon, size: 48, color: BrandColors.forest),
-      ),
+      child: Center(child: Icon(icon, size: 48, color: BrandColors.forest)),
     );
   }
 }
@@ -59,12 +54,14 @@ class AppNetworkImage extends StatelessWidget {
     required this.url,
     this.logicalWidth,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
     this.semanticLabel,
   });
 
   final String? url;
   final double? logicalWidth;
   final BoxFit fit;
+  final Alignment alignment;
   final String? semanticLabel;
 
   @override
@@ -73,7 +70,8 @@ class AppNetworkImage extends StatelessWidget {
     if (raw.isEmpty) return const AppImagePlaceholder();
     return LayoutBuilder(
       builder: (context, constraints) {
-        final logical = logicalWidth ??
+        final logical =
+            logicalWidth ??
             (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
         final cacheWidth = logical == null
             ? null
@@ -81,6 +79,7 @@ class AppNetworkImage extends StatelessWidget {
         return Image.network(
           supabaseRenderUrl(raw, cacheWidth),
           fit: fit,
+          alignment: alignment,
           cacheWidth: cacheWidth,
           semanticLabel: semanticLabel,
           gaplessPlayback: true,

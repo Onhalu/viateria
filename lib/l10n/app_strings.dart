@@ -265,6 +265,13 @@ class AppStrings {
     'openSettings',
     'errorOfflineHint',
     'continueChallenge',
+    'planRoute',
+    'addToRoute',
+    'cancelRoute',
+    'expandMap',
+    'deadlinePassed',
+    'featuredPrevious',
+    'featuredNext',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -523,10 +530,53 @@ class AppStrings {
   String get openSettings => t('openSettings');
   String get errorOfflineHint => t('errorOfflineHint');
   String get continueChallenge => t('continueChallenge');
+  String get planRoute => t('planRoute');
+  String get addToRoute => t('addToRoute');
+  String get cancelRoute => t('cancelRoute');
+  String get expandMap => t('expandMap');
+  String get deadlinePassed => t('deadlinePassed');
+  String get featuredPrevious => t('featuredPrevious');
+  String get featuredNext => t('featuredNext');
 
-  String challengeProgress(int done, int total) => t('challengeProgressFormat')
-      .replaceAll('{done}', '$done')
-      .replaceAll('{total}', '$total');
+  /// "Splň do {date}" / "Complete by {date}" / "Abschließen bis {date}".
+  String rewardDeadlineLabel(String formattedDate) {
+    return switch (locale) {
+      'cs' => 'Splň do $formattedDate',
+      'de' => 'Abschließen bis $formattedDate',
+      _ => 'Complete by $formattedDate',
+    };
+  }
+
+  /// Suffix when the deadline is within 7 calendar days. Null otherwise.
+  String? rewardDaysLeftSuffix(DateTime completeBy, DateTime now) {
+    if (rewardDeadlinePassed(completeBy, now)) return null;
+    final days = _calendarDaysUntil(completeBy, now);
+    if (days > 7) return null;
+    return switch (locale) {
+      'cs' => '· zbývá $days ${_csDayWord(days)}',
+      'de' => '· noch $days ${days == 1 ? 'Tag' : 'Tage'}',
+      _ => '· $days ${days == 1 ? 'day' : 'days'} left',
+    };
+  }
+
+  bool rewardDeadlinePassed(DateTime completeBy, DateTime now) {
+    return now.isAfter(completeBy);
+  }
+
+  String routeStopsSummary(int count, double km) {
+    final distance = km.toStringAsFixed(1);
+    final places = switch (locale) {
+      'cs' => _csPlaceWord(count),
+      'de' => count == 1 ? 'Ort' : 'Orte',
+      _ => count == 1 ? 'place' : 'places',
+    };
+    return '$count $places · $distance km';
+  }
+
+  String challengeProgress(int done, int total) =>
+      t('challengeProgressFormat')
+          .replaceAll('{done}', '$done')
+          .replaceAll('{total}', '$total');
 
   String verifyDistanceAway(int meters) =>
       t('verifyDistanceAway').replaceAll('{n}', '$meters');
@@ -866,6 +916,13 @@ class AppStrings {
       'openSettings': 'Open settings',
       'errorOfflineHint': 'Check your connection and try again.',
       'continueChallenge': 'Continue',
+      'planRoute': 'Plan a route',
+      'addToRoute': 'Add to route',
+      'cancelRoute': 'Cancel',
+      'expandMap': 'Expand map',
+      'deadlinePassed': 'Deadline passed',
+      'featuredPrevious': 'Previous',
+      'featuredNext': 'Next',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -1137,6 +1194,13 @@ class AppStrings {
       'openSettings': 'Otevřít nastavení',
       'errorOfflineHint': 'Zkontrolujte připojení a zkuste to znovu.',
       'continueChallenge': 'Pokračovat',
+      'planRoute': 'Naplánovat trasu',
+      'addToRoute': 'Přidat do trasy',
+      'cancelRoute': 'Zrušit',
+      'expandMap': 'Zvětšit mapu',
+      'deadlinePassed': 'Termín vypršel',
+      'featuredPrevious': 'Předchozí',
+      'featuredNext': 'Další',
     },
     'de': {
       'appName': 'VANDERY',
@@ -1411,6 +1475,37 @@ class AppStrings {
       'openSettings': 'Einstellungen öffnen',
       'errorOfflineHint': 'Prüfe die Verbindung und versuche es erneut.',
       'continueChallenge': 'Weiter',
+      'planRoute': 'Route planen',
+      'addToRoute': 'Zur Route hinzufügen',
+      'cancelRoute': 'Abbrechen',
+      'expandMap': 'Karte vergrößern',
+      'deadlinePassed': 'Frist abgelaufen',
+      'featuredPrevious': 'Zurück',
+      'featuredNext': 'Weiter',
     },
   };
+}
+
+int _calendarDaysUntil(DateTime completeBy, DateTime now) {
+  final end = DateTime(completeBy.year, completeBy.month, completeBy.day);
+  final today = DateTime(now.year, now.month, now.day);
+  return end.difference(today).inDays;
+}
+
+String _csDayWord(int n) {
+  final mod100 = n.abs() % 100;
+  final mod10 = n.abs() % 10;
+  if (mod100 >= 11 && mod100 <= 14) return 'dní';
+  if (mod10 == 1) return 'den';
+  if (mod10 >= 2 && mod10 <= 4) return 'dny';
+  return 'dní';
+}
+
+String _csPlaceWord(int n) {
+  final mod100 = n.abs() % 100;
+  final mod10 = n.abs() % 10;
+  if (mod100 >= 11 && mod100 <= 14) return 'míst';
+  if (mod10 == 1) return 'místo';
+  if (mod10 >= 2 && mod10 <= 4) return 'místa';
+  return 'míst';
 }

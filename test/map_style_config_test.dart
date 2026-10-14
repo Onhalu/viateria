@@ -29,8 +29,10 @@ void main() {
     expect(MapStyleConfig.diskRadius, 14);
     expect(MapStyleConfig.selectedDiskRadius, 16);
     expect(MapStyleConfig.diskStrokeWidth, 1.5);
+    expect(MapStyleConfig.inChallengeDiskStrokeWidth, 2);
     expect(MapStyleConfig.verifiedDiskStrokeWidth, 0);
     expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
+    expect(MapStyleConfig.outsideDiskFill, 'rgba(250, 248, 242, 0.90)');
     expect(MapStyleConfig.diskLayerId, 'poi-disks');
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
@@ -38,8 +40,8 @@ void main() {
     expect(MapStyleConfig.creamHex, '#F3EFE5');
     expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
     expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
-    expect(MapStyleConfig.verifiedDiskFill, MapStyleConfig.barkHex);
-    expect(MapStyleConfig.verifiedDiskFill, '#756653');
+    expect(MapStyleConfig.verifiedDiskFill, MapStyleConfig.forestHex);
+    expect(MapStyleConfig.verifiedDiskFill, '#35483C');
     expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(
       MapStyleConfig.markerColorExpression,
@@ -50,8 +52,8 @@ void main() {
       contains(MapStyleConfig.creamHex),
     );
     expect(
-      MapStyleConfig.markerColorExpression.contains(MapStyleConfig.barkHex),
-      isFalse,
+      MapStyleConfig.markerColorExpression,
+      contains(MapStyleConfig.barkHex),
     );
     expect(
       MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.creamHex),
@@ -62,17 +64,28 @@ void main() {
     expect(
       MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.forestHex),
       lessThan(
-        MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.sageHex),
+        MapStyleConfig.markerColorExpression.indexOf(MapStyleConfig.barkHex),
       ),
     );
     expect(
       MapStyleConfig.diskFillExpression,
       contains(MapStyleConfig.placeStateVerified),
     );
-    expect(MapStyleConfig.diskFillExpression, contains(MapStyleConfig.barkHex));
+    expect(
+      MapStyleConfig.diskFillExpression,
+      contains(MapStyleConfig.forestHex),
+    );
+    expect(
+      MapStyleConfig.diskFillExpression.contains(MapStyleConfig.barkHex),
+      isFalse,
+    );
     expect(
       MapStyleConfig.diskFillExpression,
       contains(MapStyleConfig.diskFillColor),
+    );
+    expect(
+      MapStyleConfig.diskFillExpression,
+      contains(MapStyleConfig.outsideDiskFill),
     );
     expect(
       MapStyleConfig.diskStrokeWidthExpression,

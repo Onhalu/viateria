@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../domain/catalog_query.dart';
@@ -6,6 +8,7 @@ import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import '../layout/breakpoints.dart';
 import 'app_network_image.dart';
 
 class ChallengeCard extends StatelessWidget {
@@ -268,7 +271,7 @@ class _HeroSlide extends StatelessWidget {
   }
 }
 
-class CatalogFeaturedSection extends StatelessWidget {
+class CatalogFeaturedSection extends StatefulWidget {
   const CatalogFeaturedSection({
     super.key,
     required this.challenges,
@@ -281,39 +284,278 @@ class CatalogFeaturedSection extends StatelessWidget {
   final ValueChanged<Challenge> onOpen;
 
   @override
+  State<CatalogFeaturedSection> createState() => _CatalogFeaturedSectionState();
+}
+
+class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
+  final _scroll = ScrollController();
+  var _index = 0;
+
+  static const _cardWidth = 196.0;
+  static const _gap = 12.0;
+  static const _height = 196.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_onScroll);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scroll.hasClients || widget.challenges.isEmpty) return;
+    final next = (_scroll.offset / (_cardWidth + _gap)).round().clamp(
+      0,
+      widget.challenges.length - 1,
+    );
+    if (next != _index) setState(() => _index = next);
+  }
+
+  Future<void> _step(int delta) async {
+    if (!_scroll.hasClients || widget.challenges.isEmpty) return;
+    final next = (_index + delta).clamp(0, widget.challenges.length - 1);
+    await _scroll.animateTo(
+      next * (_cardWidth + _gap),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
-    if (challenges.isEmpty) return const SizedBox.shrink();
-    return Column(
-      key: const Key('catalog-featured'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          strings.catalogFeatured,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: BrandColors.forest,
-            fontWeight: FontWeight.w700,
+    if (widget.challenges.isEmpty) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= Breakpoints.compactMax;
+        final last = _index >= widget.challenges.length - 1;
+        final cardWidth = wide
+            ? _cardWidth
+            : (constraints.maxWidth - 24).clamp(160.0, 420.0);
+        final stride = cardWidth + (wide ? _gap : 0);
+        final listHeight = wide ? _height : cardWidth * 9 / 16 + 96;
+        return Column(
+          key: const Key('catalog-featured'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              strings.catalogFeatured,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: BrandColors.forest,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+                    _step(-1),
+                const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+                    _step(1),
+              },
+              child: Focus(
+                child: Stack(
+                  children: [
+                    SizedBox(
+                      height: listHeight,
+                      child: ScrollConfiguration(
+                        behavior: const MaterialScrollBehavior().copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: ListView.separated(
+                          controller: _scroll,
+                          scrollDirection: Axis.horizontal,
+                          primary: false,
+                          physics: _CardSnapPhysics(itemExtent: stride),
+                          itemCount: widget.challenges.length,
+                          separatorBuilder: (_, _) =>
+                              SizedBox(width: wide ? _gap : 0),
+                          itemBuilder: (context, index) {
+                            final challenge = widget.challenges[index];
+                            return CatalogFeaturedCard(
+                              challenge: challenge,
+                              stats: widget.routeStats[challenge.id],
+                              onTap: () => widget.onOpen(challenge),
+                              width: cardWidth,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    if (wide) ...[
+                      Positioned(
+                        left: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: _FeaturedArrow(
+                            key: const Key('catalog-featured-prev'),
+                            tooltip: strings.featuredPrevious,
+                            icon: Icons.chevron_left,
+                            visible: _index > 0,
+                            onPressed: () => _step(-1),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: _FeaturedArrow(
+                            key: const Key('catalog-featured-next'),
+                            tooltip: strings.featuredNext,
+                            icon: Icons.chevron_right,
+                            visible: !last,
+                            onPressed: () => _step(1),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (!wide) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < widget.challenges.length; i++)
+                    Container(
+                      key: Key('catalog-featured-dot-$i'),
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i == _index
+                            ? BrandColors.forest
+                            : BrandColors.beige,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FeaturedArrow extends StatelessWidget {
+  const _FeaturedArrow({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.visible,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final bool visible;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 150),
+      opacity: visible ? 1 : 0,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: Tooltip(
+          message: tooltip,
+          child: Semantics(
+            button: true,
+            label: tooltip,
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BrandColors.cream.withValues(alpha: 0.95),
+                    shape: BoxShape.circle,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x2635483C),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: onPressed,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(icon, color: BrandColors.forest, size: 24),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 196,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            primary: false,
-            itemCount: challenges.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final challenge = challenges[index];
-              return CatalogFeaturedCard(
-                challenge: challenge,
-                stats: routeStats[challenge.id],
-                onTap: () => onOpen(challenge),
-              );
-            },
-          ),
-        ),
-      ],
+      ),
+    );
+  }
+}
+
+class _CardSnapPhysics extends ScrollPhysics {
+  const _CardSnapPhysics({required this.itemExtent, super.parent});
+
+  final double itemExtent;
+
+  @override
+  _CardSnapPhysics applyTo(ScrollPhysics? ancestor) {
+    return _CardSnapPhysics(
+      itemExtent: itemExtent,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  double _target(ScrollMetrics position) {
+    if (itemExtent <= 0) return position.pixels;
+    final index = (position.pixels / itemExtent).round();
+    return (index * itemExtent).clamp(0.0, position.maxScrollExtent);
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    final tolerance = toleranceFor(position);
+    final target = _target(position);
+    if (velocity.abs() < tolerance.velocity &&
+        (position.pixels - target).abs() < tolerance.distance) {
+      return null;
+    }
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      target,
+      velocity,
+      tolerance: tolerance,
     );
   }
 }
@@ -338,9 +580,7 @@ class CatalogCountryResults extends StatelessWidget {
   /// layout tests that measure the section's top edge.
   List<Widget> slivers({required int columns, required double width}) {
     if (challenges.isEmpty) return const [];
-    final cell = columns <= 1
-        ? width
-        : (width - 12 * (columns - 1)) / columns;
+    final cell = columns <= 1 ? width : (width - 12 * (columns - 1)) / columns;
     // 16:9 cover plus two title lines and a 14px meta row.
     final extent = cell * 9 / 16 + 96;
     return [
@@ -382,6 +622,7 @@ class CatalogFeaturedCard extends StatelessWidget {
     this.stats,
     this.cardKeyPrefix = 'catalog-featured',
     this.expand = false,
+    this.width = 196,
   });
 
   final Challenge challenge;
@@ -389,6 +630,7 @@ class CatalogFeaturedCard extends StatelessWidget {
   final VoidCallback onTap;
   final String cardKeyPrefix;
   final bool expand;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -397,7 +639,7 @@ class CatalogFeaturedCard extends StatelessWidget {
     final title = challenge.copyFor(locale).title;
     return SizedBox(
       key: Key('$cardKeyPrefix-${challenge.id}'),
-      width: expand ? null : 196,
+      width: expand ? null : width,
       child: Material(
         color: BrandColors.cream,
         shape: RoundedRectangleBorder(

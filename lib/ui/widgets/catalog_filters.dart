@@ -80,9 +80,9 @@ class CatalogFilterChipRow extends StatelessWidget {
   final ValueChanged<CatalogFilter> onChanged;
 
   /// Gap between the access/difficulty row and the country flags.
-  static const rowGap = 6.0;
+  static const rowGap = 8.0;
 
-  /// Two 28px chip rows plus [rowGap]. Used by welcome-panel height tests.
+  /// Two chip rows plus [rowGap]. Used by welcome-panel height tests.
   static const areaHeight = CatalogFilterChip.height * 2 + rowGap;
 
   @override
@@ -92,64 +92,10 @@ class CatalogFilterChipRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FilterScrollRow(
-          rowKey: const Key('catalog-filter-access-chips'),
-          children: [
-            CatalogFilterChip(
-              key: const Key('catalog-filter-mode-story'),
-              selected: filter.accessModes.contains(AccessMode.story),
-              label: strings.catalogFilterStory,
-              onShell: true,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  accessModes: _toggle(filter.accessModes, AccessMode.story),
-                ),
-              ),
-            ),
-            const SizedBox(width: CatalogFilterChip.gap),
-            CatalogFilterChip(
-              key: const Key('catalog-filter-mode-open'),
-              selected: filter.accessModes.contains(AccessMode.open),
-              label: strings.catalogFilterOpen,
-              onShell: true,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  accessModes: _toggle(filter.accessModes, AccessMode.open),
-                ),
-              ),
-            ),
-            const _ChipGroupGap(),
-            CatalogDifficultyChipRow(
-              filter: filter,
-              strings: strings,
-              onChanged: onChanged,
-            ),
-            if (filter.isActive) ...[
-              const SizedBox(width: 12),
-              Center(
-                child: TextButton(
-                  key: const Key('catalog-clear-filters'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: BrandColors.cream,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: const Size(0, CatalogFilterChip.height),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: () => onChanged(filter.cleared()),
-                  child: Text(
-                    strings.catalogClearFilters,
-                    style: const TextStyle(
-                      color: BrandColors.cream,
-                      fontSize: CatalogFilterChip.fontSize,
-                      decoration: TextDecoration.underline,
-                      decorationColor: BrandColors.cream,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+        _EqualOrScrollChips(
+          filter: filter,
+          strings: strings,
+          onChanged: onChanged,
         ),
         const SizedBox(height: rowGap),
         _FilterScrollRow(
@@ -263,9 +209,8 @@ class _FilterScrollRow extends StatelessWidget {
   }
 }
 
-class CatalogDifficultyChipRow extends StatelessWidget {
-  const CatalogDifficultyChipRow({
-    super.key,
+class _EqualOrScrollChips extends StatelessWidget {
+  const _EqualOrScrollChips({
     required this.filter,
     required this.strings,
     required this.onChanged,
@@ -277,12 +222,167 @@ class CatalogDifficultyChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      key: const Key('catalog-difficulty-chips'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = CatalogFilterChip.gap;
+        const groupGap = 16.0;
+        final clearSlot = filter.isActive ? 60.0 : 0.0;
+        final width = constraints.maxWidth;
+        final available = width - groupGap - clearSlot - gap * 3;
+        final each = available / 5;
+        final scroll = each < CatalogFilterChip.minOptionWidth;
+        final access = _accessChips(expand: !scroll);
+        final difficulty = CatalogDifficultyChipRow(
+          filter: filter,
+          strings: strings,
+          onChanged: onChanged,
+          expand: !scroll,
+        );
+        final clear = filter.isActive ? _clearButton() : null;
+        if (scroll) {
+          return SizedBox(
+            key: const Key('catalog-filter-access-chips'),
+            height: CatalogFilterChip.height,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              primary: false,
+              children: [
+                ...access,
+                const _ChipGroupGap(),
+                difficulty,
+                if (clear != null) ...[const SizedBox(width: 12), clear],
+              ],
+            ),
+          );
+        }
+        return SizedBox(
+          key: const Key('catalog-filter-access-chips'),
+          height: CatalogFilterChip.height,
+          child: Row(
+            children: [
+              Expanded(flex: 2, child: Row(children: access)),
+              const _ChipGroupGap(),
+              Expanded(flex: 3, child: difficulty),
+              if (clear != null) ...[const SizedBox(width: 12), clear],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _accessChips({required bool expand}) {
+    Widget chip({
+      required Key key,
+      required bool selected,
+      required String label,
+      required VoidCallback onTap,
+    }) {
+      return CatalogFilterChip(
+        key: key,
+        selected: selected,
+        label: label,
+        onShell: true,
+        expand: expand,
+        onTap: onTap,
+      );
+    }
+
+    final story = chip(
+      key: const Key('catalog-filter-mode-story'),
+      selected: filter.accessModes.contains(AccessMode.story),
+      label: strings.catalogFilterStory,
+      onTap: () => onChanged(
+        filter.copyWith(
+          accessModes: _toggle(filter.accessModes, AccessMode.story),
+        ),
+      ),
+    );
+    final open = chip(
+      key: const Key('catalog-filter-mode-open'),
+      selected: filter.accessModes.contains(AccessMode.open),
+      label: strings.catalogFilterOpen,
+      onTap: () => onChanged(
+        filter.copyWith(
+          accessModes: _toggle(filter.accessModes, AccessMode.open),
+        ),
+      ),
+    );
+    if (expand) {
+      return [
+        Expanded(child: story),
+        const SizedBox(width: CatalogFilterChip.gap),
+        Expanded(child: open),
+      ];
+    }
+    return [story, const SizedBox(width: CatalogFilterChip.gap), open];
+  }
+
+  Widget _clearButton() {
+    return TextButton(
+      key: const Key('catalog-clear-filters'),
+      style: TextButton.styleFrom(
+        foregroundColor: BrandColors.cream,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        minimumSize: const Size(48, CatalogFilterChip.height),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () => onChanged(filter.cleared()),
+      child: Text(
+        strings.catalogClearFilters,
+        style: const TextStyle(
+          color: BrandColors.cream,
+          fontSize: CatalogFilterChip.fontSize,
+          decoration: TextDecoration.underline,
+          decorationColor: BrandColors.cream,
+        ),
+      ),
+    );
+  }
+}
+
+class CatalogDifficultyChipRow extends StatelessWidget {
+  const CatalogDifficultyChipRow({
+    super.key,
+    required this.filter,
+    required this.strings,
+    required this.onChanged,
+    this.expand = false,
+  });
+
+  final CatalogFilter filter;
+  final AppStrings strings;
+  final ValueChanged<CatalogFilter> onChanged;
+  final bool expand;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[
+      for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
+        if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+        if (expand)
+          Expanded(
+            child: CatalogFilterChip(
+              key: Key(
+                'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
+              ),
+              selected: filter.difficulties.contains(
+                CatalogDifficulty.values[i],
+              ),
+              label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
+              onShell: true,
+              expand: true,
+              onTap: () => onChanged(
+                filter.copyWith(
+                  difficulties: _toggle(
+                    filter.difficulties,
+                    CatalogDifficulty.values[i],
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
           CatalogFilterChip(
             key: Key(
               'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
@@ -299,8 +399,12 @@ class CatalogDifficultyChipRow extends StatelessWidget {
               ),
             ),
           ),
-        ],
       ],
+    ];
+    return Row(
+      key: const Key('catalog-difficulty-chips'),
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      children: chips,
     );
   }
 }
@@ -322,6 +426,7 @@ class CatalogFilterChip extends StatelessWidget {
     this.flagCode,
     this.semanticLabel,
     this.onShell = false,
+    this.expand = false,
   });
 
   final bool selected;
@@ -329,24 +434,33 @@ class CatalogFilterChip extends StatelessWidget {
   final String? label;
   final String? flagCode;
   final String? semanticLabel;
+  final bool expand;
 
   /// When true, chips sit on [BrandColors.shellFill]: cream @ 22% unselected,
   /// solid cream selected, no border.
   final bool onShell;
 
-  static const height = 28.0;
-  static const gap = 6.0;
+  static const height = 40.0;
+  static const gap = 8.0;
   static const horizontalPadding = 8.0;
-  static const fontSize = 12.0;
-  static const radius = 14.0;
+  static const fontSize = 14.0;
+  static const radius = 20.0;
+  static const minOptionWidth = 72.0;
 
   @override
   Widget build(BuildContext context) {
     final isFlag = flagCode != null;
-    final fill = onShell
-        ? (selected ? BrandColors.cream : BrandColors.creamPill)
-        : (selected && !isFlag ? BrandColors.forest : BrandColors.cream);
-    final border = selected ? BrandColors.forest : BrandColors.beige;
+    final fill = isFlag
+        ? BrandColors.cream
+        : (selected ? BrandColors.forest : BrandColors.cream);
+    final side = isFlag
+        ? BorderSide(
+            color: selected ? BrandColors.forest : BrandColors.beige,
+            width: selected ? 1.5 : 1,
+          )
+        : (selected
+              ? BorderSide.none
+              : const BorderSide(color: BrandColors.beige));
     return Semantics(
       button: true,
       selected: selected,
@@ -355,35 +469,34 @@ class CatalogFilterChip extends StatelessWidget {
         color: fill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
-          side: onShell
-              ? BorderSide.none
-              : BorderSide(color: border, width: selected ? 2.0 : 1.0),
+          side: side,
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: SizedBox(
+            width: expand ? double.infinity : null,
             height: height,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
+              padding: EdgeInsets.symmetric(
+                horizontal: isFlag ? horizontalPadding : 4,
               ),
               child: Center(
                 child: isFlag
                     ? ExcludeSemantics(child: CountryFlag(code: flagCode!))
                     : Text(
                         label!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: fontSize,
                           height: 1.1,
                           fontWeight: FontWeight.w600,
-                          color: onShell
-                              ? (selected
+                          color: selected
+                              ? BrandColors.onPrimary
+                              : (onShell
                                     ? BrandColors.forest
-                                    : BrandColors.cream)
-                              : (selected
-                                    ? BrandColors.onPrimary
-                                    : BrandColors.bark),
+                                    : BrandColors.forest),
                         ),
                       ),
               ),

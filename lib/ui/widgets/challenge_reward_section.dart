@@ -105,6 +105,9 @@ class ChallengeRewardSection extends StatelessWidget {
     this.hasDisplayName = true,
     this.onSaveDiploma,
     this.onUnlock,
+    this.locale = 'en',
+    this.completeBy,
+    this.showDeadline = false,
   });
 
   static const double panelRadius = 16;
@@ -123,6 +126,11 @@ class ChallengeRewardSection extends StatelessWidget {
 
   /// Same checkout the challenge pay buttons use. Only set while [locked].
   final VoidCallback? onUnlock;
+  final String locale;
+
+  /// `paid_at + 6 months`. Shown on the diploma when [showDeadline] is set.
+  final DateTime? completeBy;
+  final bool showDeadline;
 
   bool get _blurPreview => completed && !entitled;
 
@@ -179,6 +187,60 @@ class ChallengeRewardSection extends StatelessWidget {
     );
   }
 
+  Widget? _deadlineChip() {
+    final due = completeBy;
+    if (locked || !showDeadline || due == null) return null;
+    final now = DateTime.now();
+    final passed = strings.rewardDeadlinePassed(due, now);
+    final label = strings.rewardDeadlineLabel(formatLocalDate(due, locale));
+    final suffix = strings.rewardDaysLeftSuffix(due, now);
+    final color = passed ? BrandColors.error : BrandColors.forest;
+    return Semantics(
+      label: label,
+      container: true,
+      child: DecoratedBox(
+        key: const Key('challenge-reward-deadline'),
+        decoration: BoxDecoration(
+          color: BrandColors.cream,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: BrandColors.beige),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 32),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.event, size: 16, color: BrandColors.bark),
+                const SizedBox(width: 6),
+                Text(
+                  passed ? strings.deadlinePassed : label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (!passed && suffix != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    suffix,
+                    style: const TextStyle(
+                      color: BrandColors.bark,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _body() {
     final showFile = entitled && hasDisplayName;
     return Column(
@@ -191,6 +253,7 @@ class ChallengeRewardSection extends StatelessWidget {
           // shows no lock.
           blur: _texturedDiploma && !locked,
           textured: _texturedDiploma,
+          deadline: _deadlineChip(),
           image:
               entitled &&
                   hasDisplayName &&
@@ -325,6 +388,7 @@ class _DiplomaPlaceholder extends StatelessWidget {
     this.blur = false,
     this.textured = false,
     this.image,
+    this.deadline,
   });
 
   final String? label;
@@ -333,6 +397,7 @@ class _DiplomaPlaceholder extends StatelessWidget {
   /// Paint [_DiplomaTexture] instead of the plain doc-icon schematic.
   final bool textured;
   final Widget? image;
+  final Widget? deadline;
 
   @override
   Widget build(BuildContext context) {
@@ -361,6 +426,9 @@ class _DiplomaPlaceholder extends StatelessWidget {
         ),
         child: art,
       );
+    }
+    if (deadline != null) {
+      art = Stack(alignment: Alignment.center, children: [art, deadline!]);
     }
     return Column(
       key: const Key('challenge-reward-diploma'),

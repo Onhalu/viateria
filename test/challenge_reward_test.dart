@@ -1606,4 +1606,79 @@ void main() {
       expect(BrandColors.bark, const Color(0xFF756653));
     },
   );
+
+  test('deadline copy uses paid_at + 6 months and the 7-day boundary', () {
+    final due = DateTime(2026, 10, 21, 12);
+    final cs = AppStrings('cs');
+    final en = AppStrings('en');
+    final de = AppStrings('de');
+    expect(
+      cs.rewardDeadlineLabel(formatLocalDate(due, 'cs')),
+      'Splň do 21. 10. 2026',
+    );
+    expect(
+      en.rewardDeadlineLabel(formatLocalDate(due, 'en')),
+      'Complete by Oct 21, 2026',
+    );
+    expect(
+      de.rewardDeadlineLabel(formatLocalDate(due, 'de')),
+      'Abschließen bis 21.10.2026',
+    );
+    expect(
+      cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 14, 8)),
+      '· zbývá 7 dní',
+    );
+    expect(
+      cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 20, 8)),
+      '· zbývá 1 den',
+    );
+    expect(
+      cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 19, 8)),
+      '· zbývá 2 dny',
+    );
+    expect(cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 1, 8)), isNull);
+    expect(
+      en.rewardDaysLeftSuffix(due, DateTime(2026, 10, 20, 8)),
+      '· 1 day left',
+    );
+    expect(
+      de.rewardDaysLeftSuffix(due, DateTime(2026, 10, 19, 8)),
+      '· noch 2 Tage',
+    );
+    expect(cs.rewardDeadlinePassed(due, DateTime(2026, 10, 21, 13)), isTrue);
+    expect(cs.deadlinePassed, 'Termín vypršel');
+    expect(en.deadlinePassed, 'Deadline passed');
+    expect(de.deadlinePassed, 'Frist abgelaufen');
+  });
+
+  testWidgets('paid reward shows the deadline chip and hides the lock', (
+    tester,
+  ) async {
+    final due = DateTime(2027, 4, 20);
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ChallengeRewardSection(
+              strings: AppStrings('en'),
+              completed: false,
+              entitled: false,
+              locked: false,
+              locale: 'en',
+              completeBy: due,
+              showDeadline: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+    expect(find.byKey(const Key('challenge-reward-deadline')), findsOneWidget);
+    expect(find.byKey(const Key('challenge-deadline-date')), findsNothing);
+    expect(find.text('Complete by Apr 20, 2027'), findsOneWidget);
+  });
 }
