@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -23,9 +24,9 @@ import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/brand_assets.dart';
 import '../challenge_route_controller.dart';
 import '../layout/breakpoints.dart';
+import '../layout/map_search_metrics.dart';
 import '../widgets/challenge_hero.dart';
 import '../widgets/challenge_map.dart';
 import '../widgets/error_state.dart';
@@ -60,11 +61,22 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   final _startController = TextEditingController();
   final _feedScroll = ScrollController();
   final _route = ChallengeRouteController();
+  final _payBarShown = ValueNotifier<bool>(false);
 
   int _routeToken = 0;
   String? _pendingRevealId;
   var _revealScheduled = false;
+  var _payScroll = false;
+  var _paySuppressed = false;
   final _chapterKeys = <String, GlobalKey>{};
+  final _revealIndexes = <String, int>{};
+  var _feedItemCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _feedScroll.addListener(_onFeedOffset);
+  }
 
   @override
   void didChangeDependencies() {
@@ -82,10 +94,31 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     _offerFuture = _loadOffer();
   }
 
+  void _onFeedOffset() {
+    if (!_feedScroll.hasClients) return;
+    final position = _feedScroll.position;
+    if (!position.hasViewportDimension) return;
+    final next = paymentBarShouldShow(
+      currentlyVisible: _payScroll,
+      offset: position.pixels,
+      viewport: position.viewportDimension,
+    );
+    if (next == _payScroll) return;
+    _payScroll = next;
+    _publishPayBar();
+  }
+
+  void _publishPayBar() {
+    final visible = _payScroll && !_paySuppressed;
+    if (visible != _payBarShown.value) _payBarShown.value = visible;
+  }
+
   @override
   void dispose() {
+    _feedScroll.removeListener(_onFeedOffset);
     _startController.dispose();
     _feedScroll.dispose();
+    _payBarShown.dispose();
     _route.dispose();
     super.dispose();
   }
@@ -166,16 +199,27 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     );
     if (!mounted) return;
     final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
-    await showInAppFapiCheckout(
-      context,
-      challengeId: widget.challengeId,
-      checkoutUrl: checkoutUrl,
-    );
+    _paySuppressed = true;
+    _publishPayBar();
+    try {
+      await showInAppFapiCheckout(
+        context,
+        challengeId: widget.challengeId,
+        checkoutUrl: checkoutUrl,
+      );
+    } finally {
+      _paySuppressed = false;
+      _publishPayBar();
+    }
     if (!mounted) return;
     await _reload();
   }
 
-  Widget _offerPayCtas(Challenge challenge, AppStrings strings) {
+  Widget _offerPayCtas(
+    Challenge challenge,
+    AppStrings strings, {
+    bool bar = false,
+  }) {
     return FutureBuilder<FapiOffer?>(
       future: _offerFuture,
       builder: (context, offerSnapshot) {
@@ -191,6 +235,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               offerSnapshot.hasError ||
               (!loading && offerSnapshot.data == null),
           onPay: _unlockPaid,
+          bar: bar,
         );
       },
     );
@@ -407,6 +452,23 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   GlobalKey _chapterKey(String id) =>
       _chapterKeys.putIfAbsent(id, GlobalKey.new);
 
+  Widget _feedSliver(List<Widget> children) {
+    _feedItemCount = children.length;
+    for (var i = 0; i < children.length; i++) {
+      final key = children[i].key;
+      if (key == null) continue;
+      for (final entry in _chapterKeys.entries) {
+        if (identical(entry.value, key)) {
+          _revealIndexes[entry.key] = i;
+        }
+      }
+    }
+    return SliverList.builder(
+      itemCount: children.length,
+      itemBuilder: (context, index) => children[index],
+    );
+  }
+
   Future<void> _openVerify(
     String challengeId,
     String waypointId, {
@@ -455,48 +517,42 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     });
   }
 
-  /// The next chapter sits below the map and planner, so a sliver may not
-  /// have built it yet. Walk the feed until the key exists, then expand it
-  /// into view.
+  /// Lazy sliver children are built near the viewport. One post-frame
+  /// [Scrollable.ensureVisible] brings the revealed chapter in. If it is not
+  /// mounted yet, nudge once toward its index and try again.
   Future<void> _revealChapter(String id) async {
-    for (var attempt = 0; attempt < 24; attempt++) {
-      if (!mounted) return;
-      final target = _chapterKeys[id]?.currentContext;
-      if (target != null && target.mounted && mounted) {
-        final reduceMotion = MediaQuery.disableAnimationsOf(context);
-        final duration = reduceMotion
-            ? Duration.zero
-            : const Duration(milliseconds: 350);
-        if (!target.mounted) return;
-        await Scrollable.ensureVisible(
-          target,
-          alignment: 0.12,
-          duration: duration,
-          curve: Curves.easeOutCubic,
-        );
-        return;
-      }
-      if (!_feedScroll.hasClients) {
-        await WidgetsBinding.instance.endOfFrame;
-        continue;
-      }
-      final position = _feedScroll.position;
-      if (!position.hasContentDimensions || !position.hasPixels) {
-        await WidgetsBinding.instance.endOfFrame;
-        continue;
-      }
-      final next = position.pixels + position.viewportDimension * 0.8;
-      if (next >= position.maxScrollExtent - 0.5) {
-        if (position.pixels < position.maxScrollExtent) {
-          position.jumpTo(position.maxScrollExtent);
-          await WidgetsBinding.instance.endOfFrame;
-          continue;
-        }
-        return;
-      }
-      position.jumpTo(next);
-      await WidgetsBinding.instance.endOfFrame;
+    await _ensureChapter(id, nudged: false);
+  }
+
+  Future<void> _ensureChapter(String id, {required bool nudged}) async {
+    if (!mounted) return;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final duration = reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 400);
+    final target = _chapterKeys[id]?.currentContext;
+    if (target != null && target.mounted) {
+      await Scrollable.ensureVisible(
+        target,
+        alignment: 0.1,
+        duration: duration,
+        curve: Curves.easeOut,
+      );
+      return;
     }
+    if (nudged || !_feedScroll.hasClients) return;
+    final index = _revealIndexes[id];
+    final position = _feedScroll.position;
+    if (!position.hasContentDimensions) return;
+    final targetOffset = index == null
+        ? position.pixels + position.viewportDimension * 0.75
+        : position.maxScrollExtent *
+              (index / (_feedItemCount <= 1 ? 1 : _feedItemCount - 1));
+    position.jumpTo(targetOffset.clamp(0.0, position.maxScrollExtent));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_ensureChapter(id, nudged: true));
+    });
   }
 
   @override
@@ -584,175 +640,169 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             final compact = constraints.maxWidth < Breakpoints.compactMax;
             final cover = challenge.coverImageUrl;
             final hasCover = cover != null && cover.isNotEmpty;
+            _revealIndexes.clear();
             final scroll = CustomScrollView(
               key: const Key('challenge-feed-scroll'),
               controller: _feedScroll,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      if (!hasCover) ...[
-                        Text(
-                          copy.title,
-                          key: const Key('challenge-title'),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      _ChallengeProgress(
-                        done: completed.length,
-                        total: waypoints.length,
-                        label: strings.challengeProgress(
-                          completed.length,
-                          waypoints.length,
-                        ),
+                  sliver: _feedSliver([
+                    if (!hasCover) ...[
+                      Text(
+                        copy.title,
+                        key: const Key('challenge-title'),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 12),
-                      _ChallengeRouteBlock(
-                        includeMap: !twoColumn,
-                        route: _route,
-                        waypoints: waypoints,
-                        plannerWaypoints: plannerWaypoints,
-                        hidden: hidden,
-                        fog: fog,
-                        strings: strings,
-                        locale: locale,
-                        startController: _startController,
-                        destinationOf: _destinationOf,
-                        elevationAt: _catalogElevationAt,
-                        onWaypointTap: _setDestination,
-                        onVerifyWaypoint: (waypoint, place) => _openVerify(
-                          challenge.id,
-                          waypoint.id,
-                          place: place,
-                        ),
-                        onFogTap: () => _rejectLockedPlace(),
-                        onStartNavigation: _startNavigation,
-                        onEndNavigation: _endNavigation,
-                        onStartSubmitted: _submitStartText,
-                        onUseGps: _useGps,
-                        onStartPlacePicked: (place) =>
-                            _pickStartPlace(place, locale),
-                        onCustomPlaceChosen: _chooseCustomStart,
-                        onRetry: _refreshRoutes,
+                    ],
+                    _ChallengeProgress(
+                      done: completed.length,
+                      total: waypoints.length,
+                      label: strings.challengeProgress(
+                        completed.length,
+                        waypoints.length,
                       ),
-                      if (copy.description.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          copy.description,
-                          key: const Key('challenge-info'),
-                        ),
-                      ],
-                      if (!hasAccess) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          strings.challengeLockedPaid,
-                          key: const Key('challenge-unlock-cta'),
-                        ),
-                      ],
-                      if (!compact) ...[
-                        const SizedBox(height: 16),
-                        _offerPayCtas(challenge, strings),
-                      ],
-                      if (data.purchase?.status == PurchaseStatus.pending)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(strings.purchasePending),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    _ChallengeRouteBlock(
+                      includeMap: !twoColumn,
+                      route: _route,
+                      waypoints: waypoints,
+                      plannerWaypoints: plannerWaypoints,
+                      hidden: hidden,
+                      fog: fog,
+                      strings: strings,
+                      locale: locale,
+                      startController: _startController,
+                      destinationOf: _destinationOf,
+                      elevationAt: _catalogElevationAt,
+                      onWaypointTap: _setDestination,
+                      onVerifyWaypoint: (waypoint, place) =>
+                          _openVerify(challenge.id, waypoint.id, place: place),
+                      onFogTap: () => _rejectLockedPlace(),
+                      onStartNavigation: _startNavigation,
+                      onEndNavigation: _endNavigation,
+                      onStartSubmitted: _submitStartText,
+                      onUseGps: _useGps,
+                      onStartPlacePicked: (place) =>
+                          _pickStartPlace(place, locale),
+                      onCustomPlaceChosen: _chooseCustomStart,
+                      onRetry: _refreshRoutes,
+                    ),
+                    if (copy.description.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(copy.description, key: const Key('challenge-info')),
+                    ],
+                    if (!hasAccess) ...[
                       const SizedBox(height: 16),
                       Text(
-                        strings.waypoints,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        strings.challengeLockedPaid,
+                        key: const Key('challenge-unlock-cta'),
                       ),
-                      const SizedBox(height: 8),
-                      for (final item in feed)
-                        if (item is StoryFeedChapter)
-                          KeyedSubtree(
-                            key: _chapterKey(item.step.id),
-                            child: StoryChapterCard(
-                              step: item.step,
-                              locale: locale,
-                              initiallyExpanded:
-                                  item.step.kind == StoryStepKind.opening,
-                              expandOnce: _pendingRevealId == item.step.id,
-                            ),
-                          )
-                        else if (item is StoryFeedPlace)
-                          ListenableBuilder(
-                            listenable: _route,
-                            builder: (context, _) => _WaypointTile(
-                              waypoint: item.waypoint,
-                              locale: locale,
-                              selected:
-                                  item.waypoint.id == _route.destinationId,
+                    ],
+                    if (!compact) ...[
+                      const SizedBox(height: 16),
+                      _offerPayCtas(challenge, strings),
+                    ],
+                    if (data.purchase?.status == PurchaseStatus.pending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(strings.purchasePending),
+                      ),
+                    const SizedBox(height: 16),
+                    Text(
+                      strings.waypoints,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    for (final item in feed)
+                      if (item is StoryFeedChapter)
+                        KeyedSubtree(
+                          key: _chapterKey(item.step.id),
+                          child: StoryChapterCard(
+                            step: item.step,
+                            locale: locale,
+                            initiallyExpanded:
+                                item.step.kind == StoryStepKind.opening,
+                            expandOnce: _pendingRevealId == item.step.id,
+                          ),
+                        )
+                      else if (item is StoryFeedPlace)
+                        ListenableBuilder(
+                          listenable: _route,
+                          builder: (context, _) => _WaypointTile(
+                            waypoint: item.waypoint,
+                            locale: locale,
+                            selected: item.waypoint.id == _route.destinationId,
+                            unlocked: item.unlocked,
+                            completed: item.completed,
+                            mystery:
+                                challenge.accessMode == AccessMode.story &&
+                                !item.unlocked &&
+                                !item.completed,
+                            displayTitle: storyPlaceTitle(
+                              mode: challenge.accessMode,
                               unlocked: item.unlocked,
                               completed: item.completed,
-                              mystery:
-                                  challenge.accessMode == AccessMode.story &&
-                                  !item.unlocked &&
-                                  !item.completed,
-                              displayTitle: storyPlaceTitle(
-                                mode: challenge.accessMode,
-                                unlocked: item.unlocked,
-                                completed: item.completed,
-                                waypoint: item.waypoint,
-                                locale: locale,
-                                lockedTitle: strings.storyNextStop,
-                              ),
-                              strings: strings,
-                              onSelect: item.unlocked || item.completed
-                                  ? () => _setDestination(item.waypoint)
-                                  : _rejectLockedPlace,
-                              onVerify: () =>
-                                  _openVerify(challenge.id, item.waypoint.id),
+                              waypoint: item.waypoint,
+                              locale: locale,
+                              lockedTitle: strings.storyNextStop,
                             ),
+                            strings: strings,
+                            onSelect: item.unlocked || item.completed
+                                ? () => _setDestination(item.waypoint)
+                                : _rejectLockedPlace,
+                            onVerify: () =>
+                                _openVerify(challenge.id, item.waypoint.id),
                           ),
-                      const SizedBox(height: 16),
-                      ChallengeDeadlineBanner(
-                        strings: strings,
-                        locale: locale,
-                        paid: purchasePaid,
-                        completeBy: completeBy,
-                      ),
-                      const SizedBox(height: 16),
-                      ChallengeRewardSection(
-                        strings: strings,
-                        completed: isComplete,
-                        entitled: diplomaEntitled,
-                        locked: rewardLocked,
-                        locale: locale,
-                        completeBy: completeBy,
-                        showDeadline: purchasePaid,
-                        challengeId: challenge.id,
-                        diplomas: context.read<AppServices>().diplomas,
-                        hasDisplayName:
-                            diplomaName != null &&
-                            diplomaName.trim().isNotEmpty,
-                        onSaveDiploma: diplomaEntitled
-                            ? () => context.push(
-                                '/diploma/${challenge.id}',
-                                extra: data,
-                              )
-                            : null,
-                        onUnlock: rewardLocked
-                            ? () => _unlockPaid(RewardVariant.diploma)
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                      ChallengePhotosHeader(
-                        title: strings.challengePhotosTitle,
-                      ),
-                      if (gallery.isEmpty) ...[
-                        const SizedBox(height: 10),
-                        ChallengePhotosEmpty(
-                          message: strings.challengePhotosEmpty,
                         ),
-                        const SizedBox(height: 16),
-                      ],
-                    ]),
-                  ),
+                    const SizedBox(height: 16),
+                    ChallengeDeadlineBanner(
+                      strings: strings,
+                      locale: locale,
+                      paid: purchasePaid,
+                      completeBy: completeBy,
+                    ),
+                    const SizedBox(height: 16),
+                    ChallengeRewardSection(
+                      strings: strings,
+                      completed: isComplete,
+                      entitled: diplomaEntitled,
+                      locked: rewardLocked,
+                      locale: locale,
+                      completeBy: completeBy,
+                      showDeadline: purchasePaid,
+                      challengeId: challenge.id,
+                      diplomas: context.read<AppServices>().diplomas,
+                      hasDisplayName:
+                          diplomaName != null && diplomaName.trim().isNotEmpty,
+                      onSaveDiploma: diplomaEntitled
+                          ? () => context.push(
+                              '/diploma/${challenge.id}',
+                              extra: data,
+                            )
+                          : null,
+                      onUnlock: rewardLocked
+                          ? () => _unlockPaid(RewardVariant.diploma)
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+                    ChallengePhotosHeader(title: strings.challengePhotosTitle),
+                    if (gallery.isEmpty) ...[
+                      const SizedBox(height: 10),
+                      ChallengePhotosEmpty(
+                        message: strings.challengePhotosEmpty,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (compact)
+                      SizedBox(
+                        height: 64 + MediaQuery.paddingOf(context).bottom,
+                      ),
+                  ]),
                 ),
                 if (gallery.isNotEmpty)
                   SliverPadding(
@@ -808,25 +858,63 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 ? ChallengeHero(
                     url: cover,
                     title: copy.title,
-                    lengthLabel: _lengthLabel(strings, challenge.length),
-                    difficultyLabel: _difficultyLabel(
-                      strings,
-                      challenge.difficulty,
-                    ),
+                    backLabel: strings.back,
+                    onBack: widget.embedded ? null : () => context.pop(),
                   )
                 : null;
-            return Column(
+            final column = Column(
               children: [
+                if (!hasCover && !widget.embedded)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      key: const Key('challenge-back'),
+                      tooltip: strings.back,
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.arrow_back),
+                      color: BrandColors.forest,
+                    ),
+                  ),
                 ?hero,
                 Expanded(child: page),
-                if (compact)
-                  _ChallengeStickyBar(
-                    strings: strings,
-                    hasAccess: hasAccess,
-                    feed: feed,
-                    pay: _offerPayCtas(challenge, strings),
-                    onVerify: (id) => _openVerify(challenge.id, id),
+              ],
+            );
+            if (!compact) return column;
+            return Stack(
+              children: [
+                column,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _payBarShown,
+                    builder: (context, shown, child) {
+                      final reduce = MediaQuery.disableAnimationsOf(context);
+                      return IgnorePointer(
+                        ignoring: !shown,
+                        child: ExcludeSemantics(
+                          excluding: !shown,
+                          child: AnimatedSlide(
+                            offset: shown ? Offset.zero : const Offset(0, 1),
+                            duration: reduce
+                                ? Duration.zero
+                                : const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: child,
+                          ),
+                        ),
+                      );
+                    },
+                    child: _ChallengePaymentBar(
+                      strings: strings,
+                      locale: locale,
+                      paid: purchasePaid,
+                      completeBy: completeBy,
+                      pay: _offerPayCtas(challenge, strings, bar: true),
+                    ),
                   ),
+                ),
               ],
             );
           },
@@ -834,17 +922,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       },
     );
     return Scaffold(
-      appBar: widget.embedded
-          ? null
-          : AppBar(
-              title: Text(strings.appName),
-              actions: const [
-                Padding(
-                  padding: EdgeInsets.only(right: 12),
-                  child: Center(child: BrandMark(size: 24)),
-                ),
-              ],
-            ),
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
     );
   }
@@ -1174,69 +1251,67 @@ class _LazyChallengeMapState extends State<_LazyChallengeMap> {
   }
 }
 
-String? _lengthLabel(AppStrings strings, ChallengeLength? length) {
-  return switch (length) {
-    ChallengeLength.short => strings.catalogLengthShort,
-    ChallengeLength.medium => strings.catalogLengthMedium,
-    ChallengeLength.long => strings.catalogLengthLong,
-    null => null,
-  };
-}
-
-String? _difficultyLabel(AppStrings strings, CatalogDifficulty? difficulty) {
-  return switch (difficulty) {
-    CatalogDifficulty.easy => strings.catalogDifficultyEasy,
-    CatalogDifficulty.normal => strings.catalogDifficultyNormal,
-    CatalogDifficulty.hard => strings.catalogDifficultyHard,
-    null => null,
-  };
-}
-
-class _ChallengeStickyBar extends StatelessWidget {
-  const _ChallengeStickyBar({
+class _ChallengePaymentBar extends StatelessWidget {
+  const _ChallengePaymentBar({
     required this.strings,
-    required this.hasAccess,
-    required this.feed,
+    required this.locale,
+    required this.paid,
+    required this.completeBy,
     required this.pay,
-    required this.onVerify,
   });
 
   final AppStrings strings;
-  final bool hasAccess;
-  final List<ChallengeFeedItem> feed;
+  final String locale;
+  final bool paid;
+  final DateTime? completeBy;
   final Widget pay;
-  final ValueChanged<String> onVerify;
 
   @override
   Widget build(BuildContext context) {
-    StoryFeedPlace? next;
-    for (final item in feed) {
-      if (item is StoryFeedPlace && item.unlocked && !item.completed) {
-        next = item;
-        break;
-      }
-    }
+    final due = completeBy;
+    final deadline = paid && due != null;
     return Material(
+      key: const Key('challenge-payment-bar'),
       color: BrandColors.cream,
-      elevation: 0,
-      child: SafeArea(
-        top: false,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: BrandColors.beige)),
+        ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (hasAccess && next != null) ...[
-                FilledButton(
-                  key: const Key('challenge-sticky-verify'),
-                  onPressed: () => onVerify(next!.waypoint.id),
-                  child: Text(strings.verify),
-                ),
-                const SizedBox(height: 8),
-              ],
-              pay,
-            ],
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
+          child: SizedBox(
+            height: 64,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: deadline
+                  ? Row(
+                      key: const Key('challenge-paybar-deadline'),
+                      children: [
+                        const Icon(
+                          Icons.event,
+                          color: BrandColors.forest,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            strings.rewardDeadlineLabel(
+                              formatLocalDate(due, locale),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: BrandColors.forest,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : pay,
+            ),
           ),
         ),
       ),
@@ -1252,6 +1327,7 @@ class _ChallengePayCtas extends StatelessWidget {
     required this.loading,
     required this.failed,
     required this.onPay,
+    this.bar = false,
   });
 
   static const gap = 10.0;
@@ -1270,6 +1346,7 @@ class _ChallengePayCtas extends StatelessWidget {
   final bool loading;
   final bool failed;
   final ValueChanged<RewardVariant> onPay;
+  final bool bar;
 
   /// Disabled variant stays a solid beige button with bark type so the
   /// label stays readable when that reward has no sale form.
@@ -1296,7 +1373,11 @@ class _ChallengePayCtas extends StatelessWidget {
   ButtonStyle _ctaStyle({required bool outlined}) {
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(0, minHeight)),
-      padding: const WidgetStatePropertyAll(padding),
+      padding: WidgetStatePropertyAll(
+        bar
+            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
+            : padding,
+      ),
       alignment: Alignment.center,
       visualDensity: VisualDensity.standard,
       elevation: const WidgetStatePropertyAll(0),
@@ -1304,10 +1385,12 @@ class _ChallengePayCtas extends StatelessWidget {
       surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       splashFactory: NoSplash.splashFactory,
-      shape: const WidgetStatePropertyAll(
-        RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(radius)),
-        ),
+      shape: WidgetStatePropertyAll(
+        bar
+            ? const StadiumBorder()
+            : const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(radius)),
+              ),
       ),
       backgroundColor: WidgetStateProperty.resolveWith(
         (states) => _colors(outlined: outlined, states: states).background,
@@ -1327,7 +1410,7 @@ class _ChallengePayCtas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stack = MediaQuery.sizeOf(context).width < narrowBreakpoint;
+    final stack = !bar && MediaQuery.sizeOf(context).width < narrowBreakpoint;
     final diploma = _payButton(
       key: const Key('challenge-pay-diploma'),
       priceKey: const Key('challenge-pay-diploma-price'),
@@ -1373,23 +1456,7 @@ class _ChallengePayCtas extends StatelessWidget {
               ],
             ),
           );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        buttons,
-        const SizedBox(height: 8),
-        Text(
-          strings.paymentTrust,
-          key: const Key('challenge-pay-trust'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: BrandColors.bark,
-            fontSize: AppTheme.labelSize,
-          ),
-        ),
-      ],
-    );
+    return buttons;
   }
 
   Widget _payButton({
@@ -1474,19 +1541,22 @@ class _ChallengePayCtas extends StatelessWidget {
       ],
     );
     final style = _ctaStyle(outlined: outlined);
+    final buttonChild = bar
+        ? FittedBox(fit: BoxFit.scaleDown, child: child)
+        : child;
     if (outlined) {
       return OutlinedButton(
         key: key,
         onPressed: onPressed,
         style: style,
-        child: child,
+        child: buttonChild,
       );
     }
     return FilledButton(
       key: key,
       onPressed: onPressed,
       style: style,
-      child: child,
+      child: buttonChild,
     );
   }
 }

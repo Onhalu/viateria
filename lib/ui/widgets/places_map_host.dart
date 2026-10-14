@@ -12,8 +12,8 @@ import '../../map/map_icons.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
+import '../../map/poi_source_sync.dart';
 import '../../map/story_fog_icon.dart';
-import '../../map/verified_badge_icon.dart';
 import '../../models/models.dart';
 import '../../domain/story_fog.dart';
 
@@ -147,14 +147,12 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   var _fogLayersReady = false;
   Timer? _moveEnd;
   Timer? _styleTimeout;
+  final _poiGate = PoiSourceGate();
 
   @override
   void didUpdateWidget(covariant PlacesMapHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.places != widget.places ||
-        oldWidget.selectedPlaceId != widget.selectedPlaceId ||
-        !_sameChallengeMembership(oldWidget.geometry, widget.geometry) ||
-        !setEquals(oldWidget.verifiedPlaceIds, widget.verifiedPlaceIds)) {
+    if (!_samePlaceMarkers(oldWidget)) {
       unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
@@ -246,8 +244,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       final sdf = await sdfSilhouettePng(data.buffer.asUint8List());
       await controller.addImage(name, sdf, true);
     }
-    final badge = await verifiedBadgePng();
-    await controller.addImage(MapStyleConfig.verifiedBadgeIconId, badge);
   }
 
   Future<void> _installLayers(MapLibreMapController controller) async {
@@ -281,26 +277,10 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         iconImage: [Expressions.get, 'icon'],
         iconSize: MapStyleConfig.markerSizeExpression,
         iconColor: MapStyleConfig.markerColorExpression,
+        iconOpacity: MapStyleConfig.symbolOpacityExpression,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
-    );
-
-    await controller.addSymbolLayer(
-      MapStyleConfig.poiSourceId,
-      MapStyleConfig.verifiedBadgeLayerId,
-      const SymbolLayerProperties(
-        iconImage: MapStyleConfig.verifiedBadgeIconId,
-        iconSize: 0.28,
-        iconOffset: Offset(0.7, -0.85),
-        iconAllowOverlap: true,
-        iconIgnorePlacement: true,
-      ),
-      filter: const [
-        Expressions.equal,
-        [Expressions.get, 'placeState'],
-        MapStyleConfig.placeStateVerified,
-      ],
     );
 
     await controller.addSource(
@@ -369,16 +349,49 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     );
   }
 
+  bool _samePlaceMarkers(PlacesMapHost oldWidget) {
+    final previous = poiMarkerSignature(
+      places: oldWidget.places,
+      selectedId: oldWidget.selectedPlaceId,
+      challengePlaceIds: _challengeIdsFor(oldWidget),
+      verifiedPlaceIds: oldWidget.verifiedPlaceIds,
+    );
+    final next = poiMarkerSignature(
+      places: widget.places,
+      selectedId: widget.selectedPlaceId,
+      challengePlaceIds: _challengeIdsFor(widget),
+      verifiedPlaceIds: widget.verifiedPlaceIds,
+    );
+    return previous == next;
+  }
+
+  Set<String> _challengeIdsFor(PlacesMapHost host) {
+    final geometry = host.geometry;
+    if (geometry == null) return const {};
+    return placeIdsInChallenge(
+      host.places,
+      placeIds: geometry.revealedWaypoints.map((waypoint) => waypoint.placeId),
+    );
+  }
+
   Future<void> _pushPlaces(List<Place> places) async {
     final controller = _controller;
     if (controller == null || !_layersReady) return;
+    final challengePlaceIds = _challengePlaceIds(places);
+    final signature = poiMarkerSignature(
+      places: places,
+      selectedId: widget.selectedPlaceId,
+      challengePlaceIds: challengePlaceIds,
+      verifiedPlaceIds: widget.verifiedPlaceIds,
+    );
+    if (!_poiGate.shouldReplace(signature)) return;
     await _setSource(
       controller,
       MapStyleConfig.poiSourceId,
       featureCollectionOf(
         places,
         selectedId: widget.selectedPlaceId,
-        challengePlaceIds: _challengePlaceIds(places),
+        challengePlaceIds: challengePlaceIds,
         verifiedPlaceIds: widget.verifiedPlaceIds,
       ),
     );
@@ -391,16 +404,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       places,
       placeIds: geometry.revealedWaypoints.map((waypoint) => waypoint.placeId),
     );
-  }
-
-  bool _sameChallengeMembership(
-    ChallengeMapGeometry? a,
-    ChallengeMapGeometry? b,
-  ) {
-    if (identical(a, b)) return true;
-    if (a == null || b == null) return a == b;
-    return a.waypoints == b.waypoints &&
-        setEquals(a.hiddenWaypointIds, b.hiddenWaypointIds);
   }
 
   Future<void> _syncChallengeSources() async {

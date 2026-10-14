@@ -308,7 +308,8 @@ void main() {
 
     expect(store.challengeId, 'open-1');
     expect(find.text('Visit any stop'), findsWidgets);
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byKey(const Key('challenge-back')), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
 
     await tester.pageBack();

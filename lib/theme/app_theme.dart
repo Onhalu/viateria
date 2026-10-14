@@ -136,7 +136,7 @@ abstract final class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: BrandColors.forest,
           foregroundColor: BrandColors.onPrimary,
-          minimumSize: const Size.fromHeight(ctaHeight),
+          minimumSize: const Size(64, ctaHeight),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           textStyle: const TextStyle(
             fontSize: bodySize,
@@ -150,7 +150,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: BrandColors.cream,
           foregroundColor: BrandColors.forest,
-          minimumSize: const Size.fromHeight(minTap),
+          minimumSize: const Size(64, minTap),
           side: const BorderSide(color: BrandColors.forest, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           textStyle: const TextStyle(

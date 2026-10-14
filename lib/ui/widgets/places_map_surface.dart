@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -19,6 +20,8 @@ import '../../map/place_catalog.dart';
 import '../../map/place_query.dart';
 import '../../map/places_controller.dart';
 import '../../models/models.dart';
+import '../layout/map_search_metrics.dart';
+import 'cooperative_map_gestures.dart';
 import 'map_chrome.dart';
 import 'places_map_host.dart';
 import 'places_map_panels.dart';
@@ -89,10 +92,16 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   Timer? _debounce;
   MapLibreMapController? _map;
   var _mapFailed = false;
+  var _controlPressed = false;
+  List<Place>? _waypointInput;
+  List<Place>? _waypointCache;
+  Set<String>? _waypointIds;
 
   @override
   void initState() {
     super.initState();
+    _searchFocus.addListener(_onSearchFocus);
+    HardwareKeyboard.instance.addHandler(_onHardwareKey);
     final services = context.read<AppServices>();
     _controller = PlacesMapController(
       catalog: widget.catalog ?? services.places,
@@ -118,8 +127,22 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     if (mounted) setState(() {});
   }
 
+  void _onSearchFocus() {
+    if (mounted) setState(() {});
+  }
+
+  bool _onHardwareKey(KeyEvent event) {
+    final down = HardwareKeyboard.instance.isControlPressed;
+    if (down != _controlPressed && mounted) {
+      setState(() => _controlPressed = down);
+    }
+    return false;
+  }
+
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
+    _searchFocus.removeListener(_onSearchFocus);
     _debounce?.cancel();
     _verifiedPlaces.removeListener(_syncVerifiedIds);
     _controller.removeListener(_onController);
@@ -156,7 +179,11 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                         .verifiedPlaces
                         .ids,
                     catalogRoute: widget.catalogRoute,
-                    zoomGesturesEnabled: widget.zoomGesturesEnabled,
+                    zoomGesturesEnabled: mapWheelZoomEnabled(
+                      isWeb: kIsWeb,
+                      controlPressed: _controlPressed,
+                      enabled: widget.zoomGesturesEnabled,
+                    ),
                     onWaypointTap: widget.onWaypointTap,
                     onFogTap: widget.onFogTap,
                     onReady: (controller) {
@@ -202,20 +229,36 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                             widget.overlayTop!,
                             SizedBox(height: compact ? 6 : 10),
                           ],
-                          Row(
-                            children: [
-                              Expanded(child: _searchBar(strings)),
-                              const SizedBox(width: 8),
-                              MapIconButton(
-                                key: const Key('map-filter-button'),
-                                icon: Icons.tune,
-                                tooltip: strings.filtersTitle,
-                                size: locateSize,
-                                iconSize: locateIcon,
-                                onPressed: () =>
-                                    unawaited(_openFilters(strings)),
-                              ),
-                            ],
+                          LayoutBuilder(
+                            builder: (context, searchConstraints) {
+                              final slot = searchConstraints.maxWidth;
+                              final controls = locateSize + 8;
+                              final fieldWidth = mapSearchFieldWidth(
+                                viewportWidth: MediaQuery.sizeOf(context).width,
+                                slotWidth: math.max(0, slot - controls),
+                                margin: inset,
+                                controlsWidth: locateSize,
+                                focused: _searchFocus.hasFocus,
+                              );
+                              return Row(
+                                children: [
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: _searchBar(strings),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  MapIconButton(
+                                    key: const Key('map-filter-button'),
+                                    icon: Icons.tune,
+                                    tooltip: strings.filtersTitle,
+                                    size: locateSize,
+                                    iconSize: locateIcon,
+                                    onPressed: () =>
+                                        unawaited(_openFilters(strings)),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           if (_controller.query.trim().isNotEmpty &&
                               _waypointPlaces(_controller.searchHits)
@@ -582,15 +625,34 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
       for (final waypoint in widget.geometry?.revealedWaypoints ?? const [])
         if (waypoint.placeId != null) waypoint.placeId!,
     };
-    return [
+    if (_waypointCache != null &&
+        _waypointIds != null &&
+        setEquals(ids, _waypointIds!) &&
+        _samePlaceIds(places, _waypointInput)) {
+      return _waypointCache!;
+    }
+    final filtered = [
       for (final place in places)
         if (ids.contains(place.id)) place,
     ];
+    _waypointInput = places;
+    _waypointIds = ids;
+    _waypointCache = filtered;
+    return filtered;
+  }
+
+  bool _samePlaceIds(List<Place>? a, List<Place>? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null || a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
   }
 
   Widget _maybeCooperative(Widget child) {
     if (!widget.cooperativeGestures) return child;
-    return _CooperativeMapGestures(child: child);
+    return CooperativeMapGestures(child: child);
   }
 
   void _syncChallengeMembership() {
@@ -834,36 +896,6 @@ void fitMapPoints(
       ),
     ),
   );
-}
-
-/// One finger scrolls the parent. Two fingers reach the map.
-class _CooperativeMapGestures extends StatefulWidget {
-  const _CooperativeMapGestures({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_CooperativeMapGestures> createState() =>
-      _CooperativeMapGesturesState();
-}
-
-class _CooperativeMapGesturesState extends State<_CooperativeMapGestures> {
-  var _pointers = 0;
-
-  void _change(int delta) {
-    setState(() => _pointers = math.max(0, _pointers + delta));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) => _change(1),
-      onPointerUp: (_) => _change(-1),
-      onPointerCancel: (_) => _change(-1),
-      child: IgnorePointer(ignoring: _pointers < 2, child: widget.child),
-    );
-  }
 }
 
 LatLngBounds boundsOf(List<ll.LatLng> points) {

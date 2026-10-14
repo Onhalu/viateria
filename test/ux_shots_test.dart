@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
+import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 
@@ -191,6 +193,130 @@ void main() {
     );
     await tester.pumpAndSettle();
     await shot('filters-featured');
+
+    final openSample = sampleOpenChallenge();
+    final openCopy = _shotChallenge(
+      openSample.challenge,
+      translations: [
+        for (final text in open.challenge.translations)
+          LocalizedText(
+            locale: text.locale,
+            title: text.title,
+            description: switch (text.locale) {
+              'cs' => 'Navštivte libovolnou zastávku na stezce a sbírejte razítka po cestě.',
+              'de' =>
+                'Besuchen Sie einen beliebigen Halt und sammeln Sie Stempel.',
+              _ =>
+                'Visit any stop along the trail and collect stamps as you go.',
+            },
+          ),
+      ],
+      difficulty: CatalogDifficulty.easy,
+      length: ChallengeLength.short,
+    );
+    final storyCopy = _shotChallenge(
+      story.challenge,
+      translations: const [
+        LocalizedText(
+          locale: 'cs',
+          title: 'Příběhová stezka',
+          description:
+              'Odemykejte zastávky postupně a přečtěte si příběh mezi nimi.',
+        ),
+        LocalizedText(
+          locale: 'en',
+          title: 'Story trail',
+          description:
+              'Unlock each stop in order and read the story between them.',
+          diplomaHeadline: 'Story master',
+        ),
+        LocalizedText(
+          locale: 'de',
+          title: 'Geschichtenpfad',
+          description: 'Schalten Sie die Stopps der Reihe nach frei.',
+        ),
+      ],
+      difficulty: CatalogDifficulty.normal,
+      length: ChallengeLength.medium,
+    );
+    final shotDetails = [
+      ChallengeDetail(challenge: storyCopy, waypoints: story.waypoints),
+      ChallengeDetail(challenge: openCopy, waypoints: openSample.waypoints),
+    ];
+    final progress = MemoryProgress(details: shotDetails);
+    progress.statuses['open-1'] = ChallengeRunStatus.completed;
+    progress.completed['open-1'] = {'ow-1', 'ow-2'};
+    final shotServices = buildServices(
+      challenges: [storyCopy, openCopy],
+      details: shotDetails,
+      progress: progress,
+    );
+    for (final locale in ['cs', 'en']) {
+      final strings = AppStrings(locale);
+      for (final width in [390.0, 1280.0]) {
+        final tag = '$locale-${width.round()}';
+        useView(tester, Size(width, width < 600 ? 844 : 900));
+        await resetTree();
+        await tester.pumpWidget(
+          wrapApp(shotServices, locale: LocaleController(initial: locale)),
+        );
+        await tester.pumpAndSettle();
+        await shot('home-$tag');
+
+        await tester.tap(find.text(strings.navProfile));
+        await tester.pumpAndSettle();
+        await shot('profile-$tag');
+        final completedDate = find.byKey(
+          const Key('profile-completed-date-open-1'),
+        );
+        if (completedDate.evaluate().isNotEmpty) {
+          final dateRect = tester.getRect(completedDate);
+          final viewHeight = tester.view.physicalSize.height;
+          if (dateRect.top < 0 || dateRect.bottom > viewHeight - 8) {
+            await tester.ensureVisible(completedDate);
+            await tester.pumpAndSettle();
+            await shot('profile-date-$tag');
+          }
+        }
+
+        await tester.tap(find.text(strings.navMap));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await shot('map-$tag');
+        await tester.tap(find.byKey(const Key('map-plan-route')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('map-route-panel')), findsOneWidget);
+        expect(find.byKey(const Key('route-start-field')), findsOneWidget);
+        await shot('map-route-$tag');
+
+        await tester.tap(find.text(strings.catalogTitle));
+        await tester.pumpAndSettle();
+        final heroCard = find.byKey(const Key('catalog-hero-story-1'));
+        await tester.ensureVisible(heroCard);
+        await tester.pumpAndSettle();
+        await tester.tap(heroCard);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('challenge-title')), findsOneWidget);
+        expect(find.byKey(const Key('challenge-back')), findsOneWidget);
+        await shot('hero-$tag');
+        if (width < 600) {
+          final scrollable = tester.state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byKey(const Key('challenge-feed-scroll')),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          scrollable.position.jumpTo(
+            scrollable.position.viewportDimension * 0.55,
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 250));
+          await shot('paybar-$tag');
+        }
+      }
+    }
     debugDisableShadows = true;
   });
 }
@@ -213,6 +339,32 @@ Future<void> _loadFamily(
 Future<ByteData> _fileBytes(String path) async {
   final bytes = await File(path).readAsBytes();
   return ByteData.sublistView(Uint8List.fromList(bytes));
+}
+
+Challenge _shotChallenge(
+  Challenge source, {
+  required List<LocalizedText> translations,
+  CatalogDifficulty? difficulty,
+  ChallengeLength? length,
+}) {
+  return Challenge(
+    id: source.id,
+    slug: source.slug,
+    accessMode: source.accessMode,
+    pricingType: source.pricingType,
+    priceCents: source.priceCents,
+    diplomaPriceCents: source.diplomaPriceCents,
+    medalPriceCents: source.medalPriceCents,
+    currency: source.currency,
+    status: source.status,
+    countryCode: source.countryCode,
+    coverImageUrl: source.coverImageUrl,
+    fapiFormUrlDiploma: source.fapiFormUrlDiploma,
+    fapiFormUrlMedal: source.fapiFormUrlMedal,
+    difficulty: difficulty ?? source.difficulty,
+    length: length ?? source.length,
+    translations: translations,
+  );
 }
 
 Future<void> saveShot(WidgetTester tester, String name) async {

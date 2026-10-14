@@ -193,7 +193,7 @@ void main() {
     test('formats dates in the active locale', () {
       final date = DateTime(2026, 9, 11);
       expect(formatLocalDate(date, 'cs'), '11. 9. 2026');
-      expect(formatLocalDate(date, 'de'), '11.09.2026');
+      expect(formatLocalDate(date, 'de'), '11. Sept. 2026');
       expect(formatLocalDate(date, 'en'), 'Sep 11, 2026');
     });
 
@@ -536,7 +536,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(strings.unlockWithStripe), findsNothing);
-        expect(find.byKey(const Key('challenge-pay-trust')), findsOneWidget);
+        expect(find.byKey(const Key('challenge-pay-trust')), findsNothing);
         expect(infoY, lessThan(diploma.top));
         expect(medal.bottom, lessThan(waypointsY));
         expect(diploma.left, lessThan(medal.left));
@@ -859,7 +859,7 @@ void main() {
       expect(find.text('Medaille + Diplom'), findsOneWidget);
     });
 
-    testWidgets('pay CTAs stack only when the viewport is under 320 dp', (
+    testWidgets('the payment bar keeps both buttons in a row under 320 dp', (
       tester,
     ) async {
       useView(tester, width: 319);
@@ -875,7 +875,7 @@ void main() {
 
       expect(
         tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
-        isA<Column>(),
+        isA<Row>(),
       );
       final diploma = tester.getRect(
         find.byKey(const Key('challenge-pay-diploma')),
@@ -883,8 +883,8 @@ void main() {
       final medal = tester.getRect(
         find.byKey(const Key('challenge-pay-medal')),
       );
-      expect(diploma.bottom, lessThanOrEqualTo(medal.top));
-      expect(medal.top - diploma.bottom, inInclusiveRange(8, 12));
+      expect(diploma.right, lessThanOrEqualTo(medal.left));
+      expect(medal.left - diploma.right, inInclusiveRange(8, 12));
       expect(diploma.height, greaterThanOrEqualTo(52));
       expect(medal.height, greaterThanOrEqualTo(52));
     });
@@ -1622,7 +1622,7 @@ void main() {
     );
     expect(
       de.rewardDeadlineLabel(formatLocalDate(due, 'de')),
-      'Abschließen bis 21.10.2026',
+      'Abschließen bis 21. Okt. 2026',
     );
     expect(
       cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 14, 8)),

@@ -4,6 +4,7 @@ import '../../domain/route_planner.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import 'place_presentation.dart';
+import 'route_start_field.dart';
 
 class RoutePlannerPanel extends StatefulWidget {
   const RoutePlannerPanel({
@@ -173,31 +174,13 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
             ),
             if (widget.showCustomStartField) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('route-start-field'),
-                      controller: widget.startController,
-                      autofocus: true,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: strings.routeStartHint,
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onSubmitted: widget.onStartSubmitted,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    key: const Key('route-start-submit'),
-                    tooltip: strings.routeSearch,
-                    onPressed: () =>
-                        widget.onStartSubmitted(widget.startController.text),
-                    icon: const Icon(Icons.search),
-                  ),
-                ],
+              RouteStartField(
+                controller: widget.startController,
+                strings: strings,
+                onSubmitted: widget.onStartSubmitted,
+                onUseGps: widget.onUseGps,
+                autofocus: true,
+                showGps: false,
               ),
             ],
             const SizedBox(height: 16),

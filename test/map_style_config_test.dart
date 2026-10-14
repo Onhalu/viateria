@@ -24,13 +24,13 @@ void main() {
   test('Batch B marker sizes without clustering', () {
     expect(MapStyleConfig.markerIconSize, 0.45);
     expect(MapStyleConfig.selectedMarkerIconSize, 0.55);
-    expect(MapStyleConfig.diskDiameter, 28);
-    expect(MapStyleConfig.selectedDiskDiameter, 32);
-    expect(MapStyleConfig.diskRadius, 14);
-    expect(MapStyleConfig.selectedDiskRadius, 16);
+    expect(MapStyleConfig.diskDiameter, 32);
+    expect(MapStyleConfig.selectedDiskDiameter, 36.8);
+    expect(MapStyleConfig.diskRadius, 16);
+    expect(MapStyleConfig.selectedDiskRadius, 18.4);
     expect(MapStyleConfig.diskStrokeWidth, 1.5);
     expect(MapStyleConfig.inChallengeDiskStrokeWidth, 2);
-    expect(MapStyleConfig.verifiedDiskStrokeWidth, 0);
+    expect(MapStyleConfig.verifiedDiskStrokeWidth, 1.5);
     expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
     expect(MapStyleConfig.outsideDiskFill, 'rgba(250, 248, 242, 0.90)');
     expect(MapStyleConfig.diskLayerId, 'poi-disks');
@@ -40,8 +40,8 @@ void main() {
     expect(MapStyleConfig.creamHex, '#F3EFE5');
     expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
     expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
-    expect(MapStyleConfig.verifiedDiskFill, MapStyleConfig.forestHex);
-    expect(MapStyleConfig.verifiedDiskFill, '#35483C');
+    expect(MapStyleConfig.verifiedDiskFill, '#A7B78C');
+    expect(MapStyleConfig.verifiedDiskFill, isNot(MapStyleConfig.forestHex));
     expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(
       MapStyleConfig.markerColorExpression,
@@ -73,8 +73,9 @@ void main() {
     );
     expect(
       MapStyleConfig.diskFillExpression,
-      contains(MapStyleConfig.forestHex),
+      contains(MapStyleConfig.verifiedDiskFill),
     );
+    expect(MapStyleConfig.symbolOpacityExpression, contains(0));
     expect(
       MapStyleConfig.diskFillExpression.contains(MapStyleConfig.barkHex),
       isFalse,
@@ -158,6 +159,11 @@ void main() {
         isTrue,
       );
       expect(File(config).readAsStringSync().contains('verifiedHex'), isFalse);
+      expect(File(host).readAsStringSync().contains('verifiedBadge'), isFalse);
+      expect(
+        File(host).readAsStringSync().contains('verified_badge_icon'),
+        isFalse,
+      );
       expect(File(config).readAsStringSync().contains('#B8860B'), isFalse);
     },
   );

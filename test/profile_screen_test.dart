@@ -275,6 +275,12 @@ void main() {
     expect(find.text(strings.completedChallengesEmpty), findsNothing);
     expect(find.byKey(const Key('profile-completed-open-1')), findsOneWidget);
     expect(find.text('Open trail'), findsOneWidget);
+    expect(find.text('Completed on Sep 7, 2026'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('profile-avatar'))),
+      const Size(72, 72),
+    );
+    expect(tester.getTopLeft(find.byKey(const Key('profile-avatar'))).dy, 24);
 
     await tester.tap(find.byKey(const Key('profile-completed-open-1')));
     await tester.pumpAndSettle();

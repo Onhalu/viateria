@@ -1,3 +1,7 @@
+import 'package:intl/intl.dart';
+
+import 'local_dates.dart';
+
 /// Custom i18n (cs / en / de) — no generated ARB catalog.
 class AppStrings {
   AppStrings(this.locale) : _table = _tables[locale] ?? _tables['en']!;
@@ -553,9 +557,22 @@ class AppStrings {
     final days = _calendarDaysUntil(completeBy, now);
     if (days > 7) return null;
     return switch (locale) {
-      'cs' => '· zbývá $days ${_csDayWord(days)}',
-      'de' => '· noch $days ${days == 1 ? 'Tag' : 'Tage'}',
-      _ => '· $days ${days == 1 ? 'day' : 'days'} left',
+      'cs' =>
+        '· zbývá $days ${Intl.plural(days, locale: locale, one: 'den', few: 'dny', other: 'dní')}',
+      'de' =>
+        '· noch $days ${Intl.plural(days, locale: locale, one: 'Tag', other: 'Tage')}',
+      _ =>
+        '· $days ${Intl.plural(days, locale: locale, one: 'day', other: 'days')} left',
+    };
+  }
+
+  /// Profile line: "Dokončeno dne {date}" with [DateFormat.yMMMd].
+  String completedOnLabel(DateTime date) {
+    final formatted = formatLocaleDate(date, locale);
+    return switch (locale) {
+      'cs' => 'Dokončeno dne $formatted',
+      'de' => 'Abgeschlossen am $formatted',
+      _ => 'Completed on $formatted',
     };
   }
 
@@ -566,9 +583,15 @@ class AppStrings {
   String routeStopsSummary(int count, double km) {
     final distance = km.toStringAsFixed(1);
     final places = switch (locale) {
-      'cs' => _csPlaceWord(count),
-      'de' => count == 1 ? 'Ort' : 'Orte',
-      _ => count == 1 ? 'place' : 'places',
+      'cs' => Intl.plural(
+        count,
+        locale: locale,
+        one: 'místo',
+        few: 'místa',
+        other: 'míst',
+      ),
+      'de' => Intl.plural(count, locale: locale, one: 'Ort', other: 'Orte'),
+      _ => Intl.plural(count, locale: locale, one: 'place', other: 'places'),
     };
     return '$count $places · $distance km';
   }
@@ -1490,22 +1513,4 @@ int _calendarDaysUntil(DateTime completeBy, DateTime now) {
   final end = DateTime(completeBy.year, completeBy.month, completeBy.day);
   final today = DateTime(now.year, now.month, now.day);
   return end.difference(today).inDays;
-}
-
-String _csDayWord(int n) {
-  final mod100 = n.abs() % 100;
-  final mod10 = n.abs() % 10;
-  if (mod100 >= 11 && mod100 <= 14) return 'dní';
-  if (mod10 == 1) return 'den';
-  if (mod10 >= 2 && mod10 <= 4) return 'dny';
-  return 'dní';
-}
-
-String _csPlaceWord(int n) {
-  final mod100 = n.abs() % 100;
-  final mod10 = n.abs() % 10;
-  if (mod100 >= 11 && mod100 <= 14) return 'míst';
-  if (mod10 == 1) return 'místo';
-  if (mod10 >= 2 && mod10 <= 4) return 'místa';
-  return 'míst';
 }

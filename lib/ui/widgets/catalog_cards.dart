@@ -290,10 +290,11 @@ class CatalogFeaturedSection extends StatefulWidget {
 class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
   final _scroll = ScrollController();
   var _index = 0;
+  var _stride = _cardWidth + _gap;
 
   static const _cardWidth = 196.0;
-  static const _gap = 12.0;
-  static const _height = 196.0;
+  static const _gap = 16.0;
+  static const _textBlock = 148.0;
 
   @override
   void initState() {
@@ -310,7 +311,7 @@ class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
 
   void _onScroll() {
     if (!_scroll.hasClients || widget.challenges.isEmpty) return;
-    final next = (_scroll.offset / (_cardWidth + _gap)).round().clamp(
+    final next = (_scroll.offset / _stride).round().clamp(
       0,
       widget.challenges.length - 1,
     );
@@ -321,7 +322,7 @@ class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
     if (!_scroll.hasClients || widget.challenges.isEmpty) return;
     final next = (_index + delta).clamp(0, widget.challenges.length - 1);
     await _scroll.animateTo(
-      next * (_cardWidth + _gap),
+      next * _stride,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
@@ -338,8 +339,9 @@ class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
         final cardWidth = wide
             ? _cardWidth
             : (constraints.maxWidth - 24).clamp(160.0, 420.0);
-        final stride = cardWidth + (wide ? _gap : 0);
-        final listHeight = wide ? _height : cardWidth * 9 / 16 + 96;
+        final stride = cardWidth + _gap;
+        _stride = stride;
+        final listHeight = cardWidth * 9 / 16 + _textBlock;
         return Column(
           key: const Key('catalog-featured'),
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +382,7 @@ class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
                           physics: _CardSnapPhysics(itemExtent: stride),
                           itemCount: widget.challenges.length,
                           separatorBuilder: (_, _) =>
-                              SizedBox(width: wide ? _gap : 0),
+                              const SizedBox(width: _gap),
                           itemBuilder: (context, index) {
                             final challenge = widget.challenges[index];
                             return CatalogFeaturedCard(
@@ -580,9 +582,9 @@ class CatalogCountryResults extends StatelessWidget {
   /// layout tests that measure the section's top edge.
   List<Widget> slivers({required int columns, required double width}) {
     if (challenges.isEmpty) return const [];
-    final cell = columns <= 1 ? width : (width - 12 * (columns - 1)) / columns;
-    // 16:9 cover plus two title lines and a 14px meta row.
-    final extent = cell * 9 / 16 + 96;
+    final cell = columns <= 1 ? width : (width - 16 * (columns - 1)) / columns;
+    // 16:9 cover plus title, badge, and a two-line excerpt.
+    final extent = cell * 9 / 16 + 148;
     return [
       const SliverToBoxAdapter(
         child: SizedBox(key: Key('catalog-country-results'), height: 1),
@@ -591,8 +593,8 @@ class CatalogCountryResults extends StatelessWidget {
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
           mainAxisExtent: extent,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final challenge = challenges[index];
@@ -636,7 +638,14 @@ class CatalogFeaturedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleController>().locale;
     final strings = context.watch<LocaleController>().strings;
-    final title = challenge.copyFor(locale).title;
+    final copy = challenge.copyFor(locale);
+    final title = copy.title;
+    final excerpt = copy.description.trim();
+    final hasMeta = _hasCatalogMeta(
+      stats,
+      challenge.difficulty,
+      challenge.length,
+    );
     return SizedBox(
       key: Key('$cardKeyPrefix-${challenge.id}'),
       width: expand ? null : width,
@@ -658,7 +667,7 @@ class CatalogFeaturedCard extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -673,12 +682,8 @@ class CatalogFeaturedCard extends StatelessWidget {
                           height: 1.2,
                         ),
                       ),
-                      if (_hasCatalogMeta(
-                        stats,
-                        challenge.difficulty,
-                        challenge.length,
-                      )) ...[
-                        const SizedBox(height: 4),
+                      if (hasMeta) ...[
+                        const SizedBox(height: 8),
                         CatalogChallengeMeta(
                           stats: stats,
                           lengthBand: challenge.length == null
@@ -687,6 +692,20 @@ class CatalogFeaturedCard extends StatelessWidget {
                           difficulty: challenge.difficulty,
                           strings: strings,
                           color: BrandColors.bark,
+                        ),
+                      ],
+                      if (excerpt.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          excerpt,
+                          key: Key('$cardKeyPrefix-excerpt-${challenge.id}'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BrandColors.bark,
+                            fontSize: 14,
+                            height: 1.2,
+                          ),
                         ),
                       ],
                     ],

@@ -44,9 +44,10 @@ abstract final class BrandColors {
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 
-  /// Verified disk fill (solid forest). Icon tint is cream, not this.
-  static const verifiedDiskHex = forestHex;
-  static const verified = forest;
+  /// Verified disk fill. No category icon sits on this disk.
+  static const verifiedFill = Color(0xFFA7B78C);
+  static const verifiedDiskHex = '#A7B78C';
+  static const verified = verifiedFill;
 }
 
 /// Historical name used by map widgets. Same object as [BrandColors].

@@ -4,120 +4,52 @@ import '../../theme/app_theme.dart';
 import '../layout/breakpoints.dart';
 import 'app_network_image.dart';
 
-/// Full-bleed challenge cover. Aspect comes from the loaded image.
-class ChallengeHero extends StatefulWidget {
+/// Full-bleed challenge cover. About 4:1, clamped, always [BoxFit.cover].
+class ChallengeHero extends StatelessWidget {
   const ChallengeHero({
     super.key,
     required this.url,
     required this.title,
-    this.lengthLabel,
-    this.difficultyLabel,
+    this.onBack,
+    this.backLabel = 'Zpět',
   });
 
   final String url;
   final String title;
-  final String? lengthLabel;
-  final String? difficultyLabel;
-
-  @override
-  State<ChallengeHero> createState() => _ChallengeHeroState();
-}
-
-class _ChallengeHeroState extends State<ChallengeHero> {
-  ImageStream? _stream;
-  ImageStreamListener? _listener;
-  Size? _intrinsic;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _resolve();
-  }
-
-  @override
-  void didUpdateWidget(covariant ChallengeHero oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) _resolve();
-  }
-
-  void _resolve() {
-    final provider = NetworkImage(widget.url);
-    final next = provider.resolve(createLocalImageConfiguration(context));
-    if (identical(next, _stream)) return;
-    if (_stream != null && _listener != null) {
-      _stream!.removeListener(_listener!);
-    }
-    _listener = ImageStreamListener((info, _) {
-      final size = Size(
-        info.image.width.toDouble(),
-        info.image.height.toDouble(),
-      );
-      if (!mounted || _intrinsic == size) return;
-      setState(() => _intrinsic = size);
-    }, onError: (_, _) {});
-    _stream = next;
-    next.addListener(_listener!);
-  }
-
-  @override
-  void dispose() {
-    if (_stream != null && _listener != null) {
-      _stream!.removeListener(_listener!);
-    }
-    super.dispose();
-  }
+  final VoidCallback? onBack;
+  final String backLabel;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final viewport = MediaQuery.sizeOf(context).height;
         final wide = width >= Breakpoints.mediumMax;
-        final minHeight = wide ? 280.0 : 220.0;
-        final maxHeight = wide ? 520.0 : viewport * 0.56;
-        final intrinsic = _intrinsic;
-        final aspect = intrinsic == null || intrinsic.height == 0
-            ? 16 / 9
-            : intrinsic.width / intrinsic.height;
-        final natural = width / aspect;
-        final crop = natural > maxHeight;
-        final height = natural.clamp(minHeight, maxHeight);
-        final chips = [
-          if (widget.lengthLabel != null) widget.lengthLabel!,
-          if (widget.difficultyLabel != null) widget.difficultyLabel!,
-        ];
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+        final height = challengeHeroHeight(width);
+        final padding = MediaQuery.paddingOf(context);
+        return SizedBox(
           width: width,
           height: height,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (intrinsic == null)
-                const ColoredBox(
-                  key: Key('challenge-hero-skeleton'),
-                  color: Color(0x66D8CDB8),
-                )
-              else
-                AppNetworkImage(
-                  url: widget.url,
-                  logicalWidth: width,
-                  fit: crop ? BoxFit.cover : BoxFit.fitWidth,
-                  alignment: crop ? const Alignment(0, -0.2) : Alignment.center,
-                ),
+              AppNetworkImage(
+                url: url,
+                logicalWidth: width,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
               const Align(
                 alignment: Alignment.bottomCenter,
                 child: FractionallySizedBox(
-                  heightFactor: 0.55,
+                  heightFactor: 0.7,
                   widthFactor: 1,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0x0035483C), Color(0xB835483C)],
+                        colors: [Color(0x0035483C), Color(0xCC35483C)],
                       ),
                     ),
                   ),
@@ -126,44 +58,27 @@ class _ChallengeHeroState extends State<ChallengeHero> {
               Positioned(
                 left: wide ? 24 : 16,
                 right: wide ? 24 : 16,
-                bottom: wide ? 24 : 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.title,
-                      key: const Key('challenge-title'),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppTheme.displayFont,
-                        fontWeight: FontWeight.w600,
-                        color: BrandColors.cream,
-                        fontSize: wide ? 36 : 28,
-                        height: 1.15,
-                        shadows: [
-                          Shadow(
-                            color: Color(0x4D000000),
-                            blurRadius: 3,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (chips.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final label in chips) _HeroChip(label: label),
-                        ],
-                      ),
-                    ],
-                  ],
+                bottom: wide ? 16 : 12,
+                child: Text(
+                  title,
+                  key: const Key('challenge-title'),
+                  maxLines: wide ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTheme.displayFont,
+                    fontWeight: FontWeight.w600,
+                    color: BrandColors.cream,
+                    fontSize: wide ? 28 : 24,
+                    height: 1.15,
+                  ),
                 ),
               ),
+              if (onBack != null)
+                Positioned(
+                  left: 12 + padding.left,
+                  top: 12 + padding.top,
+                  child: const _HeroBackButton(),
+                ),
             ],
           ),
         );
@@ -172,30 +87,39 @@ class _ChallengeHeroState extends State<ChallengeHero> {
   }
 }
 
-class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.label});
-
-  final String label;
+/// 40 dp cream circle, 48 dp tap target, forest arrow.
+class _HeroBackButton extends StatelessWidget {
+  const _HeroBackButton();
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: BrandColors.cream.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+    final hero = context.findAncestorWidgetOfExactType<ChallengeHero>()!;
+    return Tooltip(
+      message: hero.backLabel,
+      child: Semantics(
+        button: true,
+        label: hero.backLabel,
         child: SizedBox(
-          height: 28,
+          width: 48,
+          height: 48,
           child: Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: BrandColors.forest,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                height: 1,
+            child: Material(
+              color: BrandColors.cream.withValues(alpha: 0.9),
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: const Key('challenge-back'),
+                customBorder: const CircleBorder(),
+                onTap: hero.onBack,
+                child: const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Icon(
+                    Icons.arrow_back,
+                    size: 24,
+                    color: BrandColors.forest,
+                  ),
+                ),
               ),
             ),
           ),
@@ -203,4 +127,13 @@ class _HeroChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Width / 4, at least 160 dp. Desktop (width ≥ 840) also caps at 240 dp.
+double challengeHeroHeight(double width) {
+  final ratio = width / 4;
+  if (width >= Breakpoints.mediumMax) {
+    return ratio.clamp(160.0, 240.0);
+  }
+  return ratio < 160 ? 160.0 : ratio;
 }
