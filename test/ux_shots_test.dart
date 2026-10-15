@@ -324,6 +324,11 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 250));
           await shot('paybar-$tag');
+        } else {
+          final pay = find.byKey(const Key('challenge-pay-ctas'));
+          await tester.ensureVisible(pay);
+          await tester.pumpAndSettle();
+          await shot('paybar-$tag');
         }
       }
     }

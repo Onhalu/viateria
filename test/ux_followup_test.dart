@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/challenge_reward.dart';
 import 'package:viateria/domain/route_planner.dart';
@@ -15,11 +16,15 @@ import 'package:viateria/map/place_category.dart';
 import 'package:viateria/map/poi_source_sync.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/layout/map_search_metrics.dart';
+import 'package:viateria/ui/screens/challenge_screen.dart';
+import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
 import 'package:viateria/ui/widgets/challenge_hero.dart';
 import 'package:viateria/ui/widgets/cooperative_map_gestures.dart';
 import 'package:viateria/ui/widgets/route_start_field.dart';
 
+import 'bottom_nav_test.dart' show buildServices, wrapApp;
+import 'helpers/catalog_finders.dart';
 import 'helpers/fakes.dart';
 
 void main() {
@@ -154,6 +159,48 @@ void main() {
       find.byKey(const Key('challenge-hero-collapsed')),
     );
     expect(collapsed.height, 64);
+    final frame = tester.getRect(find.byKey(const Key('challenge-hero-frame')));
+    expect(frame.left, AppShell.horizontalInset);
+    expect(frame.right, 390 - AppShell.horizontalInset);
+    expect(frame.top, 0);
+    expect(frame.height, ChallengeCollapsingHero.collapsedBody);
+    expect(
+      tester
+          .widget<ClipRRect>(find.byKey(const Key('challenge-hero-frame')))
+          .borderRadius,
+      BorderRadius.circular(challengeHeroRadius),
+    );
+  });
+
+  testWidgets('the hero frame sits under the safe area', (tester) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(top: 30);
+    tester.view.viewPadding = const FakeViewPadding(top: 30);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: CustomScrollView(
+            slivers: [
+              ChallengeCollapsingHero(
+                url: 'https://example.invalid/cover.jpg',
+                title: 'Příběhová stezka',
+                location: 'Beskydy',
+              ),
+              SliverToBoxAdapter(child: SizedBox(height: 40)),
+            ],
+          ),
+        ),
+      ),
+    );
+    final frame = tester.getRect(find.byKey(const Key('challenge-hero-frame')));
+    expect(frame.top, 30);
+    expect(frame.left, AppShell.horizontalInset);
+    expect(frame.height, challengeHeroHeight(390));
   });
 
   test('hero is about 4:1, clamped to 160 and 240', () {
@@ -183,6 +230,17 @@ void main() {
     );
 
     expect(tester.getSize(find.byType(ChallengeHero)).height, 160);
+    final frame = tester.getRect(find.byKey(const Key('challenge-hero-frame')));
+    expect(frame.left, AppShell.horizontalInset);
+    expect(frame.right, 390 - AppShell.horizontalInset);
+    expect(frame.top, 0);
+    expect(frame.height, 160);
+    expect(
+      tester
+          .widget<ClipRRect>(find.byKey(const Key('challenge-hero-frame')))
+          .borderRadius,
+      BorderRadius.circular(challengeHeroRadius),
+    );
     final title = tester.widget<Text>(find.byKey(const Key('challenge-title')));
     expect(title.maxLines, 1);
     expect(title.style?.fontSize, 24);
@@ -219,6 +277,10 @@ void main() {
       ),
     );
     expect(tester.getSize(find.byType(ChallengeHero)).height, 240);
+    final frame = tester.getRect(find.byKey(const Key('challenge-hero-frame')));
+    expect(frame.left, AppShell.horizontalInset);
+    expect(frame.right, 1280 - AppShell.horizontalInset);
+    expect(frame.height, 240);
     expect(
       tester.widget<Text>(find.byKey(const Key('challenge-title'))).maxLines,
       2,
@@ -229,6 +291,48 @@ void main() {
           .style
           ?.fontSize,
       28,
+    );
+  });
+
+  testWidgets('payment bar lines up with the bottom nav pill', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(390, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      wrapApp(buildServices(), locale: LocaleController(initial: 'en')),
+    );
+    await tester.pumpAndSettle();
+    final card = find.byKey(const Key('catalog-hero-open-1'));
+    await tester.scrollUntilVisible(
+      card,
+      300,
+      scrollable: catalogVerticalScrollable(),
+    );
+    await tester.tap(card);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('challenge-back')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byKey(const Key('challenge-feed-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    final nav = tester.getRect(find.byKey(const Key('app-bottom-nav')));
+    final bar = tester.getRect(find.byKey(const Key('challenge-payment-bar')));
+    expect(bar.left, closeTo(nav.left, 0.01));
+    expect(bar.right, closeTo(nav.right, 0.01));
+    expect(
+      tester.getSize(find.byKey(const Key('challenge-pay-diploma'))).height,
+      ChallengePaymentBarMetrics.tapTarget,
     );
   });
 

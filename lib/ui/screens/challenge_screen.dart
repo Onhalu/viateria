@@ -27,6 +27,7 @@ import '../../theme/app_theme.dart';
 import '../challenge_route_controller.dart';
 import '../layout/breakpoints.dart';
 import '../layout/map_search_metrics.dart';
+import '../widgets/app_shell.dart';
 import '../widgets/challenge_hero.dart';
 import '../widgets/challenge_map.dart';
 import '../widgets/error_state.dart';
@@ -806,7 +807,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     ],
                     if (compact)
                       SizedBox(
-                        height: 64 + MediaQuery.paddingOf(context).bottom,
+                        key: const Key('challenge-payment-spacer'),
+                        height: ChallengePaymentBarMetrics.occupiedHeight(
+                          MediaQuery.sizeOf(context).width,
+                          MediaQuery.paddingOf(context).bottom,
+                          singleRow: purchasePaid && completeBy != null,
+                        ),
                       ),
                   ]),
                 ),
@@ -1248,6 +1254,51 @@ class _LazyChallengeMapState extends State<_LazyChallengeMap> {
   }
 }
 
+/// Phone payment strip. Side inset and corner radius match the nav pill.
+abstract final class ChallengePaymentBarMetrics {
+  static const sideInset = kNavSideInset;
+  static const topPadding = 12.0;
+  static const bottomPadding = 12.0;
+  static const visualHeight = 44.0;
+  static const tapTarget = 48.0;
+  static const labelSize = 15.0;
+  static const minLabelSize = 14.0;
+  static const letterSpacing = 0.1;
+  static const rowGap = 10.0;
+  static const columnGap = 8.0;
+  static const stackBreakpoint = 340.0;
+  static const radius = AppShell.barRadius;
+  static const spinner = 18.0;
+
+  static bool stacked(double width) => width < stackBreakpoint;
+
+  static double bodyHeight(double width, {bool singleRow = false}) {
+    final buttons = !singleRow && stacked(width)
+        ? tapTarget * 2 + columnGap
+        : tapTarget;
+    return topPadding + buttons + bottomPadding;
+  }
+
+  static double occupiedHeight(
+    double width,
+    double safeBottom, {
+    bool singleRow = false,
+  }) => bodyHeight(width, singleRow: singleRow) + safeBottom;
+}
+
+/// Font size for the payment-bar label. Starts at 15 and may scale down
+/// to 14, never further.
+double paymentBarLabelFontSize({
+  required double textWidth,
+  required double maxWidth,
+}) {
+  const base = ChallengePaymentBarMetrics.labelSize;
+  const floor = ChallengePaymentBarMetrics.minLabelSize;
+  if (!maxWidth.isFinite || maxWidth <= 0 || textWidth <= 0) return base;
+  if (textWidth <= maxWidth) return base;
+  return (base * maxWidth / textWidth).clamp(floor, base);
+}
+
 class _ChallengePaymentBar extends StatelessWidget {
   const _ChallengePaymentBar({
     required this.strings,
@@ -1267,48 +1318,63 @@ class _ChallengePaymentBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final due = completeBy;
     final deadline = paid && due != null;
-    return Material(
-      key: const Key('challenge-payment-bar'),
-      color: BrandColors.cream,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: BrandColors.beige)),
+    final media = MediaQuery.paddingOf(context);
+    final content = deadline
+        ? SizedBox(
+            height: ChallengePaymentBarMetrics.tapTarget,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                key: const Key('challenge-paybar-deadline'),
+                children: [
+                  const Icon(Icons.event, color: BrandColors.forest, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      strings.rewardDeadlineLabel(formatLocalDate(due, locale)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: BrandColors.forest,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : pay;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        media.left + kNavSideInset,
+        0,
+        media.right + kNavSideInset,
+        0,
+      ),
+      child: Material(
+        key: const Key('challenge-payment-bar'),
+        color: BrandColors.cream,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        clipBehavior: Clip.antiAlias,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(ChallengePaymentBarMetrics.radius),
+          ),
+          side: BorderSide(color: BrandColors.beige),
         ),
         child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.paddingOf(context).bottom,
+          padding: const EdgeInsets.only(
+            top: ChallengePaymentBarMetrics.topPadding,
+            bottom: ChallengePaymentBarMetrics.bottomPadding,
           ),
-          child: SizedBox(
-            height: 64,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: deadline
-                  ? Row(
-                      key: const Key('challenge-paybar-deadline'),
-                      children: [
-                        const Icon(
-                          Icons.event,
-                          color: BrandColors.forest,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            strings.rewardDeadlineLabel(
-                              formatLocalDate(due, locale),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: BrandColors.forest,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : pay,
-            ),
+          child: SafeArea(
+            top: false,
+            left: false,
+            right: false,
+            child: content,
           ),
         ),
       ),
@@ -1345,13 +1411,18 @@ class _ChallengePayCtas extends StatelessWidget {
   final ValueChanged<RewardVariant> onPay;
   final bool bar;
 
-  /// Disabled variant stays a solid beige button with bark type so the
-  /// label stays readable when that reward has no sale form.
+  /// In-page disabled stays a solid beige button with bark type. The phone
+  /// bar uses forest at 40% for the fill, the border, and the label.
   static ({Color background, Color foreground, Color border}) _colors({
     required bool outlined,
     required Set<WidgetState> states,
+    required bool bar,
   }) {
     if (states.contains(WidgetState.disabled)) {
+      if (bar) {
+        final muted = BrandColors.forest.withValues(alpha: 0.4);
+        return (background: muted, foreground: muted, border: muted);
+      }
       return (
         background: outlined ? BrandColors.cream : BrandColors.beige,
         foreground: BrandColors.bark,
@@ -1368,35 +1439,53 @@ class _ChallengePayCtas extends StatelessWidget {
   }
 
   ButtonStyle _ctaStyle({required bool outlined}) {
+    final shape = bar
+        ? const StadiumBorder()
+        : const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(radius)),
+          );
     return ButtonStyle(
-      minimumSize: const WidgetStatePropertyAll(Size(0, minHeight)),
+      minimumSize: WidgetStatePropertyAll(
+        Size(0, bar ? ChallengePaymentBarMetrics.visualHeight : minHeight),
+      ),
+      fixedSize: bar
+          ? const WidgetStatePropertyAll(
+              Size.fromHeight(ChallengePaymentBarMetrics.visualHeight),
+            )
+          : null,
+      tapTargetSize: bar ? MaterialTapTargetSize.padded : null,
       padding: WidgetStatePropertyAll(
-        bar ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4) : padding,
+        bar ? const EdgeInsets.symmetric(horizontal: 12) : padding,
       ),
       alignment: Alignment.center,
       visualDensity: VisualDensity.standard,
-      elevation: const WidgetStatePropertyAll(0),
-      shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+      elevation: WidgetStateProperty.resolveWith((states) {
+        final contact =
+            bar && !outlined && !states.contains(WidgetState.disabled);
+        return contact ? 1.0 : 0.0;
+      }),
+      shadowColor: WidgetStateProperty.resolveWith((states) {
+        final contact =
+            bar && !outlined && !states.contains(WidgetState.disabled);
+        if (!contact) return Colors.transparent;
+        return BrandColors.forest.withValues(alpha: 0.14);
+      }),
       surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       splashFactory: NoSplash.splashFactory,
-      shape: WidgetStatePropertyAll(
-        bar
-            ? const StadiumBorder()
-            : const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(radius)),
-              ),
-      ),
+      shape: WidgetStatePropertyAll(shape),
       backgroundColor: WidgetStateProperty.resolveWith(
-        (states) => _colors(outlined: outlined, states: states).background,
+        (states) =>
+            _colors(outlined: outlined, states: states, bar: bar).background,
       ),
       foregroundColor: WidgetStateProperty.resolveWith(
-        (states) => _colors(outlined: outlined, states: states).foreground,
+        (states) =>
+            _colors(outlined: outlined, states: states, bar: bar).foreground,
       ),
       side: WidgetStateProperty.resolveWith((states) {
         if (!outlined) return BorderSide.none;
         return BorderSide(
-          color: _colors(outlined: outlined, states: states).border,
+          color: _colors(outlined: outlined, states: states, bar: bar).border,
           width: borderWidth,
         );
       }),
@@ -1405,7 +1494,7 @@ class _ChallengePayCtas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stack = !bar && MediaQuery.sizeOf(context).width < narrowBreakpoint;
+    final width = MediaQuery.sizeOf(context).width;
     final diploma = _payButton(
       key: const Key('challenge-pay-diploma'),
       priceKey: const Key('challenge-pay-diploma-price'),
@@ -1430,28 +1519,49 @@ class _ChallengePayCtas extends StatelessWidget {
           ? null
           : () => onPay(RewardVariant.medalAndDiploma),
     );
-    final buttons = stack
-        ? Column(
-            key: const Key('challenge-pay-ctas'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              diploma,
-              const SizedBox(height: gap),
-              medal,
-            ],
-          )
-        : IntrinsicHeight(
-            child: Row(
-              key: const Key('challenge-pay-ctas'),
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(flex: 1, child: diploma),
-                const SizedBox(width: gap),
-                Expanded(flex: 1, child: medal),
-              ],
-            ),
-          );
-    return buttons;
+    if (bar && ChallengePaymentBarMetrics.stacked(width)) {
+      return Column(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          medal,
+          const SizedBox(height: ChallengePaymentBarMetrics.columnGap),
+          diploma,
+        ],
+      );
+    }
+    if (!bar && width < narrowBreakpoint) {
+      return Column(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          diploma,
+          const SizedBox(height: gap),
+          medal,
+        ],
+      );
+    }
+    if (bar) {
+      return Row(
+        key: const Key('challenge-pay-ctas'),
+        children: [
+          Expanded(flex: 1, child: diploma),
+          const SizedBox(width: ChallengePaymentBarMetrics.rowGap),
+          Expanded(flex: 1, child: medal),
+        ],
+      );
+    }
+    return IntrinsicHeight(
+      child: Row(
+        key: const Key('challenge-pay-ctas'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(flex: 1, child: diploma),
+          const SizedBox(width: gap),
+          Expanded(flex: 1, child: medal),
+        ],
+      ),
+    );
   }
 
   Widget _payButton({
@@ -1464,94 +1574,163 @@ class _ChallengePayCtas extends StatelessWidget {
     required FapiOfferVariant? variant,
     required VoidCallback? onPressed,
   }) {
-    final states = <WidgetState>{if (onPressed == null) WidgetState.disabled};
-    final ink = _colors(outlined: outlined, states: states).foreground;
-    final price = loading || failed
-        ? null
-        : formatPayButtonPrice(
-            cents: variant?.priceCents,
-            currency: variant?.currency ?? '',
-            locale: strings.locale,
-            freeLabel: strings.payPriceFree,
-          );
-    final showFallback = !loading && failed;
-    final child = Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: labelSize,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-            color: ink,
-          ),
-        ),
-        if (loading) ...[
-          const SizedBox(height: priceGap),
-          Semantics(
-            label: strings.payPriceLoading,
-            child: SizedBox(
-              key: loadingKey,
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: ink),
-            ),
-          ),
-        ] else if (showFallback) ...[
-          const SizedBox(height: priceGap),
+    final effectivePressed = bar && loading ? null : onPressed;
+    final states = <WidgetState>{
+      if (effectivePressed == null) WidgetState.disabled,
+    };
+    final ink = _colors(
+      outlined: outlined,
+      states: states,
+      bar: bar,
+    ).foreground;
+    final Widget child;
+    if (bar) {
+      child = loading
+          ? Semantics(
+              label: strings.payPriceLoading,
+              child: SizedBox(
+                key: loadingKey,
+                width: ChallengePaymentBarMetrics.spinner,
+                height: ChallengePaymentBarMetrics.spinner,
+                child: CircularProgressIndicator(strokeWidth: 2, color: ink),
+              ),
+            )
+          : _PaymentBarLabel(text: label, color: ink);
+    } else {
+      final price = loading || failed
+          ? null
+          : formatPayButtonPrice(
+              cents: variant?.priceCents,
+              currency: variant?.currency ?? '',
+              locale: strings.locale,
+              freeLabel: strings.payPriceFree,
+            );
+      final showFallback = !loading && failed;
+      child = Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
           Text(
-            strings.payPriceUnavailable,
-            key: fallbackKey,
+            label,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: labelSize,
               fontWeight: FontWeight.w600,
               height: 1.2,
               color: ink,
             ),
           ),
-        ] else if (price != null) ...[
-          const SizedBox(height: priceGap),
-          Text(
-            price,
-            key: priceKey,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: priceSize,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
-              color: ink,
+          if (loading) ...[
+            const SizedBox(height: priceGap),
+            Semantics(
+              label: strings.payPriceLoading,
+              child: SizedBox(
+                key: loadingKey,
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: ink),
+              ),
             ),
-          ),
+          ] else if (showFallback) ...[
+            const SizedBox(height: priceGap),
+            Text(
+              strings.payPriceUnavailable,
+              key: fallbackKey,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+                color: ink,
+              ),
+            ),
+          ] else if (price != null) ...[
+            const SizedBox(height: priceGap),
+            Text(
+              price,
+              key: priceKey,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: priceSize,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+                color: ink,
+              ),
+            ),
+          ],
         ],
-      ],
-    );
+      );
+    }
     final style = _ctaStyle(outlined: outlined);
-    final buttonChild = bar
-        ? FittedBox(fit: BoxFit.scaleDown, child: child)
-        : child;
     if (outlined) {
       return OutlinedButton(
         key: key,
-        onPressed: onPressed,
+        onPressed: effectivePressed,
         style: style,
-        child: buttonChild,
+        child: child,
       );
     }
     return FilledButton(
       key: key,
-      onPressed: onPressed,
+      onPressed: effectivePressed,
       style: style,
-      child: buttonChild,
+      child: child,
+    );
+  }
+}
+
+class _PaymentBarLabel extends StatelessWidget {
+  const _PaymentBarLabel({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final base = TextStyle(
+          fontSize: ChallengePaymentBarMetrics.labelSize,
+          fontWeight: FontWeight.w600,
+          letterSpacing: ChallengePaymentBarMetrics.letterSpacing,
+          height: 1,
+          color: color,
+        );
+        final direction = Directionality.of(context);
+        final measured = TextPainter(
+          text: TextSpan(text: text, style: base),
+          textDirection: direction,
+          maxLines: 1,
+        )..layout();
+        final fontSize = paymentBarLabelFontSize(
+          textWidth: measured.width,
+          maxWidth: maxWidth,
+        );
+        measured.dispose();
+        final style = base.copyWith(fontSize: fontSize);
+        final label = Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          textAlign: TextAlign.center,
+          style: style,
+        );
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: maxWidth.isFinite
+              ? SizedBox(width: maxWidth, child: label)
+              : label,
+        );
+      },
     );
   }
 }
