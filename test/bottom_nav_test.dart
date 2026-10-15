@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/app.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
@@ -33,6 +34,7 @@ AppServices buildServices({
   bool configured = true,
   LeaderboardRepository? leaderboard,
   PlaceCatalog? places,
+  DiplomaClient? diplomas,
 }) {
   final open = sampleOpenChallenge();
   final story = sampleStoryChallenge();
@@ -78,6 +80,7 @@ AppServices buildServices({
     photoCapture: MemoryCapture(),
     leaderboard: leaderboard,
     places: places,
+    diplomas: diplomas,
   );
 }
 

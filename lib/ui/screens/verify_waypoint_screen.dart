@@ -22,6 +22,7 @@ import '../../map/place_query.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/place_presentation.dart';
 import '../widgets/verify_success_confetti.dart';
+import 'diploma_screen.dart';
 
 /// Local visited-place ids recorded after a successful verify.
 ///
@@ -252,9 +253,13 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         if (!mounted) return;
         final story = detail.challenge.accessMode == AccessMode.story;
         if (updated.isCompleted && !story) {
-          _celebrateAndLeave(
-            () => context.go('/diploma/${widget.challengeId}'),
-          );
+          final id = widget.challengeId!;
+          final nav = Navigator.of(context, rootNavigator: true);
+          _celebrateAndLeave(() {
+            if (nav.canPop()) nav.pop();
+            final host = nav.context;
+            if (host.mounted) showDiplomaWindow(host, id);
+          });
           return;
         }
         final hints = storyStepIdsAfterVerify(
@@ -434,7 +439,8 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
                                 ? _fallbackHint
                                 : (_error != null ? _fallbackHint : null),
                             retryLabel: strings.retry,
-                            settingsLabel: _error == strings.cameraDenied ||
+                            settingsLabel:
+                                _error == strings.cameraDenied ||
                                     _fallbackHint == strings.gpsDeniedFallback
                                 ? strings.openSettings
                                 : null,

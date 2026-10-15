@@ -5,7 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
+import 'package:viateria/ui/diploma_share.dart';
+import 'package:viateria/ui/screens/diploma_screen.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
@@ -238,6 +241,7 @@ void main() {
       ],
       difficulty: CatalogDifficulty.normal,
       length: ChallengeLength.medium,
+      region: 'Beskydy',
     );
     final shotDetails = [
       ChallengeDetail(challenge: storyCopy, waypoints: story.waypoints),
@@ -299,6 +303,12 @@ void main() {
         expect(find.byKey(const Key('challenge-title')), findsOneWidget);
         expect(find.byKey(const Key('challenge-back')), findsOneWidget);
         await shot('hero-$tag');
+        await tester.drag(
+          find.byKey(const Key('challenge-feed-scroll')),
+          const Offset(0, -240),
+        );
+        await tester.pump();
+        await shot('hero-collapsed-$tag');
         if (width < 600) {
           final scrollable = tester.state<ScrollableState>(
             find
@@ -315,6 +325,55 @@ void main() {
           await tester.pump(const Duration(milliseconds: 250));
           await shot('paybar-$tag');
         }
+      }
+    }
+
+    final previousProvider = diplomaImageProvider;
+    diplomaImageProvider = (_) => MemoryImage(Uint8List.fromList(_shotPng));
+    addTearDown(() => diplomaImageProvider = previousProvider);
+    final diplomaServices = buildServices(
+      diplomas: MemoryDiplomaClient(
+        accessState: 'ready',
+        imageUrl: 'https://example.test/diploma.png',
+        completionLabel: 'dokončeno dne 7. 9. 2026',
+      ),
+    );
+    for (final locale in ['cs', 'en']) {
+      for (final frame in const [
+        (name: 'sheet', size: Size(390, 844)),
+        (name: 'dialog', size: Size(1280, 900)),
+      ]) {
+        useView(tester, frame.size);
+        await resetTree();
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider(
+                create: (_) => LocaleController(initial: locale),
+              ),
+              Provider.value(value: diplomaServices),
+            ],
+            child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              home: Builder(
+                builder: (context) {
+                  return Scaffold(
+                    body: Center(
+                      child: FilledButton(
+                        onPressed: () => showDiplomaWindow(context, 'open-1'),
+                        child: const Text('open-diploma'),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open-diploma'));
+        await tester.pumpAndSettle();
+        await shot('diploma-${frame.name}-$locale');
       }
     }
     debugDisableShadows = true;
@@ -346,6 +405,7 @@ Challenge _shotChallenge(
   required List<LocalizedText> translations,
   CatalogDifficulty? difficulty,
   ChallengeLength? length,
+  String? region,
 }) {
   return Challenge(
     id: source.id,
@@ -358,6 +418,7 @@ Challenge _shotChallenge(
     currency: source.currency,
     status: source.status,
     countryCode: source.countryCode,
+    region: region ?? source.region,
     coverImageUrl: source.coverImageUrl,
     fapiFormUrlDiploma: source.fapiFormUrlDiploma,
     fapiFormUrlMedal: source.fapiFormUrlMedal,
@@ -372,6 +433,78 @@ Future<void> saveShot(WidgetTester tester, String name) async {
   goldenFileComparator = _ArtifactGolden();
   await expectLater(find.byType(MaterialApp).first, matchesGoldenFile(name));
 }
+
+const _shotPng = <int>[
+  137,
+  80,
+  78,
+  71,
+  13,
+  10,
+  26,
+  10,
+  0,
+  0,
+  0,
+  13,
+  73,
+  72,
+  68,
+  82,
+  0,
+  0,
+  0,
+  1,
+  0,
+  0,
+  0,
+  1,
+  8,
+  6,
+  0,
+  0,
+  0,
+  31,
+  21,
+  196,
+  137,
+  0,
+  0,
+  0,
+  13,
+  73,
+  68,
+  65,
+  84,
+  120,
+  156,
+  99,
+  248,
+  207,
+  192,
+  240,
+  31,
+  0,
+  5,
+  0,
+  1,
+  255,
+  15,
+  162,
+  131,
+  0,
+  0,
+  0,
+  0,
+  73,
+  69,
+  78,
+  68,
+  174,
+  66,
+  96,
+  130,
+];
 
 class _ArtifactGolden extends GoldenFileComparator {
   @override

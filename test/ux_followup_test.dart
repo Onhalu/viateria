@@ -9,6 +9,7 @@ import 'package:viateria/domain/challenge_reward.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
+import 'package:viateria/models/models.dart';
 import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/map/poi_source_sync.dart';
@@ -23,6 +24,137 @@ import 'helpers/fakes.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('reduced motion snaps the hero fade', () {
+    expect(
+      challengeHeroExpandedFade(
+        shrinkOffset: 20,
+        maxExtent: 160,
+        minExtent: 64,
+        reduceMotion: false,
+      ),
+      closeTo(76 / 96, 0.001),
+    );
+    expect(
+      challengeHeroExpandedFade(
+        shrinkOffset: 20,
+        maxExtent: 160,
+        minExtent: 64,
+        reduceMotion: true,
+      ),
+      1,
+    );
+    expect(
+      challengeHeroExpandedFade(
+        shrinkOffset: 80,
+        maxExtent: 160,
+        minExtent: 64,
+        reduceMotion: true,
+      ),
+      0,
+    );
+  });
+
+  test('location line prefers the region, then a locale country name', () {
+    const region = Challenge(
+      id: 'a',
+      slug: 'a',
+      accessMode: AccessMode.open,
+      pricingType: PricingType.free,
+      priceCents: 0,
+      currency: 'eur',
+      status: PublishStatus.published,
+      region: 'Beskydy',
+      countryCode: 'CZ',
+      translations: [],
+    );
+    expect(challengeLocationLine(region, 'en'), 'Beskydy');
+    const country = Challenge(
+      id: 'a',
+      slug: 'a',
+      accessMode: AccessMode.open,
+      pricingType: PricingType.free,
+      priceCents: 0,
+      currency: 'eur',
+      status: PublishStatus.published,
+      countryCode: 'SK',
+      translations: [],
+    );
+    expect(challengeLocationLine(country, 'cs'), 'Slovensko');
+    expect(challengeLocationLine(country, 'en'), 'Slovakia');
+    expect(challengeLocationLine(country, 'de'), 'Slowakei');
+  });
+
+  testWidgets('scrolling collapses the hero into a pinned forest bar', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomScrollView(
+            controller: controller,
+            slivers: [
+              ChallengeCollapsingHero(
+                url: 'https://example.invalid/cover.jpg',
+                title: 'Příběhová stezka',
+                location: 'Beskydy',
+                backLabel: 'Zpět',
+                onBack: () {},
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 2000)),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester
+          .widget<Opacity>(find.byKey(const Key('challenge-hero-expanded')))
+          .opacity,
+      1,
+    );
+    expect(
+      tester
+          .widget<Opacity>(find.byKey(const Key('challenge-hero-collapsed')))
+          .opacity,
+      0,
+    );
+    expect(find.byTooltip('Zpět'), findsOneWidget);
+
+    controller.jumpTo(400);
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<Opacity>(find.byKey(const Key('challenge-hero-expanded')))
+          .opacity,
+      0,
+    );
+    expect(
+      tester
+          .widget<Opacity>(find.byKey(const Key('challenge-hero-collapsed')))
+          .opacity,
+      1,
+    );
+    final bar = tester.widget<Text>(
+      find.byKey(const Key('challenge-collapsed-title')),
+    );
+    expect(bar.maxLines, 1);
+    expect(bar.style?.fontFamily, AppTheme.displayFont);
+    expect(bar.style?.color, BrandColors.cream);
+    expect(find.text('Beskydy'), findsOneWidget);
+    expect(tester.getTopLeft(find.byKey(const Key('challenge-back'))).dy, 12);
+    final collapsed = tester.getSize(
+      find.byKey(const Key('challenge-hero-collapsed')),
+    );
+    expect(collapsed.height, 64);
+  });
 
   test('hero is about 4:1, clamped to 160 and 240', () {
     expect(challengeHeroHeight(390), 160);

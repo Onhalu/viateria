@@ -37,6 +37,7 @@ import '../widgets/place_presentation.dart';
 import '../widgets/route_planner_panel.dart';
 import '../widgets/story_chapter_card.dart';
 import '../fapi_checkout_window.dart';
+import 'diploma_screen.dart';
 
 class ChallengeScreen extends StatefulWidget {
   const ChallengeScreen({
@@ -646,6 +647,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               controller: _feedScroll,
               scrollCacheExtent: const ScrollCacheExtent.pixels(1200),
               slivers: [
+                if (hasCover)
+                  ChallengeCollapsingHero(
+                    url: cover,
+                    title: copy.title,
+                    location: challengeLocationLine(challenge, locale),
+                    backLabel: strings.back,
+                    onBack: widget.embedded ? null : () => context.pop(),
+                  ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   sliver: _feedSliver([
@@ -780,10 +789,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       hasDisplayName:
                           diplomaName != null && diplomaName.trim().isNotEmpty,
                       onSaveDiploma: diplomaEntitled
-                          ? () => context.push(
-                              '/diploma/${challenge.id}',
-                              extra: data,
-                            )
+                          ? () => showDiplomaWindow(context, challenge.id)
                           : null,
                       onUnlock: rewardLocked
                           ? () => _unlockPaid(RewardVariant.diploma)
@@ -854,14 +860,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     ],
                   )
                 : scroll;
-            final hero = hasCover
-                ? ChallengeHero(
-                    url: cover,
-                    title: copy.title,
-                    backLabel: strings.back,
-                    onBack: widget.embedded ? null : () => context.pop(),
-                  )
-                : null;
             final column = Column(
               children: [
                 if (!hasCover && !widget.embedded)
@@ -875,7 +873,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       color: BrandColors.forest,
                     ),
                   ),
-                ?hero,
                 Expanded(child: page),
               ],
             );
@@ -1374,9 +1371,7 @@ class _ChallengePayCtas extends StatelessWidget {
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(0, minHeight)),
       padding: WidgetStatePropertyAll(
-        bar
-            ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
-            : padding,
+        bar ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4) : padding,
       ),
       alignment: Alignment.center,
       visualDensity: VisualDensity.standard,

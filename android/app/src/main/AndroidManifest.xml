@@ -73,5 +73,10 @@
             <action android:name="com.instagram.share.ADD_TO_STORY" />
             <data android:mimeType="image/png" />
         </intent>
+        <package android:name="com.facebook.katana" />
+        <intent>
+            <action android:name="com.facebook.stories.ADD_TO_STORY" />
+            <data android:mimeType="image/png" />
+        </intent>
     </queries>
 </manifest>
