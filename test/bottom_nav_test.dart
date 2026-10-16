@@ -7,6 +7,7 @@ import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
 import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/data/repositories.dart';
+import 'package:viateria/data/route_services.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
@@ -35,6 +36,9 @@ AppServices buildServices({
   LeaderboardRepository? leaderboard,
   PlaceCatalog? places,
   DiplomaClient? diplomas,
+  RoutingClient? routing,
+  ElevationLookup? elevation,
+  DeviceLocation? deviceLocation,
 }) {
   final open = sampleOpenChallenge();
   final story = sampleStoryChallenge();
@@ -81,6 +85,9 @@ AppServices buildServices({
     leaderboard: leaderboard,
     places: places,
     diplomas: diplomas,
+    routing: routing,
+    elevation: elevation,
+    deviceLocation: deviceLocation,
   );
 }
 

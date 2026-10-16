@@ -10,6 +10,7 @@ import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/ui/diploma_share.dart';
 import 'package:viateria/ui/screens/diploma_screen.dart';
 import 'package:viateria/l10n/app_strings.dart';
+import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
@@ -18,6 +19,7 @@ import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'auth_register_form_test.dart';
 import 'bottom_nav_test.dart';
 import 'helpers/fakes.dart';
+import 'helpers/map_harness.dart';
 
 /// Before/after frames for the UX audit.
 ///
@@ -137,9 +139,6 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await shot(frame.name);
-      await tester.tap(find.byKey(const Key('map-plan-route')));
-      await tester.pumpAndSettle();
-      await shot('${frame.name}-route');
     }
 
     final story = sampleStoryChallenge(
@@ -254,6 +253,10 @@ void main() {
       challenges: [storyCopy, openCopy],
       details: shotDetails,
       progress: progress,
+      places: MemoryPlaceCatalog(samplePlaces()),
+      routing: MemoryRoutingClient(),
+      elevation: MemoryElevationLookup(),
+      deviceLocation: MemoryDeviceLocation(),
     );
     for (final locale in ['cs', 'en']) {
       final strings = AppStrings(locale);
@@ -287,10 +290,23 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
         await shot('map-$tag');
-        await tester.tap(find.byKey(const Key('map-plan-route')));
+        expect(find.byKey(const Key('map-plan-route')), findsNothing);
+        await tester.enterText(
+          find.byKey(const Key('map-search-field')),
+          'Karl',
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.byKey(const Key('map-search-karlstejn')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('map-poi-sheet')), findsOneWidget);
+        expect(find.text(strings.planRoute), findsOneWidget);
+        await tester.tap(find.byKey(const Key('map-poi-add-route')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('map-route-panel')), findsOneWidget);
-        expect(find.byKey(const Key('route-start-field')), findsOneWidget);
+        expect(find.byKey(const Key('route-mode-toggle')), findsOneWidget);
+        expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
+        expect(find.text(strings.routeModeWalk), findsOneWidget);
+        expect(find.text(strings.routeModeBike), findsOneWidget);
         await shot('map-route-$tag');
 
         await tester.tap(find.text(strings.catalogTitle));

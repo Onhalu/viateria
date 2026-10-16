@@ -6,14 +6,8 @@ import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../layout/breakpoints.dart';
 import 'app_network_image.dart';
-import 'app_shell.dart';
-
-/// Cover radius. [AppTheme.radiusSheet] is the 20 dp card corner.
-const challengeHeroRadius = AppTheme.radiusSheet;
 
 /// Full-bleed challenge cover. About 4:1, clamped, always [BoxFit.cover].
-/// The picture is inset by [AppShell.horizontalInset] and sits under the
-/// top safe area so the rounded corners stay visible.
 class ChallengeHero extends StatelessWidget {
   const ChallengeHero({
     super.key,
@@ -36,78 +30,59 @@ class ChallengeHero extends StatelessWidget {
         final wide = width >= Breakpoints.mediumMax;
         final height = challengeHeroHeight(width);
         final padding = MediaQuery.paddingOf(context);
-        final inset = AppShell.horizontalInset;
         return SizedBox(
           width: width,
-          height: height + padding.top,
-          child: ColoredBox(
-            color: BrandColors.cream,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                padding.left + inset,
-                padding.top,
-                padding.right + inset,
-                0,
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AppNetworkImage(
+                url: url,
+                logicalWidth: width,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
-              child: ClipRRect(
-                key: const Key('challenge-hero-frame'),
-                borderRadius: BorderRadius.circular(challengeHeroRadius),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    AppNetworkImage(
-                      url: url,
-                      logicalWidth: width - inset * 2,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                    ),
-                    const Align(
-                      alignment: Alignment.bottomCenter,
-                      child: FractionallySizedBox(
-                        heightFactor: 0.7,
-                        widthFactor: 1,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Color(0x0035483C), Color(0xCC35483C)],
-                            ),
-                          ),
-                        ),
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: FractionallySizedBox(
+                  heightFactor: 0.7,
+                  widthFactor: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0x0035483C), Color(0xCC35483C)],
                       ),
                     ),
-                    Positioned(
-                      left: wide ? 24 : 16,
-                      right: wide ? 24 : 16,
-                      bottom: wide ? 16 : 12,
-                      child: Text(
-                        title,
-                        key: const Key('challenge-title'),
-                        maxLines: wide ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: AppTheme.displayFont,
-                          fontWeight: FontWeight.w600,
-                          color: BrandColors.cream,
-                          fontSize: wide ? 28 : 24,
-                          height: 1.15,
-                        ),
-                      ),
-                    ),
-                    if (onBack != null)
-                      Positioned(
-                        left: 8,
-                        top: 8,
-                        child: HeroBackButton(
-                          label: backLabel,
-                          onPressed: onBack,
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              Positioned(
+                left: wide ? 24 : 16,
+                right: wide ? 24 : 16,
+                bottom: wide ? 16 : 12,
+                child: Text(
+                  title,
+                  key: const Key('challenge-title'),
+                  maxLines: wide ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppTheme.displayFont,
+                    fontWeight: FontWeight.w600,
+                    color: BrandColors.cream,
+                    fontSize: wide ? 28 : 24,
+                    height: 1.15,
+                  ),
+                ),
+              ),
+              if (onBack != null)
+                Positioned(
+                  left: 12 + padding.left,
+                  top: 12 + padding.top,
+                  child: HeroBackButton(label: backLabel, onPressed: onBack),
+                ),
+            ],
           ),
         );
       },
@@ -185,7 +160,7 @@ class ChallengeCollapsingHero extends StatelessWidget {
     final top = MediaQuery.paddingOf(context).top;
     final width = MediaQuery.sizeOf(context).width;
     final expanded = math.max(
-      challengeHeroHeight(width) + top,
+      challengeHeroHeight(width),
       collapsedBody + top + 1,
     );
     return SliverPersistentHeader(
@@ -296,149 +271,124 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
     );
     final collapsedFade = 1 - expandedFade;
     final wide = MediaQuery.sizeOf(context).width >= Breakpoints.mediumMax;
-    final media = MediaQuery.paddingOf(context);
-    final inset = AppShell.horizontalInset;
-    return ColoredBox(
-      color: BrandColors.cream,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          media.left + inset,
-          top,
-          media.right + inset,
-          0,
-        ),
-        child: ClipRRect(
-          key: const Key('challenge-hero-frame'),
-          borderRadius: BorderRadius.circular(challengeHeroRadius),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              const ColoredBox(color: BrandColors.forest),
-              IgnorePointer(
-                ignoring: expandedFade == 0,
-                child: ExcludeSemantics(
-                  excluding: expandedFade == 0,
-                  child: Opacity(
-                    key: const Key('challenge-hero-expanded'),
-                    opacity: expandedFade,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        AppNetworkImage(
-                          url: url,
-                          logicalWidth:
-                              MediaQuery.sizeOf(context).width -
-                              inset * 2 -
-                              media.horizontal,
-                          fit: BoxFit.cover,
-                        ),
-                        const Align(
-                          alignment: Alignment.bottomCenter,
-                          child: FractionallySizedBox(
-                            heightFactor: 0.7,
-                            widthFactor: 1,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Color(0x0035483C),
-                                    Color(0xCC35483C),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: wide ? 24 : 16,
-                          right: wide ? 24 : 16,
-                          bottom: wide ? 16 : 12,
-                          child: Text(
-                            title,
-                            key: const Key('challenge-title'),
-                            maxLines: wide ? 2 : 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppTheme.displayFont,
-                              fontWeight: FontWeight.w600,
-                              color: BrandColors.cream,
-                              fontSize: wide ? 28 : 24,
-                              height: 1.15,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: BrandColors.forest),
+        IgnorePointer(
+          ignoring: expandedFade == 0,
+          child: ExcludeSemantics(
+            excluding: expandedFade == 0,
+            child: Opacity(
+              key: const Key('challenge-hero-expanded'),
+              opacity: expandedFade,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AppNetworkImage(
+                    url: url,
+                    logicalWidth: MediaQuery.sizeOf(context).width,
+                    fit: BoxFit.cover,
                   ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: ChallengeCollapsingHero.collapsedBody,
-                child: IgnorePointer(
-                  ignoring: collapsedFade == 0,
-                  child: ExcludeSemantics(
-                    excluding: collapsedFade == 0,
-                    child: Opacity(
-                      key: const Key('challenge-hero-collapsed'),
-                      opacity: collapsedFade,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: onBack == null ? 16 : 68,
-                          right: 16,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (location.isNotEmpty)
-                              Text(
-                                location,
-                                key: const Key('challenge-collapsed-location'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: BrandColors.cream.withValues(
-                                    alpha: 0.85,
-                                  ),
-                                  fontSize: 12,
-                                  height: 1.2,
-                                ),
-                              ),
-                            Text(
-                              title,
-                              key: const Key('challenge-collapsed-title'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: AppTheme.displayFont,
-                                fontWeight: FontWeight.w600,
-                                color: BrandColors.cream,
-                                fontSize: 18,
-                                height: 1.15,
-                              ),
-                            ),
-                          ],
+                  const Align(
+                    alignment: Alignment.bottomCenter,
+                    child: FractionallySizedBox(
+                      heightFactor: 0.7,
+                      widthFactor: 1,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x0035483C), Color(0xCC35483C)],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                  Positioned(
+                    left: wide ? 24 : 16,
+                    right: wide ? 24 : 16,
+                    bottom: wide ? 16 : 12,
+                    child: Text(
+                      title,
+                      key: const Key('challenge-title'),
+                      maxLines: wide ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppTheme.displayFont,
+                        fontWeight: FontWeight.w600,
+                        color: BrandColors.cream,
+                        fontSize: wide ? 28 : 24,
+                        height: 1.15,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              if (onBack != null)
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: HeroBackButton(label: backLabel, onPressed: onBack),
-                ),
-            ],
+            ),
           ),
         ),
-      ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: ChallengeCollapsingHero.collapsedBody,
+          child: IgnorePointer(
+            ignoring: collapsedFade == 0,
+            child: ExcludeSemantics(
+              excluding: collapsedFade == 0,
+              child: Opacity(
+                key: const Key('challenge-hero-collapsed'),
+                opacity: collapsedFade,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: onBack == null ? 16 : 68,
+                    right: 16,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (location.isNotEmpty)
+                        Text(
+                          location,
+                          key: const Key('challenge-collapsed-location'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: BrandColors.cream.withValues(alpha: 0.85),
+                            fontSize: 12,
+                            height: 1.2,
+                          ),
+                        ),
+                      Text(
+                        title,
+                        key: const Key('challenge-collapsed-title'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: AppTheme.displayFont,
+                          fontWeight: FontWeight.w600,
+                          color: BrandColors.cream,
+                          fontSize: 18,
+                          height: 1.15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (onBack != null)
+          Positioned(
+            left: 12,
+            top: top + 8,
+            child: HeroBackButton(label: backLabel, onPressed: onBack),
+          ),
+      ],
     );
   }
 

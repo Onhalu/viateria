@@ -520,7 +520,10 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                       },
                       onAddToRoute: widget.onAddToRoute == null
                           ? null
-                          : () => widget.onAddToRoute!(selected),
+                          : () {
+                              widget.onAddToRoute!(selected);
+                              _controller.select(null);
+                            },
                     ),
                   ),
               ],

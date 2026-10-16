@@ -292,7 +292,7 @@ class PlaceDetailSheet extends StatelessWidget {
                   foregroundColor: MapPalette.forest,
                   minimumSize: const Size.fromHeight(48),
                 ),
-                child: Text(strings.addToRoute),
+                child: Text(strings.planRoute),
               ),
             ],
           ],

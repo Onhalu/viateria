@@ -173,7 +173,8 @@ void main() {
     expect(find.textContaining('1.6 km'), findsOneWidget);
     expect(find.textContaining('1.2 km'), findsOneWidget);
     expect(find.textContaining(' m'), findsWidgets);
-    expect(find.text('0 m'), findsNothing);
+    // The memory profile only climbs, so each mode's descent is a real 0 m.
+    expect(find.text('0 m'), findsNWidgets(2));
     expect(find.text(strings.routeElevationFailed), findsNothing);
     expect(find.text('Ridge'), findsWidgets);
   });

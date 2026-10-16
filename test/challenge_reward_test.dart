@@ -17,7 +17,6 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
-import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/challenge_reward_section.dart';
 import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
@@ -861,10 +860,8 @@ void main() {
       expect(find.text('Medaille + Diplom'), findsOneWidget);
     });
 
-    testWidgets('the payment bar stacks under 340 dp with the medal on top', (
-      tester,
-    ) async {
-      useView(tester, width: 319);
+    testWidgets('the payment buttons float as a centered pair', (tester) async {
+      useView(tester, width: 390);
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
@@ -877,7 +874,11 @@ void main() {
 
       expect(
         tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
-        isA<Column>(),
+        isA<Row>(),
+      );
+      expect(
+        tester.widget(find.byKey(const Key('challenge-payment-bar'))),
+        isA<Padding>(),
       );
       final diploma = tester.getRect(
         find.byKey(const Key('challenge-pay-diploma')),
@@ -885,8 +886,18 @@ void main() {
       final medal = tester.getRect(
         find.byKey(const Key('challenge-pay-medal')),
       );
-      expect(medal.bottom, lessThanOrEqualTo(diploma.top));
-      expect(diploma.top - medal.bottom, ChallengePaymentBarMetrics.columnGap);
+      expect(diploma.right, lessThanOrEqualTo(medal.left));
+      expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
+      expect(
+        diploma.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(
+        medal.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(diploma.width, lessThan(180));
+      expect((diploma.left + medal.right) / 2, closeTo(195, 1));
       expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
       expect(medal.height, ChallengePaymentBarMetrics.tapTarget);
       expect(
@@ -903,30 +914,23 @@ void main() {
       final bar = tester.getRect(
         find.byKey(const Key('challenge-payment-bar')),
       );
-      expect(bar.left, kNavSideInset);
-      expect(bar.right, 319 - kNavSideInset);
-      expect(bar.height, ChallengePaymentBarMetrics.bodyHeight(319));
-      expect(medal.top - bar.top, ChallengePaymentBarMetrics.topPadding);
-      expect(diploma.left, bar.left);
-      expect(medal.right, closeTo(bar.right, 0.5));
-      final shape =
-          tester
-                  .widget<Material>(
-                    find.byKey(const Key('challenge-payment-bar')),
-                  )
-                  .shape
-              as RoundedRectangleBorder;
-      expect(
-        shape.borderRadius,
-        BorderRadius.circular(ChallengePaymentBarMetrics.radius),
-      );
+      expect(bar.left, 0);
+      expect(bar.right, 390);
+      expect(bar.height, ChallengePaymentBarMetrics.bodyHeight(390));
+      expect(diploma.top - bar.top, ChallengePaymentBarMetrics.topPadding);
       final label = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const Key('challenge-pay-diploma')),
           matching: find.text('Digital diploma'),
         ),
       );
-      expect(label.style?.fontSize, ChallengePaymentBarMetrics.labelSize);
+      expect(
+        label.style?.fontSize,
+        inInclusiveRange(
+          ChallengePaymentBarMetrics.minLabelSize,
+          ChallengePaymentBarMetrics.labelSize,
+        ),
+      );
       expect(label.style?.fontWeight, FontWeight.w600);
       expect(
         label.style?.letterSpacing,
@@ -965,7 +969,7 @@ void main() {
         tester
             .getSize(find.byKey(const Key('challenge-payment-spacer')))
             .height,
-        ChallengePaymentBarMetrics.occupiedHeight(319, 0),
+        ChallengePaymentBarMetrics.occupiedHeight(390, 0),
       );
     });
 
@@ -993,7 +997,14 @@ void main() {
       expect(diploma.right, lessThanOrEqualTo(medal.left));
       expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
       expect((diploma.height - medal.height).abs(), lessThan(1));
-      expect((diploma.width - medal.width).abs(), lessThan(1));
+      expect(
+        diploma.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(
+        medal.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
       expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
       final outlined = tester.widget<OutlinedButton>(
         find.byKey(const Key('challenge-pay-diploma')),
@@ -1048,8 +1059,32 @@ void main() {
       );
       expect(diploma.onPressed, isNull);
       expect(medal.onPressed, isNull);
-      expect(find.text('Digital diploma'), findsNothing);
-      expect(find.text('Medal + diploma'), findsNothing);
+      expect(
+        tester
+            .widget<Opacity>(
+              find
+                  .ancestor(
+                    of: find.text('Digital diploma'),
+                    matching: find.byType(Opacity),
+                  )
+                  .first,
+            )
+            .opacity,
+        0,
+      );
+      expect(
+        tester
+            .widget<Opacity>(
+              find
+                  .ancestor(
+                    of: find.text('Medal + diploma'),
+                    matching: find.byType(Opacity),
+                  )
+                  .first,
+            )
+            .opacity,
+        0,
+      );
       final spinner = tester.getSize(
         find.byKey(const Key('challenge-pay-medal-price-loading')),
       );

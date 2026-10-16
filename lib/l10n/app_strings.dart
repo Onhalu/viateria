@@ -53,6 +53,10 @@ class AppStrings {
     'bike',
     'distance',
     'elevation',
+    'elevationGain',
+    'elevationLoss',
+    'routeModeWalk',
+    'routeModeBike',
     'time',
     'difficulty',
     'openInOsm',
@@ -321,6 +325,10 @@ class AppStrings {
   String get bike => t('bike');
   String get distance => t('distance');
   String get elevation => t('elevation');
+  String get elevationGain => t('elevationGain');
+  String get elevationLoss => t('elevationLoss');
+  String get routeModeWalk => t('routeModeWalk');
+  String get routeModeBike => t('routeModeBike');
   String get time => t('time');
   String get difficulty => t('difficulty');
   String get openInOsm => t('openInOsm');
@@ -710,6 +718,10 @@ class AppStrings {
       'bike': 'Bike',
       'distance': 'Distance',
       'elevation': 'Elevation',
+      'elevationGain': 'Ascent',
+      'elevationLoss': 'Descent',
+      'routeModeWalk': 'Walk',
+      'routeModeBike': 'Bike',
       'time': 'Time',
       'difficulty': 'Difficulty',
       'openInOsm': 'Open in OpenStreetMap',
@@ -990,6 +1002,10 @@ class AppStrings {
       'bike': 'Kolo',
       'distance': 'Vzdálenost',
       'elevation': 'Převýšení',
+      'elevationGain': 'Stoupání',
+      'elevationLoss': 'Klesání',
+      'routeModeWalk': 'Chůze',
+      'routeModeBike': 'Kolo',
       'time': 'Čas',
       'difficulty': 'Obtížnost',
       'openInOsm': 'Otevřít v OpenStreetMap',
@@ -1268,6 +1284,10 @@ class AppStrings {
       'bike': 'Rad',
       'distance': 'Distanz',
       'elevation': 'Höhenmeter',
+      'elevationGain': 'Anstieg',
+      'elevationLoss': 'Abstieg',
+      'routeModeWalk': 'Gehen',
+      'routeModeBike': 'Rad',
       'time': 'Zeit',
       'difficulty': 'Schwierigkeit',
       'openInOsm': 'In OpenStreetMap öffnen',

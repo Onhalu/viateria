@@ -250,7 +250,7 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
               )
             else if (widget.hike != null || widget.bike != null) ...[
               if (widget.hike != null)
-                _RouteStatsCard(
+                RouteStatsCard(
                   key: const Key('route-hike-stats'),
                   title: strings.routeWalking,
                   icon: Icons.hiking,
@@ -263,7 +263,7 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
               if (widget.hike != null && widget.bike != null)
                 const SizedBox(height: 8),
               if (widget.bike != null)
-                _RouteStatsCard(
+                RouteStatsCard(
                   key: const Key('route-bike-stats'),
                   title: strings.routeCycling,
                   icon: Icons.directions_bike,
@@ -366,8 +366,8 @@ class _RouteEmpty extends StatelessWidget {
   }
 }
 
-class _RouteStatsCard extends StatelessWidget {
-  const _RouteStatsCard({
+class RouteStatsCard extends StatelessWidget {
+  const RouteStatsCard({
     super.key,
     required this.title,
     required this.icon,
@@ -418,30 +418,39 @@ class _RouteStatsCard extends StatelessWidget {
               key: summary.elevationGainM == null
                   ? Key('route-elevation-missing-${summary.mode.name}')
                   : null,
-              label: strings.elevation,
+              label: strings.elevationGain,
               value: summary.elevationGainM == null
                   ? strings.routeElevationFailed
                   : '${summary.elevationGainM!.round()} m',
             ),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: double.infinity,
-              child: navigating == summary.mode
-                  ? FilledButton.tonalIcon(
-                      key: Key('route-end-navigation-${summary.mode.name}'),
-                      onPressed: onEndNavigation,
-                      icon: const Icon(Icons.close),
-                      label: Text(strings.routeEndNavigation),
-                    )
-                  : FilledButton.tonalIcon(
-                      key: Key('route-navigate-${summary.mode.name}'),
-                      onPressed: onStartNavigation == null
-                          ? null
-                          : () => onStartNavigation!(summary.mode),
-                      icon: const Icon(Icons.directions_outlined),
-                      label: Text(strings.routeNavigate),
-                    ),
+            _Stat(
+              key: summary.elevationLossM == null
+                  ? Key('route-elevation-loss-missing-${summary.mode.name}')
+                  : null,
+              label: strings.elevationLoss,
+              value: summary.elevationLossM == null
+                  ? strings.routeElevationFailed
+                  : '${summary.elevationLossM!.round()} m',
             ),
+            if (navigating != null || onStartNavigation != null) ...[
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                child: navigating == summary.mode
+                    ? FilledButton.tonalIcon(
+                        key: Key('route-end-navigation-${summary.mode.name}'),
+                        onPressed: onEndNavigation,
+                        icon: const Icon(Icons.close),
+                        label: Text(strings.routeEndNavigation),
+                      )
+                    : FilledButton.tonalIcon(
+                        key: Key('route-navigate-${summary.mode.name}'),
+                        onPressed: () => onStartNavigation!(summary.mode),
+                        icon: const Icon(Icons.directions_outlined),
+                        label: Text(strings.routeNavigate),
+                      ),
+              ),
+            ],
           ],
         ),
       ),
