@@ -12,6 +12,7 @@ import '../../map/map_icons.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
+import '../../map/poi_source_sync.dart';
 import '../../map/story_fog_icon.dart';
 import '../../models/models.dart';
 import '../../domain/story_fog.dart';
@@ -108,6 +109,8 @@ class PlacesMapHost extends StatefulWidget {
     this.onFogTap,
     this.selectedPlaceId,
     this.verifiedPlaceIds = const {},
+    this.catalogRoute = const [],
+    this.zoomGesturesEnabled = true,
   });
 
   final List<Place> places;
@@ -127,6 +130,12 @@ class PlacesMapHost extends StatefulWidget {
   final String? selectedPlaceId;
   final Set<String> verifiedPlaceIds;
 
+  /// Ordered stops for a session route on the main map. Empty hides the line.
+  final List<ll.LatLng> catalogRoute;
+
+  /// Wheel / pinch zoom. Challenge detail on web turns this off.
+  final bool zoomGesturesEnabled;
+
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
 }
@@ -138,14 +147,12 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   var _fogLayersReady = false;
   Timer? _moveEnd;
   Timer? _styleTimeout;
+  final _poiGate = PoiSourceGate();
 
   @override
   void didUpdateWidget(covariant PlacesMapHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.places != widget.places ||
-        oldWidget.selectedPlaceId != widget.selectedPlaceId ||
-        !_sameChallengeMembership(oldWidget.geometry, widget.geometry) ||
-        !setEquals(oldWidget.verifiedPlaceIds, widget.verifiedPlaceIds)) {
+    if (!_samePlaceMarkers(oldWidget)) {
       unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
@@ -158,6 +165,9 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         _layersReady &&
         _controller != null) {
       unawaited(_ensureChallengeLayers(_controller!));
+    }
+    if (!listEquals(oldWidget.catalogRoute, widget.catalogRoute)) {
+      unawaited(_syncCatalogRoute());
     }
   }
 
@@ -176,6 +186,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       trackCameraPosition: true,
       compassEnabled: false,
       rotateGesturesEnabled: false,
+      zoomGesturesEnabled: widget.zoomGesturesEnabled,
       myLocationEnabled: widget.myLocationEnabled,
       myLocationTrackingMode: MyLocationTrackingMode.none,
       myLocationRenderMode: MyLocationRenderMode.normal,
@@ -213,6 +224,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         await _ensureChallengeLayers(controller);
       }
       _layersReady = true;
+      await _syncCatalogRoute();
       await _pushPlaces(widget.places);
       if (widget.geometry != null) {
         await _syncChallengeSources();
@@ -265,9 +277,37 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         iconImage: [Expressions.get, 'icon'],
         iconSize: MapStyleConfig.markerSizeExpression,
         iconColor: MapStyleConfig.markerColorExpression,
+        iconOpacity: MapStyleConfig.symbolOpacityExpression,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
+    );
+
+    await controller.addSource(
+      MapStyleConfig.catalogRouteSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addLineLayer(
+      MapStyleConfig.catalogRouteSourceId,
+      MapStyleConfig.catalogRouteLayerId,
+      const LineLayerProperties(
+        lineColor: MapStyleConfig.forestHex,
+        lineWidth: 4,
+        lineOpacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round',
+      ),
+    );
+  }
+
+  Future<void> _syncCatalogRoute() async {
+    final controller = _controller;
+    if (controller == null || !_layersReady) return;
+    final line = widget.catalogRoute;
+    await _setSource(
+      controller,
+      MapStyleConfig.catalogRouteSourceId,
+      line.length > 1 ? _lineCollection(line) : _emptyCollection(),
     );
   }
 
@@ -309,16 +349,49 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     );
   }
 
+  bool _samePlaceMarkers(PlacesMapHost oldWidget) {
+    final previous = poiMarkerSignature(
+      places: oldWidget.places,
+      selectedId: oldWidget.selectedPlaceId,
+      challengePlaceIds: _challengeIdsFor(oldWidget),
+      verifiedPlaceIds: oldWidget.verifiedPlaceIds,
+    );
+    final next = poiMarkerSignature(
+      places: widget.places,
+      selectedId: widget.selectedPlaceId,
+      challengePlaceIds: _challengeIdsFor(widget),
+      verifiedPlaceIds: widget.verifiedPlaceIds,
+    );
+    return previous == next;
+  }
+
+  Set<String> _challengeIdsFor(PlacesMapHost host) {
+    final geometry = host.geometry;
+    if (geometry == null) return const {};
+    return placeIdsInChallenge(
+      host.places,
+      placeIds: geometry.revealedWaypoints.map((waypoint) => waypoint.placeId),
+    );
+  }
+
   Future<void> _pushPlaces(List<Place> places) async {
     final controller = _controller;
     if (controller == null || !_layersReady) return;
+    final challengePlaceIds = _challengePlaceIds(places);
+    final signature = poiMarkerSignature(
+      places: places,
+      selectedId: widget.selectedPlaceId,
+      challengePlaceIds: challengePlaceIds,
+      verifiedPlaceIds: widget.verifiedPlaceIds,
+    );
+    if (!_poiGate.shouldReplace(signature)) return;
     await _setSource(
       controller,
       MapStyleConfig.poiSourceId,
       featureCollectionOf(
         places,
         selectedId: widget.selectedPlaceId,
-        challengePlaceIds: _challengePlaceIds(places),
+        challengePlaceIds: challengePlaceIds,
         verifiedPlaceIds: widget.verifiedPlaceIds,
       ),
     );
@@ -331,16 +404,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       places,
       placeIds: geometry.revealedWaypoints.map((waypoint) => waypoint.placeId),
     );
-  }
-
-  bool _sameChallengeMembership(
-    ChallengeMapGeometry? a,
-    ChallengeMapGeometry? b,
-  ) {
-    if (identical(a, b)) return true;
-    if (a == null || b == null) return a == b;
-    return a.waypoints == b.waypoints &&
-        setEquals(a.hiddenWaypointIds, b.hiddenWaypointIds);
   }
 
   Future<void> _syncChallengeSources() async {

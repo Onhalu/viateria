@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -193,7 +194,7 @@ void main() {
     test('formats dates in the active locale', () {
       final date = DateTime(2026, 9, 11);
       expect(formatLocalDate(date, 'cs'), '11. 9. 2026');
-      expect(formatLocalDate(date, 'de'), '11.09.2026');
+      expect(formatLocalDate(date, 'de'), '11. Sept. 2026');
       expect(formatLocalDate(date, 'en'), 'Sep 11, 2026');
     });
 
@@ -536,6 +537,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(strings.unlockWithStripe), findsNothing);
+        expect(find.byKey(const Key('challenge-pay-trust')), findsNothing);
         expect(infoY, lessThan(diploma.top));
         expect(medal.bottom, lessThan(waypointsY));
         expect(diploma.left, lessThan(medal.left));
@@ -606,7 +608,7 @@ void main() {
         );
         expect(
           diplomaButton.style?.side?.resolve(const {}),
-          const BorderSide(color: BrandColors.forest, width: 2),
+          const BorderSide(color: BrandColors.forest, width: 1.5),
         );
         expect(diplomaButton.style?.elevation?.resolve(const {}), 0);
         expect(
@@ -858,10 +860,8 @@ void main() {
       expect(find.text('Medaille + Diplom'), findsOneWidget);
     });
 
-    testWidgets('pay CTAs stack only when the viewport is under 320 dp', (
-      tester,
-    ) async {
-      useView(tester, width: 319);
+    testWidgets('the payment buttons float as a centered pair', (tester) async {
+      useView(tester, width: 390);
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
@@ -874,7 +874,11 @@ void main() {
 
       expect(
         tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
-        isA<Column>(),
+        isA<Row>(),
+      );
+      expect(
+        tester.widget(find.byKey(const Key('challenge-payment-bar'))),
+        isA<Padding>(),
       );
       final diploma = tester.getRect(
         find.byKey(const Key('challenge-pay-diploma')),
@@ -882,14 +886,95 @@ void main() {
       final medal = tester.getRect(
         find.byKey(const Key('challenge-pay-medal')),
       );
-      expect(diploma.bottom, lessThanOrEqualTo(medal.top));
-      expect(medal.top - diploma.bottom, inInclusiveRange(8, 12));
-      expect(diploma.height, greaterThanOrEqualTo(52));
-      expect(medal.height, greaterThanOrEqualTo(52));
+      expect(diploma.right, lessThanOrEqualTo(medal.left));
+      expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
+      expect(
+        diploma.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(
+        medal.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(diploma.width, lessThan(180));
+      expect((diploma.left + medal.right) / 2, closeTo(195, 1));
+      expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
+      expect(medal.height, ChallengePaymentBarMetrics.tapTarget);
+      expect(
+        tester
+            .getSize(
+              find.descendant(
+                of: find.byKey(const Key('challenge-pay-diploma')),
+                matching: find.byType(Material),
+              ),
+            )
+            .height,
+        ChallengePaymentBarMetrics.visualHeight,
+      );
+      final bar = tester.getRect(
+        find.byKey(const Key('challenge-payment-bar')),
+      );
+      expect(bar.left, 0);
+      expect(bar.right, 390);
+      expect(bar.height, ChallengePaymentBarMetrics.bodyHeight(390));
+      expect(diploma.top - bar.top, ChallengePaymentBarMetrics.topPadding);
+      final label = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('challenge-pay-diploma')),
+          matching: find.text('Digital diploma'),
+        ),
+      );
+      expect(
+        label.style?.fontSize,
+        inInclusiveRange(
+          ChallengePaymentBarMetrics.minLabelSize,
+          ChallengePaymentBarMetrics.labelSize,
+        ),
+      );
+      expect(label.style?.fontWeight, FontWeight.w600);
+      expect(
+        label.style?.letterSpacing,
+        ChallengePaymentBarMetrics.letterSpacing,
+      );
+      expect(label.maxLines, 1);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('challenge-pay-diploma')),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is FittedBox && widget.fit == BoxFit.scaleDown,
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('challenge-pay-diploma')),
+            )
+            .style
+            ?.shape
+            ?.resolve(const {}),
+        isA<StadiumBorder>(),
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('challenge-pay-diploma')),
+            )
+            .style
+            ?.tapTargetSize,
+        MaterialTapTargetSize.padded,
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const Key('challenge-payment-spacer')))
+            .height,
+        ChallengePaymentBarMetrics.occupiedHeight(390, 0),
+      );
     });
 
-    testWidgets('pay CTAs stay side-by-side at 320 dp', (tester) async {
-      useView(tester, width: 320);
+    testWidgets('the payment bar stays a row at 340 dp', (tester) async {
+      useView(tester, width: 360);
       final story = sampleStoryChallenge();
       await tester.pumpWidget(
         wrapScreen(
@@ -909,9 +994,201 @@ void main() {
       final medal = tester.getRect(
         find.byKey(const Key('challenge-pay-medal')),
       );
-      expect(diploma.left, lessThan(medal.left));
+      expect(diploma.right, lessThanOrEqualTo(medal.left));
+      expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
       expect((diploma.height - medal.height).abs(), lessThan(1));
-      expect((diploma.width - medal.width).abs(), lessThan(1));
+      expect(
+        diploma.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(
+        medal.width,
+        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
+      );
+      expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
+      final outlined = tester.widget<OutlinedButton>(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
+      final filled = tester.widget<FilledButton>(
+        find.byKey(const Key('challenge-pay-medal')),
+      );
+      expect(outlined.style?.elevation?.resolve(const {}), 0);
+      expect(filled.style?.elevation?.resolve(const {}), 1);
+      expect(
+        filled.style?.shadowColor?.resolve(const {}),
+        BrandColors.forest.withValues(alpha: 0.14),
+      );
+      expect(
+        filled.style?.surfaceTintColor?.resolve(const {}),
+        Colors.transparent,
+      );
+      expect(filled.style?.elevation?.resolve({WidgetState.disabled}), 0);
+    });
+
+    test('payment bar labels scale from 15 down to 14 and stop', () {
+      expect(paymentBarLabelFontSize(textWidth: 100, maxWidth: 100), 15);
+      expect(
+        paymentBarLabelFontSize(textWidth: 100, maxWidth: 96),
+        closeTo(14.4, 0.001),
+      );
+      expect(paymentBarLabelFontSize(textWidth: 100, maxWidth: 50), 14);
+    });
+
+    testWidgets('a loading payment bar keeps its width and shows a spinner', (
+      tester,
+    ) async {
+      useView(tester, width: 390);
+      final story = sampleStoryChallenge();
+      final gate = Completer<FapiOffer>();
+      final purchases = MemoryPurchases()..offerGate = gate;
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: story, purchases: purchases),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final diploma = tester.widget<OutlinedButton>(
+        find.byKey(const Key('challenge-pay-diploma')),
+      );
+      final medal = tester.widget<FilledButton>(
+        find.byKey(const Key('challenge-pay-medal')),
+      );
+      expect(diploma.onPressed, isNull);
+      expect(medal.onPressed, isNull);
+      expect(
+        tester
+            .widget<Opacity>(
+              find
+                  .ancestor(
+                    of: find.text('Digital diploma'),
+                    matching: find.byType(Opacity),
+                  )
+                  .first,
+            )
+            .opacity,
+        0,
+      );
+      expect(
+        tester
+            .widget<Opacity>(
+              find
+                  .ancestor(
+                    of: find.text('Medal + diploma'),
+                    matching: find.byType(Opacity),
+                  )
+                  .first,
+            )
+            .opacity,
+        0,
+      );
+      final spinner = tester.getSize(
+        find.byKey(const Key('challenge-pay-medal-price-loading')),
+      );
+      expect(spinner.width, ChallengePaymentBarMetrics.spinner);
+      expect(spinner.height, ChallengePaymentBarMetrics.spinner);
+      final diplomaWidth = tester
+          .getSize(find.byKey(const Key('challenge-pay-diploma')))
+          .width;
+      final medalWidth = tester
+          .getSize(find.byKey(const Key('challenge-pay-medal')))
+          .width;
+      expect((diplomaWidth - medalWidth).abs(), lessThan(1));
+      expect(diplomaWidth, greaterThan(100));
+
+      gate.complete(memoryFapiOffer);
+      await tester.pumpAndSettle();
+      expect(find.text('Digital diploma'), findsOneWidget);
+      expect(find.text('€4.99'), findsNothing);
+    });
+
+    testWidgets('a disabled payment bar button is forest at 40 percent', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      useView(tester, width: 390, height: 844);
+      final story = sampleStoryChallenge();
+      final missingMedal = ChallengeDetail(
+        challenge: Challenge(
+          id: story.challenge.id,
+          slug: story.challenge.slug,
+          accessMode: story.challenge.accessMode,
+          pricingType: story.challenge.pricingType,
+          priceCents: story.challenge.priceCents,
+          diplomaPriceCents: story.challenge.diplomaPriceCents,
+          medalPriceCents: story.challenge.medalPriceCents,
+          currency: story.challenge.currency,
+          status: story.challenge.status,
+          translations: story.challenge.translations,
+          fapiFormUrlDiploma: story.challenge.fapiFormUrlDiploma,
+          fapiFormUrlMedal: '',
+        ),
+        waypoints: story.waypoints,
+      );
+      await tester.pumpWidget(
+        wrapScreen(
+          buildServices(detail: missingMedal),
+          locale: 'en',
+          challengeId: 'story-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      final scrollable = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byKey(const Key('challenge-feed-scroll')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final muted = BrandColors.forest.withValues(alpha: 0.4);
+      final medal = tester.widget<FilledButton>(
+        find.byKey(const Key('challenge-pay-medal')),
+      );
+      expect(medal.onPressed, isNull);
+      expect(
+        medal.style?.backgroundColor?.resolve({WidgetState.disabled}),
+        muted,
+      );
+      expect(
+        medal.style?.foregroundColor?.resolve({WidgetState.disabled}),
+        muted,
+      );
+      expect(medal.style?.elevation?.resolve({WidgetState.disabled}), 0);
+      expect(
+        medal.style?.shadowColor?.resolve({WidgetState.disabled}),
+        Colors.transparent,
+      );
+      final label = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('challenge-pay-medal')),
+          matching: find.text('Medal + diploma'),
+        ),
+      );
+      expect(label.style?.color, muted);
+      expect(
+        tester
+            .getSemantics(find.byKey(const Key('challenge-pay-medal')))
+            .flagsCollection
+            .isEnabled,
+        Tristate.isFalse,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('challenge-pay-diploma')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      semantics.dispose();
     });
 
     testWidgets('tapping a pay CTA opens in-app checkout for that variant', (
@@ -1605,4 +1882,79 @@ void main() {
       expect(BrandColors.bark, const Color(0xFF756653));
     },
   );
+
+  test('deadline copy uses paid_at + 6 months and the 7-day boundary', () {
+    final due = DateTime(2026, 10, 21, 12);
+    final cs = AppStrings('cs');
+    final en = AppStrings('en');
+    final de = AppStrings('de');
+    expect(
+      cs.rewardDeadlineLabel(formatLocalDate(due, 'cs')),
+      'Splň do 21. 10. 2026',
+    );
+    expect(
+      en.rewardDeadlineLabel(formatLocalDate(due, 'en')),
+      'Complete by Oct 21, 2026',
+    );
+    expect(
+      de.rewardDeadlineLabel(formatLocalDate(due, 'de')),
+      'Abschließen bis 21. Okt. 2026',
+    );
+    expect(
+      cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 14, 8)),
+      '· zbývá 7 dní',
+    );
+    expect(
+      cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 20, 8)),
+      '· zbývá 1 den',
+    );
+    expect(
+      cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 19, 8)),
+      '· zbývá 2 dny',
+    );
+    expect(cs.rewardDaysLeftSuffix(due, DateTime(2026, 10, 1, 8)), isNull);
+    expect(
+      en.rewardDaysLeftSuffix(due, DateTime(2026, 10, 20, 8)),
+      '· 1 day left',
+    );
+    expect(
+      de.rewardDaysLeftSuffix(due, DateTime(2026, 10, 19, 8)),
+      '· noch 2 Tage',
+    );
+    expect(cs.rewardDeadlinePassed(due, DateTime(2026, 10, 21, 13)), isTrue);
+    expect(cs.deadlinePassed, 'Termín vypršel');
+    expect(en.deadlinePassed, 'Deadline passed');
+    expect(de.deadlinePassed, 'Frist abgelaufen');
+  });
+
+  testWidgets('paid reward shows the deadline chip and hides the lock', (
+    tester,
+  ) async {
+    final due = DateTime(2027, 4, 20);
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ChallengeRewardSection(
+              strings: AppStrings('en'),
+              completed: false,
+              entitled: false,
+              locked: false,
+              locale: 'en',
+              completeBy: due,
+              showDeadline: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('challenge-reward-lock')), findsNothing);
+    expect(find.byKey(const Key('challenge-reward-deadline')), findsOneWidget);
+    expect(find.byKey(const Key('challenge-deadline-date')), findsNothing);
+    expect(find.text('Complete by Apr 20, 2027'), findsOneWidget);
+  });
 }

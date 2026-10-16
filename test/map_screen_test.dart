@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/route_services.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/data/verified_places.dart';
 import 'package:viateria/l10n/app_strings.dart';
@@ -24,7 +25,12 @@ import 'package:viateria/ui/widgets/places_map_surface.dart';
 import 'helpers/fakes.dart';
 import 'helpers/map_harness.dart';
 
-AppServices _services({VerifiedPlacesStore? verifiedPlaces}) {
+AppServices _services({
+  VerifiedPlacesStore? verifiedPlaces,
+  RoutingClient? routing,
+  ElevationLookup? elevation,
+  DeviceLocation? deviceLocation,
+}) {
   final open = sampleOpenChallenge();
   return AppServices(
     config: const AppConfig(
@@ -41,10 +47,17 @@ AppServices _services({VerifiedPlacesStore? verifiedPlaces}) {
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     verifiedPlaces: verifiedPlaces,
+    routing: routing,
+    elevation: elevation,
+    deviceLocation: deviceLocation,
   );
 }
 
-Widget _mapApp({PlaceCatalog? catalog, VerifiedPlacesStore? verifiedPlaces}) {
+Widget _mapApp({
+  PlaceCatalog? catalog,
+  VerifiedPlacesStore? verifiedPlaces,
+  AppServices? services,
+}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -76,7 +89,9 @@ Widget _mapApp({PlaceCatalog? catalog, VerifiedPlacesStore? verifiedPlaces}) {
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
       ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
-      Provider.value(value: _services(verifiedPlaces: verifiedPlaces)),
+      Provider.value(
+        value: services ?? _services(verifiedPlaces: verifiedPlaces),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -545,6 +560,56 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets(
+    'a place offers the shared route planner and the map has no plan button',
+    (tester) async {
+      final strings = AppStrings('cs');
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        _mapApp(
+          services: _services(
+            routing: MemoryRoutingClient(),
+            elevation: MemoryElevationLookup(),
+            deviceLocation: MemoryDeviceLocation(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('map-plan-route')), findsNothing);
+      await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('map-search-karlstejn')));
+      await tester.pumpAndSettle();
+      expect(find.text(strings.planRoute), findsOneWidget);
+      expect(find.text(strings.addToRoute), findsNothing);
+
+      await tester.tap(find.byKey(const Key('map-poi-add-route')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+      expect(find.byKey(const Key('map-route-panel')), findsOneWidget);
+      expect(find.byKey(const Key('route-start-field')), findsOneWidget);
+      expect(find.byKey(const Key('map-route-destination')), findsOneWidget);
+      expect(find.text('Karlštejn'), findsOneWidget);
+      expect(find.byKey(const Key('route-mode-toggle')), findsOneWidget);
+      expect(find.text(strings.routeModeWalk), findsOneWidget);
+      expect(find.text(strings.routeModeBike), findsOneWidget);
+      expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
+      expect(find.text(strings.elevationGain), findsOneWidget);
+      expect(find.text(strings.elevationLoss), findsOneWidget);
+      expect(find.text(strings.distance), findsOneWidget);
+
+      await tester.tap(find.text(strings.routeModeBike));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('route-bike-stats')), findsOneWidget);
+      expect(find.byKey(const Key('route-hike-stats')), findsNothing);
+    },
+  );
 }
 
 class _GatedPlaceCatalog implements PlaceCatalog {

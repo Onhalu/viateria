@@ -1,3 +1,7 @@
+import 'package:intl/intl.dart';
+
+import 'local_dates.dart';
+
 /// Custom i18n (cs / en / de) — no generated ARB catalog.
 class AppStrings {
   AppStrings(this.locale) : _table = _tables[locale] ?? _tables['en']!;
@@ -49,6 +53,10 @@ class AppStrings {
     'bike',
     'distance',
     'elevation',
+    'elevationGain',
+    'elevationLoss',
+    'routeModeWalk',
+    'routeModeBike',
     'time',
     'difficulty',
     'openInOsm',
@@ -258,6 +266,20 @@ class AppStrings {
     'pointsOne',
     'pointsFew',
     'pointsMany',
+    'buyChallenge',
+    'paymentTrust',
+    'challengeProgressFormat',
+    'verifyDistanceAway',
+    'openSettings',
+    'errorOfflineHint',
+    'continueChallenge',
+    'planRoute',
+    'addToRoute',
+    'cancelRoute',
+    'expandMap',
+    'deadlinePassed',
+    'featuredPrevious',
+    'featuredNext',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -303,6 +325,10 @@ class AppStrings {
   String get bike => t('bike');
   String get distance => t('distance');
   String get elevation => t('elevation');
+  String get elevationGain => t('elevationGain');
+  String get elevationLoss => t('elevationLoss');
+  String get routeModeWalk => t('routeModeWalk');
+  String get routeModeBike => t('routeModeBike');
   String get time => t('time');
   String get difficulty => t('difficulty');
   String get openInOsm => t('openInOsm');
@@ -511,6 +537,80 @@ class AppStrings {
   String get pointsOne => t('pointsOne');
   String get pointsFew => t('pointsFew');
   String get pointsMany => t('pointsMany');
+  String get buyChallenge => t('buyChallenge');
+  String get paymentTrust => t('paymentTrust');
+  String get openSettings => t('openSettings');
+  String get errorOfflineHint => t('errorOfflineHint');
+  String get continueChallenge => t('continueChallenge');
+  String get planRoute => t('planRoute');
+  String get addToRoute => t('addToRoute');
+  String get cancelRoute => t('cancelRoute');
+  String get expandMap => t('expandMap');
+  String get deadlinePassed => t('deadlinePassed');
+  String get featuredPrevious => t('featuredPrevious');
+  String get featuredNext => t('featuredNext');
+
+  /// "Splň do {date}" / "Complete by {date}" / "Abschließen bis {date}".
+  String rewardDeadlineLabel(String formattedDate) {
+    return switch (locale) {
+      'cs' => 'Splň do $formattedDate',
+      'de' => 'Abschließen bis $formattedDate',
+      _ => 'Complete by $formattedDate',
+    };
+  }
+
+  /// Suffix when the deadline is within 7 calendar days. Null otherwise.
+  String? rewardDaysLeftSuffix(DateTime completeBy, DateTime now) {
+    if (rewardDeadlinePassed(completeBy, now)) return null;
+    final days = _calendarDaysUntil(completeBy, now);
+    if (days > 7) return null;
+    return switch (locale) {
+      'cs' =>
+        '· zbývá $days ${Intl.plural(days, locale: locale, one: 'den', few: 'dny', other: 'dní')}',
+      'de' =>
+        '· noch $days ${Intl.plural(days, locale: locale, one: 'Tag', other: 'Tage')}',
+      _ =>
+        '· $days ${Intl.plural(days, locale: locale, one: 'day', other: 'days')} left',
+    };
+  }
+
+  /// Profile line: "Dokončeno dne {date}" with [DateFormat.yMMMd].
+  String completedOnLabel(DateTime date) {
+    final formatted = formatLocaleDate(date, locale);
+    return switch (locale) {
+      'cs' => 'Dokončeno dne $formatted',
+      'de' => 'Abgeschlossen am $formatted',
+      _ => 'Completed on $formatted',
+    };
+  }
+
+  bool rewardDeadlinePassed(DateTime completeBy, DateTime now) {
+    return now.isAfter(completeBy);
+  }
+
+  String routeStopsSummary(int count, double km) {
+    final distance = km.toStringAsFixed(1);
+    final places = switch (locale) {
+      'cs' => Intl.plural(
+        count,
+        locale: locale,
+        one: 'místo',
+        few: 'místa',
+        other: 'míst',
+      ),
+      'de' => Intl.plural(count, locale: locale, one: 'Ort', other: 'Orte'),
+      _ => Intl.plural(count, locale: locale, one: 'place', other: 'places'),
+    };
+    return '$count $places · $distance km';
+  }
+
+  String challengeProgress(int done, int total) =>
+      t('challengeProgressFormat')
+          .replaceAll('{done}', '$done')
+          .replaceAll('{total}', '$total');
+
+  String verifyDistanceAway(int meters) =>
+      t('verifyDistanceAway').replaceAll('{n}', '$meters');
 
   String leaderboardBreakdown(int places, int challenges) =>
       t('leaderboardBreakdown')
@@ -618,6 +718,10 @@ class AppStrings {
       'bike': 'Bike',
       'distance': 'Distance',
       'elevation': 'Elevation',
+      'elevationGain': 'Ascent',
+      'elevationLoss': 'Descent',
+      'routeModeWalk': 'Walk',
+      'routeModeBike': 'Bike',
       'time': 'Time',
       'difficulty': 'Difficulty',
       'openInOsm': 'Open in OpenStreetMap',
@@ -840,6 +944,20 @@ class AppStrings {
       'pointsOne': 'point',
       'pointsFew': 'points',
       'pointsMany': 'points',
+      'buyChallenge': 'Buy challenge',
+      'paymentTrust': 'Payment via FAPI · card/transfer',
+      'challengeProgressFormat': '{done}/{total} places',
+      'verifyDistanceAway': 'You are {n} m from this place',
+      'openSettings': 'Open settings',
+      'errorOfflineHint': 'Check your connection and try again.',
+      'continueChallenge': 'Continue',
+      'planRoute': 'Plan a route',
+      'addToRoute': 'Add to route',
+      'cancelRoute': 'Cancel',
+      'expandMap': 'Expand map',
+      'deadlinePassed': 'Deadline passed',
+      'featuredPrevious': 'Previous',
+      'featuredNext': 'Next',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -884,6 +1002,10 @@ class AppStrings {
       'bike': 'Kolo',
       'distance': 'Vzdálenost',
       'elevation': 'Převýšení',
+      'elevationGain': 'Stoupání',
+      'elevationLoss': 'Klesání',
+      'routeModeWalk': 'Chůze',
+      'routeModeBike': 'Kolo',
       'time': 'Čas',
       'difficulty': 'Obtížnost',
       'openInOsm': 'Otevřít v OpenStreetMap',
@@ -1104,6 +1226,20 @@ class AppStrings {
       'pointsOne': 'bod',
       'pointsFew': 'body',
       'pointsMany': 'bodů',
+      'buyChallenge': 'Koupit výzvu',
+      'paymentTrust': 'Platba přes FAPI · karta/převod',
+      'challengeProgressFormat': '{done}/{total} míst',
+      'verifyDistanceAway': 'Jsi {n} m od místa',
+      'openSettings': 'Otevřít nastavení',
+      'errorOfflineHint': 'Zkontrolujte připojení a zkuste to znovu.',
+      'continueChallenge': 'Pokračovat',
+      'planRoute': 'Naplánovat trasu',
+      'addToRoute': 'Přidat do trasy',
+      'cancelRoute': 'Zrušit',
+      'expandMap': 'Zvětšit mapu',
+      'deadlinePassed': 'Termín vypršel',
+      'featuredPrevious': 'Předchozí',
+      'featuredNext': 'Další',
     },
     'de': {
       'appName': 'VANDERY',
@@ -1148,6 +1284,10 @@ class AppStrings {
       'bike': 'Rad',
       'distance': 'Distanz',
       'elevation': 'Höhenmeter',
+      'elevationGain': 'Anstieg',
+      'elevationLoss': 'Abstieg',
+      'routeModeWalk': 'Gehen',
+      'routeModeBike': 'Rad',
       'time': 'Zeit',
       'difficulty': 'Schwierigkeit',
       'openInOsm': 'In OpenStreetMap öffnen',
@@ -1371,6 +1511,26 @@ class AppStrings {
       'pointsOne': 'Punkt',
       'pointsFew': 'Punkte',
       'pointsMany': 'Punkte',
+      'buyChallenge': 'Challenge kaufen',
+      'paymentTrust': 'Zahlung über FAPI · Karte/Überweisung',
+      'challengeProgressFormat': '{done}/{total} Orte',
+      'verifyDistanceAway': 'Du bist {n} m vom Ort entfernt',
+      'openSettings': 'Einstellungen öffnen',
+      'errorOfflineHint': 'Prüfe die Verbindung und versuche es erneut.',
+      'continueChallenge': 'Weiter',
+      'planRoute': 'Route planen',
+      'addToRoute': 'Zur Route hinzufügen',
+      'cancelRoute': 'Abbrechen',
+      'expandMap': 'Karte vergrößern',
+      'deadlinePassed': 'Frist abgelaufen',
+      'featuredPrevious': 'Zurück',
+      'featuredNext': 'Weiter',
     },
   };
+}
+
+int _calendarDaysUntil(DateTime completeBy, DateTime now) {
+  final end = DateTime(completeBy.year, completeBy.month, completeBy.day);
+  final today = DateTime(now.year, now.month, now.day);
+  return end.difference(today).inDays;
 }

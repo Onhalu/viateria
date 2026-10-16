@@ -461,6 +461,7 @@ class DualRoutePlanner {
       mode: mode,
       distanceKm: path.distanceKm,
       elevationGainM: elevationGainFromHeights(heights, planner),
+      elevationLossM: elevationLossFromHeights(heights, planner),
       osmPoints: osmPoints,
     );
   }
@@ -543,13 +544,26 @@ List<double?>? applyCatalogEndpointElevations(
 /// Gain along sampled heights. Null if the series is unusable — never 0 from
 /// missing data or two endpoints alone.
 double? elevationGainFromHeights(List<double?>? raw, RoutePlanner planner) {
+  final filled = _usableHeights(raw);
+  if (filled == null) return null;
+  return planner.elevationGainAlong(filled);
+}
+
+/// Descent along the same sampled series as [elevationGainFromHeights].
+double? elevationLossFromHeights(List<double?>? raw, RoutePlanner planner) {
+  final filled = _usableHeights(raw);
+  if (filled == null) return null;
+  return planner.elevationLossAlong(filled);
+}
+
+List<double>? _usableHeights(List<double?>? raw) {
   // Two heights are endpoints only — gain must follow the walking/cycling line.
   if (raw == null || raw.length < 3) return null;
   final knownCount = raw.whereType<double>().length;
   if (knownCount < 2 || knownCount * 2 < raw.length) return null;
   final filled = fillHeightGaps(raw);
   if (filled == null || filled.length < 3) return null;
-  return planner.elevationGainAlong(filled);
+  return filled;
 }
 
 List<double>? fillHeightGaps(List<double?> raw) {

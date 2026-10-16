@@ -12,17 +12,111 @@ import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
 import '../fapi_checkout_window.dart';
+import '../layout/breakpoints.dart';
+import '../widgets/app_network_image.dart';
+import '../widgets/error_state.dart';
 
-class DiplomaScreen extends StatefulWidget {
+/// Deep link. In-app entry points use [showDiplomaWindow].
+class DiplomaScreen extends StatelessWidget {
   const DiplomaScreen({super.key, required this.challengeId});
 
   final String challengeId;
 
   @override
-  State<DiplomaScreen> createState() => _DiplomaScreenState();
+  Widget build(BuildContext context) {
+    final strings = context.watch<LocaleController>().strings;
+    return Scaffold(
+      appBar: AppBar(title: Text(strings.viewDiploma)),
+      body: DiplomaView(challengeId: challengeId),
+    );
+  }
 }
 
-class _DiplomaScreenState extends State<DiplomaScreen> {
+/// Dialog from 600 dp, sheet below that. The route stays available for links.
+Future<void> showDiplomaWindow(BuildContext context, String challengeId) {
+  final wide = MediaQuery.sizeOf(context).width >= Breakpoints.compactMax;
+  if (wide) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: const Color(0x99000000),
+      builder: (context) {
+        final height = MediaQuery.sizeOf(context).height;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 520, maxHeight: height * 0.9),
+            child: SizedBox(
+              width: double.infinity,
+              height: height * 0.9,
+              child: _DiplomaWindow(challengeId: challengeId),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useRootNavigator: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      final height = MediaQuery.sizeOf(context).height * 0.92;
+      return SizedBox(
+        width: double.infinity,
+        height: height,
+        child: _DiplomaWindow(challengeId: challengeId),
+      );
+    },
+  );
+}
+
+class _DiplomaWindow extends StatelessWidget {
+  const _DiplomaWindow({required this.challengeId});
+
+  final String challengeId;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.watch<LocaleController>().strings;
+    return Material(
+      key: const Key('diploma-window'),
+      color: BrandColors.cream,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              key: const Key('diploma-window-close'),
+              tooltip: strings.closeCta,
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close, color: BrandColors.forest),
+            ),
+          ),
+          Expanded(child: DiplomaView(challengeId: challengeId)),
+        ],
+      ),
+    );
+  }
+}
+
+class DiplomaView extends StatefulWidget {
+  const DiplomaView({super.key, required this.challengeId});
+
+  final String challengeId;
+
+  @override
+  State<DiplomaView> createState() => _DiplomaViewState();
+}
+
+class _DiplomaViewState extends State<DiplomaView> {
   Future<_DiplomaViewData>? _future;
 
   @override
@@ -243,37 +337,45 @@ class _DiplomaScreenState extends State<DiplomaScreen> {
   @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleController>().strings;
-    return Scaffold(
-      appBar: AppBar(title: Text(strings.viewDiploma)),
-      body: FutureBuilder<_DiplomaViewData>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 12),
-                  Text(strings.diplomaGenerating),
-                ],
+    return FutureBuilder<_DiplomaViewData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            children: [
+              const SizedBox(height: 48),
+              const Center(
+                child: AppSkeleton(width: 280, height: 360, radius: 12),
               ),
-            );
-          }
-          if (!snapshot.hasData) {
-            return Center(child: Text(strings.errorGeneric));
-          }
-          return _DiplomaBody(
-            data: snapshot.data!,
-            strings: strings,
-            onRetry: _retry,
-            onBuy: _buy,
-            onSave: _saveFile,
-            onShare: _shareTarget,
-            onEditName: _editName,
+              const SizedBox(height: 12),
+              Text(
+                strings.diplomaGenerating,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: BrandColors.forest, fontSize: 16),
+              ),
+            ],
           );
-        },
-      ),
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return ErrorState(
+            title: strings.errorGeneric,
+            hint: strings.errorOfflineHint,
+            retryLabel: strings.retry,
+            onRetry: _retry,
+          );
+        }
+        return _DiplomaBody(
+          data: snapshot.data!,
+          strings: strings,
+          onRetry: _retry,
+          onBuy: _buy,
+          onSave: _saveFile,
+          onShare: _shareTarget,
+          onEditName: _editName,
+        );
+      },
     );
   }
 }
@@ -392,14 +494,28 @@ class _DiplomaBody extends StatelessWidget {
       ),
     );
     if (data.imageUrl != null) {
-      return AspectRatio(
-        aspectRatio: 1,
-        child: Image(
-          key: const Key('diploma-image'),
-          image: diplomaImageProvider(data.imageUrl!),
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
-        ),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final logical = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 420.0;
+          final cache = cachePixelsFor(
+            logical,
+            MediaQuery.devicePixelRatioOf(context),
+          );
+          final provider = diplomaImageProvider(data.imageUrl!);
+          return AspectRatio(
+            aspectRatio: 1,
+            child: Image(
+              key: const Key('diploma-image'),
+              image: cache == null
+                  ? provider
+                  : ResizeImage(provider, width: cache),
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+            ),
+          );
+        },
       );
     }
     if (blurred) {

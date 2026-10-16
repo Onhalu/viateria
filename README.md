@@ -47,6 +47,9 @@ The compile-time names are the same as local `.env` / `String.fromEnvironment` i
 | `MAP_STYLE_URL` | No (falls back to OpenFreeMap Liberty) | `MapStyleConfig.styleUrlFromEnv` |
 | `STRIPE_PUBLISHABLE_KEY` | No (unused by pay CTAs) | `AppConfig.fromEnvironment` |
 | `USE_ASSET_PLACE_CATALOG` | No (default reads `public.places`) | `AppConfig.fromEnvironment` |
+| `FACEBOOK_APP_ID` | No (empty falls back to the system share sheet) | `diplomaFacebookAppId` |
+
+`FACEBOOK_APP_ID` is the Meta app id used as `source_application` for Instagram Stories and Facebook Stories. Leave it empty until Ondřej supplies the value. Without it, both story buttons share through the system sheet. Desktop web still downloads the PNG and opens the network.
 
 ### 1. GitHub Actions secrets
 

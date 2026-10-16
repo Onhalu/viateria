@@ -173,6 +173,7 @@ class PlaceDetailSheet extends StatelessWidget {
     required this.userLocation,
     required this.onClose,
     required this.onVerify,
+    this.onAddToRoute,
     this.compact = false,
   });
 
@@ -181,6 +182,7 @@ class PlaceDetailSheet extends StatelessWidget {
   final GeoPoint? userLocation;
   final VoidCallback onClose;
   final VoidCallback onVerify;
+  final VoidCallback? onAddToRoute;
   final bool compact;
 
   @override
@@ -281,6 +283,18 @@ class PlaceDetailSheet extends StatelessWidget {
                 ),
               ],
             ),
+            if (onAddToRoute != null) ...[
+              const SizedBox(height: 4),
+              TextButton(
+                key: const Key('map-poi-add-route'),
+                onPressed: onAddToRoute,
+                style: TextButton.styleFrom(
+                  foregroundColor: MapPalette.forest,
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                child: Text(strings.planRoute),
+              ),
+            ],
           ],
         ),
       ),

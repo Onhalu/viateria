@@ -8,11 +8,13 @@ import '../../domain/promo.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
+import '../layout/breakpoints.dart';
 import '../navigation.dart';
 import '../widgets/catalog_cards.dart';
 import '../widgets/catalog_filters.dart';
 import '../widgets/catalog_welcome_header.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/error_state.dart';
 import '../widgets/promo_widget.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -106,17 +108,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
     AppStrings strings,
   ) {
     if (snapshot.connectionState != ConnectionState.done) {
-      return const Center(child: CircularProgressIndicator());
+      return const CatalogLoadingSkeleton();
     }
     if (snapshot.hasError) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(strings.errorGeneric),
-            TextButton(onPressed: _reload, child: Text(strings.retry)),
-          ],
-        ),
+      return ErrorState(
+        title: strings.errorGeneric,
+        hint: strings.errorOfflineHint,
+        retryLabel: strings.retry,
+        onRetry: _reload,
       );
     }
     final data = snapshot.data!;
@@ -158,39 +157,68 @@ class _CatalogScreenState extends State<CatalogScreen> {
               outlinedAction: true,
               onAction: () => _applyFilter(const CatalogFilter()),
             )
-          : ListView(
-              key: const Key('catalog-results'),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              children: [
-                CatalogHeroCarousel(
-                  challenges: visible,
-                  routeStats: routeStats,
-                  onOpen: (challenge) => openChallenge(context, challenge.id),
-                ),
-                const SizedBox(height: 16),
-                CatalogFeaturedSection(
-                  challenges: visible,
-                  routeStats: routeStats,
-                  onOpen: (challenge) => openChallenge(context, challenge.id),
-                ),
-                if (promos.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  PromoWidget(
-                    key: const Key('promo-widget'),
-                    promos: promos,
-                    now: now,
-                    onOpen: _openPromo,
-                  ),
-                ],
-                const SizedBox(height: 16),
-                CatalogRegionsSection(filter: _filter, onChanged: _applyFilter),
-                const SizedBox(height: 16),
-                CatalogCountryResults(
-                  challenges: visible,
-                  routeStats: routeStats,
-                  onOpen: (challenge) => openChallenge(context, challenge.id),
-                ),
-              ],
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final content = width > Breakpoints.catalogMaxWidth
+                    ? Breakpoints.catalogMaxWidth
+                    : width;
+                final side = 16 + (width - content) / 2;
+                final columns = Breakpoints.catalogColumns(content - 32);
+                return CustomScrollView(
+                  key: const Key('catalog-results'),
+                  slivers: [
+                    SliverPadding(
+                      key: const Key('catalog-results-padding'),
+                      padding: EdgeInsets.fromLTRB(side, 8, side, 0),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          CatalogHeroCarousel(
+                            challenges: visible,
+                            routeStats: routeStats,
+                            onOpen: (challenge) =>
+                                openChallenge(context, challenge.id),
+                          ),
+                          const SizedBox(height: 16),
+                          CatalogFeaturedSection(
+                            challenges: visible,
+                            routeStats: routeStats,
+                            onOpen: (challenge) =>
+                                openChallenge(context, challenge.id),
+                          ),
+                          if (promos.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            PromoWidget(
+                              key: const Key('promo-widget'),
+                              promos: promos,
+                              now: now,
+                              onOpen: _openPromo,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          CatalogRegionsSection(
+                            filter: _filter,
+                            onChanged: _applyFilter,
+                          ),
+                          const SizedBox(height: 16),
+                        ]),
+                      ),
+                    ),
+                    if (visible.isNotEmpty)
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(side, 0, side, 16),
+                        sliver: SliverMainAxisGroup(
+                          slivers: CatalogCountryResults(
+                            challenges: visible,
+                            routeStats: routeStats,
+                            onOpen: (challenge) =>
+                                openChallenge(context, challenge.id),
+                          ).slivers(columns: columns, width: content - 32),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
     );
   }
