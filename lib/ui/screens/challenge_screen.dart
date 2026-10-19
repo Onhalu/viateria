@@ -70,6 +70,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   var _revealScheduled = false;
   var _payScroll = false;
   var _paySuppressed = false;
+  final _inlinePayKey = GlobalKey();
+  double? _inlinePayTop;
+  double? _inlinePayBottom;
   final _chapterKeys = <String, GlobalKey>{};
   final _revealIndexes = <String, int>{};
   var _feedItemCount = 0;
@@ -100,19 +103,43 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     if (!_feedScroll.hasClients) return;
     final position = _feedScroll.position;
     if (!position.hasViewportDimension) return;
-    final next = paymentBarShouldShow(
+    _payScroll = paymentBarShouldShow(
       currentlyVisible: _payScroll,
       offset: position.pixels,
       viewport: position.viewportDimension,
     );
-    if (next == _payScroll) return;
-    _payScroll = next;
     _publishPayBar();
   }
 
   void _publishPayBar() {
-    final visible = _payScroll && !_paySuppressed;
+    final visible = floatingPayBarShouldShow(
+      scrolledEnough: _payScroll,
+      inlineVisible: _inlinePayVisible(),
+      suppressed: _paySuppressed,
+    );
     if (visible != _payBarShown.value) _payBarShown.value = visible;
+  }
+
+  bool _inlinePayVisible() {
+    if (!_feedScroll.hasClients) return true;
+    final position = _feedScroll.position;
+    if (!position.hasViewportDimension) return true;
+    final targetContext = _inlinePayKey.currentContext;
+    final target = targetContext?.findRenderObject();
+    if (target is RenderBox && target.attached && target.hasSize) {
+      final viewport = RenderAbstractViewport.maybeOf(target);
+      if (viewport != null) {
+        final reveal = viewport.getOffsetToReveal(target, 0);
+        _inlinePayTop = reveal.offset;
+        _inlinePayBottom = reveal.offset + target.size.height;
+      }
+    }
+    final top = _inlinePayTop;
+    final bottom = _inlinePayBottom;
+    if (top == null || bottom == null) return true;
+    final viewTop = top - position.pixels;
+    final viewBottom = bottom - position.pixels;
+    return viewBottom > 1 && viewTop < position.viewportDimension - 1;
   }
 
   @override
@@ -653,6 +680,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     url: cover,
                     title: copy.title,
                     location: challengeLocationLine(challenge, locale),
+                    layoutWidth: twoColumn
+                        ? constraints.maxWidth / 2
+                        : constraints.maxWidth,
                     backLabel: strings.back,
                     onBack: widget.embedded ? null : () => context.pop(),
                   ),
@@ -676,7 +706,35 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                         waypoints.length,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    if (copy.description.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _ChallengeDescriptionCard(text: copy.description),
+                    ],
+                    if (!hasAccess) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        strings.challengeLockedPaid,
+                        key: const Key('challenge-unlock-cta'),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    KeyedSubtree(
+                      key: _inlinePayKey,
+                      child: purchasePaid && completeBy != null
+                          ? _PayDeadlineRow(
+                              key: const Key('challenge-pay-deadline'),
+                              label: strings.rewardDeadlineLabel(
+                                formatLocalDate(completeBy, locale),
+                              ),
+                            )
+                          : _offerPayCtas(challenge, strings),
+                    ),
+                    if (data.purchase?.status == PurchaseStatus.pending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(strings.purchasePending),
+                      ),
+                    const SizedBox(height: 16),
                     _ChallengeRouteBlock(
                       includeMap: !twoColumn,
                       route: _route,
@@ -702,26 +760,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       onCustomPlaceChosen: _chooseCustomStart,
                       onRetry: _refreshRoutes,
                     ),
-                    if (copy.description.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text(copy.description, key: const Key('challenge-info')),
-                    ],
-                    if (!hasAccess) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        strings.challengeLockedPaid,
-                        key: const Key('challenge-unlock-cta'),
-                      ),
-                    ],
-                    if (!compact) ...[
-                      const SizedBox(height: 16),
-                      _offerPayCtas(challenge, strings),
-                    ],
-                    if (data.purchase?.status == PurchaseStatus.pending)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(strings.purchasePending),
-                      ),
                     const SizedBox(height: 16),
                     Text(
                       strings.waypoints,
@@ -882,6 +920,11 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 Expanded(child: page),
               ],
             );
+            if (compact) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _publishPayBar();
+              });
+            }
             if (!compact) return column;
             return Stack(
               children: [
@@ -1254,6 +1297,115 @@ class _LazyChallengeMapState extends State<_LazyChallengeMap> {
   }
 }
 
+/// The phone bar slides up only after the page has scrolled far enough and
+/// the in-page payment pair is off screen, so the two never show together.
+bool floatingPayBarShouldShow({
+  required bool scrolledEnough,
+  required bool inlineVisible,
+  required bool suppressed,
+}) {
+  return scrolledEnough && !inlineVisible && !suppressed;
+}
+
+class _ChallengeDescriptionCard extends StatelessWidget {
+  const _ChallengeDescriptionCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: const Key('challenge-description'),
+      color: BrandColors.cream,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        side: const BorderSide(color: BrandColors.beige),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          text,
+          key: const Key('challenge-info'),
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: BrandColors.forest,
+            height: 1.4,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PayDeadlineRow extends StatelessWidget {
+  const _PayDeadlineRow({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          const Icon(Icons.event, color: BrandColors.forest, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: BrandColors.forest,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PayBarHeading extends StatelessWidget {
+  const _PayBarHeading({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: ChallengePaymentBarMetrics.headingHeight,
+      child: Center(
+        child: DecoratedBox(
+          key: const Key('challenge-paybar-heading'),
+          decoration: BoxDecoration(
+            color: BrandColors.cream.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: AppTheme.displayFont,
+                color: BrandColors.forest,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Floating phone payment buttons. No panel behind them.
 abstract final class ChallengePaymentBarMetrics {
   static const topPadding = 8.0;
@@ -1263,12 +1415,15 @@ abstract final class ChallengePaymentBarMetrics {
   static const labelSize = 15.0;
   static const minLabelSize = 14.0;
   static const letterSpacing = 0.1;
-  static const rowGap = 10.0;
+  static const rowGap = 18.0;
+  static const headingHeight = 28.0;
+  static const headingGap = 8.0;
   static const buttonMaxWidth = 170.0;
   static const spinner = 18.0;
 
   static double bodyHeight(double width, {bool singleRow = false}) {
-    return topPadding + tapTarget + bottomPadding;
+    if (singleRow) return topPadding + tapTarget + bottomPadding;
+    return topPadding + headingHeight + headingGap + tapTarget + bottomPadding;
   }
 
   static double occupiedHeight(
@@ -1312,28 +1467,18 @@ class _ChallengePaymentBar extends StatelessWidget {
     final deadline = paid && due != null;
     final media = MediaQuery.paddingOf(context);
     final content = deadline
-        ? Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              key: const Key('challenge-paybar-deadline'),
-              children: [
-                const Icon(Icons.event, color: BrandColors.forest, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    strings.rewardDeadlineLabel(formatLocalDate(due, locale)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: BrandColors.forest,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        ? _PayDeadlineRow(
+            key: const Key('challenge-paybar-deadline'),
+            label: strings.rewardDeadlineLabel(formatLocalDate(due, locale)),
           )
-        : pay;
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _PayBarHeading(text: strings.joinChallenge),
+              const SizedBox(height: ChallengePaymentBarMetrics.headingGap),
+              pay,
+            ],
+          );
     return Padding(
       key: const Key('challenge-payment-bar'),
       padding: EdgeInsets.fromLTRB(
@@ -1457,14 +1602,17 @@ class _ChallengePayCtas extends StatelessWidget {
     );
   }
 
+  Key _key(String name) =>
+      Key('${bar ? 'challenge-floating-pay' : 'challenge-pay'}-$name');
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final diploma = _payButton(
-      key: const Key('challenge-pay-diploma'),
-      priceKey: const Key('challenge-pay-diploma-price'),
-      loadingKey: const Key('challenge-pay-diploma-price-loading'),
-      fallbackKey: const Key('challenge-pay-diploma-price-fallback'),
+      key: _key('diploma'),
+      priceKey: _key('diploma-price'),
+      loadingKey: _key('diploma-price-loading'),
+      fallbackKey: _key('diploma-price-fallback'),
       outlined: true,
       label: strings.payDigitalDiploma,
       variant: offer?.diploma,
@@ -1473,10 +1621,10 @@ class _ChallengePayCtas extends StatelessWidget {
           : () => onPay(RewardVariant.diploma),
     );
     final medal = _payButton(
-      key: const Key('challenge-pay-medal'),
-      priceKey: const Key('challenge-pay-medal-price'),
-      loadingKey: const Key('challenge-pay-medal-price-loading'),
-      fallbackKey: const Key('challenge-pay-medal-price-fallback'),
+      key: _key('medal'),
+      priceKey: _key('medal-price'),
+      loadingKey: _key('medal-price-loading'),
+      fallbackKey: _key('medal-price-fallback'),
       outlined: false,
       label: strings.payMedalAndDiploma,
       variant: offer?.medal,
@@ -1494,7 +1642,7 @@ class _ChallengePayCtas extends StatelessWidget {
             math.max(0.0, room),
           );
           return Row(
-            key: const Key('challenge-pay-ctas'),
+            key: _key('ctas'),
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ConstrainedBox(
@@ -1513,7 +1661,7 @@ class _ChallengePayCtas extends StatelessWidget {
     }
     if (width < narrowBreakpoint) {
       return Column(
-        key: const Key('challenge-pay-ctas'),
+        key: _key('ctas'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           diploma,
@@ -1524,7 +1672,7 @@ class _ChallengePayCtas extends StatelessWidget {
     }
     return IntrinsicHeight(
       child: Row(
-        key: const Key('challenge-pay-ctas'),
+        key: _key('ctas'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(flex: 1, child: diploma),

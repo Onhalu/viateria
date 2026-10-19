@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -7,82 +8,103 @@ import '../../theme/app_theme.dart';
 import '../layout/breakpoints.dart';
 import 'app_network_image.dart';
 
-/// Full-bleed challenge cover. About 4:1, clamped, always [BoxFit.cover].
-class ChallengeHero extends StatelessWidget {
+/// Full-width challenge cover. The whole photo is visible: height follows
+/// the image aspect ratio and is capped at 70% of the viewport. A capped
+/// photo is letterboxed over a blurred copy of itself and is never cropped.
+class ChallengeHero extends StatefulWidget {
   const ChallengeHero({
     super.key,
     required this.url,
     required this.title,
+    this.image,
     this.onBack,
     this.backLabel = 'Zpět',
   });
 
   final String url;
   final String title;
+
+  /// Overrides [url] when tests supply a decoded photo.
+  final ImageProvider? image;
   final VoidCallback? onBack;
   final String backLabel;
+
+  @override
+  State<ChallengeHero> createState() => _ChallengeHeroState();
+}
+
+class _ChallengeHeroState extends State<ChallengeHero> {
+  final _cover = _CoverSubscription();
+  Size? _imageSize;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _listen();
+  }
+
+  @override
+  void didUpdateWidget(ChallengeHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url || oldWidget.image != widget.image) {
+      _imageSize = null;
+      _listen();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cover.cancel();
+    super.dispose();
+  }
+
+  void _listen() {
+    _cover.listen(
+      provider: _provider,
+      context: context,
+      onSize: (size) {
+        if (!mounted || size == _imageSize) return;
+        setState(() => _imageSize = size);
+      },
+    );
+  }
+
+  ImageProvider get _provider =>
+      widget.image ?? challengeCoverProvider(context, widget.url);
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final wide = width >= Breakpoints.mediumMax;
-        final height = challengeHeroHeight(width);
-        final padding = MediaQuery.paddingOf(context);
+        final viewport = MediaQuery.sizeOf(context).height;
+        final height = challengeHeroExtent(
+          width: width,
+          viewportHeight: viewport,
+          imageWidth: _imageSize?.width,
+          imageHeight: _imageSize?.height,
+        );
         return SizedBox(
           width: width,
           height: height,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              AppNetworkImage(
-                url: url,
-                logicalWidth: width,
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-              ),
-              const Align(
-                alignment: Alignment.bottomCenter,
-                child: FractionallySizedBox(
-                  heightFactor: 0.7,
-                  widthFactor: 1,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0x0035483C), Color(0xCC35483C)],
-                      ),
-                    ),
+          child: UncroppedCover(
+            provider: _provider,
+            imageSize: _imageSize,
+            title: widget.title,
+            wide: width >= Breakpoints.mediumMax,
+            letterboxed: challengeHeroLetterboxed(
+              width: width,
+              viewportHeight: viewport,
+              imageWidth: _imageSize?.width,
+              imageHeight: _imageSize?.height,
+            ),
+            backTop: 12 + MediaQuery.paddingOf(context).top,
+            back: widget.onBack == null
+                ? null
+                : HeroBackButton(
+                    label: widget.backLabel,
+                    onPressed: widget.onBack,
                   ),
-                ),
-              ),
-              Positioned(
-                left: wide ? 24 : 16,
-                right: wide ? 24 : 16,
-                bottom: wide ? 16 : 12,
-                child: Text(
-                  title,
-                  key: const Key('challenge-title'),
-                  maxLines: wide ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: AppTheme.displayFont,
-                    fontWeight: FontWeight.w600,
-                    color: BrandColors.cream,
-                    fontSize: wide ? 28 : 24,
-                    height: 1.15,
-                  ),
-                ),
-              ),
-              if (onBack != null)
-                Positioned(
-                  left: 12 + padding.left,
-                  top: 12 + padding.top,
-                  child: HeroBackButton(label: backLabel, onPressed: onBack),
-                ),
-            ],
           ),
         );
       },
@@ -134,15 +156,17 @@ class HeroBackButton extends StatelessWidget {
   }
 }
 
-/// Pinned cover. Expanded height is [challengeHeroHeight]. Scrolling
-/// collapses it into a forest bar with the same back circle, the place,
-/// and one Playfair line of the challenge name.
-class ChallengeCollapsingHero extends StatelessWidget {
+/// Pinned cover. Expanded height follows the photo. Scrolling collapses it
+/// into a forest bar with the same back circle, the place, and one Playfair
+/// line of the challenge name.
+class ChallengeCollapsingHero extends StatefulWidget {
   const ChallengeCollapsingHero({
     super.key,
     required this.url,
     required this.title,
     required this.location,
+    this.image,
+    this.layoutWidth,
     this.onBack,
     this.backLabel = 'Zpět',
   });
@@ -152,28 +176,82 @@ class ChallengeCollapsingHero extends StatelessWidget {
   final String url;
   final String title;
   final String location;
+  final ImageProvider? image;
+
+  /// Width the cover is actually laid out at. The screen passes the column
+  /// width so a half-width desktop column is not sized as if it were the
+  /// whole window.
+  final double? layoutWidth;
   final VoidCallback? onBack;
   final String backLabel;
 
   @override
+  State<ChallengeCollapsingHero> createState() =>
+      _ChallengeCollapsingHeroState();
+}
+
+class _ChallengeCollapsingHeroState extends State<ChallengeCollapsingHero> {
+  final _cover = _CoverSubscription();
+  Size? _imageSize;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _listen();
+  }
+
+  @override
+  void didUpdateWidget(ChallengeCollapsingHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url || oldWidget.image != widget.image) {
+      _imageSize = null;
+      _listen();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cover.cancel();
+    super.dispose();
+  }
+
+  void _listen() {
+    _cover.listen(
+      provider: widget.image ?? challengeCoverProvider(context, widget.url),
+      context: context,
+      onSize: (size) {
+        if (!mounted || size == _imageSize) return;
+        setState(() => _imageSize = size);
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    final width = MediaQuery.sizeOf(context).width;
+    final width = widget.layoutWidth ?? MediaQuery.sizeOf(context).width;
     final expanded = math.max(
-      challengeHeroHeight(width),
-      collapsedBody + top + 1,
+      challengeHeroExtent(
+        width: width,
+        viewportHeight: MediaQuery.sizeOf(context).height,
+        imageWidth: _imageSize?.width,
+        imageHeight: _imageSize?.height,
+      ),
+      ChallengeCollapsingHero.collapsedBody + top + 1,
     );
     return SliverPersistentHeader(
       pinned: true,
       delegate: _ChallengeHeroDelegate(
-        url: url,
-        title: title,
-        location: location,
-        onBack: onBack,
-        backLabel: backLabel,
+        provider: widget.image ?? challengeCoverProvider(context, widget.url),
+        imageSize: _imageSize,
+        layoutWidth: width,
+        title: widget.title,
+        location: widget.location,
+        onBack: widget.onBack,
+        backLabel: widget.backLabel,
         top: top,
         maxExtent: expanded,
-        minExtent: collapsedBody + top,
+        minExtent: ChallengeCollapsingHero.collapsedBody + top,
         reduceMotion: MediaQuery.disableAnimationsOf(context),
       ),
     );
@@ -230,9 +308,217 @@ String challengeLocationLine(Challenge challenge, String locale) {
   return names[locale]?[code] ?? names['en']?[code] ?? code;
 }
 
+/// `asset://path` loads a bundled photo. Anything else is a network cover.
+ImageProvider challengeCoverProvider(BuildContext context, String url) {
+  const asset = 'asset://';
+  if (url.startsWith(asset)) {
+    return AssetImage(url.substring(asset.length));
+  }
+  final width = MediaQuery.sizeOf(context).width;
+  final cache = cachePixelsFor(width, MediaQuery.devicePixelRatioOf(context));
+  return NetworkImage(supabaseRenderUrl(url, cache));
+}
+
+/// Height of a full-width cover that shows the whole photo.
+///
+/// Without a resolved image, falls back to [challengeHeroHeight]. The result
+/// never exceeds 70% of [viewportHeight].
+double challengeHeroExtent({
+  required double width,
+  required double viewportHeight,
+  double? imageWidth,
+  double? imageHeight,
+}) {
+  final cap = viewportHeight > 0
+      ? viewportHeight * challengeHeroViewportCap
+      : double.infinity;
+  final fallback = math.min(challengeHeroHeight(width), cap);
+  if (imageWidth == null ||
+      imageHeight == null ||
+      imageWidth <= 0 ||
+      imageHeight <= 0 ||
+      width <= 0) {
+    return fallback;
+  }
+  return math.min(width * imageHeight / imageWidth, cap);
+}
+
+/// True when the photo is taller than the 70% cap and must be letterboxed.
+bool challengeHeroLetterboxed({
+  required double width,
+  required double viewportHeight,
+  double? imageWidth,
+  double? imageHeight,
+}) {
+  if (imageWidth == null ||
+      imageHeight == null ||
+      imageWidth <= 0 ||
+      imageHeight <= 0 ||
+      width <= 0 ||
+      viewportHeight <= 0) {
+    return false;
+  }
+  final natural = width * imageHeight / imageWidth;
+  return natural > viewportHeight * challengeHeroViewportCap + 0.5;
+}
+
+const challengeHeroViewportCap = 0.7;
+
+/// Width / 4, at least 160 dp. Desktop (width ≥ 840) also caps at 240 dp.
+/// Used only until the photo's own aspect ratio is known.
+double challengeHeroHeight(double width) {
+  final ratio = width / 4;
+  if (width >= Breakpoints.mediumMax) {
+    return ratio.clamp(160.0, 240.0);
+  }
+  return ratio < 160 ? 160.0 : ratio;
+}
+
+class UncroppedCover extends StatelessWidget {
+  const UncroppedCover({
+    super.key,
+    required this.provider,
+    required this.imageSize,
+    required this.title,
+    required this.wide,
+    required this.letterboxed,
+    this.back,
+    this.backTop = 12,
+  });
+
+  final ImageProvider provider;
+  final Size? imageSize;
+  final String title;
+  final bool wide;
+  final bool letterboxed;
+  final Widget? back;
+  final double backTop;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final frame = Size(constraints.maxWidth, constraints.maxHeight);
+        var photo = Offset.zero & frame;
+        final source = imageSize;
+        if (source != null && source.width > 0 && source.height > 0) {
+          final fitted = applyBoxFit(BoxFit.contain, source, frame);
+          photo = Alignment.center.inscribe(
+            fitted.destination,
+            Offset.zero & frame,
+          );
+        }
+        final pad = wide ? 24.0 : 16.0;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: BrandColors.forest),
+            if (letterboxed)
+              ClipRect(
+                child: ImageFiltered(
+                  key: const Key('challenge-hero-letterbox'),
+                  imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Image(
+                    image: provider,
+                    fit: BoxFit.cover,
+                    width: frame.width,
+                    height: frame.height,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+                  ),
+                ),
+              ),
+            Image(
+              key: const Key('challenge-hero-photo'),
+              image: provider,
+              fit: BoxFit.contain,
+              width: frame.width,
+              height: frame.height,
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+            ),
+            Positioned(
+              left: photo.left,
+              top: photo.top + photo.height * 0.3,
+              width: photo.width,
+              height: photo.height * 0.7,
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x0035483C), Color(0xCC35483C)],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: photo.left + pad,
+              width: math.max(0, photo.width - pad * 2),
+              bottom: frame.height - photo.bottom + (wide ? 16 : 12),
+              child: Text(
+                title,
+                key: const Key('challenge-title'),
+                maxLines: wide ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.displayFont,
+                  fontWeight: FontWeight.w600,
+                  color: BrandColors.cream,
+                  fontSize: wide ? 28 : 24,
+                  height: 1.15,
+                ),
+              ),
+            ),
+            if (back != null)
+              Positioned(left: 12, top: backTop, child: back!),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CoverSubscription {
+  ImageProvider? _provider;
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+
+  void listen({
+    required ImageProvider provider,
+    required BuildContext context,
+    required ValueChanged<Size> onSize,
+  }) {
+    if (_provider == provider && _stream != null) return;
+    cancel();
+    _provider = provider;
+    final stream = provider.resolve(createLocalImageConfiguration(context));
+    _listener = ImageStreamListener((info, _) {
+      onSize(
+        Size(info.image.width.toDouble(), info.image.height.toDouble()),
+      );
+    }, onError: (_, _) {});
+    _stream = stream;
+    stream.addListener(_listener!);
+  }
+
+  void cancel() {
+    final stream = _stream;
+    final listener = _listener;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+    _stream = null;
+    _listener = null;
+    _provider = null;
+  }
+}
+
 class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
   _ChallengeHeroDelegate({
-    required this.url,
+    required this.provider,
+    required this.imageSize,
+    required this.layoutWidth,
     required this.title,
     required this.location,
     required this.onBack,
@@ -243,7 +529,9 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
     required this.reduceMotion,
   });
 
-  final String url;
+  final ImageProvider provider;
+  final Size? imageSize;
+  final double layoutWidth;
   final String title;
   final String location;
   final VoidCallback? onBack;
@@ -271,10 +559,11 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
     );
     final collapsedFade = 1 - expandedFade;
     final wide = MediaQuery.sizeOf(context).width >= Breakpoints.mediumMax;
+    final viewport = MediaQuery.sizeOf(context).height;
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: BrandColors.forest),
+        const ColoredBox(color: BrandColors.forest),
         IgnorePointer(
           ignoring: expandedFade == 0,
           child: ExcludeSemantics(
@@ -282,49 +571,17 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
             child: Opacity(
               key: const Key('challenge-hero-expanded'),
               opacity: expandedFade,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  AppNetworkImage(
-                    url: url,
-                    logicalWidth: MediaQuery.sizeOf(context).width,
-                    fit: BoxFit.cover,
-                  ),
-                  const Align(
-                    alignment: Alignment.bottomCenter,
-                    child: FractionallySizedBox(
-                      heightFactor: 0.7,
-                      widthFactor: 1,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0x0035483C), Color(0xCC35483C)],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: wide ? 24 : 16,
-                    right: wide ? 24 : 16,
-                    bottom: wide ? 16 : 12,
-                    child: Text(
-                      title,
-                      key: const Key('challenge-title'),
-                      maxLines: wide ? 2 : 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppTheme.displayFont,
-                        fontWeight: FontWeight.w600,
-                        color: BrandColors.cream,
-                        fontSize: wide ? 28 : 24,
-                        height: 1.15,
-                      ),
-                    ),
-                  ),
-                ],
+              child: UncroppedCover(
+                provider: provider,
+                imageSize: imageSize,
+                title: title,
+                wide: wide,
+                letterboxed: challengeHeroLetterboxed(
+                  width: layoutWidth,
+                  viewportHeight: viewport,
+                  imageWidth: imageSize?.width,
+                  imageHeight: imageSize?.height,
+                ),
               ),
             ),
           ),
@@ -394,7 +651,9 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _ChallengeHeroDelegate oldDelegate) {
-    return url != oldDelegate.url ||
+    return provider != oldDelegate.provider ||
+        imageSize != oldDelegate.imageSize ||
+        layoutWidth != oldDelegate.layoutWidth ||
         title != oldDelegate.title ||
         location != oldDelegate.location ||
         backLabel != oldDelegate.backLabel ||
@@ -404,13 +663,4 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
         minExtent != oldDelegate.minExtent ||
         reduceMotion != oldDelegate.reduceMotion;
   }
-}
-
-/// Width / 4, at least 160 dp. Desktop (width ≥ 840) also caps at 240 dp.
-double challengeHeroHeight(double width) {
-  final ratio = width / 4;
-  if (width >= Breakpoints.mediumMax) {
-    return ratio.clamp(160.0, 240.0);
-  }
-  return ratio < 160 ? 160.0 : ratio;
 }

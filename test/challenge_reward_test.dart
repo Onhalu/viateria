@@ -15,7 +15,7 @@ import 'package:viateria/domain/fapi_offer.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
-import 'package:viateria/theme/brand_colors.dart';
+import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/challenge_reward_section.dart';
@@ -447,7 +447,7 @@ void main() {
     });
 
     testWidgets(
-      'title, map, planner, info, then places sit above deadline and reward',
+      'title, description, pay, map, planner, then places sit above deadline and reward',
       (tester) async {
         useTallView(tester);
         final strings = AppStrings('en');
@@ -469,10 +469,10 @@ void main() {
         final rewardY = tester
             .getTopLeft(find.byKey(const Key('challenge-reward-section')))
             .dy;
-        expect(titleY, lessThan(mapY));
+        expect(titleY, lessThan(infoY));
+        expect(infoY, lessThan(mapY));
         expect(mapY, lessThan(plannerY));
-        expect(plannerY, lessThan(infoY));
-        expect(infoY, lessThan(waypointsY));
+        expect(plannerY, lessThan(waypointsY));
         expect(waypointsY, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
         expect(find.byKey(const Key('challenge-unlock-cta')), findsNothing);
@@ -483,7 +483,20 @@ void main() {
             .getTopLeft(find.byKey(const Key('challenge-pay-ctas')))
             .dy;
         expect(infoY, lessThan(payY));
+        expect(payY, lessThan(mapY));
         expect(payY, lessThan(waypointsY));
+        final info = tester.widget<Text>(
+          find.byKey(const Key('challenge-info')),
+        );
+        expect(info.textAlign, TextAlign.center);
+        final card = tester.widget<Material>(
+          find.byKey(const Key('challenge-description')),
+        );
+        expect(card.color, BrandColors.cream);
+        expect(
+          (card.shape as RoundedRectangleBorder).borderRadius,
+          BorderRadius.circular(AppTheme.radiusCard),
+        );
         expect(find.text('Visit any stop'), findsOneWidget);
         expect(find.text('Open trail'), findsOneWidget);
         expect(find.text(strings.waypoints), findsOneWidget);
@@ -873,18 +886,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
+        tester.widget(find.byKey(const Key('challenge-floating-pay-ctas'))),
         isA<Row>(),
       );
+      expect(find.text('Join the challenge'), findsOneWidget);
+      expect(find.byKey(const Key('challenge-paybar-heading')), findsOneWidget);
       expect(
         tester.widget(find.byKey(const Key('challenge-payment-bar'))),
         isA<Padding>(),
       );
       final diploma = tester.getRect(
-        find.byKey(const Key('challenge-pay-diploma')),
+        find.byKey(const Key('challenge-floating-pay-diploma')),
       );
       final medal = tester.getRect(
-        find.byKey(const Key('challenge-pay-medal')),
+        find.byKey(const Key('challenge-floating-pay-medal')),
       );
       expect(diploma.right, lessThanOrEqualTo(medal.left));
       expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
@@ -904,7 +919,7 @@ void main() {
         tester
             .getSize(
               find.descendant(
-                of: find.byKey(const Key('challenge-pay-diploma')),
+                of: find.byKey(const Key('challenge-floating-pay-diploma')),
                 matching: find.byType(Material),
               ),
             )
@@ -917,10 +932,15 @@ void main() {
       expect(bar.left, 0);
       expect(bar.right, 390);
       expect(bar.height, ChallengePaymentBarMetrics.bodyHeight(390));
-      expect(diploma.top - bar.top, ChallengePaymentBarMetrics.topPadding);
+      expect(
+        diploma.top - bar.top,
+        ChallengePaymentBarMetrics.topPadding +
+            ChallengePaymentBarMetrics.headingHeight +
+            ChallengePaymentBarMetrics.headingGap,
+      );
       final label = tester.widget<Text>(
         find.descendant(
-          of: find.byKey(const Key('challenge-pay-diploma')),
+          of: find.byKey(const Key('challenge-floating-pay-diploma')),
           matching: find.text('Digital diploma'),
         ),
       );
@@ -939,7 +959,7 @@ void main() {
       expect(label.maxLines, 1);
       expect(
         find.descendant(
-          of: find.byKey(const Key('challenge-pay-diploma')),
+          of: find.byKey(const Key('challenge-floating-pay-diploma')),
           matching: find.byWidgetPredicate(
             (widget) => widget is FittedBox && widget.fit == BoxFit.scaleDown,
           ),
@@ -949,7 +969,7 @@ void main() {
       expect(
         tester
             .widget<OutlinedButton>(
-              find.byKey(const Key('challenge-pay-diploma')),
+              find.byKey(const Key('challenge-floating-pay-diploma')),
             )
             .style
             ?.shape
@@ -959,7 +979,7 @@ void main() {
       expect(
         tester
             .widget<OutlinedButton>(
-              find.byKey(const Key('challenge-pay-diploma')),
+              find.byKey(const Key('challenge-floating-pay-diploma')),
             )
             .style
             ?.tapTargetSize,
@@ -985,14 +1005,14 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
+        tester.widget(find.byKey(const Key('challenge-floating-pay-ctas'))),
         isA<Row>(),
       );
       final diploma = tester.getRect(
-        find.byKey(const Key('challenge-pay-diploma')),
+        find.byKey(const Key('challenge-floating-pay-diploma')),
       );
       final medal = tester.getRect(
-        find.byKey(const Key('challenge-pay-medal')),
+        find.byKey(const Key('challenge-floating-pay-medal')),
       );
       expect(diploma.right, lessThanOrEqualTo(medal.left));
       expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
@@ -1007,10 +1027,10 @@ void main() {
       );
       expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
       final outlined = tester.widget<OutlinedButton>(
-        find.byKey(const Key('challenge-pay-diploma')),
+        find.byKey(const Key('challenge-floating-pay-diploma')),
       );
       final filled = tester.widget<FilledButton>(
-        find.byKey(const Key('challenge-pay-medal')),
+        find.byKey(const Key('challenge-floating-pay-medal')),
       );
       expect(outlined.style?.elevation?.resolve(const {}), 0);
       expect(filled.style?.elevation?.resolve(const {}), 1);
@@ -1052,10 +1072,10 @@ void main() {
       await tester.pump();
 
       final diploma = tester.widget<OutlinedButton>(
-        find.byKey(const Key('challenge-pay-diploma')),
+        find.byKey(const Key('challenge-floating-pay-diploma')),
       );
       final medal = tester.widget<FilledButton>(
-        find.byKey(const Key('challenge-pay-medal')),
+        find.byKey(const Key('challenge-floating-pay-medal')),
       );
       expect(diploma.onPressed, isNull);
       expect(medal.onPressed, isNull);
@@ -1064,7 +1084,12 @@ void main() {
             .widget<Opacity>(
               find
                   .ancestor(
-                    of: find.text('Digital diploma'),
+                    of: find.descendant(
+                      of: find.byKey(
+                        const Key('challenge-floating-pay-diploma'),
+                      ),
+                      matching: find.text('Digital diploma'),
+                    ),
                     matching: find.byType(Opacity),
                   )
                   .first,
@@ -1077,7 +1102,12 @@ void main() {
             .widget<Opacity>(
               find
                   .ancestor(
-                    of: find.text('Medal + diploma'),
+                    of: find.descendant(
+                      of: find.byKey(
+                        const Key('challenge-floating-pay-medal'),
+                      ),
+                      matching: find.text('Medal + diploma'),
+                    ),
                     matching: find.byType(Opacity),
                   )
                   .first,
@@ -1086,23 +1116,30 @@ void main() {
         0,
       );
       final spinner = tester.getSize(
-        find.byKey(const Key('challenge-pay-medal-price-loading')),
+        find.byKey(const Key('challenge-floating-pay-medal-price-loading')),
       );
       expect(spinner.width, ChallengePaymentBarMetrics.spinner);
       expect(spinner.height, ChallengePaymentBarMetrics.spinner);
       final diplomaWidth = tester
-          .getSize(find.byKey(const Key('challenge-pay-diploma')))
+          .getSize(find.byKey(const Key('challenge-floating-pay-diploma')))
           .width;
       final medalWidth = tester
-          .getSize(find.byKey(const Key('challenge-pay-medal')))
+          .getSize(find.byKey(const Key('challenge-floating-pay-medal')))
           .width;
       expect((diplomaWidth - medalWidth).abs(), lessThan(1));
       expect(diplomaWidth, greaterThan(100));
 
       gate.complete(memoryFapiOffer);
       await tester.pumpAndSettle();
-      expect(find.text('Digital diploma'), findsOneWidget);
-      expect(find.text('€4.99'), findsNothing);
+      expect(find.text('Digital diploma'), findsNWidgets(2));
+      expect(find.text('€4.99'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('challenge-floating-pay-diploma')),
+          matching: find.text('€4.99'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('a disabled payment bar button is forest at 40 percent', (
@@ -1150,7 +1187,7 @@ void main() {
 
       final muted = BrandColors.forest.withValues(alpha: 0.4);
       final medal = tester.widget<FilledButton>(
-        find.byKey(const Key('challenge-pay-medal')),
+        find.byKey(const Key('challenge-floating-pay-medal')),
       );
       expect(medal.onPressed, isNull);
       expect(
@@ -1168,14 +1205,14 @@ void main() {
       );
       final label = tester.widget<Text>(
         find.descendant(
-          of: find.byKey(const Key('challenge-pay-medal')),
+          of: find.byKey(const Key('challenge-floating-pay-medal')),
           matching: find.text('Medal + diploma'),
         ),
       );
       expect(label.style?.color, muted);
       expect(
         tester
-            .getSemantics(find.byKey(const Key('challenge-pay-medal')))
+            .getSemantics(find.byKey(const Key('challenge-floating-pay-medal')))
             .flagsCollection
             .isEnabled,
         Tristate.isFalse,
@@ -1183,7 +1220,7 @@ void main() {
       expect(
         tester
             .widget<OutlinedButton>(
-              find.byKey(const Key('challenge-pay-diploma')),
+              find.byKey(const Key('challenge-floating-pay-diploma')),
             )
             .onPressed,
         isNotNull,
@@ -1314,7 +1351,8 @@ void main() {
       await tester.tap(find.byKey(const Key('payment-back-to-challenge')));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-pay-ctas')), findsNothing);
+      expect(find.byKey(const Key('challenge-pay-deadline')), findsOneWidget);
       expect(find.text(strings.purchasePending), findsNothing);
       expect(find.text(strings.congratulations), findsNothing);
       expect(find.text(strings.deadlineCompleteBy), findsOneWidget);

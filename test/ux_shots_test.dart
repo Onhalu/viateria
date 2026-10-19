@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -52,6 +53,23 @@ void main() {
     await _loadFamily('MaterialIcons', const [
       '/home/ubuntu/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
     ]);
+    final done = Completer<void>();
+    final stream = const AssetImage(
+      'assets/challenges/beskydy-autumn.jpg',
+    ).resolve(ImageConfiguration(bundle: rootBundle, devicePixelRatio: 1));
+    late ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (_, _) {
+        stream.removeListener(listener);
+        if (!done.isCompleted) done.complete();
+      },
+      onError: (error, stack) {
+        stream.removeListener(listener);
+        if (!done.isCompleted) done.completeError(error, stack);
+      },
+    );
+    stream.addListener(listener);
+    await done.future;
   }
 
   void useView(WidgetTester tester, Size size) {
@@ -142,7 +160,7 @@ void main() {
     }
 
     final story = sampleStoryChallenge(
-      coverImageUrl: 'https://cdn.example/cover.jpg',
+      coverImageUrl: 'asset://assets/challenges/beskydy-autumn.jpg',
     );
     final open = sampleOpenChallenge();
     final purchases = MemoryPurchases()
@@ -318,7 +336,24 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('challenge-title')), findsOneWidget);
         expect(find.byKey(const Key('challenge-back')), findsOneWidget);
+        expect(find.byKey(const Key('challenge-hero-photo')), findsOneWidget);
+        expect(
+          find.byKey(const Key('challenge-hero-letterbox')),
+          findsNothing,
+          reason:
+              'hero ${tester.getSize(find.byKey(const Key('challenge-hero-expanded')))} '
+              'view ${tester.view.physicalSize}',
+        );
         await shot('hero-$tag');
+        await tester.ensureVisible(
+          find.byKey(const Key('challenge-description')),
+        );
+        await tester.pumpAndSettle();
+        await shot('description-$tag');
+        await tester.ensureVisible(find.byKey(const Key('challenge-pay-ctas')));
+        await tester.pumpAndSettle();
+        expect(find.text(strings.payDigitalDiploma), findsWidgets);
+        await shot('pay-inline-$tag');
         await tester.drag(
           find.byKey(const Key('challenge-feed-scroll')),
           const Offset(0, -240),
@@ -334,13 +369,26 @@ void main() {
                 )
                 .first,
           );
-          scrollable.position.jumpTo(
-            scrollable.position.viewportDimension * 0.55,
-          );
+          scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 250));
+          expect(find.text(strings.joinChallenge), findsOneWidget);
+          expect(
+            find.byKey(const Key('challenge-paybar-heading')),
+            findsOneWidget,
+          );
           await shot('paybar-$tag');
         } else {
+          final scrollable = tester.state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byKey(const Key('challenge-feed-scroll')),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          scrollable.position.jumpTo(0);
+          await tester.pump();
           final pay = find.byKey(const Key('challenge-pay-ctas'));
           await tester.ensureVisible(pay);
           await tester.pumpAndSettle();

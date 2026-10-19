@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show ImageByteFormat, PictureRecorder;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -227,6 +230,81 @@ void main() {
     expect(challengeHeroHeight(800), 200);
     expect(challengeHeroHeight(1280), 240);
     expect(challengeHeroHeight(2000), 240);
+    expect(challengeHeroExtent(width: 390, viewportHeight: 844), 160);
+  });
+
+  test('a resolved photo sets the hero height and caps at 70 percent', () {
+    expect(
+      challengeHeroExtent(
+        width: 390,
+        viewportHeight: 844,
+        imageWidth: 1280,
+        imageHeight: 854,
+      ),
+      closeTo(390 * 854 / 1280, 0.01),
+    );
+    expect(
+      challengeHeroLetterboxed(
+        width: 390,
+        viewportHeight: 844,
+        imageWidth: 1280,
+        imageHeight: 854,
+      ),
+      isFalse,
+    );
+    expect(
+      challengeHeroExtent(
+        width: 390,
+        viewportHeight: 800,
+        imageWidth: 100,
+        imageHeight: 400,
+      ),
+      closeTo(560, 0.01),
+    );
+    expect(
+      challengeHeroLetterboxed(
+        width: 390,
+        viewportHeight: 800,
+        imageWidth: 100,
+        imageHeight: 400,
+      ),
+      isTrue,
+    );
+  });
+
+  test('the floating bar waits until the in-page pair has left the screen', () {
+    expect(
+      floatingPayBarShouldShow(
+        scrolledEnough: true,
+        inlineVisible: true,
+        suppressed: false,
+      ),
+      isFalse,
+    );
+    expect(
+      floatingPayBarShouldShow(
+        scrolledEnough: false,
+        inlineVisible: false,
+        suppressed: false,
+      ),
+      isFalse,
+    );
+    expect(
+      floatingPayBarShouldShow(
+        scrolledEnough: true,
+        inlineVisible: false,
+        suppressed: true,
+      ),
+      isFalse,
+    );
+    expect(
+      floatingPayBarShouldShow(
+        scrolledEnough: true,
+        inlineVisible: false,
+        suppressed: false,
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('hero title, scrim, and back control', (tester) async {
@@ -250,6 +328,10 @@ void main() {
 
     expect(tester.getSize(find.byType(ChallengeHero)), const Size(390, 160));
     expect(
+      tester.widget<Image>(find.byKey(const Key('challenge-hero-photo'))).fit,
+      BoxFit.contain,
+    );
+    expect(
       find.descendant(
         of: find.byType(ChallengeHero),
         matching: find.byType(ClipRRect),
@@ -263,6 +345,30 @@ void main() {
     expect(title.style?.color, BrandColors.cream);
     expect(find.byKey(const Key('challenge-back')), findsOneWidget);
     expect(find.byTooltip('Zpět'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.runAsync(_precacheCover);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChallengeHero(
+            url: 'asset://assets/challenges/beskydy-autumn.jpg',
+            title: 'Beskydy',
+            backLabel: 'Zpět',
+            onBack: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final photo = tester.getSize(find.byType(ChallengeHero));
+    expect(photo.width, 390);
+    expect(photo.height, closeTo(390 * 854 / 1280, 0.6));
+    expect(find.byKey(const Key('challenge-hero-letterbox')), findsNothing);
+    expect(
+      tester.widget<Image>(find.byKey(const Key('challenge-hero-photo'))).fit,
+      BoxFit.contain,
+    );
     final circle = tester.getSize(find.byType(InkWell));
     expect(circle, const Size(40, 40));
     final tap = tester.getSize(
@@ -272,6 +378,56 @@ void main() {
     );
     expect(tap.width, greaterThanOrEqualTo(48));
     expect(tap.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('a tall photo is letterboxed instead of cropped', (tester) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final bytes = await tester.runAsync(() async {
+      final recorder = PictureRecorder();
+      final canvas = Canvas(recorder);
+      canvas.drawRect(
+        const Rect.fromLTWH(0, 0, 20, 200),
+        Paint()..color = const Color(0xFF8C3A2F),
+      );
+      final image = await recorder.endRecording().toImage(20, 200);
+      final data = await image.toByteData(format: ImageByteFormat.png);
+      image.dispose();
+      return data!.buffer.asUint8List();
+    });
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ChallengeHero(
+              url: 'memory',
+              image: MemoryImage(bytes!),
+              title: 'Tall ridge',
+            ),
+          ),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pump();
+    expect(
+      tester.getSize(find.byType(ChallengeHero)).height,
+      closeTo(800 * challengeHeroViewportCap, 0.5),
+    );
+    expect(find.byKey(const Key('challenge-hero-letterbox')), findsOneWidget);
+    final sharp = tester.widget<Image>(
+      find.byKey(const Key('challenge-hero-photo')),
+    );
+    expect(sharp.fit, BoxFit.contain);
+    final blur = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('challenge-hero-letterbox')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(blur.fit, BoxFit.cover);
   });
 
   testWidgets('desktop hero allows two title lines and caps height', (
@@ -339,13 +495,24 @@ void main() {
       position.maxScrollExtent,
       greaterThanOrEqualTo(position.viewportDimension * 0.5),
     );
+    expect(
+      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+      const Offset(0, 1),
+    );
     position.jumpTo(position.maxScrollExtent);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
-    final diploma = tester.getRect(
-      find.byKey(const Key('challenge-pay-diploma')),
+    expect(
+      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+      Offset.zero,
     );
-    final medal = tester.getRect(find.byKey(const Key('challenge-pay-medal')));
+    expect(find.text('Join the challenge'), findsOneWidget);
+    final diploma = tester.getRect(
+      find.byKey(const Key('challenge-floating-pay-diploma')),
+    );
+    final medal = tester.getRect(
+      find.byKey(const Key('challenge-floating-pay-medal')),
+    );
     expect(
       diploma.width,
       lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
@@ -366,7 +533,9 @@ void main() {
       isA<Padding>(),
     );
     expect(
-      tester.getSize(find.byKey(const Key('challenge-pay-diploma'))).height,
+      tester
+          .getSize(find.byKey(const Key('challenge-floating-pay-diploma')))
+          .height,
       ChallengePaymentBarMetrics.tapTarget,
     );
   });
@@ -661,3 +830,34 @@ void main() {
 }
 
 void _noop() {}
+
+Future<void> _precacheCover() {
+  return _resolveImage(
+    const AssetImage('assets/challenges/beskydy-autumn.jpg'),
+  );
+}
+
+Future<void> _resolveImage(ImageProvider provider) {
+  return provider
+      .resolve(ImageConfiguration(bundle: rootBundle, devicePixelRatio: 1))
+      .timeout();
+}
+
+extension on ImageStream {
+  Future<void> timeout() {
+    final done = Completer<void>();
+    late ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) {
+        removeListener(listener);
+        if (!done.isCompleted) done.complete();
+      },
+      onError: (error, stack) {
+        removeListener(listener);
+        if (!done.isCompleted) done.completeError(error, stack);
+      },
+    );
+    addListener(listener);
+    return done.future;
+  }
+}
