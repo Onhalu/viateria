@@ -29,8 +29,19 @@ String supabaseRenderUrl(String url, int? width) {
   final params = Map<String, String>.from(uri.queryParameters);
   params['width'] = '$width';
   params.putIfAbsent('quality', () => '70');
+  // Width only. A `resize=cover` param would crop to a different ratio
+  // before the card can decide cover vs contain.
+  params.remove('resize');
   return uri.replace(path: path, queryParameters: params).toString();
 }
+
+/// 4:3 card photos within ±15% of 4:3 (1.13–1.53) may crop. Anything else
+/// is shown whole.
+bool catalogCoverShouldCrop(double aspectRatio) {
+  return aspectRatio >= 1.13 && aspectRatio <= 1.53;
+}
+
+const catalogCardAspectRatio = 4 / 3;
 
 /// Beige stand-in used while a network image loads or fails.
 class AppImagePlaceholder extends StatelessWidget {

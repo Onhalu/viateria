@@ -40,6 +40,12 @@ void main() {
     expect(rendered.path, '/storage/v1/render/image/public/covers/a.jpg');
     expect(rendered.queryParameters['width'], '400');
     expect(rendered.queryParameters['quality'], '70');
+    expect(rendered.queryParameters['resize'], isNull);
+    expect(catalogCoverShouldCrop(4 / 3), isTrue);
+    expect(catalogCoverShouldCrop(1.13), isTrue);
+    expect(catalogCoverShouldCrop(1.53), isTrue);
+    expect(catalogCoverShouldCrop(1.12), isFalse);
+    expect(catalogCoverShouldCrop(0.86), isFalse);
     expect(
       supabaseRenderUrl('https://example.com/a.jpg', 400),
       'https://example.com/a.jpg',
@@ -87,7 +93,7 @@ void main() {
     expect(icon.color, BrandColors.bark);
     await tester.tap(find.text('Retry'));
     expect(taps, 1);
-    expect(tester.getSize(find.byType(FilledButton)).height, greaterThanOrEqualTo(52));
+    expect(tester.getSize(find.byType(FilledButton)).height, greaterThanOrEqualTo(48));
   });
 
   testWidgets('skeleton is beige and stays still when motion is reduced', (
@@ -129,7 +135,7 @@ void main() {
     expect(box.color, BrandColors.beige);
   });
 
-  testWidgets('primary filled button is a 52px pill', (tester) async {
+  testWidgets('primary filled button is a padded pill', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -140,7 +146,7 @@ void main() {
         ),
       ),
     );
-    expect(tester.getSize(find.byType(FilledButton)).height, 52);
+    expect(tester.getSize(find.byType(FilledButton)).height, 48);
     final theme = FilledButtonTheme.of(
       tester.element(find.byType(FilledButton)),
     );

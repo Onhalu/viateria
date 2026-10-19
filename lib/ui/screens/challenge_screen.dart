@@ -14,7 +14,6 @@ import '../../data/repositories.dart';
 import '../../data/route_services.dart';
 import '../../domain/challenge_photos.dart';
 import '../../domain/challenge_reward.dart';
-import '../../domain/fapi_offer.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/story_feed.dart';
 import '../../domain/story_fog.dart';
@@ -28,6 +27,7 @@ import '../../theme/app_theme.dart';
 import '../challenge_route_controller.dart';
 import '../layout/breakpoints.dart';
 import '../layout/map_search_metrics.dart';
+import '../widgets/app_shell.dart';
 import '../widgets/challenge_hero.dart';
 import '../widgets/challenge_map.dart';
 import '../widgets/error_state.dart';
@@ -59,7 +59,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   static const _rules = UnlockRules();
 
   Future<_ChallengePageData>? _future;
-  Future<FapiOffer?>? _offerFuture;
   final _startController = TextEditingController();
   final _feedScroll = ScrollController();
   final _route = ChallengeRouteController();
@@ -87,7 +86,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _future ??= _load();
-    _offerFuture ??= _loadOffer();
     context.read<LastOpenedChallengeStore>().remember(widget.challengeId);
   }
 
@@ -96,7 +94,6 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.challengeId == widget.challengeId) return;
     _future = _load();
-    _offerFuture = _loadOffer();
   }
 
   void _onFeedOffset() {
@@ -114,16 +111,19 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   void _publishPayBar() {
     final visible = floatingPayBarShouldShow(
       scrolledEnough: _payScroll,
-      inlineVisible: _inlinePayVisible(),
+      inlineVisibleFraction: _inlinePayVisibleFraction(),
       suppressed: _paySuppressed,
+      paid: _payPaid,
     );
     if (visible != _payBarShown.value) _payBarShown.value = visible;
   }
 
-  bool _inlinePayVisible() {
-    if (!_feedScroll.hasClients) return true;
+  var _payPaid = false;
+
+  double _inlinePayVisibleFraction() {
+    if (!_feedScroll.hasClients) return 1;
     final position = _feedScroll.position;
-    if (!position.hasViewportDimension) return true;
+    if (!position.hasViewportDimension) return 1;
     final targetContext = _inlinePayKey.currentContext;
     final target = targetContext?.findRenderObject();
     if (target is RenderBox && target.attached && target.hasSize) {
@@ -136,10 +136,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     }
     final top = _inlinePayTop;
     final bottom = _inlinePayBottom;
-    if (top == null || bottom == null) return true;
-    final viewTop = top - position.pixels;
-    final viewBottom = bottom - position.pixels;
-    return viewBottom > 1 && viewTop < position.viewportDimension - 1;
+    if (top == null || bottom == null) return 1;
+    return inlinePayVisibleFraction(
+      blockTop: top,
+      blockBottom: bottom,
+      scrollOffset: position.pixels,
+      viewport: position.viewportDimension,
+    );
   }
 
   @override
@@ -198,22 +201,8 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   Future<void> _reload() async {
     setState(() {
       _future = _load();
-      _offerFuture = _loadOffer();
     });
     await _future;
-  }
-
-  Future<FapiOffer?> _loadOffer() async {
-    final services = context.read<AppServices>();
-    final locale = context.read<LocaleController>().locale;
-    try {
-      return await services.purchases.fetchOffer(
-        widget.challengeId,
-        locale: locale,
-      );
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<void> _unlockPaid(RewardVariant variant) async {
@@ -244,29 +233,16 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _reload();
   }
 
-  Widget _offerPayCtas(
+  Widget _payCtas(
     Challenge challenge,
     AppStrings strings, {
     bool bar = false,
   }) {
-    return FutureBuilder<FapiOffer?>(
-      future: _offerFuture,
-      builder: (context, offerSnapshot) {
-        final loading =
-            _offerFuture == null ||
-            offerSnapshot.connectionState != ConnectionState.done;
-        return _ChallengePayCtas(
-          strings: strings,
-          challenge: challenge,
-          offer: offerSnapshot.data,
-          loading: loading,
-          failed:
-              offerSnapshot.hasError ||
-              (!loading && offerSnapshot.data == null),
-          onPay: _unlockPaid,
-          bar: bar,
-        );
-      },
+    return _ChallengePayCtas(
+      strings: strings,
+      challenge: challenge,
+      onPay: _unlockPaid,
+      bar: bar,
     );
   }
 
@@ -666,7 +642,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             final twoColumn = Breakpoints.challengeTwoColumn(
               constraints.maxWidth,
             );
-            final compact = constraints.maxWidth < Breakpoints.compactMax;
+            _payPaid = purchasePaid;
             final cover = challenge.coverImageUrl;
             final hasCover = cover != null && cover.isNotEmpty;
             _revealIndexes.clear();
@@ -683,6 +659,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     layoutWidth: twoColumn
                         ? constraints.maxWidth / 2
                         : constraints.maxWidth,
+                    focalY: challenge.heroFocalY,
                     backLabel: strings.back,
                     onBack: widget.embedded ? null : () => context.pop(),
                   ),
@@ -710,14 +687,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       const SizedBox(height: 16),
                       _ChallengeDescriptionCard(text: copy.description),
                     ],
-                    if (!hasAccess) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        strings.challengeLockedPaid,
-                        key: const Key('challenge-unlock-cta'),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 40),
                     KeyedSubtree(
                       key: _inlinePayKey,
                       child: purchasePaid && completeBy != null
@@ -727,7 +697,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                                 formatLocalDate(completeBy, locale),
                               ),
                             )
-                          : _offerPayCtas(challenge, strings),
+                          : _payCtas(challenge, strings),
                     ),
                     if (data.purchase?.status == PurchaseStatus.pending)
                       Padding(
@@ -843,13 +813,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    if (compact)
+                    if (!purchasePaid)
                       SizedBox(
                         key: const Key('challenge-payment-spacer'),
                         height: ChallengePaymentBarMetrics.occupiedHeight(
                           MediaQuery.sizeOf(context).width,
                           MediaQuery.paddingOf(context).bottom,
-                          singleRow: purchasePaid && completeBy != null,
                         ),
                       ),
                   ]),
@@ -920,12 +889,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 Expanded(child: page),
               ],
             );
-            if (compact) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _publishPayBar();
-              });
-            }
-            if (!compact) return column;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _publishPayBar();
+            });
+            if (purchasePaid) return column;
             return Stack(
               children: [
                 column,
@@ -945,7 +912,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                             offset: shown ? Offset.zero : const Offset(0, 1),
                             duration: reduce
                                 ? Duration.zero
-                                : const Duration(milliseconds: 200),
+                                : const Duration(milliseconds: 220),
                             curve: Curves.easeOut,
                             child: child,
                           ),
@@ -954,10 +921,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     },
                     child: _ChallengePaymentBar(
                       strings: strings,
-                      locale: locale,
-                      paid: purchasePaid,
-                      completeBy: completeBy,
-                      pay: _offerPayCtas(challenge, strings, bar: true),
+                      pay: _payCtas(challenge, strings, bar: true),
                     ),
                   ),
                 ),
@@ -1297,16 +1261,6 @@ class _LazyChallengeMapState extends State<_LazyChallengeMap> {
   }
 }
 
-/// The phone bar slides up only after the page has scrolled far enough and
-/// the in-page payment pair is off screen, so the two never show together.
-bool floatingPayBarShouldShow({
-  required bool scrolledEnough,
-  required bool inlineVisible,
-  required bool suppressed,
-}) {
-  return scrolledEnough && !inlineVisible && !suppressed;
-}
-
 class _ChallengeDescriptionCard extends StatelessWidget {
   const _ChallengeDescriptionCard({required this.text});
 
@@ -1345,96 +1299,118 @@ class _PayDeadlineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          const Icon(Icons.event, color: BrandColors.forest, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: BrandColors.forest,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PayBarHeading extends StatelessWidget {
-  const _PayBarHeading({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: ChallengePaymentBarMetrics.headingHeight,
-      child: Center(
-        child: DecoratedBox(
-          key: const Key('challenge-paybar-heading'),
-          decoration: BoxDecoration(
-            color: BrandColors.cream.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: AppTheme.displayFont,
-                color: BrandColors.forest,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                height: 1,
-              ),
+    return Row(
+      children: [
+        const Icon(Icons.event, color: BrandColors.forest, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: BrandColors.forest,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
 
-/// Floating phone payment buttons. No panel behind them.
+/// The floating pair waits until about half a viewport has scrolled, then
+/// stays hidden while the in-page block is still 30% on screen, while FAPI
+/// is open, and after the challenge is paid.
+bool floatingPayBarShouldShow({
+  required bool scrolledEnough,
+  required double inlineVisibleFraction,
+  required bool suppressed,
+  required bool paid,
+}) {
+  return scrolledEnough &&
+      inlineVisibleFraction < inlinePayHideFraction &&
+      !suppressed &&
+      !paid;
+}
+
+/// Share of the in-page block that intersects the viewport. Unmeasured
+/// blocks count as fully visible so the floating pair cannot double up.
+const inlinePayHideFraction = 0.30;
+
+double inlinePayVisibleFraction({
+  required double blockTop,
+  required double blockBottom,
+  required double scrollOffset,
+  required double viewport,
+}) {
+  final height = blockBottom - blockTop;
+  if (height <= 0 || viewport <= 0) return 1;
+  final viewTop = blockTop - scrollOffset;
+  final viewBottom = blockBottom - scrollOffset;
+  final visibleTop = math.max(0.0, viewTop);
+  final visibleBottom = math.min(viewport, viewBottom);
+  final visible = math.max(0.0, visibleBottom - visibleTop);
+  return (visible / height).clamp(0.0, 1.0);
+}
+
+/// Floating payment buttons. No panel behind them.
 abstract final class ChallengePaymentBarMetrics {
-  static const topPadding = 8.0;
-  static const bottomPadding = 8.0;
+  static const headingSize = 20.0;
+  static const headingHeight = 24.0;
+  static const topPadding = 0.0;
+  static const headingGap = 8.0;
+  static const phoneBottom = 4.0;
+  static const desktopBottom = 12.0;
   static const visualHeight = 44.0;
   static const tapTarget = 48.0;
   static const labelSize = 15.0;
   static const minLabelSize = 14.0;
   static const letterSpacing = 0.1;
-  static const rowGap = 18.0;
-  static const headingHeight = 28.0;
-  static const headingGap = 8.0;
-  static const buttonMaxWidth = 170.0;
+  static const rowGap = 32.0;
+  static const wideGap = 40.0;
+  static const narrowGap = 16.0;
+  static const buttonMaxWidth = 168.0;
+  static const wideButtonWidth = 176.0;
+  static const wideBreakpoint = 600.0;
+  static const narrowBreakpoint = 340.0;
+  static const inlineMaxWidth = 440.0;
+  static const inlineHeadingGap = 20.0;
+  static const inlineNarrowGap = 8.0;
   static const spinner = 18.0;
 
-  static double bodyHeight(double width, {bool singleRow = false}) {
-    if (singleRow) return topPadding + tapTarget + bottomPadding;
-    return topPadding + headingHeight + headingGap + tapTarget + bottomPadding;
-  }
+  static double bottomPadding(double width) =>
+      width >= wideBreakpoint ? desktopBottom : phoneBottom;
 
-  static double occupiedHeight(
-    double width,
-    double safeBottom, {
-    bool singleRow = false,
-  }) => bodyHeight(width, singleRow: singleRow) + safeBottom;
+  static double bodyHeight(double width) =>
+      headingHeight + headingGap + tapTarget + bottomPadding(width);
+
+  static double occupiedHeight(double width, double safeBottom) =>
+      bodyHeight(width) + safeBottom;
 }
 
-/// Font size for the payment-bar label. Starts at 15 and may scale down
-/// to 14, never further.
+/// Each floating button's width. Under 340 dp the row uses [Expanded].
+double floatingPayButtonWidth(double windowWidth) {
+  if (windowWidth >= ChallengePaymentBarMetrics.wideBreakpoint) {
+    return ChallengePaymentBarMetrics.wideButtonWidth;
+  }
+  final room =
+      (windowWidth - 2 * kNavSideInset - ChallengePaymentBarMetrics.rowGap) /
+      2;
+  return math.min(ChallengePaymentBarMetrics.buttonMaxWidth, math.max(0, room));
+}
+
+double floatingPayGap(double windowWidth) {
+  if (windowWidth < ChallengePaymentBarMetrics.narrowBreakpoint) {
+    return ChallengePaymentBarMetrics.narrowGap;
+  }
+  if (windowWidth >= ChallengePaymentBarMetrics.wideBreakpoint) {
+    return ChallengePaymentBarMetrics.wideGap;
+  }
+  return ChallengePaymentBarMetrics.rowGap;
+}
+
+/// Font size for a payment label. Starts at 15 and may scale down to 14.
 double paymentBarLabelFontSize({
   required double textWidth,
   required double maxWidth,
@@ -1449,45 +1425,45 @@ double paymentBarLabelFontSize({
 class _ChallengePaymentBar extends StatelessWidget {
   const _ChallengePaymentBar({
     required this.strings,
-    required this.locale,
-    required this.paid,
-    required this.completeBy,
     required this.pay,
   });
 
   final AppStrings strings;
-  final String locale;
-  final bool paid;
-  final DateTime? completeBy;
   final Widget pay;
 
   @override
   Widget build(BuildContext context) {
-    final due = completeBy;
-    final deadline = paid && due != null;
     final media = MediaQuery.paddingOf(context);
-    final content = deadline
-        ? _PayDeadlineRow(
-            key: const Key('challenge-paybar-deadline'),
-            label: strings.rewardDeadlineLabel(formatLocalDate(due, locale)),
-          )
-        : Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _PayBarHeading(text: strings.joinChallenge),
-              const SizedBox(height: ChallengePaymentBarMetrics.headingGap),
-              pay,
-            ],
-          );
+    final width = MediaQuery.sizeOf(context).width;
     return Padding(
       key: const Key('challenge-payment-bar'),
       padding: EdgeInsets.fromLTRB(
-        media.left,
-        ChallengePaymentBarMetrics.topPadding,
-        media.right,
-        ChallengePaymentBarMetrics.bottomPadding + media.bottom,
+        media.left + kNavSideInset,
+        0,
+        media.right + kNavSideInset,
+        ChallengePaymentBarMetrics.bottomPadding(width) + media.bottom,
       ),
-      child: content,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            strings.joinChallenge,
+            key: const Key('challenge-paybar-heading'),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: AppTheme.displayFont,
+              color: BrandColors.forest,
+              fontSize: ChallengePaymentBarMetrics.headingSize,
+              fontWeight: FontWeight.w600,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: ChallengePaymentBarMetrics.headingGap),
+          pay,
+        ],
+      ),
     );
   }
 }
@@ -1496,138 +1472,40 @@ class _ChallengePayCtas extends StatelessWidget {
   const _ChallengePayCtas({
     required this.strings,
     required this.challenge,
-    required this.offer,
-    required this.loading,
-    required this.failed,
     required this.onPay,
     this.bar = false,
   });
 
-  static const gap = 10.0;
-  static const minHeight = 52.0;
-  static const narrowBreakpoint = 320.0;
-  static const radius = 16.0;
-  static const borderWidth = 1.5;
-  static const labelSize = 15.5;
-  static const priceSize = 16.5;
-  static const priceGap = 5.0;
-  static const padding = EdgeInsets.symmetric(horizontal: 14, vertical: 11);
-
   final AppStrings strings;
   final Challenge challenge;
-  final FapiOffer? offer;
-  final bool loading;
-  final bool failed;
   final ValueChanged<RewardVariant> onPay;
   final bool bar;
-
-  /// In-page disabled stays a solid beige button with bark type. The phone
-  /// bar uses forest at 40% for the fill, the border, and the label.
-  static ({Color background, Color foreground, Color border}) _colors({
-    required bool outlined,
-    required Set<WidgetState> states,
-    required bool bar,
-  }) {
-    if (states.contains(WidgetState.disabled)) {
-      if (bar) {
-        final muted = BrandColors.forest.withValues(alpha: 0.4);
-        return (background: muted, foreground: muted, border: muted);
-      }
-      return (
-        background: outlined ? BrandColors.cream : BrandColors.beige,
-        foreground: BrandColors.bark,
-        border: BrandColors.bark,
-      );
-    }
-    final pressed = states.contains(WidgetState.pressed);
-    Color tone(Color color) => pressed ? color.withValues(alpha: 0.85) : color;
-    return (
-      background: tone(outlined ? BrandColors.cream : BrandColors.forest),
-      foreground: tone(outlined ? BrandColors.forest : BrandColors.cream),
-      border: tone(BrandColors.forest),
-    );
-  }
-
-  ButtonStyle _ctaStyle({required bool outlined}) {
-    final shape = bar
-        ? const StadiumBorder()
-        : const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(radius)),
-          );
-    return ButtonStyle(
-      minimumSize: WidgetStatePropertyAll(
-        Size(0, bar ? ChallengePaymentBarMetrics.visualHeight : minHeight),
-      ),
-      fixedSize: bar
-          ? const WidgetStatePropertyAll(
-              Size.fromHeight(ChallengePaymentBarMetrics.visualHeight),
-            )
-          : null,
-      tapTargetSize: bar ? MaterialTapTargetSize.padded : null,
-      padding: WidgetStatePropertyAll(
-        bar ? const EdgeInsets.symmetric(horizontal: 12) : padding,
-      ),
-      alignment: Alignment.center,
-      visualDensity: VisualDensity.standard,
-      elevation: WidgetStateProperty.resolveWith((states) {
-        final contact =
-            bar && !outlined && !states.contains(WidgetState.disabled);
-        return contact ? 1.0 : 0.0;
-      }),
-      shadowColor: WidgetStateProperty.resolveWith((states) {
-        final contact =
-            bar && !outlined && !states.contains(WidgetState.disabled);
-        if (!contact) return Colors.transparent;
-        return BrandColors.forest.withValues(alpha: 0.14);
-      }),
-      surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-      splashFactory: NoSplash.splashFactory,
-      shape: WidgetStatePropertyAll(shape),
-      backgroundColor: WidgetStateProperty.resolveWith(
-        (states) =>
-            _colors(outlined: outlined, states: states, bar: bar).background,
-      ),
-      foregroundColor: WidgetStateProperty.resolveWith(
-        (states) =>
-            _colors(outlined: outlined, states: states, bar: bar).foreground,
-      ),
-      side: WidgetStateProperty.resolveWith((states) {
-        if (!outlined) return BorderSide.none;
-        return BorderSide(
-          color: _colors(outlined: outlined, states: states, bar: bar).border,
-          width: borderWidth,
-        );
-      }),
-    );
-  }
 
   Key _key(String name) =>
       Key('${bar ? 'challenge-floating-pay' : 'challenge-pay'}-$name');
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final diploma = _payButton(
+    final sizes =
+        Theme.of(context).extension<AppButtonSizes>() ?? AppButtonSizes.standard;
+    final diploma = AppButton(
       key: _key('diploma'),
-      priceKey: _key('diploma-price'),
-      loadingKey: _key('diploma-price-loading'),
-      fallbackKey: _key('diploma-price-fallback'),
-      outlined: true,
       label: strings.payDigitalDiploma,
-      variant: offer?.diploma,
+      variant: AppButtonVariant.secondary,
+      size: bar ? AppButtonSize.m : AppButtonSize.l,
+      elevated: bar,
+      loadingLabel: strings.buttonLoading,
       onPressed: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
           ? null
           : () => onPay(RewardVariant.diploma),
     );
-    final medal = _payButton(
+    final medal = AppButton(
       key: _key('medal'),
-      priceKey: _key('medal-price'),
-      loadingKey: _key('medal-price-loading'),
-      fallbackKey: _key('medal-price-fallback'),
-      outlined: false,
       label: strings.payMedalAndDiploma,
-      variant: offer?.medal,
+      variant: AppButtonVariant.primary,
+      size: bar ? AppButtonSize.m : AppButtonSize.l,
+      elevated: bar,
+      loadingLabel: strings.buttonLoading,
       onPressed: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
           ? null
           : () => onPay(RewardVariant.medalAndDiploma),
@@ -1635,236 +1513,89 @@ class _ChallengePayCtas extends StatelessWidget {
     if (bar) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final room =
-              (constraints.maxWidth - ChallengePaymentBarMetrics.rowGap) / 2;
-          final maxEach = math.min(
-            ChallengePaymentBarMetrics.buttonMaxWidth,
-            math.max(0.0, room),
-          );
+          final width = MediaQuery.sizeOf(context).width;
+          final gap = floatingPayGap(width);
+          if (width < ChallengePaymentBarMetrics.narrowBreakpoint) {
+            return Row(
+              key: _key('ctas'),
+              children: [
+                Expanded(child: diploma),
+                SizedBox(width: gap),
+                Expanded(child: medal),
+              ],
+            );
+          }
+          final buttonWidth = floatingPayButtonWidth(width);
           return Row(
             key: _key('ctas'),
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxEach),
-                child: diploma,
-              ),
-              const SizedBox(width: ChallengePaymentBarMetrics.rowGap),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxEach),
-                child: medal,
-              ),
+              SizedBox(width: buttonWidth, child: diploma),
+              SizedBox(width: gap),
+              SizedBox(width: buttonWidth, child: medal),
             ],
           );
         },
       );
     }
-    if (width < narrowBreakpoint) {
-      return Column(
-        key: _key('ctas'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          diploma,
-          const SizedBox(height: gap),
-          medal,
-        ],
-      );
-    }
-    return IntrinsicHeight(
-      child: Row(
-        key: _key('ctas'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(flex: 1, child: diploma),
-          const SizedBox(width: gap),
-          Expanded(flex: 1, child: medal),
-        ],
-      ),
-    );
-  }
-
-  Widget _payButton({
-    required Key key,
-    required Key priceKey,
-    required Key loadingKey,
-    required Key fallbackKey,
-    required bool outlined,
-    required String label,
-    required FapiOfferVariant? variant,
-    required VoidCallback? onPressed,
-  }) {
-    final effectivePressed = bar && loading ? null : onPressed;
-    final states = <WidgetState>{
-      if (effectivePressed == null) WidgetState.disabled,
-    };
-    final ink = _colors(
-      outlined: outlined,
-      states: states,
-      bar: bar,
-    ).foreground;
-    final Widget child;
-    if (bar) {
-      final caption = _PaymentBarLabel(text: label, color: ink);
-      child = loading
-          ? Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(opacity: 0, child: caption),
-                Semantics(
-                  label: strings.payPriceLoading,
-                  child: SizedBox(
-                    key: loadingKey,
-                    width: ChallengePaymentBarMetrics.spinner,
-                    height: ChallengePaymentBarMetrics.spinner,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: ink,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : caption;
-    } else {
-      final price = loading || failed
-          ? null
-          : formatPayButtonPrice(
-              cents: variant?.priceCents,
-              currency: variant?.currency ?? '',
-              locale: strings.locale,
-              freeLabel: strings.payPriceFree,
-            );
-      final showFallback = !loading && failed;
-      child = Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: labelSize,
-              fontWeight: FontWeight.w600,
-              height: 1.2,
-              color: ink,
-            ),
-          ),
-          if (loading) ...[
-            const SizedBox(height: priceGap),
-            Semantics(
-              label: strings.payPriceLoading,
-              child: SizedBox(
-                key: loadingKey,
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: ink),
-              ),
-            ),
-          ] else if (showFallback) ...[
-            const SizedBox(height: priceGap),
-            Text(
-              strings.payPriceUnavailable,
-              key: fallbackKey,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: ChallengePaymentBarMetrics.inlineMaxWidth,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final narrow =
+                constraints.maxWidth <
+                ChallengePaymentBarMetrics.narrowBreakpoint;
+            final heading = Text(
+              strings.joinChallenge,
+              key: const Key('challenge-pay-heading'),
+              textAlign: TextAlign.left,
               style: TextStyle(
-                fontSize: 13,
+                fontFamily: AppTheme.displayFont,
                 fontWeight: FontWeight.w600,
+                fontSize: MediaQuery.sizeOf(context).width >=
+                        ChallengePaymentBarMetrics.wideBreakpoint
+                    ? 32
+                    : 28,
                 height: 1.2,
-                color: ink,
+                color: BrandColors.forest,
               ),
-            ),
-          ] else if (price != null) ...[
-            const SizedBox(height: priceGap),
-            Text(
-              price,
-              key: priceKey,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: priceSize,
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-                color: ink,
-              ),
-            ),
-          ],
-        ],
-      );
-    }
-    final style = _ctaStyle(outlined: outlined);
-    if (outlined) {
-      return OutlinedButton(
-        key: key,
-        onPressed: effectivePressed,
-        style: style,
-        child: child,
-      );
-    }
-    return FilledButton(
-      key: key,
-      onPressed: effectivePressed,
-      style: style,
-      child: child,
-    );
-  }
-}
-
-class _PaymentBarLabel extends StatelessWidget {
-  const _PaymentBarLabel({required this.text, required this.color});
-
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth;
-        final base = TextStyle(
-          fontSize: ChallengePaymentBarMetrics.labelSize,
-          fontWeight: FontWeight.w600,
-          letterSpacing: ChallengePaymentBarMetrics.letterSpacing,
-          height: 1,
-          color: color,
-        );
-        final direction = Directionality.of(context);
-        final measured = TextPainter(
-          text: TextSpan(text: text, style: base),
-          textDirection: direction,
-          maxLines: 1,
-        )..layout();
-        final fontSize = paymentBarLabelFontSize(
-          textWidth: measured.width,
-          maxWidth: maxWidth,
-        );
-        measured.dispose();
-        final style = base.copyWith(fontSize: fontSize);
-        final painted = TextPainter(
-          text: TextSpan(text: text, style: style),
-          textDirection: direction,
-          maxLines: 1,
-        )..layout();
-        final overflows = maxWidth.isFinite && painted.width > maxWidth + 0.5;
-        painted.dispose();
-        final label = Text(
-          text,
-          maxLines: 1,
-          overflow: overflows ? TextOverflow.ellipsis : TextOverflow.visible,
-          softWrap: false,
-          textAlign: TextAlign.center,
-          style: style,
-        );
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.center,
-          child: overflows ? SizedBox(width: maxWidth, child: label) : label,
-        );
-      },
+            );
+            final buttons = narrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      medal,
+                      const SizedBox(
+                        height: ChallengePaymentBarMetrics.inlineNarrowGap,
+                      ),
+                      diploma,
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: diploma),
+                      SizedBox(width: sizes.gapPair),
+                      Expanded(child: medal),
+                    ],
+                  );
+            return Column(
+              key: _key('ctas'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                heading,
+                const SizedBox(
+                  height: ChallengePaymentBarMetrics.inlineHeadingGap,
+                ),
+                buttons,
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }

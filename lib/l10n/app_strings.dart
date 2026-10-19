@@ -217,6 +217,7 @@ class AppStrings {
     'diplomaNameSave',
     'diplomaNameCancel',
     'joinChallenge',
+    'buttonLoading',
     'payDigitalDiploma',
     'payMedalAndDiploma',
     'payPriceFree',
@@ -490,6 +491,7 @@ class AppStrings {
   String get diplomaNameSave => t('diplomaNameSave');
   String get diplomaNameCancel => t('diplomaNameCancel');
   String get joinChallenge => t('joinChallenge');
+  String get buttonLoading => t('buttonLoading');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
   String get payPriceFree => t('payPriceFree');
@@ -894,7 +896,8 @@ class AppStrings {
       'diplomaNameInvalid': 'Enter 1–40 characters and no control characters.',
       'diplomaNameSave': 'Save',
       'diplomaNameCancel': 'Cancel',
-      'joinChallenge': 'Join the challenge',
+      'joinChallenge': 'Accept the challenge',
+      'buttonLoading': 'Loading',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
       'payPriceFree': 'Free',
@@ -1177,7 +1180,8 @@ class AppStrings {
       'diplomaNameInvalid': 'Zadej 1–40 znaků bez řídicích znaků.',
       'diplomaNameSave': 'Uložit',
       'diplomaNameCancel': 'Zrušit',
-      'joinChallenge': 'Zapoj se do výzvy',
+      'joinChallenge': 'Přijmi výzvu',
+      'buttonLoading': 'Načítání',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
       'payPriceFree': 'Zdarma',
@@ -1464,7 +1468,8 @@ class AppStrings {
       'diplomaNameInvalid': 'Gib 1–40 Zeichen ohne Steuerzeichen ein.',
       'diplomaNameSave': 'Speichern',
       'diplomaNameCancel': 'Abbrechen',
-      'joinChallenge': 'Mach mit bei der Challenge',
+      'joinChallenge': 'Nimm die Herausforderung an',
+      'buttonLoading': 'Wird geladen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
       'payPriceFree': 'Kostenlos',

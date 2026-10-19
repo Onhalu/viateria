@@ -36,7 +36,7 @@ class ChallengeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AspectRatio(
-              aspectRatio: 16 / 9,
+              aspectRatio: catalogCardAspectRatio,
               child: challenge.coverImageUrl == null
                   ? Container(
                       color: BrandColors.beige,
@@ -46,7 +46,10 @@ class ChallengeCard extends StatelessWidget {
                         color: scheme.onPrimaryContainer,
                       ),
                     )
-                  : AppNetworkImage(url: challenge.coverImageUrl),
+                  : CatalogCoverImage(
+                      url: challenge.coverImageUrl,
+                      card: true,
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -341,7 +344,7 @@ class _CatalogFeaturedSectionState extends State<CatalogFeaturedSection> {
             : (constraints.maxWidth - 24).clamp(160.0, 420.0);
         final stride = cardWidth + _gap;
         _stride = stride;
-        final listHeight = cardWidth * 9 / 16 + _textBlock;
+        final listHeight = cardWidth / catalogCardAspectRatio + _textBlock;
         return Column(
           key: const Key('catalog-featured'),
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -583,8 +586,8 @@ class CatalogCountryResults extends StatelessWidget {
   List<Widget> slivers({required int columns, required double width}) {
     if (challenges.isEmpty) return const [];
     final cell = columns <= 1 ? width : (width - 16 * (columns - 1)) / columns;
-    // 16:9 cover plus title, badge, and a two-line excerpt.
-    final extent = cell * 9 / 16 + 148;
+    // 4:3 cover plus title, badge, and a two-line excerpt.
+    final extent = cell / catalogCardAspectRatio + 148;
     return [
       const SliverToBoxAdapter(
         child: SizedBox(key: Key('catalog-country-results'), height: 1),
@@ -662,8 +665,11 @@ class CatalogFeaturedCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AspectRatio(
-                aspectRatio: 16 / 9,
-                child: CatalogCoverImage(url: challenge.coverImageUrl),
+                aspectRatio: catalogCardAspectRatio,
+                child: CatalogCoverImage(
+                  url: challenge.coverImageUrl,
+                  card: true,
+                ),
               ),
               Expanded(
                 child: Padding(
@@ -721,9 +727,13 @@ class CatalogFeaturedCard extends StatelessWidget {
 }
 
 class CatalogCoverImage extends StatelessWidget {
-  const CatalogCoverImage({super.key, required this.url});
+  const CatalogCoverImage({super.key, required this.url, this.card = false});
 
   final String? url;
+
+  /// Card thumbnails pick cover or contain from the photo's own ratio.
+  /// The home carousel stays a full-bleed cover.
+  final bool card;
 
   @override
   Widget build(BuildContext context) {
@@ -733,7 +743,115 @@ class CatalogCoverImage extends StatelessWidget {
         child: Icon(Icons.landscape, size: 48, color: BrandColors.forest),
       );
     }
-    return AppNetworkImage(url: url);
+    if (!card) return AppNetworkImage(url: url);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final logical = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : null;
+        final cache = logical == null
+            ? null
+            : cachePixelsFor(logical, MediaQuery.devicePixelRatioOf(context));
+        return _CardCover(provider: _cardProvider(url!, cache));
+      },
+    );
+  }
+}
+
+ImageProvider _cardProvider(String url, int? cacheWidth) {
+  const asset = 'asset://';
+  final ImageProvider image = url.startsWith(asset)
+      ? AssetImage(url.substring(asset.length))
+      : NetworkImage(supabaseRenderUrl(url, cacheWidth));
+  if (cacheWidth == null) return image;
+  return ResizeImage(image, width: cacheWidth);
+}
+
+/// Beige field. Photos near 4:3 crop from the center. Other ratios are
+/// shown whole, with no blur and no shadow.
+class _CardCover extends StatefulWidget {
+  const _CardCover({required this.provider});
+
+  final ImageProvider provider;
+
+  @override
+  State<_CardCover> createState() => _CardCoverState();
+}
+
+class _CardCoverState extends State<_CardCover> {
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+  Size? _source;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _listen();
+  }
+
+  @override
+  void didUpdateWidget(_CardCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.provider != widget.provider) {
+      _source = null;
+      _listen();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stop();
+    super.dispose();
+  }
+
+  void _listen() {
+    _stop();
+    final stream = widget.provider.resolve(
+      createLocalImageConfiguration(context),
+    );
+    var sync = true;
+    _listener = ImageStreamListener((info, _) {
+      final next = Size(
+        info.image.width.toDouble(),
+        info.image.height.toDouble(),
+      );
+      if (sync) {
+        _source = next;
+        return;
+      }
+      if (!mounted || next == _source) return;
+      setState(() => _source = next);
+    }, onError: (_, _) {});
+    _stream = stream;
+    stream.addListener(_listener!);
+    sync = false;
+  }
+
+  void _stop() {
+    final stream = _stream;
+    final listener = _listener;
+    if (stream != null && listener != null) stream.removeListener(listener);
+    _stream = null;
+    _listener = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final source = _source;
+    final aspect = source == null || source.height == 0
+        ? null
+        : source.width / source.height;
+    final crop = aspect != null && catalogCoverShouldCrop(aspect);
+    return ColoredBox(
+      color: BrandColors.beige,
+      child: Image(
+        image: widget.provider,
+        fit: crop ? BoxFit.cover : BoxFit.contain,
+        alignment: Alignment.center,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+      ),
+    );
   }
 }
 

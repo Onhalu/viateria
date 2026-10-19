@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'app_button.dart';
 import 'brand_colors.dart';
 
+export 'app_button.dart';
 export 'brand_colors.dart' show BrandColors, MapPalette;
 
 /// App-wide Material theme. Colors come from [BrandColors] / [MapPalette].
@@ -49,8 +51,6 @@ abstract final class AppTheme {
       offset: Offset(0, 4),
     ),
   ];
-
-  static const _pill = StadiumBorder();
 
   static ThemeData light() {
     const scheme = ColorScheme(
@@ -107,9 +107,11 @@ abstract final class AppTheme {
       labelMedium: sans.copyWith(fontSize: labelSize),
       labelSmall: sans.copyWith(fontSize: captionSize, color: BrandColors.bark),
     );
+    const buttonSizes = AppButtonSizes.standard;
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
+      extensions: const [buttonSizes],
       scaffoldBackgroundColor: BrandColors.cream,
       canvasColor: BrandColors.cream,
       dividerColor: BrandColors.beige,
@@ -133,52 +135,32 @@ abstract final class AppTheme {
         clipBehavior: Clip.antiAlias,
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: BrandColors.forest,
-          foregroundColor: BrandColors.onPrimary,
-          minimumSize: const Size(64, ctaHeight),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: const TextStyle(
-            fontSize: bodySize,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-          ),
-          shape: _pill,
-        ),
+        style: AppButtonThemes.filled(buttonSizes),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: BrandColors.cream,
-          foregroundColor: BrandColors.forest,
-          minimumSize: const Size(64, minTap),
-          side: const BorderSide(color: BrandColors.forest, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: const TextStyle(
-            fontSize: bodySize,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-          ),
-          shape: _pill,
-        ),
+        style: AppButtonThemes.outlined(buttonSizes),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: BrandColors.forest),
+        style: AppButtonThemes.text(buttonSizes),
       ),
+      iconButtonTheme: IconButtonThemeData(style: AppButtonThemes.icon()),
       chipTheme: ChipThemeData(
-        backgroundColor: BrandColors.cream,
+        backgroundColor: BrandColors.beige,
         selectedColor: BrandColors.forest,
-        disabledColor: BrandColors.cream,
+        disabledColor: BrandColors.beige,
         labelStyle: const TextStyle(
-          color: BrandColors.bark,
+          color: BrandColors.forest,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
         ),
         secondaryLabelStyle: const TextStyle(
           color: BrandColors.onPrimary,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
         ),
-        side: const BorderSide(color: BrandColors.beige),
+        side: BorderSide.none,
         shape: const StadiumBorder(),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         checkmarkColor: BrandColors.onPrimary,
         surfaceTintColor: Colors.transparent,
       ),

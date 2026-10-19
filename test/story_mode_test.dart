@@ -649,9 +649,9 @@ void main() {
       await _pumpDetail(tester, _paidStory(), purchases: purchases);
 
       expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-      expect(find.text(strings.payDigitalDiploma), findsOneWidget);
-      expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
-      expect(find.text(strings.challengeLockedPaid), findsOneWidget);
+      expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
+      expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+      expect(find.text(strings.challengeLockedPaid), findsNothing);
       expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
       expect(find.text('Úvod výzvy'), findsOneWidget);
       expect(find.text('Vítej v příběhové výpravě.'), findsOneWidget);
@@ -785,30 +785,26 @@ void main() {
       expect(find.text('Souhlasím se'), findsNothing);
       expect(find.text('https://vyslapni.cz/obchodni-podminky/'), findsNothing);
       expect(find.byKey(const Key('challenge-pay-terms')), findsNothing);
-      expect(find.text('197${priceThinSpace}Kč'), findsOneWidget);
+      expect(find.text('197${priceThinSpace}Kč'), findsNothing);
       expect(find.text(strings.payPriceUnavailable), findsNothing);
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('challenge-pay-medal')))
-            .onPressed,
-        isNull,
+      final medal = tester.widget<FilledButton>(
+        find.descendant(
+          of: find.byKey(const Key('challenge-pay-medal')),
+          matching: find.byType(FilledButton),
+        ),
       );
+      expect(medal.onPressed, isNull);
       expect(
-        tester
-            .widget<Text>(
-              find.descendant(
-                of: find.byKey(const Key('challenge-pay-medal')),
-                matching: find.text(strings.payMedalAndDiploma),
-              ),
-            )
-            .style
-            ?.color,
-        BrandColors.bark,
+        medal.style?.foregroundColor?.resolve({WidgetState.disabled}),
+        BrandColors.cream.withValues(alpha: 0.7),
       );
       expect(
         tester
             .widget<OutlinedButton>(
-              find.byKey(const Key('challenge-pay-diploma')),
+              find.descendant(
+                of: find.byKey(const Key('challenge-pay-diploma')),
+                matching: find.byType(OutlinedButton),
+              ),
             )
             .onPressed,
         isNotNull,
@@ -963,9 +959,9 @@ void main() {
 
     expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
     expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-    expect(find.text(strings.payDigitalDiploma), findsOneWidget);
-    expect(find.text(strings.payMedalAndDiploma), findsOneWidget);
-    expect(find.text(strings.payPriceFree), findsNWidgets(2));
+    expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
+    expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+    expect(find.text(strings.payPriceFree), findsNothing);
     expect(find.text('999${priceThinSpace}Kč'), findsNothing);
     expect(find.text(strings.challengeLockedPaid), findsNothing);
 

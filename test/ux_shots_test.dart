@@ -16,6 +16,7 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
+import 'package:viateria/ui/widgets/catalog_cards.dart';
 
 import 'auth_register_form_test.dart';
 import 'bottom_nav_test.dart';
@@ -53,23 +54,28 @@ void main() {
     await _loadFamily('MaterialIcons', const [
       '/home/ubuntu/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
     ]);
-    final done = Completer<void>();
-    final stream = const AssetImage(
+    for (final asset in const [
       'assets/challenges/beskydy-autumn.jpg',
-    ).resolve(ImageConfiguration(bundle: rootBundle, devicePixelRatio: 1));
-    late ImageStreamListener listener;
-    listener = ImageStreamListener(
-      (_, _) {
-        stream.removeListener(listener);
-        if (!done.isCompleted) done.complete();
-      },
-      onError: (error, stack) {
-        stream.removeListener(listener);
-        if (!done.isCompleted) done.completeError(error, stack);
-      },
-    );
-    stream.addListener(listener);
-    await done.future;
+      'assets/challenges/alice-manfield.jpg',
+    ]) {
+      final done = Completer<void>();
+      final stream = AssetImage(
+        asset,
+      ).resolve(ImageConfiguration(bundle: rootBundle, devicePixelRatio: 1));
+      late ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (_, _) {
+          stream.removeListener(listener);
+          if (!done.isCompleted) done.complete();
+        },
+        onError: (error, stack) {
+          stream.removeListener(listener);
+          if (!done.isCompleted) done.completeError(error, stack);
+        },
+      );
+      stream.addListener(listener);
+      await done.future;
+    }
   }
 
   void useView(WidgetTester tester, Size size) {
@@ -233,6 +239,7 @@ void main() {
       ],
       difficulty: CatalogDifficulty.easy,
       length: ChallengeLength.short,
+      coverImageUrl: 'asset://assets/challenges/alice-manfield.jpg',
     );
     final storyCopy = _shotChallenge(
       story.challenge,
@@ -276,7 +283,7 @@ void main() {
       elevation: MemoryElevationLookup(),
       deviceLocation: MemoryDeviceLocation(),
     );
-    for (final locale in ['cs', 'en']) {
+    for (final locale in ['cs', 'en', 'de']) {
       final strings = AppStrings(locale);
       for (final width in [390.0, 1280.0]) {
         final tag = '$locale-${width.round()}';
@@ -287,6 +294,17 @@ void main() {
         );
         await tester.pumpAndSettle();
         await shot('home-$tag');
+        await _pumpThumbPair(
+          tester,
+          locale: locale,
+          portrait: openCopy,
+          landscape: storyCopy,
+        );
+        await shot('home-cards-$tag');
+        await tester.pumpWidget(
+          wrapApp(shotServices, locale: LocaleController(initial: locale)),
+        );
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text(strings.navProfile));
         await tester.pumpAndSettle();
@@ -360,40 +378,20 @@ void main() {
         );
         await tester.pump();
         await shot('hero-collapsed-$tag');
-        if (width < 600) {
-          final scrollable = tester.state<ScrollableState>(
-            find
-                .descendant(
-                  of: find.byKey(const Key('challenge-feed-scroll')),
-                  matching: find.byType(Scrollable),
-                )
-                .first,
-          );
-          scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 250));
-          expect(find.text(strings.joinChallenge), findsOneWidget);
-          expect(
-            find.byKey(const Key('challenge-paybar-heading')),
-            findsOneWidget,
-          );
-          await shot('paybar-$tag');
-        } else {
-          final scrollable = tester.state<ScrollableState>(
-            find
-                .descendant(
-                  of: find.byKey(const Key('challenge-feed-scroll')),
-                  matching: find.byType(Scrollable),
-                )
-                .first,
-          );
-          scrollable.position.jumpTo(0);
-          await tester.pump();
-          final pay = find.byKey(const Key('challenge-pay-ctas'));
-          await tester.ensureVisible(pay);
-          await tester.pumpAndSettle();
-          await shot('paybar-$tag');
-        }
+        final scrollable = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byKey(const Key('challenge-feed-scroll')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text(strings.joinChallenge), findsWidgets);
+        expect(find.byKey(const Key('challenge-paybar-heading')), findsOneWidget);
+        await shot('paybar-$tag');
       }
     }
 
@@ -475,6 +473,7 @@ Challenge _shotChallenge(
   CatalogDifficulty? difficulty,
   ChallengeLength? length,
   String? region,
+  String? coverImageUrl,
 }) {
   return Challenge(
     id: source.id,
@@ -488,13 +487,60 @@ Challenge _shotChallenge(
     status: source.status,
     countryCode: source.countryCode,
     region: region ?? source.region,
-    coverImageUrl: source.coverImageUrl,
+    coverImageUrl: coverImageUrl ?? source.coverImageUrl,
     fapiFormUrlDiploma: source.fapiFormUrlDiploma,
     fapiFormUrlMedal: source.fapiFormUrlMedal,
     difficulty: difficulty ?? source.difficulty,
     length: length ?? source.length,
     translations: translations,
   );
+}
+
+Future<void> _pumpThumbPair(
+  WidgetTester tester, {
+  required String locale,
+  required Challenge portrait,
+  required Challenge landscape,
+}) async {
+  final width = tester.view.physicalSize.width;
+  final card = width >= 600 ? 280.0 : (width - 48) / 2;
+  await tester.pumpWidget(
+    ChangeNotifierProvider(
+      create: (_) => LocaleController(initial: locale),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: card / (4 / 3) + 148,
+                  child: CatalogFeaturedCard(
+                    challenge: portrait,
+                    onTap: () {},
+                    width: card,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                SizedBox(
+                  height: card / (4 / 3) + 148,
+                  child: CatalogFeaturedCard(
+                    challenge: landscape,
+                    onTap: () {},
+                    width: card,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> saveShot(WidgetTester tester, String name) async {
