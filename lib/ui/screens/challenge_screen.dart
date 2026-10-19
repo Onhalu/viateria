@@ -72,6 +72,11 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   final _inlinePayKey = GlobalKey();
   double? _inlinePayTop;
   double? _inlinePayBottom;
+  double? _inlineGlobalTop;
+  double? _inlineGlobalBottom;
+  double? _feedViewGlobalTop;
+  double? _feedViewHeight;
+  var _inlineMeasuredInFeed = false;
   final _chapterKeys = <String, GlobalKey>{};
   final _revealIndexes = <String, int>{};
   var _feedItemCount = 0;
@@ -124,25 +129,67 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     if (!_feedScroll.hasClients) return 1;
     final position = _feedScroll.position;
     if (!position.hasViewportDimension) return 1;
-    final targetContext = _inlinePayKey.currentContext;
-    final target = targetContext?.findRenderObject();
-    if (target is RenderBox && target.attached && target.hasSize) {
-      final viewport = RenderAbstractViewport.maybeOf(target);
-      if (viewport != null) {
-        final reveal = viewport.getOffsetToReveal(target, 0);
-        _inlinePayTop = reveal.offset;
-        _inlinePayBottom = reveal.offset + target.size.height;
+    final target = _inlinePayKey.currentContext?.findRenderObject();
+    final feedObject = position.context.storageContext.findRenderObject();
+    if (target is RenderBox &&
+        target.attached &&
+        target.hasSize &&
+        feedObject != null) {
+      if (_renderIsUnder(target, feedObject)) {
+        final viewport = RenderAbstractViewport.maybeOf(target);
+        if (viewport != null) {
+          final reveal = viewport.getOffsetToReveal(target, 0);
+          _inlinePayTop = reveal.offset;
+          _inlinePayBottom = reveal.offset + target.size.height;
+          _inlineMeasuredInFeed = true;
+        }
+      } else {
+        final origin = target.localToGlobal(Offset.zero);
+        _inlineGlobalTop = origin.dy;
+        _inlineGlobalBottom = origin.dy + target.size.height;
+        _inlineMeasuredInFeed = false;
+        if (feedObject is RenderBox && feedObject.hasSize) {
+          _feedViewGlobalTop = feedObject.localToGlobal(Offset.zero).dy;
+          _feedViewHeight = feedObject.size.height;
+        }
       }
     }
-    final top = _inlinePayTop;
-    final bottom = _inlinePayBottom;
-    if (top == null || bottom == null) return 1;
+    if (_inlineMeasuredInFeed) {
+      final top = _inlinePayTop;
+      final bottom = _inlinePayBottom;
+      if (top == null || bottom == null) return 1;
+      return inlinePayVisibleFraction(
+        blockTop: top,
+        blockBottom: bottom,
+        scrollOffset: position.pixels,
+        viewport: position.viewportDimension,
+      );
+    }
+    final globalTop = _inlineGlobalTop;
+    final globalBottom = _inlineGlobalBottom;
+    final viewTop = _feedViewGlobalTop;
+    final viewHeight = _feedViewHeight;
+    if (globalTop == null ||
+        globalBottom == null ||
+        viewTop == null ||
+        viewHeight == null) {
+      return 1;
+    }
     return inlinePayVisibleFraction(
-      blockTop: top,
-      blockBottom: bottom,
-      scrollOffset: position.pixels,
-      viewport: position.viewportDimension,
+      blockTop: globalTop,
+      blockBottom: globalBottom,
+      scrollOffset: viewTop,
+      viewport: viewHeight,
     );
+  }
+
+  bool _renderIsUnder(RenderObject node, RenderObject ancestor) {
+    RenderObject? current = node;
+    while (current != null) {
+      if (identical(current, ancestor)) return true;
+      current = current.parent;
+    }
+    return false;
   }
 
   @override
@@ -233,11 +280,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _reload();
   }
 
-  Widget _payCtas(
-    Challenge challenge,
-    AppStrings strings, {
-    bool bar = false,
-  }) {
+  Widget _payCtas(Challenge challenge, AppStrings strings, {bool bar = false}) {
     return _ChallengePayCtas(
       strings: strings,
       challenge: challenge,
@@ -646,6 +689,67 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             final cover = challenge.coverImageUrl;
             final hasCover = cover != null && cover.isNotEmpty;
             _revealIndexes.clear();
+            Widget routeBlock({
+              required bool includeMap,
+              bool mapOnly = false,
+              double? mapHeight,
+            }) {
+              return _ChallengeRouteBlock(
+                includeMap: includeMap,
+                mapOnly: mapOnly,
+                mapHeight: mapHeight,
+                route: _route,
+                waypoints: waypoints,
+                plannerWaypoints: plannerWaypoints,
+                hidden: hidden,
+                fog: fog,
+                strings: strings,
+                locale: locale,
+                startController: _startController,
+                destinationOf: _destinationOf,
+                elevationAt: _catalogElevationAt,
+                onWaypointTap: _setDestination,
+                onVerifyWaypoint: (waypoint, place) =>
+                    _openVerify(challenge.id, waypoint.id, place: place),
+                onFogTap: () => _rejectLockedPlace(),
+                onStartNavigation: _startNavigation,
+                onEndNavigation: _endNavigation,
+                onStartSubmitted: _submitStartText,
+                onUseGps: _useGps,
+                onStartPlacePicked: (place) => _pickStartPlace(place, locale),
+                onCustomPlaceChosen: _chooseCustomStart,
+                onRetry: _refreshRoutes,
+              );
+            }
+
+            // Description, then 40 dp, then the in-page payment block.
+            // On a wide window this column sits under the side map.
+            final intro = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (copy.description.isNotEmpty) ...[
+                  _ChallengeDescriptionCard(text: copy.description),
+                  const SizedBox(height: 40),
+                ] else
+                  const SizedBox(height: 40),
+                KeyedSubtree(
+                  key: _inlinePayKey,
+                  child: purchasePaid && completeBy != null
+                      ? _PayDeadlineRow(
+                          key: const Key('challenge-pay-deadline'),
+                          label: strings.rewardDeadlineLabel(
+                            formatLocalDate(completeBy, locale),
+                          ),
+                        )
+                      : _payCtas(challenge, strings),
+                ),
+                if (data.purchase?.status == PurchaseStatus.pending)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(strings.purchasePending),
+                  ),
+              ],
+            );
             final scroll = CustomScrollView(
               key: const Key('challenge-feed-scroll'),
               controller: _feedScroll,
@@ -683,53 +787,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                         waypoints.length,
                       ),
                     ),
-                    if (copy.description.isNotEmpty) ...[
+                    if (!twoColumn) ...[
                       const SizedBox(height: 16),
-                      _ChallengeDescriptionCard(text: copy.description),
+                      routeBlock(includeMap: true, mapOnly: true),
+                      const SizedBox(height: 16),
+                      intro,
                     ],
-                    const SizedBox(height: 40),
-                    KeyedSubtree(
-                      key: _inlinePayKey,
-                      child: purchasePaid && completeBy != null
-                          ? _PayDeadlineRow(
-                              key: const Key('challenge-pay-deadline'),
-                              label: strings.rewardDeadlineLabel(
-                                formatLocalDate(completeBy, locale),
-                              ),
-                            )
-                          : _payCtas(challenge, strings),
-                    ),
-                    if (data.purchase?.status == PurchaseStatus.pending)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(strings.purchasePending),
-                      ),
                     const SizedBox(height: 16),
-                    _ChallengeRouteBlock(
-                      includeMap: !twoColumn,
-                      route: _route,
-                      waypoints: waypoints,
-                      plannerWaypoints: plannerWaypoints,
-                      hidden: hidden,
-                      fog: fog,
-                      strings: strings,
-                      locale: locale,
-                      startController: _startController,
-                      destinationOf: _destinationOf,
-                      elevationAt: _catalogElevationAt,
-                      onWaypointTap: _setDestination,
-                      onVerifyWaypoint: (waypoint, place) =>
-                          _openVerify(challenge.id, waypoint.id, place: place),
-                      onFogTap: () => _rejectLockedPlace(),
-                      onStartNavigation: _startNavigation,
-                      onEndNavigation: _endNavigation,
-                      onStartSubmitted: _submitStartText,
-                      onUseGps: _useGps,
-                      onStartPlacePicked: (place) =>
-                          _pickStartPlace(place, locale),
-                      onCustomPlaceChosen: _chooseCustomStart,
-                      onRetry: _refreshRoutes,
-                    ),
+                    routeBlock(includeMap: false),
                     const SizedBox(height: 16),
                     Text(
                       strings.waypoints,
@@ -838,35 +903,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
-                        child: _ChallengeRouteBlock(
-                          includeMap: true,
-                          mapOnly: true,
-                          mapHeight: constraints.maxHeight,
-                          route: _route,
-                          waypoints: waypoints,
-                          plannerWaypoints: plannerWaypoints,
-                          hidden: hidden,
-                          fog: fog,
-                          strings: strings,
-                          locale: locale,
-                          startController: _startController,
-                          destinationOf: _destinationOf,
-                          elevationAt: _catalogElevationAt,
-                          onWaypointTap: _setDestination,
-                          onVerifyWaypoint: (waypoint, place) => _openVerify(
-                            challenge.id,
-                            waypoint.id,
-                            place: place,
+                        child: _ChallengeSideMap(
+                          onScroll: _publishPayBar,
+                          below: intro,
+                          mapForHeight: (height) => routeBlock(
+                            includeMap: true,
+                            mapOnly: true,
+                            mapHeight: height,
                           ),
-                          onFogTap: () => _rejectLockedPlace(),
-                          onStartNavigation: _startNavigation,
-                          onEndNavigation: _endNavigation,
-                          onStartSubmitted: _submitStartText,
-                          onUseGps: _useGps,
-                          onStartPlacePicked: (place) =>
-                              _pickStartPlace(place, locale),
-                          onCustomPlaceChosen: _chooseCustomStart,
-                          onRetry: _refreshRoutes,
                         ),
                       ),
                       Expanded(child: scroll),
@@ -1010,7 +1054,7 @@ class _ChallengeRouteBlock extends StatelessWidget {
     required this.onRetry,
     this.includeMap = true,
     this.mapOnly = false,
-    this.mapHeight = 280,
+    this.mapHeight,
   });
 
   final ChallengeRouteController route;
@@ -1035,7 +1079,7 @@ class _ChallengeRouteBlock extends StatelessWidget {
   final VoidCallback onRetry;
   final bool includeMap;
   final bool mapOnly;
-  final double mapHeight;
+  final double? mapHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -1047,7 +1091,7 @@ class _ChallengeRouteBlock extends StatelessWidget {
         final viewport = MediaQuery.sizeOf(context).height;
         final width = MediaQuery.sizeOf(context).width;
         final mobileHeight = (viewport * 0.55).clamp(320.0, 480.0);
-        final height = mapOnly ? mapHeight : mobileHeight;
+        final height = mapHeight ?? mobileHeight;
         final mobile = width < Breakpoints.compactMax;
         final map = ChallengeMap(
           height: height,
@@ -1211,6 +1255,57 @@ void _openExpandedMap(
   );
 }
 
+/// Wide challenge layout: the map fills the side column, and the description
+/// plus the in-page payment block sit directly under it.
+class _ChallengeSideMap extends StatelessWidget {
+  const _ChallengeSideMap({
+    required this.mapForHeight,
+    required this.below,
+    required this.onScroll,
+  });
+
+  final Widget Function(double height) mapForHeight;
+  final Widget below;
+  final VoidCallback onScroll;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final belowMax = constraints.maxHeight * 0.5;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, mapConstraints) {
+                  return mapForHeight(mapConstraints.maxHeight);
+                },
+              ),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: belowMax),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification.metrics.axis == Axis.vertical) onScroll();
+                  return false;
+                },
+                child: ListView(
+                  key: const Key('challenge-map-column'),
+                  shrinkWrap: true,
+                  primary: false,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  children: [below],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _LazyChallengeMap extends StatefulWidget {
   const _LazyChallengeMap({required this.child});
 
@@ -1282,10 +1377,8 @@ class _ChallengeDescriptionCard extends StatelessWidget {
           text,
           key: const Key('challenge-info'),
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: BrandColors.forest,
-            height: 1.4,
-          ),
+          style: Theme.of(context).textTheme.bodyLarge
+              ?.copyWith(color: BrandColors.forest, height: 1.4),
         ),
       ),
     );
@@ -1395,8 +1488,7 @@ double floatingPayButtonWidth(double windowWidth) {
     return ChallengePaymentBarMetrics.wideButtonWidth;
   }
   final room =
-      (windowWidth - 2 * kNavSideInset - ChallengePaymentBarMetrics.rowGap) /
-      2;
+      (windowWidth - 2 * kNavSideInset - ChallengePaymentBarMetrics.rowGap) / 2;
   return math.min(ChallengePaymentBarMetrics.buttonMaxWidth, math.max(0, room));
 }
 
@@ -1423,10 +1515,7 @@ double paymentBarLabelFontSize({
 }
 
 class _ChallengePaymentBar extends StatelessWidget {
-  const _ChallengePaymentBar({
-    required this.strings,
-    required this.pay,
-  });
+  const _ChallengePaymentBar({required this.strings, required this.pay});
 
   final AppStrings strings;
   final Widget pay;
@@ -1487,7 +1576,8 @@ class _ChallengePayCtas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sizes =
-        Theme.of(context).extension<AppButtonSizes>() ?? AppButtonSizes.standard;
+        Theme.of(context).extension<AppButtonSizes>() ??
+        AppButtonSizes.standard;
     final diploma = AppButton(
       key: _key('diploma'),
       label: strings.payDigitalDiploma,
@@ -1556,7 +1646,8 @@ class _ChallengePayCtas extends StatelessWidget {
               style: TextStyle(
                 fontFamily: AppTheme.displayFont,
                 fontWeight: FontWeight.w600,
-                fontSize: MediaQuery.sizeOf(context).width >=
+                fontSize:
+                    MediaQuery.sizeOf(context).width >=
                         ChallengePaymentBarMetrics.wideBreakpoint
                     ? 32
                     : 28,

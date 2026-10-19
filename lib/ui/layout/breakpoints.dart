@@ -25,7 +25,8 @@ abstract final class Breakpoints {
   /// Floating bottom nav only on a compact (phone portrait) window.
   static bool usesNavigationRail(double width) => width >= compactMax;
 
-  /// Challenge detail: sticky map beside the story at expanded and up.
+  /// Challenge detail from 840 dp: the map stays in a side column, and the
+  /// description plus the payment block sit under that map.
   static bool challengeTwoColumn(double width) => width >= mediumMax;
 
   /// Catalog result grid: 1 / 2 / 3 columns.

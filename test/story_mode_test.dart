@@ -26,7 +26,9 @@ import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/brand_colors.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/screens/verify_waypoint_screen.dart';
+import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
+import 'package:viateria/ui/widgets/route_planner_panel.dart';
 import 'package:viateria/ui/widgets/story_chapter_card.dart';
 
 import 'helpers/fake_payment_webview.dart';
@@ -754,6 +756,28 @@ void main() {
         height: 5200,
       );
 
+      expect(
+        tester.getTopLeft(find.byType(ChallengeMap)).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('challenge-description'))).dy,
+        ),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const Key('challenge-description'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('challenge-pay-heading'))).dy,
+        ),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const Key('challenge-pay-heading'))).dy,
+        lessThan(tester.getTopLeft(find.byType(RoutePlannerPanel)).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byType(RoutePlannerPanel)).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('story-chapter-s-open'))).dy,
+        ),
+      );
       expect(
         tester.getTopLeft(find.byKey(const Key('story-chapter-s-open'))).dy,
         lessThan(

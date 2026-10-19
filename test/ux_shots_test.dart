@@ -17,6 +17,7 @@ import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
+import 'package:viateria/ui/widgets/challenge_map.dart';
 
 import 'auth_register_form_test.dart';
 import 'bottom_nav_test.dart';
@@ -59,9 +60,8 @@ void main() {
       'assets/challenges/alice-manfield.jpg',
     ]) {
       final done = Completer<void>();
-      final stream = AssetImage(
-        asset,
-      ).resolve(ImageConfiguration(bundle: rootBundle, devicePixelRatio: 1));
+      final stream = AssetImage(asset)
+          .resolve(ImageConfiguration(bundle: rootBundle, devicePixelRatio: 1));
       late ImageStreamListener listener;
       listener = ImageStreamListener(
         (_, _) {
@@ -363,12 +363,16 @@ void main() {
               'view ${tester.view.physicalSize}',
         );
         await shot('hero-$tag');
-        await tester.ensureVisible(
+        await _revealInChallenge(tester, const Key('challenge-description'));
+        await tester.pumpAndSettle();
+        final mapRect = tester.getRect(find.byType(ChallengeMap));
+        final descriptionRect = tester.getRect(
           find.byKey(const Key('challenge-description')),
         );
-        await tester.pumpAndSettle();
+        expect(mapRect.bottom, lessThanOrEqualTo(descriptionRect.top + 1));
+        if (locale == 'cs') await shot('order-$tag');
         await shot('description-$tag');
-        await tester.ensureVisible(find.byKey(const Key('challenge-pay-ctas')));
+        await _revealInChallenge(tester, const Key('challenge-pay-ctas'));
         await tester.pumpAndSettle();
         expect(find.text(strings.payDigitalDiploma), findsWidgets);
         await shot('pay-inline-$tag');
@@ -390,7 +394,10 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
         expect(find.text(strings.joinChallenge), findsWidgets);
-        expect(find.byKey(const Key('challenge-paybar-heading')), findsOneWidget);
+        expect(
+          find.byKey(const Key('challenge-paybar-heading')),
+          findsOneWidget,
+        );
         await shot('paybar-$tag');
       }
     }
@@ -445,6 +452,26 @@ void main() {
     }
     debugDisableShadows = true;
   });
+}
+
+/// Brings a challenge block on screen. Below the map it starts offstage, so
+/// the feed has to scroll before [WidgetTester.ensureVisible] can see it.
+/// On a wide layout the block lives under the side map and is already shown.
+Future<void> _revealInChallenge(WidgetTester tester, Key key) async {
+  final finder = find.byKey(key);
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      240,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('challenge-feed-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+  }
+  await tester.ensureVisible(finder);
 }
 
 Future<void> _loadFamily(

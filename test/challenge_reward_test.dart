@@ -447,7 +447,7 @@ void main() {
     });
 
     testWidgets(
-      'title, description, pay, map, planner, then places sit above deadline and reward',
+      'title, map, description, pay, planner, then places sit above deadline and reward',
       (tester) async {
         useTallView(tester);
         final strings = AppStrings('en');
@@ -456,6 +456,9 @@ void main() {
 
         final titleY = tester
             .getTopLeft(find.byKey(const Key('challenge-title')))
+            .dy;
+        final progressY = tester
+            .getTopLeft(find.byKey(const Key('challenge-progress')))
             .dy;
         final mapY = tester.getTopLeft(find.byType(ChallengeMap)).dy;
         final plannerY = tester.getTopLeft(find.byType(RoutePlannerPanel)).dy;
@@ -469,9 +472,10 @@ void main() {
         final rewardY = tester
             .getTopLeft(find.byKey(const Key('challenge-reward-section')))
             .dy;
-        expect(titleY, lessThan(infoY));
-        expect(infoY, lessThan(mapY));
-        expect(mapY, lessThan(plannerY));
+        expect(titleY, lessThan(progressY));
+        expect(progressY, lessThan(mapY));
+        expect(mapY, lessThan(infoY));
+        expect(infoY, lessThan(plannerY));
         expect(plannerY, lessThan(waypointsY));
         expect(waypointsY, lessThan(deadlineY));
         expect(deadlineY, lessThan(rewardY));
@@ -483,7 +487,7 @@ void main() {
             .getTopLeft(find.byKey(const Key('challenge-pay-ctas')))
             .dy;
         expect(infoY, lessThan(payY));
-        expect(payY, lessThan(mapY));
+        expect(payY, lessThan(plannerY));
         expect(payY, lessThan(waypointsY));
         final info = tester.widget<Text>(
           find.byKey(const Key('challenge-info')),
@@ -500,6 +504,58 @@ void main() {
         expect(find.text('Visit any stop'), findsOneWidget);
         expect(find.text('Open trail'), findsOneWidget);
         expect(find.text(strings.waypoints), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'wide layout puts the description and pay block under the side map',
+      (tester) async {
+        useView(tester, width: 1280, height: 900);
+        final strings = AppStrings('en');
+        await tester.pumpWidget(wrapScreen(buildServices(), locale: 'en'));
+        await tester.pumpAndSettle();
+
+        final map = tester.getRect(find.byType(ChallengeMap));
+        final description = tester.getRect(
+          find.byKey(const Key('challenge-description')),
+        );
+        final heading = tester.getRect(
+          find.byKey(const Key('challenge-pay-heading')),
+        );
+        final progress = tester.getRect(
+          find.byKey(const Key('challenge-progress')),
+        );
+        final planner = tester.getRect(find.byType(RoutePlannerPanel));
+        final places = tester.getRect(find.text(strings.waypoints));
+        expect(map.right, lessThanOrEqualTo(640));
+        expect(description.top, greaterThanOrEqualTo(map.bottom - 1));
+        expect(description.center.dx, inInclusiveRange(map.left, map.right));
+        expect(heading.top - description.bottom, closeTo(40, 1));
+        expect(heading.center.dx, lessThan(map.right));
+        expect(progress.left, greaterThanOrEqualTo(map.right - 1));
+        expect(progress.top, lessThan(planner.top));
+        expect(planner.left, greaterThanOrEqualTo(map.right - 1));
+        expect(planner.top, lessThan(places.top));
+
+        final scrollable = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byKey(const Key('challenge-feed-scroll')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(
+          scrollable.position.maxScrollExtent,
+          greaterThanOrEqualTo(scrollable.position.viewportDimension * 0.5),
+        );
+        scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(
+          tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+          const Offset(0, 1),
+        );
       },
     );
 
@@ -521,6 +577,8 @@ void main() {
         final infoY = tester
             .getTopLeft(find.byKey(const Key('challenge-info')))
             .dy;
+        final mapY = tester.getTopLeft(find.byType(ChallengeMap)).dy;
+        final plannerY = tester.getTopLeft(find.byType(RoutePlannerPanel)).dy;
         final waypointsY = tester.getTopLeft(find.text(strings.waypoints)).dy;
         final diploma = tester.getRect(
           find.byKey(const Key('challenge-pay-diploma')),
@@ -560,7 +618,10 @@ void main() {
                   .dy,
           closeTo(40, 1),
         );
+        expect(mapY, lessThan(infoY));
         expect(infoY, lessThan(diploma.top));
+        expect(medal.bottom, lessThan(plannerY));
+        expect(plannerY, lessThan(waypointsY));
         expect(medal.bottom, lessThan(waypointsY));
         expect(diploma.left, lessThan(medal.left));
         expect((diploma.center.dy - medal.center.dy).abs(), lessThan(1));
@@ -1026,10 +1087,7 @@ void main() {
       );
       expect(outlined.style?.elevation?.resolve(const {}), 0);
       expect(filled.style?.elevation?.resolve(const {}), 0);
-      expect(
-        filled.style?.shadowColor?.resolve(const {}),
-        Colors.transparent,
-      );
+      expect(filled.style?.shadowColor?.resolve(const {}), Colors.transparent);
       expect(
         filled.style?.surfaceTintColor?.resolve(const {}),
         Colors.transparent,
@@ -1037,33 +1095,34 @@ void main() {
       expect(filled.style?.elevation?.resolve({WidgetState.disabled}), 0);
     });
 
-    testWidgets('a narrow in-page block stacks the medal button above the diploma', (
-      tester,
-    ) async {
-      useView(tester, width: 360, height: 900);
-      final story = sampleStoryChallenge();
-      await tester.pumpWidget(
-        wrapScreen(
-          buildServices(detail: story),
-          locale: 'de',
-          challengeId: 'story-1',
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
-        isA<Column>(),
-      );
-      final inlineMedal = tester.getRect(
-        find.byKey(const Key('challenge-pay-medal')),
-      );
-      final inlineDiploma = tester.getRect(
-        find.byKey(const Key('challenge-pay-diploma')),
-      );
-      expect(inlineMedal.bottom, lessThan(inlineDiploma.top));
-      expect(inlineDiploma.top - inlineMedal.bottom, closeTo(8, 1));
-      expect(find.text('Nimm die Herausforderung an'), findsWidgets);
-    });
+    testWidgets(
+      'a narrow in-page block stacks the medal button above the diploma',
+      (tester) async {
+        useView(tester, width: 360, height: 900);
+        final story = sampleStoryChallenge();
+        await tester.pumpWidget(
+          wrapScreen(
+            buildServices(detail: story),
+            locale: 'de',
+            challengeId: 'story-1',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget(find.byKey(const Key('challenge-pay-ctas'))),
+          isA<Column>(),
+        );
+        final inlineMedal = tester.getRect(
+          find.byKey(const Key('challenge-pay-medal')),
+        );
+        final inlineDiploma = tester.getRect(
+          find.byKey(const Key('challenge-pay-diploma')),
+        );
+        expect(inlineMedal.bottom, lessThan(inlineDiploma.top));
+        expect(inlineDiploma.top - inlineMedal.bottom, closeTo(8, 1));
+        expect(find.text('Nimm die Herausforderung an'), findsWidgets);
+      },
+    );
 
     test('floating button widths follow the window', () {
       expect(floatingPayGap(339), ChallengePaymentBarMetrics.narrowGap);
@@ -1083,42 +1142,43 @@ void main() {
       expect(paymentBarLabelFontSize(textWidth: 100, maxWidth: 50), 14);
     });
 
-    testWidgets('a loading button keeps its width and a scaled German label fits', (
-      tester,
-    ) async {
-      final semantics = tester.ensureSemantics();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
-            child: Scaffold(
-              body: Center(
-                child: SizedBox(
-                  width: 168,
-                  child: AppButton(
-                    label: 'Medaille + Diplom',
-                    loading: true,
-                    loadingLabel: 'Wird geladen',
-                    size: AppButtonSize.m,
-                    onPressed: () {},
+    testWidgets(
+      'a loading button keeps its width and a scaled German label fits',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: MediaQuery(
+              data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+              child: Scaffold(
+                body: Center(
+                  child: SizedBox(
+                    width: 168,
+                    child: AppButton(
+                      label: 'Medaille + Diplom',
+                      loading: true,
+                      loadingLabel: 'Wird geladen',
+                      size: AppButtonSize.m,
+                      onPressed: () {},
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      expect(tester.getSize(find.byType(AppButton)).width, 168);
-      expect(
-        tester.getSize(find.byType(CircularProgressIndicator)),
-        const Size(18, 18),
-      );
-      expect(find.bySemanticsLabel('Wird geladen'), findsOneWidget);
-      final idle = tester.widget<FilledButton>(find.byType(FilledButton));
-      expect(idle.onPressed, isNull);
-      semantics.dispose();
-    });
+        );
+        expect(tester.getSize(find.byType(AppButton)).width, 168);
+        expect(
+          tester.getSize(find.byType(CircularProgressIndicator)),
+          const Size(18, 18),
+        );
+        expect(find.bySemanticsLabel('Wird geladen'), findsOneWidget);
+        final idle = tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(idle.onPressed, isNull);
+        semantics.dispose();
+      },
+    );
 
     testWidgets('a disabled payment bar button is forest at 40 percent', (
       tester,
