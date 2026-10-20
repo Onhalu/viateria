@@ -605,7 +605,15 @@ void main() {
           find.byKey(const Key('challenge-pay-heading')),
         );
         expect(heading.data, strings.joinChallenge);
-        expect(heading.textAlign, TextAlign.left);
+        expect(heading.textAlign, TextAlign.center);
+        expect(
+          (diploma.left + medal.right) / 2,
+          closeTo(tester.view.physicalSize.width / 2, 8),
+        );
+        expect(
+          tester.getCenter(find.byKey(const Key('challenge-pay-heading'))).dx,
+          closeTo((diploma.left + medal.right) / 2, 1),
+        );
         expect(heading.style?.fontFamily, AppTheme.displayFont);
         expect(heading.style?.fontWeight, FontWeight.w600);
         expect(heading.style?.fontSize, 32);
@@ -897,6 +905,62 @@ void main() {
       expect(find.text('€4.99'), findsNothing);
       expect(find.text('€9.00'), findsNothing);
     });
+
+    testWidgets(
+      'a pending purchase is the only line under the centered buttons',
+      (tester) async {
+        useTallView(tester);
+        final strings = AppStrings('en');
+        final story = sampleStoryChallenge();
+        final purchases = MemoryPurchases(
+          completeOnRefresh: false,
+          purchases: {
+            story.challenge.id: Purchase(
+              challengeId: story.challenge.id,
+              status: PurchaseStatus.pending,
+              rewardVariant: RewardVariant.diploma,
+            ),
+          },
+        );
+        await tester.pumpWidget(
+          wrapScreen(
+            buildServices(detail: story, purchases: purchases),
+            locale: 'en',
+            challengeId: story.challenge.id,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final note = tester.widget<Text>(
+          find.byKey(const Key('challenge-pay-pending')),
+        );
+        expect(note.data, strings.purchasePending);
+        expect(note.textAlign, TextAlign.center);
+        expect(note.style?.color, BrandColors.bark);
+        expect(note.style?.fontSize, AppTheme.captionSize);
+        expect(find.text(strings.purchasePending), findsOneWidget);
+        expect(find.byKey(const Key('challenge-pay-terms')), findsNothing);
+        expect(find.byKey(const Key('challenge-pay-trust')), findsNothing);
+        final diploma = tester.getRect(
+          find.byKey(const Key('challenge-pay-diploma')),
+        );
+        final medal = tester.getRect(
+          find.byKey(const Key('challenge-pay-medal')),
+        );
+        final pending = tester.getRect(
+          find.byKey(const Key('challenge-pay-pending')),
+        );
+        expect(pending.top, greaterThan(medal.bottom));
+        expect(pending.center.dx, closeTo((diploma.left + medal.right) / 2, 1));
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('challenge-payment-bar')),
+            matching: find.byKey(const Key('challenge-pay-pending')),
+          ),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets('pay CTAs use German product labels', (tester) async {
       useTallView(tester);

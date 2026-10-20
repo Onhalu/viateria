@@ -16,6 +16,7 @@ import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
+import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/places_map_screen.dart';
 import 'package:viateria/ui/widgets/map_chrome.dart';
 import 'package:viateria/ui/widgets/places_map_host.dart';
@@ -587,6 +588,48 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(strings.planRoute), findsOneWidget);
       expect(find.text(strings.addToRoute), findsNothing);
+      final plan = tester.widget<AppButton>(
+        find.byKey(const Key('map-poi-add-route')),
+      );
+      expect(plan.variant, AppButtonVariant.secondary);
+      expect(plan.size, AppButtonSize.m);
+      expect(plan.icon, Icons.route);
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: find.byKey(const Key('map-poi-add-route')),
+                matching: find.byIcon(Icons.route),
+              ),
+            )
+            .size,
+        18,
+      );
+      final verify = tester.widget<AppButton>(
+        find.byKey(const Key('map-poi-verify')),
+      );
+      expect(verify.variant, AppButtonVariant.primary);
+      final actionRow = find
+          .ancestor(
+            of: find.byKey(const Key('map-poi-verify')),
+            matching: find.byType(Row),
+          )
+          .first;
+      expect(
+        find.descendant(
+          of: actionRow,
+          matching: find.byKey(const Key('map-poi-add-route')),
+        ),
+        findsOneWidget,
+      );
+      final verifyRect = tester.getRect(
+        find.byKey(const Key('map-poi-verify')),
+      );
+      final planRect = tester.getRect(
+        find.byKey(const Key('map-poi-add-route')),
+      );
+      expect(verifyRect.right, lessThan(planRect.left));
+      expect((verifyRect.center.dy - planRect.center.dy).abs(), lessThan(1));
 
       await tester.tap(find.byKey(const Key('map-poi-add-route')));
       await tester.pumpAndSettle();

@@ -280,12 +280,18 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _reload();
   }
 
-  Widget _payCtas(Challenge challenge, AppStrings strings, {bool bar = false}) {
+  Widget _payCtas(
+    Challenge challenge,
+    AppStrings strings, {
+    bool bar = false,
+    String? note,
+  }) {
     return _ChallengePayCtas(
       strings: strings,
       challenge: challenge,
       onPay: _unlockPaid,
       bar: bar,
+      note: bar ? null : note,
     );
   }
 
@@ -741,13 +747,14 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                             formatLocalDate(completeBy, locale),
                           ),
                         )
-                      : _payCtas(challenge, strings),
+                      : _payCtas(
+                          challenge,
+                          strings,
+                          note: data.purchase?.status == PurchaseStatus.pending
+                              ? strings.purchasePending
+                              : null,
+                        ),
                 ),
-                if (data.purchase?.status == PurchaseStatus.pending)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(strings.purchasePending),
-                  ),
               ],
             );
             final scroll = CustomScrollView(
@@ -1534,6 +1541,7 @@ class _ChallengePaymentBar extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             strings.joinChallenge,
@@ -1563,12 +1571,16 @@ class _ChallengePayCtas extends StatelessWidget {
     required this.challenge,
     required this.onPay,
     this.bar = false,
+    this.note,
   });
 
   final AppStrings strings;
   final Challenge challenge;
   final ValueChanged<RewardVariant> onPay;
   final bool bar;
+
+  /// Pending purchase line. Inline only, under the buttons.
+  final String? note;
 
   Key _key(String name) =>
       Key('${bar ? 'challenge-floating-pay' : 'challenge-pay'}-$name');
@@ -1629,7 +1641,7 @@ class _ChallengePayCtas extends StatelessWidget {
       );
     }
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: Alignment.center,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           maxWidth: ChallengePaymentBarMetrics.inlineMaxWidth,
@@ -1642,7 +1654,7 @@ class _ChallengePayCtas extends StatelessWidget {
             final heading = Text(
               strings.joinChallenge,
               key: const Key('challenge-pay-heading'),
-              textAlign: TextAlign.left,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: AppTheme.displayFont,
                 fontWeight: FontWeight.w600,
@@ -1675,13 +1687,26 @@ class _ChallengePayCtas extends StatelessWidget {
                   );
             return Column(
               key: _key('ctas'),
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 heading,
                 const SizedBox(
                   height: ChallengePaymentBarMetrics.inlineHeadingGap,
                 ),
                 buttons,
+                if (note != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    note!,
+                    key: const Key('challenge-pay-pending'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: BrandColors.bark,
+                      fontSize: AppTheme.captionSize,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
               ],
             );
           },

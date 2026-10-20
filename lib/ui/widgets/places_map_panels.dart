@@ -4,6 +4,7 @@ import '../../l10n/app_strings.dart';
 import '../../map/place.dart';
 import '../../map/place_category.dart';
 import '../../map/place_query.dart';
+import '../../theme/app_theme.dart';
 import 'map_chrome.dart';
 import 'place_presentation.dart';
 
@@ -256,50 +257,54 @@ class PlaceDetailSheet extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: FilledButton(
+                  child: AppButton(
                     key: const Key('map-poi-verify'),
+                    label: strings.verify,
+                    variant: AppButtonVariant.primary,
+                    size: AppButtonSize.m,
                     onPressed: onVerify,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: MapPalette.forest,
-                      foregroundColor: MapPalette.cream,
-                      minimumSize: Size.fromHeight(buttonHeight),
-                    ),
-                    child: Text(strings.verify),
                   ),
                 ),
+                if (onAddToRoute != null) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AppButton(
+                      key: const Key('map-poi-add-route'),
+                      label: strings.planRoute,
+                      variant: AppButtonVariant.secondary,
+                      size: AppButtonSize.m,
+                      icon: Icons.route,
+                      onPressed: onAddToRoute,
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    key: const Key('map-poi-close'),
-                    onPressed: onClose,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: MapPalette.cream,
-                      foregroundColor: MapPalette.forest,
-                      side: const BorderSide(color: MapPalette.beige),
-                      minimumSize: Size.fromHeight(buttonHeight),
-                    ),
-                    child: Text(strings.closeCta),
-                  ),
-                ),
+                if (onAddToRoute == null)
+                  Expanded(child: _sheetClose(strings, onClose, buttonHeight))
+                else
+                  _sheetClose(strings, onClose, buttonHeight),
               ],
             ),
-            if (onAddToRoute != null) ...[
-              const SizedBox(height: 4),
-              TextButton(
-                key: const Key('map-poi-add-route'),
-                onPressed: onAddToRoute,
-                style: TextButton.styleFrom(
-                  foregroundColor: MapPalette.forest,
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                child: Text(strings.planRoute),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
+}
+
+Widget _sheetClose(AppStrings strings, VoidCallback onClose, double height) {
+  return OutlinedButton(
+    key: const Key('map-poi-close'),
+    onPressed: onClose,
+    style: OutlinedButton.styleFrom(
+      backgroundColor: MapPalette.cream,
+      foregroundColor: MapPalette.forest,
+      side: const BorderSide(color: MapPalette.beige),
+      minimumSize: Size(64, height),
+      tapTargetSize: MaterialTapTargetSize.padded,
+    ),
+    child: Text(strings.closeCta),
+  );
 }
 
 class PlaceListPanel extends StatelessWidget {

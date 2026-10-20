@@ -336,6 +336,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('map-poi-sheet')), findsOneWidget);
         expect(find.text(strings.planRoute), findsOneWidget);
+        if (width == 390 && (locale == 'cs' || locale == 'en')) {
+          await shot('map-popup-$tag');
+        }
         await tester.tap(find.byKey(const Key('map-poi-add-route')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('map-route-panel')), findsOneWidget);
@@ -375,6 +378,12 @@ void main() {
         await _revealInChallenge(tester, const Key('challenge-pay-ctas'));
         await tester.pumpAndSettle();
         expect(find.text(strings.payDigitalDiploma), findsWidgets);
+        expect(
+          tester
+              .widget<Text>(find.byKey(const Key('challenge-pay-heading')))
+              .textAlign,
+          TextAlign.center,
+        );
         await shot('pay-inline-$tag');
         await tester.drag(
           find.byKey(const Key('challenge-feed-scroll')),
@@ -400,6 +409,54 @@ void main() {
         );
         await shot('paybar-$tag');
       }
+    }
+
+    for (final locale in ['cs', 'en']) {
+      useView(tester, const Size(390, 844));
+      await resetTree();
+      final story = sampleStoryChallenge(
+        coverImageUrl: 'asset://assets/challenges/beskydy-autumn.jpg',
+      );
+      final purchases = MemoryPurchases(
+        completeOnRefresh: false,
+        purchases: {
+          story.challenge.id: Purchase(
+            challengeId: story.challenge.id,
+            status: PurchaseStatus.pending,
+            rewardVariant: RewardVariant.diploma,
+          ),
+        },
+      );
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => LocaleController(initial: locale),
+            ),
+            ChangeNotifierProvider(
+              create: (_) =>
+                  LastOpenedChallengeStore(initialId: story.challenge.id),
+            ),
+            Provider.value(
+              value: buildServices(
+                challenges: [story.challenge],
+                details: [story],
+                purchases: purchases,
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            home: ChallengeScreen(challengeId: story.challenge.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _revealInChallenge(tester, const Key('challenge-pay-pending'));
+      await tester.pumpAndSettle();
+      expect(find.text(AppStrings(locale).purchasePending), findsOneWidget);
+      await shot('pending-$locale-390');
     }
 
     final previousProvider = diplomaImageProvider;
