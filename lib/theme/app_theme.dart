@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'app_button.dart';
 import 'brand_colors.dart';
+import 'brand_typography.dart';
 
 export 'app_button.dart';
 export 'brand_colors.dart' show BrandColors, MapPalette;
+export 'brand_typography.dart' show BrandTypography, registerManropeLicense;
 
 /// App-wide Material theme. Colors come from [BrandColors] / [MapPalette].
 abstract final class AppTheme {
@@ -42,7 +44,8 @@ abstract final class AppTheme {
   static const ctaHeight = 52.0;
   static const minTap = 48.0;
 
-  static const displayFont = 'Playfair Display';
+  /// Heading family. Body styles leave the family unset and stay Roboto.
+  static const displayFont = BrandTypography.family;
 
   static const cardShadow = [
     BoxShadow(
@@ -81,18 +84,16 @@ abstract final class AppTheme {
     );
     final radius = BorderRadius.circular(radiusCard);
     const ink = BrandColors.ink;
-    const playfair = TextStyle(
-      fontFamily: displayFont,
+    TextStyle heading(double fontSize) => BrandTypography.display(
+      fontSize: fontSize,
       color: ink,
-      fontWeight: FontWeight.w600,
-      height: 1.2,
     );
     const sans = TextStyle(color: ink, height: 1.35);
     final textTheme = TextTheme(
-      displaySmall: playfair.copyWith(fontSize: displaySize),
-      headlineMedium: playfair.copyWith(fontSize: 28),
-      headlineSmall: playfair.copyWith(fontSize: titleSize),
-      titleLarge: playfair.copyWith(fontSize: titleSize),
+      displaySmall: heading(displaySize),
+      headlineMedium: heading(28),
+      headlineSmall: heading(titleSize),
+      titleLarge: heading(titleSize),
       titleMedium: sans.copyWith(
         fontSize: bodySize,
         fontWeight: FontWeight.w700,

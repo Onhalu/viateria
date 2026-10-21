@@ -1,8 +1,9 @@
 # diploma-assets seed
 
 Temporary files for the private `diploma-assets` bucket. Final backgrounds and
-the black Vyšlápni logo replace these later. Playfair Display is OFL
-(`fonts/OFL-Playfair.txt`).
+the black Vyšlápni logo replace these later. Manrope is OFL
+(`fonts/OFL.txt`). Regular and Bold are static instances of
+`Manrope[wght].ttf` from google/fonts @ b31870af (weights 400 and 700).
 
 Upload with the service role (the bucket has no client policies):
 
@@ -13,8 +14,8 @@ Upload with the service role (the bucket has no client policies):
 | `bg/3.png` | `assets/bg/3.png` |
 | `bg/4.png` | `assets/bg/4.png` |
 | `logo/vandery-lockup.png` | `assets/logo/vandery-lockup.png` (= `assets/brand/vandery-lockup@3x.png`) |
-| `fonts/PlayfairDisplay.ttf` | `assets/fonts/PlayfairDisplay.ttf` |
-| `fonts/PlayfairDisplay-Italic.ttf` | `assets/fonts/PlayfairDisplay-Italic.ttf` (OFL, google/fonts `PlayfairDisplay-Italic[wght].ttf`) |
+| `fonts/Manrope-Regular.ttf` | `assets/fonts/Manrope-Regular.ttf` |
+| `fonts/Manrope-Bold.ttf` | `assets/fonts/Manrope-Bold.ttf` |
 
 The Edge function reads the bucket first and falls back to these bundled copies
 so a render still works before the upload. `background_variant` is chosen once

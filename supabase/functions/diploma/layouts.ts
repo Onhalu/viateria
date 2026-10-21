@@ -22,6 +22,8 @@ export type DrawOp =
     y: number;
     anchor: "middle" | "start";
     letterSpacing?: number;
+    /** CSS font-weight. Manrope Regular is 400; the challenge name is 700. */
+    fontWeight?: number;
     opacity?: number;
     italic?: boolean;
   }
@@ -32,8 +34,12 @@ export type LayoutResult = { panel: Panel; ops: DrawOp[] };
 
 const CANVAS = 1080;
 const CX = CANVAS / 2;
-/** Playfair Display cap height / em. */
-const CAP = 0.708;
+/** Manrope cap height / em (OS/2 sCapHeight 1440, unitsPerEm 2000). */
+const CAP = 0.72;
+
+/** Challenge name: uppercase, +4% tracking, Manrope 700. */
+export const TITLE_TRACKING_EM = 0.04;
+export const TITLE_FONT_WEIGHT = 700;
 const LOGO_ASPECT = 557 / 960;
 
 type Item = { key: string; size: number; gap: number };
@@ -136,7 +142,16 @@ function text(
   y: number,
   extra: Partial<Extract<DrawOp, { kind: "text" }>> = {},
 ): DrawOp {
-  return { kind: "text", text: t, size, x: CX, y, anchor: "middle", ...extra };
+  return {
+    kind: "text",
+    text: t,
+    size,
+    x: CX,
+    y,
+    anchor: "middle",
+    fontWeight: 400,
+    ...extra,
+  };
 }
 
 function logo(w: number, x: number, y: number): { op: DrawOp; h: number } {
@@ -153,20 +168,38 @@ function linesOps(
   return lines.map((l, i) => text(l, size, b[`${prefix}${i}`]));
 }
 
+function titleOps(
+  lines: string[],
+  size: number,
+  b: Record<string, number>,
+): DrawOp[] {
+  return lines.map((line, i) =>
+    text(line, size, b[`t${i}`], {
+      letterSpacing: TITLE_TRACKING_EM * size,
+      fontWeight: TITLE_FONT_WEIGHT,
+    })
+  );
+}
+
 export function layoutVariant(
   layout: Exclude<DiplomaLayout, "v4">,
   copy: DiplomaText,
   measure: Measure,
   hasItalic: boolean,
+  titleMeasure?: Measure,
 ): LayoutResult {
   const headline = copy.headline.toLocaleUpperCase("cs");
+  const titles = titleMeasure ?? measure;
+  const challengeTitle = copy.title.toLocaleUpperCase("cs");
+  const trackedTitle: Measure = (text, size, letterSpacing) =>
+    titles(text, size, letterSpacing ?? size * TITLE_TRACKING_EM);
   switch (layout) {
     case "A": {
       const panel = { x: 180, y: 105, w: 720, h: 870, r: 34, opacity: 0.55 };
       const maxW = panel.w - 2 * 64;
       const lg = logo(168, CX - 84, panel.y + 64);
       const dateY = panel.y + panel.h - 64;
-      const title = fitTitle(measure, copy.title, [44, 38, 32], maxW);
+      const title = fitTitle(trackedTitle, challengeTitle, [44, 38, 32], maxW);
       const name = fitName(measure, copy.name, 68, 46, maxW);
       const b = stack([
         { key: "head", size: 46, gap: 0 },
@@ -183,7 +216,7 @@ export function layoutVariant(
           text(copy.preposition, 28, b.pro),
           ...linesOps(name.lines, name.size, b, "n"),
           text(copy.body, 28, b.body),
-          ...linesOps(title.lines, title.size, b, "t"),
+          ...titleOps(title.lines, title.size, b),
           text(copy.duration, 28, dateY, { letterSpacing: 0.03 * 28 }),
         ],
       };
@@ -194,7 +227,7 @@ export function layoutVariant(
       const lg = logo(136, CX - 68, panel.y + 60);
       const dateY = panel.y + panel.h - 60;
       const rule2Y = dateY - 56;
-      const title = fitTitle(measure, copy.title, [42, 38, 32], maxW);
+      const title = fitTitle(trackedTitle, challengeTitle, [42, 38, 32], maxW);
       const name = fitName(measure, copy.name, 76, 48, maxW);
       const b = stack([
         { key: "head", size: 24, gap: 0 },
@@ -214,7 +247,7 @@ export function layoutVariant(
           text(copy.preposition, 30, b.pro, muted),
           ...linesOps(name.lines, name.size, b, "n"),
           text(copy.body, 30, b.body, muted),
-          ...linesOps(title.lines, title.size, b, "t"),
+          ...titleOps(title.lines, title.size, b),
           { kind: "rule", x0: CX - 32, x1: CX + 32, y: rule2Y, opacity: 0.35 },
           text(copy.duration, 24, dateY, { letterSpacing: 0.08 * 24 }),
         ],
@@ -232,7 +265,7 @@ export function layoutVariant(
       const logoY = panel.y + panel.h - 56 - logoH;
       const ruleY = logoY - 36;
       const dateY = Math.round(logoY + logoH / 2 + 24 * CAP / 2);
-      const title = fitTitle(measure, copy.title, [44, 38, 32], maxW);
+      const title = fitTitle(trackedTitle, challengeTitle, [44, 38, 32], maxW);
       const name = fitName(measure, copy.name, 70, 46, maxW);
       const b = stack([
         { key: "pro", size: 28, gap: 0 },
@@ -247,7 +280,7 @@ export function layoutVariant(
           text(copy.preposition, 28, b.pro),
           ...linesOps(name.lines, name.size, b, "n"),
           text(copy.body, 28, b.body),
-          ...linesOps(title.lines, title.size, b, "t"),
+          ...titleOps(title.lines, title.size, b),
           { kind: "rule", x0: left, x1: right, y: ruleY, opacity: 0.28 },
           logo(logoW, right - logoW, logoY).op,
           { kind: "text", text: copy.duration, size: 24, x: left, y: dateY, anchor: "start", letterSpacing: 0.06 * 24 },
@@ -259,7 +292,7 @@ export function layoutVariant(
       const maxW = panel.w - 2 * 72;
       const lg = logo(152, CX - 76, panel.y + 56);
       const dateY = panel.y + panel.h - 56;
-      const title = fitTitle(measure, copy.title, [48, 42, 36], maxW);
+      const title = fitTitle(trackedTitle, challengeTitle, [48, 42, 36], maxW);
       const name = fitName(measure, copy.name, 76, 50, maxW);
       const b = stack([
         { key: "head", size: 36, gap: 0 },
@@ -276,7 +309,7 @@ export function layoutVariant(
           text(copy.preposition, 28, b.pro),
           ...linesOps(name.lines, name.size, b, "n"),
           text(copy.body, 28, b.body),
-          ...linesOps(title.lines, title.size, b, "t"),
+          ...titleOps(title.lines, title.size, b),
           text(copy.duration, 26, dateY, { letterSpacing: 0.04 * 26 }),
         ],
       };

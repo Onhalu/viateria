@@ -775,8 +775,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       Text(
                         copy.title,
                         key: const Key('challenge-title'),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -1551,9 +1550,7 @@ class _ChallengePayCtas extends StatelessWidget {
               strings.joinChallenge,
               key: const Key('challenge-pay-heading'),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: AppTheme.displayFont,
-                fontWeight: FontWeight.w600,
+              style: BrandTypography.display(
                 fontSize:
                     MediaQuery.sizeOf(context).width >=
                         ChallengePaymentBarMetrics.wideBreakpoint

@@ -277,7 +277,7 @@ Color? _overlay(
 /// Forest fill, cream label, or one of the quieter variants.
 ///
 /// The label is sans, weight 600, one line, and scales down inside the
-/// button. It is never set below 14 sp. Playfair is not used.
+/// button. It is never set below 14 sp. Manrope is not used.
 class AppButton extends StatefulWidget {
   const AppButton({
     super.key,

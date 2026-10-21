@@ -12,7 +12,7 @@ import {
   type IssuedDiplomaRow,
 } from "./access.ts";
 import { RENDERER_VERSION } from "./hash.ts";
-import { ITALIC_FONT_ASSET, LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
+import { BOLD_FONT_ASSET, FONT_ASSET, LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -150,18 +150,10 @@ async function loadRenderAssets(admin: SupabaseClient, variant: number) {
     `bg/${variant}.png`,
   );
   const logo = await assetOrBundle(admin, LOGO_ASSET, LOGO_ASSET);
-  const font = await assetOrBundle(
-    admin,
-    "fonts/PlayfairDisplay.ttf",
-    "fonts/PlayfairDisplay.ttf",
-  );
-  let fontItalic: Uint8Array | null = null;
-  try {
-    fontItalic = await assetOrBundle(admin, ITALIC_FONT_ASSET, ITALIC_FONT_ASSET);
-  } catch {
-    fontItalic = null; // layout B then renders its italic lines in Regular
-  }
-  return { background, logo, font, fontItalic };
+  const font = await assetOrBundle(admin, FONT_ASSET, FONT_ASSET);
+  const fontBold = await assetOrBundle(admin, BOLD_FONT_ASSET, BOLD_FONT_ASSET);
+  // Manrope has no italic. Layout B draws those lines upright.
+  return { background, logo, font, fontBold, fontItalic: null };
 }
 
 async function assetOrBundle(

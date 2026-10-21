@@ -197,4 +197,47 @@ void main() {
     expect(size.width, greaterThanOrEqualTo(24));
     expect(size.height, greaterThanOrEqualTo(24));
   });
+
+  test('heading TextStyle family is Manrope', () {
+    final theme = AppTheme.light();
+    expect(theme.textTheme.displaySmall?.fontFamily, 'Manrope');
+    expect(theme.textTheme.headlineMedium?.fontFamily, 'Manrope');
+    expect(theme.textTheme.headlineSmall?.fontFamily, 'Manrope');
+    expect(theme.textTheme.titleLarge?.fontFamily, 'Manrope');
+    expect(AppTheme.displayFont, 'Manrope');
+    expect(BrandTypography.display(fontSize: 20).fontFamily, 'Manrope');
+
+    // Playfair 600 becomes Manrope 700. Playfair 700 stays 700.
+    expect(theme.textTheme.headlineSmall?.fontWeight, FontWeight.w700);
+    expect(
+      BrandTypography.mapPlayfairWeight(FontWeight.w600),
+      FontWeight.w700,
+    );
+    expect(
+      BrandTypography.mapPlayfairWeight(FontWeight.w700),
+      FontWeight.w700,
+    );
+
+    // −1% tracking from 24 sp. „Přijmi výzvu“ stays 20 / 26.
+    expect(theme.textTheme.displaySmall?.fontSize, 32);
+    expect(theme.textTheme.displaySmall?.letterSpacing, closeTo(-0.32, 0.0001));
+    expect(theme.textTheme.headlineMedium?.letterSpacing, closeTo(-0.28, 0.0001));
+    expect(theme.textTheme.headlineSmall?.letterSpacing, 0);
+    expect(theme.textTheme.headlineSmall?.height, greaterThanOrEqualTo(1.2));
+    final cta = BrandTypography.display(fontSize: 20, height: 26 / 20);
+    expect(cta.fontSize, 20);
+    expect(cta.height, 26 / 20);
+    expect(cta.letterSpacing, 0);
+    expect(BrandTypography.display(fontSize: 24, height: 1.15).height, 1.2);
+
+    // Body stays on the Material sans, not Manrope.
+    expect(theme.textTheme.bodyLarge?.fontFamily, isNot('Manrope'));
+    expect(theme.textTheme.bodyMedium?.fontFamily, isNot('Manrope'));
+    expect(theme.textTheme.bodySmall?.fontFamily, isNot('Manrope'));
+    expect(theme.textTheme.labelLarge?.fontFamily, isNot('Manrope'));
+
+    final license = File('assets/licenses/OFL.txt').readAsStringSync();
+    expect(license, contains('SIL OPEN FONT LICENSE'));
+    expect(license, contains('Manrope'));
+  });
 }

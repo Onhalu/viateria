@@ -45,7 +45,8 @@ flutter:
     - assets/brand/
     - assets/flags/
     - assets/challenges/
+    - assets/licenses/OFL.txt
   fonts:
-    - family: Playfair Display
+    - family: Manrope
       fonts:
-        - asset: assets/fonts/PlayfairDisplay-Variable.ttf
+        - asset: "assets/fonts/Manrope[wght].ttf"

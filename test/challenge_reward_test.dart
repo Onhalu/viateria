@@ -615,8 +615,8 @@ void main() {
           tester.getCenter(find.byKey(const Key('challenge-pay-heading'))).dx,
           closeTo((diploma.left + medal.right) / 2, 1),
         );
-        expect(heading.style?.fontFamily, AppTheme.displayFont);
-        expect(heading.style?.fontWeight, FontWeight.w600);
+        expect(heading.style?.fontFamily, 'Manrope');
+        expect(heading.style?.fontWeight, FontWeight.w700);
         expect(heading.style?.fontSize, 32);
         expect(heading.style?.height, 1.2);
         expect(heading.style?.color, BrandColors.forest);

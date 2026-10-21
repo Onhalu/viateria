@@ -28,12 +28,13 @@ const assetCache = new Map<string, Uint8Array>();
 const BUNDLED_ASSET_FALLBACK_COMMIT = "f885408";
 const BUNDLED_ASSET_FALLBACK_BASE =
   `https://raw.githubusercontent.com/Onhalu/viateria/${BUNDLED_ASSET_FALLBACK_COMMIT}/supabase/functions/diploma/assets/`;
-/** Assets newer than the pinned commit resolve from a pinned upstream copy. */
-const BUNDLED_ASSET_FALLBACK_OVERRIDES: Record<string, string> = {
-  // OFL, byte-identical to assets/fonts/PlayfairDisplay-Italic.ttf (google/fonts @ 1e1aa08).
-  "fonts/PlayfairDisplay-Italic.ttf":
-    "https://raw.githubusercontent.com/google/fonts/1e1aa08e994ff7db50116e86ccc7b52a4e4ae5b8/ofl/playfairdisplay/PlayfairDisplay-Italic%5Bwght%5D.ttf",
-};
+/**
+ * Static cuts are instanced from google/fonts Manrope[wght].ttf @ b31870af
+ * (wght 400 and 700). The variable file's default master is ExtraLight, so
+ * the renderer does not load it. No remote override: a missing cut must fail
+ * rather than fall back to a different family.
+ */
+const BUNDLED_ASSET_FALLBACK_OVERRIDES: Record<string, string> = {};
 
 export async function readBundledAsset(relativePath: string): Promise<Uint8Array> {
   const hit = assetCache.get(relativePath);
@@ -79,24 +80,27 @@ const LOGO_ASPECT = 557 / 960;
 export type RenderAssets = {
   background: Uint8Array;
   logo: Uint8Array;
+  /** Manrope Regular (weight 400). */
   font: Uint8Array;
-  /** PlayfairDisplay-Italic.ttf (OFL, google/fonts). Optional: layout B falls back to Regular. */
+  /** Manrope Bold (weight 700), used for the challenge name. */
+  fontBold: Uint8Array;
+  /**
+   * Manrope has no italic cut. Layout B draws `pro` and the body upright
+   * when this is null.
+   */
   fontItalic?: Uint8Array | null;
 };
 
-export const ITALIC_FONT_ASSET = "fonts/PlayfairDisplay-Italic.ttf";
+export const FONT_FAMILY = "Manrope";
+export const FONT_ASSET = "fonts/Manrope-Regular.ttf";
+export const BOLD_FONT_ASSET = "fonts/Manrope-Bold.ttf";
 
 export async function loadBundledRenderAssets(variant: number): Promise<RenderAssets> {
   const background = await readBundledAsset(`bg/${variant}.png`);
   const logo = await readBundledAsset(LOGO_ASSET);
-  const font = await readBundledAsset("fonts/PlayfairDisplay.ttf");
-  let fontItalic: Uint8Array | null = null;
-  try {
-    fontItalic = await readBundledAsset(ITALIC_FONT_ASSET);
-  } catch {
-    fontItalic = null;
-  }
-  return { background, logo, font, fontItalic };
+  const font = await readBundledAsset(FONT_ASSET);
+  const fontBold = await readBundledAsset(BOLD_FONT_ASSET);
+  return { background, logo, font, fontBold, fontItalic: null };
 }
 
 const measureCache = new WeakMap<Uint8Array, Measure>();
@@ -121,7 +125,8 @@ function opSvg(op: DrawOp, logoHref: string): string {
       const ls = op.letterSpacing ? ` letter-spacing="${op.letterSpacing.toFixed(2)}"` : "";
       const opacity = op.opacity != null && op.opacity < 1 ? ` fill-opacity="${op.opacity}"` : "";
       const italic = op.italic ? ` font-style="italic"` : "";
-      return `<text x="${op.x}" y="${op.y}" font-size="${op.size}" font-family="Playfair Display"${italic} text-anchor="${op.anchor}"${ls} fill="#000000"${opacity}>${xml(op.text)}</text>`;
+      const weight = op.fontWeight ?? 400;
+      return `<text x="${op.x}" y="${op.y}" font-size="${op.size}" font-family="${FONT_FAMILY}" font-weight="${weight}"${italic} text-anchor="${op.anchor}"${ls} fill="#000000"${opacity}>${xml(op.text)}</text>`;
     }
   }
 }
@@ -148,12 +153,18 @@ const LOGO_W = 250;
 const LOGO_H = Math.round(LOGO_W * LOGO_ASPECT);
 const CX = CANVAS / 2;
 
-type Line = { text: string; size: number; gapBefore: number };
+type Line = {
+  text: string;
+  size: number;
+  gapBefore: number;
+  letterSpacing?: number;
+  fontWeight?: number;
+};
 
 /**
  * 1080×1080 PNG with transparent rounded corners (r60). A translucent white
  * panel holds every element: black lockup, DIPLOM, pro, name, body, title,
- * date. imagescript cannot draw Playfair, so the layout is SVG rasterized by resvg.
+ * date. imagescript cannot draw Manrope, so the layout is SVG rasterized by resvg.
  */
 export async function renderDiploma(
   row: IssuedDiplomaRow,
@@ -167,7 +178,13 @@ export async function renderDiploma(
   if (layout === "v4") {
     body = v4Body(copy, logoHref);
   } else {
-    const result = layoutVariant(layout, copy, measureFor(assets.font), !!assets.fontItalic);
+    const result = layoutVariant(
+      layout,
+      copy,
+      measureFor(assets.font),
+      !!assets.fontItalic,
+      measureFor(assets.fontBold),
+    );
     body = variantBody(result, logoHref);
   }
 
@@ -185,13 +202,15 @@ export async function renderDiploma(
   </g>
 </svg>`;
 
-  const fontBuffers = assets.fontItalic ? [assets.font, assets.fontItalic] : [assets.font];
+  const fontBuffers = assets.fontItalic
+    ? [assets.font, assets.fontBold, assets.fontItalic]
+    : [assets.font, assets.fontBold];
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: CANVAS },
     font: {
       fontBuffers,
       loadSystemFonts: false,
-      defaultFontFamily: "Playfair Display",
+      defaultFontFamily: FONT_FAMILY,
     },
   });
   return resvg.render().asPng();
@@ -199,7 +218,7 @@ export async function renderDiploma(
 
 /** Prod v4 layout, unchanged. */
 function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string {
-  const title = layoutTitle(copy.title);
+  const title = layoutTitle(copy.title.toLocaleUpperCase("cs"));
   const titleLineHeight = Math.round(title.fontSize * 1.15);
 
   // Baseline-to-baseline gaps (gapBefore) measured on the reference.
@@ -212,6 +231,8 @@ function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string 
       text,
       size: title.fontSize,
       gapBefore: index === 0 ? 86 : titleLineHeight,
+      letterSpacing: 0.04 * title.fontSize,
+      fontWeight: 700,
     })),
     { text: copy.duration, size: 36, gapBefore: 64 },
   ];
@@ -230,7 +251,9 @@ function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string 
     if (index > 0) y += line.gapBefore;
     // The date is anchored to the panel bottom; the block above keeps its place.
     if (index === lastIndex) y = PANEL_Y + PANEL_H - DATE_BOTTOM_PADDING;
-    return `<text x="${CX}" y="${Math.round(y)}" font-size="${line.size}" font-family="Playfair Display" text-anchor="middle" fill="#000000">${xml(line.text)}</text>`;
+    const weight = line.fontWeight ?? 400;
+    const ls = line.letterSpacing ? ` letter-spacing="${line.letterSpacing.toFixed(2)}"` : "";
+    return `<text x="${CX}" y="${Math.round(y)}" font-size="${line.size}" font-family="${FONT_FAMILY}" font-weight="${weight}"${ls} text-anchor="middle" fill="#000000">${xml(line.text)}</text>`;
   }).join("\n    ");
 
   return [

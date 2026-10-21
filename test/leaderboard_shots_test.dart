@@ -40,8 +40,8 @@ void main() {
       '/usr/share/fonts/truetype/macos/Inter-SemiBold.ttf',
       '/usr/share/fonts/truetype/macos/Inter-Bold.ttf',
     ]);
-    await _loadFamily('Playfair Display', const [
-      'assets/fonts/PlayfairDisplay-Variable.ttf',
+    await _loadFamily('Manrope', const [
+      'assets/fonts/Manrope[wght].ttf',
     ], fromBundle: true);
     await _loadFamily('MaterialIcons', const [
       '/tmp/flutter-sdk/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

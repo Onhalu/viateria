@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/youtube_url.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import '../../theme/brand_typography.dart';
 import 'story_youtube_view.dart';
 
 /// Sage circle with a cream `?`. Locked story stops use this in the list.
@@ -38,7 +39,7 @@ class StoryQuestionMark extends StatelessWidget {
   }
 }
 
-/// Inline story chapter. Cream fill, beige border, Playfair forest title.
+/// Inline story chapter. Cream fill, beige border, Manrope forest title.
 ///
 /// [BrandColors.shellFill] is the welcome header and the bottom nav only —
 /// this card never uses it. YouTube plays in-app; otherwise cover + body.
@@ -127,12 +128,10 @@ class _StoryChapterCardState extends State<StoryChapterCard> {
                     child: Text(
                       copy.title,
                       key: Key('story-chapter-title-${widget.step.id}'),
-                      style: const TextStyle(
-                        fontFamily: 'Playfair Display',
-                        color: BrandColors.forest,
+                      style: BrandTypography.display(
                         fontSize: 20,
                         height: 1.25,
-                        fontWeight: FontWeight.w600,
+                        color: BrandColors.forest,
                       ),
                     ),
                   ),
