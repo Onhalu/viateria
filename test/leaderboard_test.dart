@@ -282,7 +282,7 @@ void main() {
     final title = tester.widget<Text>(
       find.byKey(const Key('leaderboard-title')),
     );
-    expect(title.style?.fontFamily, 'Manrope');
+    expect(title.style?.fontFamily, 'Bricolage Grotesque');
     expect(title.style?.color, BrandColors.forest);
     expect(find.text('ada@example.com'), findsNothing);
     expect(find.byIcon(Icons.emoji_events), findsNothing);

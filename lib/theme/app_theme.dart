@@ -6,7 +6,7 @@ import 'brand_typography.dart';
 
 export 'app_button.dart';
 export 'brand_colors.dart' show BrandColors, MapPalette;
-export 'brand_typography.dart' show BrandTypography, registerManropeLicense;
+export 'brand_typography.dart' show BrandTypography, registerBricolageLicense;
 
 /// App-wide Material theme. Colors come from [BrandColors] / [MapPalette].
 abstract final class AppTheme {
@@ -48,11 +48,7 @@ abstract final class AppTheme {
   static const displayFont = BrandTypography.family;
 
   static const cardShadow = [
-    BoxShadow(
-      color: Color(0x1435483C),
-      blurRadius: 16,
-      offset: Offset(0, 4),
-    ),
+    BoxShadow(color: Color(0x1435483C), blurRadius: 16, offset: Offset(0, 4)),
   ];
 
   static ThemeData light() {
@@ -84,10 +80,8 @@ abstract final class AppTheme {
     );
     final radius = BorderRadius.circular(radiusCard);
     const ink = BrandColors.ink;
-    TextStyle heading(double fontSize) => BrandTypography.display(
-      fontSize: fontSize,
-      color: ink,
-    );
+    TextStyle heading(double fontSize) =>
+        BrandTypography.display(fontSize: fontSize, color: ink);
     const sans = TextStyle(color: ink, height: 1.35);
     final textTheme = TextTheme(
       displaySmall: heading(displaySize),

@@ -22,7 +22,7 @@ export type DrawOp =
     y: number;
     anchor: "middle" | "start";
     letterSpacing?: number;
-    /** CSS font-weight. Manrope Regular is 400; the challenge name is 700. */
+    /** CSS font-weight. Bricolage Regular is 400; the challenge name is 700. */
     fontWeight?: number;
     opacity?: number;
     italic?: boolean;
@@ -34,10 +34,10 @@ export type LayoutResult = { panel: Panel; ops: DrawOp[] };
 
 const CANVAS = 1080;
 const CX = CANVAS / 2;
-/** Manrope cap height / em (OS/2 sCapHeight 1440, unitsPerEm 2000). */
-const CAP = 0.72;
+/** Bricolage Grotesque cap height / em (OS/2 sCapHeight 660, unitsPerEm 1000). */
+export const CAP = 0.66;
 
-/** Challenge name: uppercase, +4% tracking, Manrope 700. */
+/** Challenge name: uppercase, +4% tracking, Bricolage Grotesque 700. */
 export const TITLE_TRACKING_EM = 0.04;
 export const TITLE_FONT_WEIGHT = 700;
 const LOGO_ASPECT = 557 / 960;

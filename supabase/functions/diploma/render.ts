@@ -1,6 +1,6 @@
 import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
 import { diplomaCopy, layoutTitle, type IssuedDiplomaRow } from "./access.ts";
-import { type DiplomaLayout, type DrawOp, type LayoutResult, layoutVariant } from "./layouts.ts";
+import { CAP, type DiplomaLayout, type DrawOp, type LayoutResult, layoutVariant } from "./layouts.ts";
 import { createMeasure, type Measure } from "./measure.ts";
 
 export type { DiplomaLayout } from "./layouts.ts";
@@ -29,9 +29,11 @@ const BUNDLED_ASSET_FALLBACK_COMMIT = "f885408";
 const BUNDLED_ASSET_FALLBACK_BASE =
   `https://raw.githubusercontent.com/Onhalu/viateria/${BUNDLED_ASSET_FALLBACK_COMMIT}/supabase/functions/diploma/assets/`;
 /**
- * Static cuts are instanced from google/fonts Manrope[wght].ttf @ b31870af
- * (wght 400 and 700). The variable file's default master is ExtraLight, so
- * the renderer does not load it. No remote override: a missing cut must fail
+ * Static cuts are instanced from google/fonts
+ * BricolageGrotesque[opsz,wdth,wght].ttf @ b9f6c712059d. The variable file's
+ * default master is 96pt ExtraBold, and opentype.js 1.3.4 cannot set axes,
+ * so the renderer loads Regular (wght 400) and Bold (wght 700) at the axis
+ * defaults opsz 96 and wdth 100. No remote override: a missing cut must fail
  * rather than fall back to a different family.
  */
 const BUNDLED_ASSET_FALLBACK_OVERRIDES: Record<string, string> = {};
@@ -80,20 +82,20 @@ const LOGO_ASPECT = 557 / 960;
 export type RenderAssets = {
   background: Uint8Array;
   logo: Uint8Array;
-  /** Manrope Regular (weight 400). */
+  /** Bricolage Grotesque Regular (weight 400). */
   font: Uint8Array;
-  /** Manrope Bold (weight 700), used for the challenge name. */
+  /** Bricolage Grotesque Bold (weight 700), used for the challenge name. */
   fontBold: Uint8Array;
   /**
-   * Manrope has no italic cut. Layout B draws `pro` and the body upright
-   * when this is null.
+   * Bricolage Grotesque has no italic cut. Layout B draws `pro` and the body
+   * upright when this is null.
    */
   fontItalic?: Uint8Array | null;
 };
 
-export const FONT_FAMILY = "Manrope";
-export const FONT_ASSET = "fonts/Manrope-Regular.ttf";
-export const BOLD_FONT_ASSET = "fonts/Manrope-Bold.ttf";
+export const FONT_FAMILY = "Bricolage Grotesque";
+export const FONT_ASSET = "fonts/BricolageGrotesque-Regular.ttf";
+export const BOLD_FONT_ASSET = "fonts/BricolageGrotesque-Bold.ttf";
 
 export async function loadBundledRenderAssets(variant: number): Promise<RenderAssets> {
   const background = await readBundledAsset(`bg/${variant}.png`);
@@ -164,7 +166,7 @@ type Line = {
 /**
  * 1080×1080 PNG with transparent rounded corners (r60). A translucent white
  * panel holds every element: black lockup, DIPLOM, pro, name, body, title,
- * date. imagescript cannot draw Manrope, so the layout is SVG rasterized by resvg.
+ * date. imagescript cannot draw Bricolage Grotesque, so the layout is SVG rasterized by resvg.
  */
 export async function renderDiploma(
   row: IssuedDiplomaRow,
@@ -219,7 +221,7 @@ export async function renderDiploma(
 /** Prod v4 layout, unchanged. */
 function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string {
   const title = layoutTitle(copy.title.toLocaleUpperCase("cs"));
-  const titleLineHeight = Math.round(title.fontSize * 1.15);
+  const titleLineHeight = Math.round(title.fontSize * 1.2);
 
   // Baseline-to-baseline gaps (gapBefore) measured on the reference.
   const lines: Line[] = [
@@ -237,7 +239,7 @@ function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string 
     { text: copy.duration, size: 36, gapBefore: 64 },
   ];
 
-  const logoToHeadline = 70 + 92 * 0.72; // logo bottom → DIPLOM baseline
+  const logoToHeadline = 70 + 92 * CAP; // logo bottom → DIPLOM baseline
   const textSpan = lines.reduce((sum, line) => sum + line.gapBefore, 0);
   const contentH = LOGO_H + logoToHeadline + textSpan + 12; // + descender
   const free = PANEL_H - contentH;

@@ -39,7 +39,7 @@ class StoryQuestionMark extends StatelessWidget {
   }
 }
 
-/// Inline story chapter. Cream fill, beige border, Manrope forest title.
+/// Inline story chapter. Cream fill, beige border, Bricolage Grotesque forest title.
 ///
 /// [BrandColors.shellFill] is the welcome header and the bottom nav only —
 /// this card never uses it. YouTube plays in-app; otherwise cover + body.

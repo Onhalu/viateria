@@ -47,6 +47,6 @@ flutter:
     - assets/challenges/
     - assets/licenses/OFL.txt
   fonts:
-    - family: Manrope
+    - family: Bricolage Grotesque
       fonts:
-        - asset: "assets/fonts/Manrope[wght].ttf"
+        - asset: "assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf"

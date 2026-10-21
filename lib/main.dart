@@ -47,7 +47,7 @@ Future<void> syncLocaleFromProfile(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  registerManropeLicense();
+  registerBricolageLicense();
   final config = AppConfig.fromEnvironment();
   final localeController = LocaleController();
   await localeController.load();

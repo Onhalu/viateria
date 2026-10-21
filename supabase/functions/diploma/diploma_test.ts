@@ -162,8 +162,8 @@ Deno.test("T1 render is a rounded 1080 PNG under 1.5s", async () => {
 Deno.test("layout B is the default and keeps every line inside the panel", async () => {
   assert(DIPLOMA_LAYOUT === "B", "B is active");
   const assets = await loadBundledRenderAssets(4);
-  assert(assets.fontBold.byteLength > 0, "Manrope Bold bundled");
-  assert(!assets.fontItalic, "Manrope has no italic cut");
+  assert(assets.fontBold.byteLength > 0, "Bricolage Bold bundled");
+  assert(!assets.fontItalic, "Bricolage Grotesque has no italic cut");
   const measure = createMeasure(assets.font);
   const bold = createMeasure(assets.fontBold);
   const maxW = 720 - 2 * 72;
@@ -192,7 +192,7 @@ Deno.test("layout B is the default and keeps every line inside the panel", async
       }
     }
     const italic = result.ops.filter((op) => op.kind === "text" && op.italic);
-    assert(italic.length === 0, "pro + body stay upright in Manrope");
+    assert(italic.length === 0, "pro + body stay upright");
   }
 });
 
@@ -201,7 +201,7 @@ Deno.test("measured titles and names: short = 1 line, long = 2 lines without ell
   const measure = createMeasure(assets.font);
   // Real TTF metrics, not the 0.52 estimate (estimate would give 434.7 / 611.5).
   const nameWidth = measure("Ondrej_test", 76);
-  assert(Math.abs(nameWidth - 428.8) < 2, `opentype metrics in use (got ${nameWidth.toFixed(1)})`);
+  assert(Math.abs(nameWidth - 380.2) < 2, `opentype metrics in use (got ${nameWidth.toFixed(1)})`);
   const short = fitTitle(measure, "Tajemství Českého středohoří", [42, 38, 32], 576);
   assert(short.lines.length === 1 && short.size === 42, "short title one line at 42 (estimate would drop to 38)");
   const long = fitTitle(measure, "Hrady a zámky Libereckého kraje: velký okruh kolem Ještědu", [42, 38, 32], 576);

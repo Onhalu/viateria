@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/theme/app_theme.dart';
@@ -198,30 +199,47 @@ void main() {
     expect(size.height, greaterThanOrEqualTo(24));
   });
 
-  test('heading TextStyle family is Manrope', () {
+  test('heading TextStyle family is Bricolage Grotesque', () {
     final theme = AppTheme.light();
-    expect(theme.textTheme.displaySmall?.fontFamily, 'Manrope');
-    expect(theme.textTheme.headlineMedium?.fontFamily, 'Manrope');
-    expect(theme.textTheme.headlineSmall?.fontFamily, 'Manrope');
-    expect(theme.textTheme.titleLarge?.fontFamily, 'Manrope');
-    expect(AppTheme.displayFont, 'Manrope');
-    expect(BrandTypography.display(fontSize: 20).fontFamily, 'Manrope');
+    expect(theme.textTheme.displaySmall?.fontFamily, 'Bricolage Grotesque');
+    expect(theme.textTheme.headlineMedium?.fontFamily, 'Bricolage Grotesque');
+    expect(theme.textTheme.headlineSmall?.fontFamily, 'Bricolage Grotesque');
+    expect(theme.textTheme.titleLarge?.fontFamily, 'Bricolage Grotesque');
+    expect(AppTheme.displayFont, 'Bricolage Grotesque');
+    expect(
+      BrandTypography.display(fontSize: 20).fontFamily,
+      'Bricolage Grotesque',
+    );
 
-    // Playfair 600 becomes Manrope 700. Playfair 700 stays 700.
+    // Former Playfair 600 and 700 both map to Bricolage 700.
     expect(theme.textTheme.headlineSmall?.fontWeight, FontWeight.w700);
-    expect(
-      BrandTypography.mapPlayfairWeight(FontWeight.w600),
-      FontWeight.w700,
-    );
-    expect(
-      BrandTypography.mapPlayfairWeight(FontWeight.w700),
-      FontWeight.w700,
-    );
+    expect(BrandTypography.mapPlayfairWeight(FontWeight.w600), FontWeight.w700);
+    expect(BrandTypography.mapPlayfairWeight(FontWeight.w700), FontWeight.w700);
+
+    // Optical size tracks the font size and stays inside the opsz axis.
+    expect(theme.textTheme.displaySmall?.fontVariations, [
+      const FontVariation('opsz', 32),
+    ]);
+    expect(BrandTypography.display(fontSize: 20).fontVariations, [
+      const FontVariation('opsz', 20),
+    ]);
+    expect(BrandTypography.display(fontSize: 24).fontVariations, [
+      const FontVariation('opsz', 24),
+    ]);
+    expect(BrandTypography.display(fontSize: 120).fontVariations, [
+      const FontVariation('opsz', BrandTypography.opszMax),
+    ]);
+    expect(BrandTypography.display(fontSize: 8).fontVariations, [
+      const FontVariation('opsz', BrandTypography.opszMin),
+    ]);
 
     // −1% tracking from 24 sp. „Přijmi výzvu“ stays 20 / 26.
     expect(theme.textTheme.displaySmall?.fontSize, 32);
     expect(theme.textTheme.displaySmall?.letterSpacing, closeTo(-0.32, 0.0001));
-    expect(theme.textTheme.headlineMedium?.letterSpacing, closeTo(-0.28, 0.0001));
+    expect(
+      theme.textTheme.headlineMedium?.letterSpacing,
+      closeTo(-0.28, 0.0001),
+    );
     expect(theme.textTheme.headlineSmall?.letterSpacing, 0);
     expect(theme.textTheme.headlineSmall?.height, greaterThanOrEqualTo(1.2));
     final cta = BrandTypography.display(fontSize: 20, height: 26 / 20);
@@ -230,14 +248,60 @@ void main() {
     expect(cta.letterSpacing, 0);
     expect(BrandTypography.display(fontSize: 24, height: 1.15).height, 1.2);
 
-    // Body stays on the Material sans, not Manrope.
-    expect(theme.textTheme.bodyLarge?.fontFamily, isNot('Manrope'));
-    expect(theme.textTheme.bodyMedium?.fontFamily, isNot('Manrope'));
-    expect(theme.textTheme.bodySmall?.fontFamily, isNot('Manrope'));
-    expect(theme.textTheme.labelLarge?.fontFamily, isNot('Manrope'));
+    // Body and catalog card titles stay on the Material sans.
+    expect(theme.textTheme.bodyLarge?.fontFamily, isNot('Bricolage Grotesque'));
+    expect(
+      theme.textTheme.bodyMedium?.fontFamily,
+      isNot('Bricolage Grotesque'),
+    );
+    expect(theme.textTheme.bodySmall?.fontFamily, isNot('Bricolage Grotesque'));
+    expect(
+      theme.textTheme.labelLarge?.fontFamily,
+      isNot('Bricolage Grotesque'),
+    );
+    expect(
+      theme.textTheme.titleMedium?.fontFamily,
+      isNot('Bricolage Grotesque'),
+    );
 
     final license = File('assets/licenses/OFL.txt').readAsStringSync();
     expect(license, contains('SIL OPEN FONT LICENSE'));
-    expect(license, contains('Manrope'));
+    expect(license, contains('Bricolage Grotesque'));
+  });
+
+  testWidgets('opsz follows size and weight still paints', (tester) async {
+    final loader = FontLoader(BrandTypography.family);
+    loader.addFont(
+      rootBundle.load('assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf'),
+    );
+    await tester.runAsync(loader.load);
+
+    double painted(TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: 'Žďár Šumava', style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      return painter.width;
+    }
+
+    final regular = painted(
+      BrandTypography.display(fontSize: 32, fontWeight: FontWeight.w400),
+    );
+    final bold = painted(BrandTypography.display(fontSize: 32));
+    final displayOpsz = painted(
+      BrandTypography.display(fontSize: 32)
+          .copyWith(fontVariations: const [FontVariation('opsz', 96)]),
+    );
+    // opsz 32 / wght 700 is wider than both wght 400 at the same opsz and
+    // wght 700 at the default display opsz. A missing axis collapses these.
+    expect(bold - regular, greaterThan(4));
+    expect(bold - displayOpsz, greaterThan(4));
+
+    final title = AppTheme.light().textTheme.titleLarge!;
+    expect(
+      painted(title.copyWith(fontWeight: FontWeight.w800)) -
+          painted(title.copyWith(fontWeight: FontWeight.w400)),
+      greaterThan(2),
+    );
   });
 }

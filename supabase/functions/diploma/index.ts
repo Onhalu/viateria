@@ -152,7 +152,7 @@ async function loadRenderAssets(admin: SupabaseClient, variant: number) {
   const logo = await assetOrBundle(admin, LOGO_ASSET, LOGO_ASSET);
   const font = await assetOrBundle(admin, FONT_ASSET, FONT_ASSET);
   const fontBold = await assetOrBundle(admin, BOLD_FONT_ASSET, BOLD_FONT_ASSET);
-  // Manrope has no italic. Layout B draws those lines upright.
+  // Bricolage Grotesque has no italic. Layout B draws those lines upright.
   return { background, logo, font, fontBold, fontItalic: null };
 }
 
