@@ -7,10 +7,10 @@ import '../../theme/app_theme.dart';
 import '../layout/breakpoints.dart';
 import 'app_network_image.dart';
 
-/// Full-width landscape crop. Under 600 dp the frame is 3:2 and at most
-/// 300 dp tall. From 600 dp it is 16:9 and at most 480 dp tall. The photo
-/// always fills the width; a shorter cap crops more around the focal point.
-class ChallengeHero extends StatelessWidget {
+/// Full-bleed hero band. The photo keeps its own aspect ratio: full width
+/// until it would exceed the height cap, then the width shrinks and the
+/// forest band fills the sides. Web uses this same layout.
+class ChallengeHero extends StatefulWidget {
   const ChallengeHero({
     super.key,
     required this.url,
@@ -33,7 +33,47 @@ class ChallengeHero extends StatelessWidget {
   final String backLabel;
 
   @override
+  State<ChallengeHero> createState() => _ChallengeHeroState();
+}
+
+class _ChallengeHeroState extends State<ChallengeHero> {
+  final _aspect = _HeroAspect();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bind();
+  }
+
+  @override
+  void didUpdateWidget(ChallengeHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url || oldWidget.image != widget.image) {
+      _aspect.reset();
+    }
+    _bind();
+  }
+
+  @override
+  void dispose() {
+    _aspect.unbind();
+    super.dispose();
+  }
+
+  void _bind() {
+    _aspect.bind(
+      context,
+      widget.image ?? challengeCoverProvider(context, widget.url),
+      () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider =
+        widget.image ?? challengeCoverProvider(context, widget.url);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -41,19 +81,24 @@ class ChallengeHero extends StatelessWidget {
         final height = challengeHeroExtent(
           layoutWidth: width,
           windowWidth: window,
+          imageAspect: _aspect.aspect,
         );
         return SizedBox(
           width: width,
           height: height,
           child: CroppedCover(
-            provider: image ?? challengeCoverProvider(context, url),
-            title: title,
+            provider: provider,
+            title: widget.title,
             wide: window >= Breakpoints.mediumMax,
-            focalY: focalY,
+            focalY: widget.focalY,
+            imageAspect: _aspect.aspect,
             backTop: 12 + MediaQuery.paddingOf(context).top,
-            back: onBack == null
+            back: widget.onBack == null
                 ? null
-                : HeroBackButton(label: backLabel, onPressed: onBack),
+                : HeroBackButton(
+                    label: widget.backLabel,
+                    onPressed: widget.onBack,
+                  ),
           ),
         );
       },
@@ -108,7 +153,7 @@ class HeroBackButton extends StatelessWidget {
 /// Pinned cover. Expanded height follows [challengeHeroExtent]. Scrolling
 /// collapses it into a forest bar with the same back circle, the place, and
 /// one Playfair line of the challenge name.
-class ChallengeCollapsingHero extends StatelessWidget {
+class ChallengeCollapsingHero extends StatefulWidget {
   const ChallengeCollapsingHero({
     super.key,
     required this.url,
@@ -137,29 +182,115 @@ class ChallengeCollapsingHero extends StatelessWidget {
   final String backLabel;
 
   @override
+  State<ChallengeCollapsingHero> createState() =>
+      _ChallengeCollapsingHeroState();
+}
+
+class _ChallengeCollapsingHeroState extends State<ChallengeCollapsingHero> {
+  final _aspect = _HeroAspect();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bind();
+  }
+
+  @override
+  void didUpdateWidget(ChallengeCollapsingHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url || oldWidget.image != widget.image) {
+      _aspect.reset();
+    }
+    _bind();
+  }
+
+  @override
+  void dispose() {
+    _aspect.unbind();
+    super.dispose();
+  }
+
+  void _bind() {
+    _aspect.bind(
+      context,
+      widget.image ?? challengeCoverProvider(context, widget.url),
+      () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider =
+        widget.image ?? challengeCoverProvider(context, widget.url);
     final top = MediaQuery.paddingOf(context).top;
     final window = MediaQuery.sizeOf(context).width;
-    final width = layoutWidth ?? window;
+    final width = widget.layoutWidth ?? window;
     final expanded = math.max(
-      challengeHeroExtent(layoutWidth: width, windowWidth: window),
-      collapsedBody + top + 1,
+      challengeHeroExtent(
+        layoutWidth: width,
+        windowWidth: window,
+        imageAspect: _aspect.aspect,
+      ),
+      ChallengeCollapsingHero.collapsedBody + top + 1,
     );
     return SliverPersistentHeader(
       pinned: true,
       delegate: _ChallengeHeroDelegate(
-        provider: image ?? challengeCoverProvider(context, url),
-        focalY: focalY,
-        title: title,
-        location: location,
-        onBack: onBack,
-        backLabel: backLabel,
+        provider: provider,
+        focalY: widget.focalY,
+        imageAspect: _aspect.aspect,
+        title: widget.title,
+        location: widget.location,
+        onBack: widget.onBack,
+        backLabel: widget.backLabel,
         top: top,
         maxExtent: expanded,
-        minExtent: collapsedBody + top,
+        minExtent: ChallengeCollapsingHero.collapsedBody + top,
         reduceMotion: MediaQuery.disableAnimationsOf(context),
       ),
     );
+  }
+}
+
+/// Reads the photo's pixel ratio once, so the frame can match it.
+class _HeroAspect {
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+  double? aspect;
+
+  void bind(
+    BuildContext context,
+    ImageProvider provider,
+    VoidCallback onChanged,
+  ) {
+    final stream = provider.resolve(createLocalImageConfiguration(context));
+    if (_stream?.key == stream.key) return;
+    unbind();
+    _listener = ImageStreamListener((info, _) {
+      final height = info.image.height;
+      if (height == 0) return;
+      final next = info.image.width / height;
+      if (aspect == next) return;
+      aspect = next;
+      onChanged();
+    }, onError: (_, _) {});
+    _stream = stream;
+    stream.addListener(_listener!);
+  }
+
+  void reset() {
+    unbind();
+    aspect = null;
+  }
+
+  void unbind() {
+    if (_stream != null && _listener != null) {
+      _stream!.removeListener(_listener!);
+    }
+    _stream = null;
+    _listener = null;
   }
 }
 
@@ -235,14 +366,39 @@ double challengeHeroAspect(double windowWidth) =>
 double challengeHeroMaxHeight(double windowWidth) =>
     windowWidth >= 600 ? 480 : 300;
 
-/// Full width, then a height cap. The cap never shrinks the width.
+double _heroFrameAspect(double windowWidth, double? imageAspect) {
+  if (imageAspect != null && imageAspect > 0 && imageAspect.isFinite) {
+    return imageAspect;
+  }
+  return challengeHeroAspect(windowWidth);
+}
+
+/// Band height. Uses the photo's own ratio once it is known. Until then the
+/// placeholder is 3:2 below 600 dp and 16:9 from 600 dp, still under the cap.
 double challengeHeroExtent({
   required double layoutWidth,
   required double windowWidth,
+  double? imageAspect,
 }) {
   if (layoutWidth <= 0) return 0;
-  final natural = layoutWidth / challengeHeroAspect(windowWidth);
+  final natural = layoutWidth / _heroFrameAspect(windowWidth, imageAspect);
   return math.min(natural, challengeHeroMaxHeight(windowWidth));
+}
+
+/// Photo width. Full bleed when the photo fits under the height cap.
+/// Otherwise the width is `cap × aspect` and the band fills the sides,
+/// instead of [BoxFit.cover] zooming a wider frame.
+double challengeHeroPhotoWidth({
+  required double layoutWidth,
+  required double windowWidth,
+  double? imageAspect,
+}) {
+  if (layoutWidth <= 0) return 0;
+  final aspect = _heroFrameAspect(windowWidth, imageAspect);
+  final cap = challengeHeroMaxHeight(windowWidth);
+  final natural = layoutWidth / aspect;
+  if (natural <= cap) return layoutWidth;
+  return cap * aspect;
 }
 
 Alignment challengeHeroAlignment(double? focalY) {
@@ -257,6 +413,7 @@ class CroppedCover extends StatelessWidget {
     required this.title,
     required this.wide,
     this.focalY,
+    this.imageAspect,
     this.back,
     this.backTop = 12,
   });
@@ -265,47 +422,74 @@ class CroppedCover extends StatelessWidget {
   final String title;
   final bool wide;
   final double? focalY;
+
+  /// Pixel width ÷ height of [provider], once decoded. Null keeps the
+  /// placeholder ratio from [challengeHeroAspect].
+  final double? imageAspect;
   final Widget? back;
   final double backTop;
 
   @override
   Widget build(BuildContext context) {
     final pad = wide ? 24.0 : 16.0;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const ColoredBox(color: BrandColors.forest),
-        Image(
-          key: const Key('challenge-hero-photo'),
-          image: provider,
-          fit: BoxFit.cover,
-          alignment: challengeHeroAlignment(focalY),
-          width: double.infinity,
-          height: double.infinity,
-          gaplessPlayback: true,
-          errorBuilder: (_, _, _) => const AppImagePlaceholder(),
-        ),
-        const _HeroScrim(),
-        Positioned(
-          left: pad,
-          right: pad,
-          bottom: wide ? 16 : 12,
-          child: Text(
-            title,
-            key: const Key('challenge-title'),
-            maxLines: wide ? 2 : 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.displayFont,
-              fontWeight: FontWeight.w600,
-              color: BrandColors.cream,
-              fontSize: wide ? 28 : 24,
-              height: 1.15,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final window = MediaQuery.sizeOf(context).width;
+        final layout = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : window;
+        final photoWidth = challengeHeroPhotoWidth(
+          layoutWidth: layout,
+          windowWidth: window,
+          imageAspect: imageAspect,
+        );
+        final photoHeight = challengeHeroExtent(
+          layoutWidth: layout,
+          windowWidth: window,
+          imageAspect: imageAspect,
+        );
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: BrandColors.forest),
+            Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: photoWidth,
+                height: photoHeight,
+                child: Image(
+                  key: const Key('challenge-hero-photo'),
+                  image: provider,
+                  fit: BoxFit.contain,
+                  alignment: challengeHeroAlignment(focalY),
+                  gaplessPlayback: true,
+                  errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+                ),
+              ),
             ),
-          ),
-        ),
-        if (back != null) Positioned(left: 12, top: backTop, child: back!),
-      ],
+            const _HeroScrim(),
+            Positioned(
+              left: pad,
+              right: pad,
+              bottom: wide ? 16 : 12,
+              child: Text(
+                title,
+                key: const Key('challenge-title'),
+                maxLines: wide ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppTheme.displayFont,
+                  fontWeight: FontWeight.w600,
+                  color: BrandColors.cream,
+                  fontSize: wide ? 28 : 24,
+                  height: 1.15,
+                ),
+              ),
+            ),
+            if (back != null) Positioned(left: 12, top: backTop, child: back!),
+          ],
+        );
+      },
     );
   }
 }
@@ -343,6 +527,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
   _ChallengeHeroDelegate({
     required this.provider,
     required this.focalY,
+    required this.imageAspect,
     required this.title,
     required this.location,
     required this.onBack,
@@ -355,6 +540,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
 
   final ImageProvider provider;
   final double? focalY;
+  final double? imageAspect;
   final String title;
   final String location;
   final VoidCallback? onBack;
@@ -398,6 +584,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
                 title: title,
                 wide: wide,
                 focalY: focalY,
+                imageAspect: imageAspect,
               ),
             ),
           ),
@@ -469,6 +656,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _ChallengeHeroDelegate oldDelegate) {
     return provider != oldDelegate.provider ||
         focalY != oldDelegate.focalY ||
+        imageAspect != oldDelegate.imageAspect ||
         title != oldDelegate.title ||
         location != oldDelegate.location ||
         backLabel != oldDelegate.backLabel ||

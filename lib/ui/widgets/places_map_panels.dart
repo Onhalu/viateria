@@ -166,7 +166,7 @@ class _FilterBodyState extends State<_FilterBody> {
   }
 }
 
-class PlaceDetailSheet extends StatelessWidget {
+class PlaceDetailSheet extends StatefulWidget {
   const PlaceDetailSheet({
     super.key,
     required this.place,
@@ -187,124 +187,198 @@ class PlaceDetailSheet extends StatelessWidget {
   final bool compact;
 
   @override
+  State<PlaceDetailSheet> createState() => _PlaceDetailSheetState();
+}
+
+class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
+  static const _dismissDistance = 48.0;
+  var _drag = 0.0;
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    setState(() => _drag = (_drag + details.delta.dy).clamp(0.0, 240.0));
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (_drag >= _dismissDistance || velocity > 700) {
+      widget.onClose();
+      return;
+    }
+    setState(() => _drag = 0);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final km = userLocation == null
+    final place = widget.place;
+    final strings = widget.strings;
+    final km = widget.userLocation == null
         ? null
-        : distanceKm(userLocation!, place.location);
-    final pad = compact
-        ? const EdgeInsets.fromLTRB(12, 8, 12, 12)
-        : const EdgeInsets.fromLTRB(20, 10, 20, 16);
+        : distanceKm(widget.userLocation!, place.location);
+    final compact = widget.compact;
+    final horizontal = compact ? 12.0 : 20.0;
     final titleSize = compact ? 16.0 : 22.0;
-    final buttonHeight = compact ? 40.0 : 48.0;
-    return Material(
-      key: const Key('map-poi-sheet'),
-      color: MapOverlayColors.surface,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      child: Padding(
-        padding: pad,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: MapPalette.beige,
-                  borderRadius: BorderRadius.circular(99),
+    return Transform.translate(
+      offset: Offset(0, _drag),
+      child: GestureDetector(
+        onVerticalDragUpdate: _onDragUpdate,
+        onVerticalDragEnd: _onDragEnd,
+        onVerticalDragCancel: () => setState(() => _drag = 0),
+        child: Material(
+          key: const Key('map-poi-sheet'),
+          color: MapOverlayColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 48,
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: MapPalette.beige,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: _SheetCloseButton(
+                        label: strings.closeCta,
+                        onPressed: widget.onClose,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            SizedBox(height: compact ? 8 : 16),
-            Text(
-              place.name,
-              key: const Key('map-poi-sheet-name'),
-              style: TextStyle(
-                color: MapPalette.forest,
-                fontSize: titleSize,
-                height: 1.25,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                PlaceMetaChip(label: strings.t(place.category.l10nKey)),
-                if (place.elevationM != null)
-                  PlaceMetaChip(
-                    key: const Key('map-poi-sheet-elevation'),
-                    label: strings.formatElevationM(place.elevationM!),
-                  ),
-                if (km != null)
-                  PlaceMetaChip(label: strings.formatDistanceKm(km)),
-              ],
-            ),
-            if (place.description != null) ...[
-              const SizedBox(height: 8),
-              PlaceDescriptionText(
-                text: place.description!,
-                textKey: const Key('map-poi-sheet-description'),
-                toggleKey: const Key('map-poi-sheet-description-toggle'),
-                maxLines: 4,
-                moreLabel: strings.showMore,
-                lessLabel: strings.showLess,
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontal,
+                  0,
+                  horizontal,
+                  compact ? 12 : 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      place.name,
+                      key: const Key('map-poi-sheet-name'),
+                      style: TextStyle(
+                        color: MapPalette.forest,
+                        fontSize: titleSize,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        PlaceMetaChip(label: strings.t(place.category.l10nKey)),
+                        if (place.elevationM != null)
+                          PlaceMetaChip(
+                            key: const Key('map-poi-sheet-elevation'),
+                            label: strings.formatElevationM(place.elevationM!),
+                          ),
+                        if (km != null)
+                          PlaceMetaChip(label: strings.formatDistanceKm(km)),
+                      ],
+                    ),
+                    if (place.description != null) ...[
+                      const SizedBox(height: 8),
+                      PlaceDescriptionText(
+                        text: place.description!,
+                        textKey: const Key('map-poi-sheet-description'),
+                        toggleKey: const Key(
+                          'map-poi-sheet-description-toggle',
+                        ),
+                        maxLines: 4,
+                        moreLabel: strings.showMore,
+                        lessLabel: strings.showLess,
+                      ),
+                    ],
+                    SizedBox(height: compact ? 12 : 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            key: const Key('map-poi-verify'),
+                            label: strings.verify,
+                            variant: AppButtonVariant.primary,
+                            size: AppButtonSize.m,
+                            onPressed: widget.onVerify,
+                          ),
+                        ),
+                        if (widget.onAddToRoute != null) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AppButton(
+                              key: const Key('map-poi-add-route'),
+                              label: strings.planRoute,
+                              variant: AppButtonVariant.secondary,
+                              size: AppButtonSize.m,
+                              icon: Icons.route,
+                              onPressed: widget.onAddToRoute,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
-            SizedBox(height: compact ? 12 : 16),
-            Row(
-              children: [
-                Expanded(
-                  child: AppButton(
-                    key: const Key('map-poi-verify'),
-                    label: strings.verify,
-                    variant: AppButtonVariant.primary,
-                    size: AppButtonSize.m,
-                    onPressed: onVerify,
-                  ),
-                ),
-                if (onAddToRoute != null) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppButton(
-                      key: const Key('map-poi-add-route'),
-                      label: strings.planRoute,
-                      variant: AppButtonVariant.secondary,
-                      size: AppButtonSize.m,
-                      icon: Icons.route,
-                      onPressed: onAddToRoute,
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 12),
-                if (onAddToRoute == null)
-                  Expanded(child: _sheetClose(strings, onClose, buttonHeight))
-                else
-                  _sheetClose(strings, onClose, buttonHeight),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-Widget _sheetClose(AppStrings strings, VoidCallback onClose, double height) {
-  return OutlinedButton(
-    key: const Key('map-poi-close'),
-    onPressed: onClose,
-    style: OutlinedButton.styleFrom(
-      backgroundColor: MapPalette.cream,
-      foregroundColor: MapPalette.forest,
-      side: const BorderSide(color: MapPalette.beige),
-      minimumSize: Size(64, height),
-      tapTargetSize: MaterialTapTargetSize.padded,
-    ),
-    child: Text(strings.closeCta),
-  );
+/// Forest close mark on the cream sheet. 48 dp target, localized name.
+class _SheetCloseButton extends StatelessWidget {
+  const _SheetCloseButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: SizedBox(
+          key: const Key('map-poi-close'),
+          width: 48,
+          height: 48,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              child: const Icon(
+                Icons.close,
+                size: 28,
+                color: MapPalette.forest,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class PlaceListPanel extends StatelessWidget {

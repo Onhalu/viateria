@@ -509,6 +509,76 @@ void main() {
     }
     debugDisableShadows = true;
   });
+
+  testWidgets('hero and place sheet frames', (tester) async {
+    await tester.runAsync(loadFonts);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final story = sampleStoryChallenge(
+      coverImageUrl: 'asset://assets/challenges/beskydy-autumn.jpg',
+    );
+    final open = sampleOpenChallenge();
+    for (final frame in const [Size(412, 900), Size(1280, 900)]) {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = frame;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (_) => LocaleController(initial: 'cs'),
+            ),
+            ChangeNotifierProvider(
+              create: (_) => LastOpenedChallengeStore(initialId: 'story-1'),
+            ),
+            Provider.value(
+              value: buildServices(
+                challenges: [open.challenge, story.challenge],
+                details: [open, story],
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            home: const ChallengeScreen(challengeId: 'story-1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await saveShot(tester, 'detail-hero-${frame.width.round()}.png');
+    }
+
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pumpWidget(
+      wrapApp(
+        buildServices(
+          places: MemoryPlaceCatalog(samplePlaces()),
+          routing: MemoryRoutingClient(),
+          elevation: MemoryElevationLookup(),
+          deviceLocation: MemoryDeviceLocation(),
+        ),
+        locale: LocaleController(initial: 'cs'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.map_outlined).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const Key('map-search-karlstejn')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-close')), findsOneWidget);
+    expect(find.text(AppStrings('cs').cancelRoute), findsNothing);
+    await saveShot(tester, 'detail-map-sheet-cs.png');
+    debugDisableShadows = true;
+  });
 }
 
 /// Brings a challenge block on screen. Below the map it starts offstage, so

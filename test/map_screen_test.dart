@@ -630,6 +630,27 @@ void main() {
       );
       expect(verifyRect.right, lessThan(planRect.left));
       expect((verifyRect.center.dy - planRect.center.dy).abs(), lessThan(1));
+      expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('map-poi-close'))),
+        const Size(48, 48),
+      );
+      expect(
+        find.descendant(
+          of: actionRow,
+          matching: find.byKey(const Key('map-poi-close')),
+        ),
+        findsNothing,
+      );
+      expect(find.text(strings.closeCta), findsNothing);
+      expect(find.text(strings.cancelRoute), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('map-poi-sheet')),
+          matching: find.byType(AppButton),
+        ),
+        findsNWidgets(2),
+      );
 
       await tester.tap(find.byKey(const Key('map-poi-add-route')));
       await tester.pumpAndSettle();
@@ -653,6 +674,125 @@ void main() {
       expect(find.byKey(const Key('route-hike-stats')), findsNothing);
     },
   );
+
+  testWidgets('the place sheet closes from the X, a drag, and back', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Future<void> openKarl() async {
+      await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('map-search-karlstejn')));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.pumpWidget(_mapApp());
+    await tester.pumpAndSettle();
+    await openKarl();
+    expect(find.byTooltip(AppStrings('cs').closeCta), findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    await tester.pump();
+    expect(find.bySemanticsLabel('Zavřít'), findsOneWidget);
+    semantics.dispose();
+    await tester.tap(find.byKey(const Key('map-poi-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+
+    await openKarl();
+    await tester.drag(
+      find.byKey(const Key('map-poi-sheet-name')),
+      const Offset(0, 160),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+
+    await openKarl();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
+  });
+
+  testWidgets('place sheet labels the close icon in each locale', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      for (final locale in ['cs', 'en', 'de']) {
+        final strings = AppStrings(locale);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.bottomCenter,
+                child: PlaceDetailSheet(
+                  place: samplePlaces().first,
+                  strings: strings,
+                  userLocation: null,
+                  onClose: () {},
+                  onVerify: () {},
+                  onAddToRoute: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(find.byIcon(Icons.close), findsOneWidget);
+        expect(find.byTooltip(strings.closeCta), findsOneWidget);
+        expect(find.bySemanticsLabel(strings.closeCta), findsOneWidget);
+        final icon = tester.widget<Icon>(find.byIcon(Icons.close));
+        expect(icon.color, const Color(0xFF35483C));
+        expect(icon.size, greaterThanOrEqualTo(24));
+        expect(
+          tester.getSize(find.byKey(const Key('map-poi-close'))),
+          const Size(48, 48),
+        );
+        final sheet = tester.getRect(find.byKey(const Key('map-poi-sheet')));
+        final close = tester.getRect(find.byKey(const Key('map-poi-close')));
+        expect(sheet.right - close.right, lessThanOrEqualTo(1));
+        expect(close.top - sheet.top, lessThanOrEqualTo(1));
+        expect(find.text(strings.cancelRoute), findsNothing);
+        expect(find.text(strings.closeCta), findsNothing);
+        expect(find.byType(AppButton), findsNWidgets(2));
+        expect(
+          tester
+              .widget<AppButton>(find.byKey(const Key('map-poi-verify')))
+              .variant,
+          AppButtonVariant.primary,
+        );
+        expect(
+          tester
+              .widget<AppButton>(find.byKey(const Key('map-poi-add-route')))
+              .variant,
+          AppButtonVariant.secondary,
+        );
+      }
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PlaceDetailSheet(
+              place: samplePlaces().first,
+              strings: AppStrings('en'),
+              userLocation: null,
+              onClose: () {},
+              onVerify: () {},
+              onAddToRoute: null,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(AppButton), findsOneWidget);
+      expect(find.byKey(const Key('map-poi-add-route')), findsNothing);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
+  });
 }
 
 class _GatedPlaceCatalog implements PlaceCatalog {

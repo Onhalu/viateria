@@ -17,6 +17,7 @@ import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/map/poi_source_sync.dart';
 import 'package:viateria/theme/app_theme.dart';
+import 'package:viateria/ui/layout/breakpoints.dart';
 import 'package:viateria/ui/layout/map_search_metrics.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
@@ -232,22 +233,10 @@ void main() {
     expect(challengeHeroAspect(800), 16 / 9);
     expect(challengeHeroMaxHeight(390), 300);
     expect(challengeHeroMaxHeight(1280), 480);
-    expect(
-      challengeHeroExtent(layoutWidth: 390, windowWidth: 390),
-      260,
-    );
-    expect(
-      challengeHeroExtent(layoutWidth: 800, windowWidth: 800),
-      450,
-    );
-    expect(
-      challengeHeroExtent(layoutWidth: 1280, windowWidth: 1280),
-      480,
-    );
-    expect(
-      challengeHeroExtent(layoutWidth: 640, windowWidth: 1280),
-      360,
-    );
+    expect(challengeHeroExtent(layoutWidth: 390, windowWidth: 390), 260);
+    expect(challengeHeroExtent(layoutWidth: 800, windowWidth: 800), 450);
+    expect(challengeHeroExtent(layoutWidth: 1280, windowWidth: 1280), 480);
+    expect(challengeHeroExtent(layoutWidth: 640, windowWidth: 1280), 360);
     expect(challengeHeroAlignment(null), const Alignment(0, -0.2));
     expect(challengeHeroAlignment(0.4), const Alignment(0, 0.4));
   });
@@ -332,7 +321,7 @@ void main() {
     final photo = tester.widget<Image>(
       find.byKey(const Key('challenge-hero-photo')),
     );
-    expect(photo.fit, BoxFit.cover);
+    expect(photo.fit, BoxFit.contain);
     expect(photo.alignment, const Alignment(0, -0.2));
     expect(find.byKey(const Key('challenge-hero-scrim')), findsOneWidget);
     expect(find.byKey(const Key('challenge-hero-letterbox')), findsNothing);
@@ -368,11 +357,11 @@ void main() {
     await tester.pump();
     final framed = tester.getSize(find.byType(ChallengeHero));
     expect(framed.width, 390);
-    expect(framed.height, 260);
+    expect(framed.height, closeTo(390 / (1280 / 854), 0.5));
     expect(find.byKey(const Key('challenge-hero-letterbox')), findsNothing);
     expect(
       tester.widget<Image>(find.byKey(const Key('challenge-hero-photo'))).fit,
-      BoxFit.cover,
+      BoxFit.contain,
     );
     final circle = tester.getSize(find.byType(InkWell));
     expect(circle, const Size(40, 40));
@@ -393,11 +382,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ChallengeHero(
-            url: 'memory',
-            focalY: 0.25,
-            title: 'Tall ridge',
-          ),
+          body: ChallengeHero(url: 'memory', focalY: 0.25, title: 'Tall ridge'),
         ),
       ),
     );
@@ -406,7 +391,7 @@ void main() {
     final sharp = tester.widget<Image>(
       find.byKey(const Key('challenge-hero-photo')),
     );
-    expect(sharp.fit, BoxFit.cover);
+    expect(sharp.fit, BoxFit.contain);
     expect(sharp.alignment, const Alignment(0, 0.25));
     final scrim = tester.getSize(find.byKey(const Key('challenge-hero-scrim')));
     expect(scrim.width, 390);
@@ -441,6 +426,169 @@ void main() {
           .style
           ?.fontSize,
       28,
+    );
+  });
+
+  test('a known photo stays under the height cap without a wider crop', () {
+    const beskydy = 1280 / 854;
+    const portrait = 960 / 1114;
+    for (final window in [360.0, 412.0, 768.0, 1280.0, 1920.0]) {
+      final layout = window >= Breakpoints.mediumMax ? window / 2 : window;
+      final width = challengeHeroPhotoWidth(
+        layoutWidth: layout,
+        windowWidth: window,
+        imageAspect: beskydy,
+      );
+      final height = challengeHeroExtent(
+        layoutWidth: layout,
+        windowWidth: window,
+        imageAspect: beskydy,
+      );
+      expect(height, lessThanOrEqualTo(challengeHeroMaxHeight(window) + 0.01));
+      expect(width / height, closeTo(beskydy, 0.01), reason: 'window $window');
+      expect(width, lessThanOrEqualTo(layout + 0.01));
+      if (layout / beskydy <= challengeHeroMaxHeight(window)) {
+        expect(width, closeTo(layout, 0.01), reason: 'full width at $window');
+      }
+    }
+    expect(
+      challengeHeroPhotoWidth(
+        layoutWidth: 390,
+        windowWidth: 390,
+        imageAspect: portrait,
+      ),
+      closeTo(300 * portrait, 0.01),
+    );
+    expect(
+      challengeHeroExtent(
+        layoutWidth: 1920,
+        windowWidth: 1920,
+        imageAspect: beskydy,
+      ),
+      480,
+    );
+    expect(
+      challengeHeroPhotoWidth(
+        layoutWidth: 1920,
+        windowWidth: 1920,
+        imageAspect: beskydy,
+      ),
+      closeTo(480 * beskydy, 0.01),
+    );
+  });
+
+  testWidgets('the hero shows the whole photo at each viewport width', (
+    tester,
+  ) async {
+    const beskydy = 1280 / 854;
+    await tester.runAsync(
+      () => _resolveImage(
+        const AssetImage('assets/challenges/beskydy-autumn.jpg'),
+      ),
+    );
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final window in [360.0, 412.0, 768.0, 1280.0, 1920.0]) {
+      final layout = window >= Breakpoints.mediumMax ? window / 2 : window;
+      tester.view.physicalSize = Size(window, 1000);
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: layout,
+                child: const ChallengeHero(
+                  url: 'asset://assets/challenges/beskydy-autumn.jpg',
+                  title: 'Beskydy',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final hero = tester.getRect(find.byType(ChallengeHero));
+      final photo = tester.getRect(
+        find.byKey(const Key('challenge-hero-photo')),
+      );
+      final expectedWidth = challengeHeroPhotoWidth(
+        layoutWidth: layout,
+        windowWidth: window,
+        imageAspect: beskydy,
+      );
+      final expectedHeight = challengeHeroExtent(
+        layoutWidth: layout,
+        windowWidth: window,
+        imageAspect: beskydy,
+      );
+      expect(hero.width, closeTo(layout, 0.6), reason: 'band $window');
+      expect(photo.width, closeTo(expectedWidth, 0.6), reason: 'photo $window');
+      expect(
+        photo.height,
+        closeTo(expectedHeight, 0.6),
+        reason: 'photo $window',
+      );
+      expect(photo.width / photo.height, closeTo(beskydy, 0.02));
+      expect(photo.center.dx, closeTo(hero.center.dx, 0.6));
+      expect(photo.top, closeTo(hero.top, 0.6));
+      expect(photo.left, greaterThanOrEqualTo(hero.left - 0.6));
+      expect(photo.right, lessThanOrEqualTo(hero.right + 0.6));
+      expect(photo.bottom, lessThanOrEqualTo(hero.bottom + 0.6));
+      expect(
+        tester.widget<Image>(find.byKey(const Key('challenge-hero-photo'))).fit,
+        BoxFit.contain,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ChallengeHero),
+          matching: find.byType(ClipRRect),
+        ),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('challenge-hero-letterbox')), findsNothing);
+    }
+  });
+
+  testWidgets('a portrait hero is shown whole under the mobile cap', (
+    tester,
+  ) async {
+    const portrait = 960 / 1114;
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(
+      () => _resolveImage(
+        const AssetImage('assets/challenges/alice-manfield.jpg'),
+      ),
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ChallengeHero(
+            url: 'asset://assets/challenges/alice-manfield.jpg',
+            title: 'Alice',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final hero = tester.getRect(find.byType(ChallengeHero));
+    final photo = tester.getRect(find.byKey(const Key('challenge-hero-photo')));
+    expect(hero.width, 390);
+    expect(hero.height, 300);
+    expect(photo.height, closeTo(300, 0.6));
+    expect(photo.width, closeTo(300 * portrait, 0.6));
+    expect(photo.width / photo.height, closeTo(portrait, 0.02));
+    expect(photo.center.dx, closeTo(hero.center.dx, 0.6));
+    expect(
+      find.descendant(
+        of: find.byType(ChallengeHero),
+        matching: find.byType(ClipRRect),
+      ),
+      findsNothing,
     );
   });
 
