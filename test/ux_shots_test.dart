@@ -519,7 +519,11 @@ void main() {
       coverImageUrl: 'asset://assets/challenges/beskydy-autumn.jpg',
     );
     final open = sampleOpenChallenge();
-    for (final frame in const [Size(412, 900), Size(1280, 900)]) {
+    for (final frame in const [
+      Size(412, 900),
+      Size(1280, 900),
+      Size(1920, 1080),
+    ]) {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = frame;
       await tester.pumpWidget(const SizedBox.shrink());
