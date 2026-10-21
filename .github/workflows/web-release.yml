@@ -1,7 +1,9 @@
 # Flutter web release for http://viateria.limitlessdreams.cz/ (WEDOS FTP).
 #
-# Dart-define names match lib/config/app_config.dart and
-# lib/map/map_style_config.dart (String.fromEnvironment). Do not rename.
+# Dart-define names match lib/config/app_config.dart,
+# lib/map/map_style_config.dart, and lib/ui/diploma_share.dart
+# (String.fromEnvironment). Do not rename.
+# FACEBOOK_APP_ID is optional. An empty value keeps the system share sheet.
 #
 # Deploy is optional (needs FTP_HOST / FTP_USER / FTP_PASS) and runs only on
 # push to main or workflow_dispatch — never on pull_request.
@@ -55,12 +57,14 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           MAP_STYLE_URL: ${{ secrets.MAP_STYLE_URL }}
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
         run: |
           flutter build web --release --base-href=/ \
             --dart-define="SUPABASE_URL=${SUPABASE_URL}" \
             --dart-define="SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" \
             --dart-define="MAP_STYLE_URL=${MAP_STYLE_URL}" \
-            --dart-define="STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}"
+            --dart-define="STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}" \
+            --dart-define="FACEBOOK_APP_ID=${FACEBOOK_APP_ID}"
 
       # Flutter may skip dotfiles when copying web/ → build/web.
       - name: Install Apache SPA rewrite (.htaccess)

@@ -30,35 +30,44 @@ abstract final class MapStyleConfig {
   static const markerIconSize = 0.45;
   static const selectedMarkerIconSize = 0.55;
 
-  /// POI disk diameter in dp (MapLibre radius is half). Unverified cream;
-  /// verified solid bark. Selected is 32 dp, default 28.
-  static const diskDiameter = 28.0;
-  static const selectedDiskDiameter = 32.0;
+  /// POI disk diameter in dp (MapLibre radius is half). Selected is 1.15×.
+  static const diskDiameter = 32.0;
+  static const selectedDiskDiameter = 36.8;
   static const diskRadius = diskDiameter / 2;
   static const selectedDiskRadius = selectedDiskDiameter / 2;
-  static const diskStrokeWidth = 1.5;
-  static const verifiedDiskStrokeWidth = 0.0;
 
-  /// Cream `#F3EFE5` at 94% — unverified / in-challenge disks.
+  /// Rings: verified and outside are 1.5 dp. In-challenge is thicker.
+  static const diskStrokeWidth = 1.5;
+  static const inChallengeDiskStrokeWidth = 2.0;
+  static const verifiedDiskStrokeWidth = 1.5;
+
+  /// Cream `#F3EFE5` — in-challenge, not-yet-verified disks.
   static const diskFillColor = 'rgba(243, 239, 229, 0.94)';
+
+  /// Neutral `#FAF8F2` at 90% — places outside the open challenge.
+  static const outsideDiskFill = 'rgba(250, 248, 242, 0.90)';
 
   static const diskLayerId = 'poi-disks';
   static const forestHex = '#35483C';
   static const sageHex = '#9C9A7B';
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
+  static const neutralHex = '#FAF8F2';
 
   /// SDF `placeState`: verified > inChallenge > outside.
   static const placeStateOutside = 'outside';
   static const placeStateInChallenge = 'inChallenge';
   static const placeStateVerified = 'verified';
 
-  /// SDF icon-color for verified places (cream on a solid bark disk).
-  /// Not [barkHex] — bark is the disk fill, never the icon tint.
+  /// Verified disks draw no category icon (opacity 0).
   static const verifiedIconHex = creamHex;
 
-  /// Verified disk fill: solid bark `#756653` at 100%.
-  static const verifiedDiskFill = barkHex;
+  /// Verified disk fill `#A7B78C`, with a forest ring.
+  static const verifiedDiskFill = '#A7B78C';
+
+  /// Session route on the main map. Separate from challenge hike/bike lines.
+  static const catalogRouteSourceId = 'catalog-route';
+  static const catalogRouteLayerId = 'catalog-route-line';
 
   static const searchDebounce = Duration(milliseconds: 300);
   static const searchLimit = 20;
@@ -82,7 +91,7 @@ abstract final class MapStyleConfig {
     zoom: defaultZoom,
   );
 
-  /// SDF icon-color: verified cream > inChallenge forest > outside sage.
+  /// SDF icon-color: verified cream, in-challenge forest, outside bark.
   static const markerColorExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -90,35 +99,49 @@ abstract final class MapStyleConfig {
     verifiedIconHex,
     placeStateInChallenge,
     forestHex,
-    sageHex,
+    barkHex,
   ];
 
-  /// Disk fill: verified solid bark; otherwise cream at 94%.
+  /// Disk fill: verified sage-green, in-challenge cream, outside neutral @ 90%.
   static const diskFillExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
     placeStateVerified,
     verifiedDiskFill,
+    placeStateInChallenge,
     diskFillColor,
+    outsideDiskFill,
   ];
 
-  /// Verified disks have no stroke; others keep 1.5 pt sage/forest.
+  /// Verified ring is 1.5 dp. In-challenge ring is 2 dp. Outside is 1.5.
   static const diskStrokeWidthExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
     placeStateVerified,
     verifiedDiskStrokeWidth,
+    placeStateInChallenge,
+    inChallengeDiskStrokeWidth,
     diskStrokeWidth,
   ];
 
-  /// Disk stroke matches the unverified icon (sage / forest). Unused when
-  /// [diskStrokeWidthExpression] is 0 for verified.
+  /// Verified and in-challenge rings are forest. Outside ring is sage.
   static const diskStrokeColorExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
+    placeStateVerified,
+    forestHex,
     placeStateInChallenge,
     forestHex,
     sageHex,
+  ];
+
+  /// Verified places keep the disk and drop the category glyph.
+  static const symbolOpacityExpression = [
+    Expressions.match,
+    [Expressions.get, 'placeState'],
+    placeStateVerified,
+    0,
+    1,
   ];
 
   static const diskRadiusExpression = [

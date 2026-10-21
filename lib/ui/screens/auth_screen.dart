@@ -8,8 +8,9 @@ import '../../data/app_services.dart';
 import '../../data/repositories.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
+import '../../theme/app_theme.dart';
 import '../../theme/brand_assets.dart';
-import '../../theme/brand_colors.dart';
+import '../layout/breakpoints.dart';
 
 enum _AuthStep {
   signIn,
@@ -52,23 +53,42 @@ class _AuthScreenState extends State<AuthScreen> {
     vertical: 14,
   );
 
-  static final ButtonStyle _linkStyle =
-      TextButton.styleFrom(
-        textStyle: const TextStyle(decoration: TextDecoration.none),
-      ).copyWith(
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return BrandColors.forest;
-          return BrandColors.bark;
-        }),
-      );
+  static final ButtonStyle _linkStyle = TextButton.styleFrom(
+    minimumSize: const Size(48, AppTheme.minTap),
+    tapTargetSize: MaterialTapTargetSize.padded,
+    textStyle: const TextStyle(
+      fontSize: AppTheme.labelSize,
+      height: 1.2,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: BrandColors.forest,
+    ),
+  ).copyWith(foregroundColor: const WidgetStatePropertyAll(BrandColors.forest));
 
   static final ButtonStyle _socialStyle = OutlinedButton.styleFrom(
     backgroundColor: BrandColors.cream,
     foregroundColor: BrandColors.forest,
-    side: const BorderSide(color: BrandColors.forest, width: 1),
+    side: const BorderSide(color: BrandColors.forest, width: 1.5),
     padding: _buttonPadding,
-    minimumSize: const Size.fromHeight(48),
+    minimumSize: const Size.fromHeight(AppTheme.minTap),
+    textStyle: const TextStyle(
+      fontSize: AppTheme.bodySize,
+      fontWeight: FontWeight.w600,
+    ),
     shape: const RoundedRectangleBorder(borderRadius: _radius),
+  );
+
+  static final ButtonStyle _secondaryStyle = OutlinedButton.styleFrom(
+    backgroundColor: BrandColors.cream,
+    foregroundColor: BrandColors.forest,
+    side: const BorderSide(color: BrandColors.forest, width: 1.5),
+    padding: _buttonPadding,
+    minimumSize: const Size.fromHeight(AppTheme.ctaHeight),
+    textStyle: const TextStyle(
+      fontSize: AppTheme.bodySize,
+      fontWeight: FontWeight.w600,
+    ),
+    shape: const StadiumBorder(),
   );
 
   static final ButtonStyle _eyeStyle = ButtonStyle(
@@ -76,7 +96,9 @@ class _AuthScreenState extends State<AuthScreen> {
       if (states.contains(WidgetState.pressed)) return BrandColors.forest;
       return BrandColors.bark;
     }),
-    minimumSize: const WidgetStatePropertyAll(Size(44, 44)),
+    minimumSize: const WidgetStatePropertyAll(
+      Size(AppTheme.minTap, AppTheme.minTap),
+    ),
     tapTargetSize: MaterialTapTargetSize.padded,
   );
 
@@ -94,9 +116,18 @@ class _AuthScreenState extends State<AuthScreen> {
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: BrandColors.neutral,
-        labelStyle: TextStyle(color: BrandColors.bark),
-        hintStyle: TextStyle(color: BrandColors.bark),
-        floatingLabelStyle: TextStyle(color: BrandColors.bark),
+        labelStyle: TextStyle(
+          color: BrandColors.bark,
+          fontSize: AppTheme.bodySize,
+        ),
+        hintStyle: TextStyle(
+          color: BrandColors.bark,
+          fontSize: AppTheme.labelSize,
+        ),
+        floatingLabelStyle: TextStyle(
+          color: BrandColors.bark,
+          fontSize: AppTheme.labelSize,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: _radius,
           borderSide: BorderSide(color: BrandColors.beige),
@@ -121,8 +152,12 @@ class _AuthScreenState extends State<AuthScreen> {
           disabledBackgroundColor: BrandColors.forest.withValues(alpha: 0.4),
           disabledForegroundColor: BrandColors.onPrimary,
           padding: _buttonPadding,
-          minimumSize: const Size.fromHeight(48),
-          shape: const RoundedRectangleBorder(borderRadius: _radius),
+          minimumSize: const Size.fromHeight(AppTheme.ctaHeight),
+          textStyle: const TextStyle(
+            fontSize: AppTheme.bodySize,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: const StadiumBorder(),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(style: _socialStyle),
@@ -354,40 +389,39 @@ class _AuthScreenState extends State<AuthScreen> {
       _AuthStep.setPassword => strings.setPasswordTitle,
       _AuthStep.signIn || _AuthStep.forgotPasswordSent => null,
     };
+    final form = _AuthForm(
+      title: title,
+      fields: _fields(strings),
+      error: _error,
+      actions: _actions(strings),
+    );
     return Theme(
       data: _authTheme(Theme.of(context)),
       child: Scaffold(
         backgroundColor: BrandColors.cream,
         body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const SizedBox(height: 32),
-              const Center(
-                child: BrandLockup(width: BrandAssets.splashLockupWidth),
-              ),
-              if (title != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(color: BrandColors.forest),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final split = constraints.maxWidth >= Breakpoints.mediumMax;
+              final card = Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: Breakpoints.authMaxWidth,
+                    ),
+                    child: form,
+                  ),
                 ),
-              ],
-              const SizedBox(height: 32),
-              ..._fields(strings),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  key: const Key('auth-error'),
-                  style: const TextStyle(color: BrandColors.error),
-                ),
-              ],
-              const SizedBox(height: 24),
-              ..._actions(strings),
-            ],
+              );
+              if (!split) return card;
+              return Row(
+                children: [
+                  const Expanded(child: _AuthBrandPanel()),
+                  Expanded(child: card),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -542,23 +576,19 @@ class _AuthScreenState extends State<AuthScreen> {
         key: const Key('auth-forgot-password'),
         style:
             TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              minimumSize: const Size(0, 44),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(48, AppTheme.minTap),
+              tapTargetSize: MaterialTapTargetSize.padded,
               alignment: Alignment.centerRight,
               textStyle: const TextStyle(
-                fontSize: 14,
+                fontSize: AppTheme.labelSize,
                 height: 1.2,
-                fontWeight: FontWeight.w500,
-                decoration: TextDecoration.none,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: BrandColors.forest,
               ),
             ).copyWith(
-              foregroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.pressed)) {
-                  return BrandColors.forest;
-                }
-                return BrandColors.bark;
-              }),
+              foregroundColor: const WidgetStatePropertyAll(BrandColors.forest),
             ),
         onPressed: _busy ? null : () => _goTo(_AuthStep.forgotPassword),
         child: Text(strings.forgotPassword),
@@ -597,8 +627,8 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
         suffixIconConstraints: const BoxConstraints(
-          minWidth: 44,
-          minHeight: 44,
+          minWidth: AppTheme.minTap,
+          minHeight: AppTheme.minTap,
         ),
       ),
     );
@@ -613,13 +643,14 @@ class _AuthScreenState extends State<AuthScreen> {
             onPressed: _busy ? null : _signIn,
             child: _busyChild(strings.signIn),
           ),
-          TextButton(
+          const SizedBox(height: 16),
+          OutlinedButton(
             key: const Key('auth-open-register'),
-            style: _linkStyle,
+            style: _secondaryStyle,
             onPressed: _busy ? null : () => _goTo(_AuthStep.register),
             child: Text(strings.registerAction),
           ),
-          ..._providers(strings),
+          ..._providers(strings, signIn: true),
           TextButton(
             key: const Key('auth-magic-link'),
             style: _linkStyle,
@@ -708,9 +739,12 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  List<Widget> _providers(AppStrings strings) {
+  List<Widget> _providers(AppStrings strings, {bool signIn = false}) {
+    final beforeOr = signIn ? 24.0 : 8.0;
+    final afterOr = signIn ? 16.0 : 8.0;
+    final betweenSocial = signIn ? 12.0 : 8.0;
     return [
-      const SizedBox(height: 8),
+      SizedBox(height: beforeOr),
       Row(
         children: [
           const Expanded(child: Divider(color: BrandColors.beige)),
@@ -718,20 +752,21 @@ class _AuthScreenState extends State<AuthScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               strings.authOrDivider,
+              key: const Key('auth-or-divider'),
               style: const TextStyle(color: BrandColors.bark),
             ),
           ),
           const Expanded(child: Divider(color: BrandColors.beige)),
         ],
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: afterOr),
       OutlinedButton(
         key: const Key('auth-google'),
         style: _socialStyle,
         onPressed: _busy ? null : () => _oauth(AuthProvider.google),
         child: Text(strings.continueWithGoogle),
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: betweenSocial),
       OutlinedButton.icon(
         key: const Key('auth-apple'),
         style: _socialStyle,
@@ -750,6 +785,74 @@ class _AuthScreenState extends State<AuthScreen> {
       child: CircularProgressIndicator(
         strokeWidth: 2,
         color: BrandColors.onPrimary,
+      ),
+    );
+  }
+}
+
+class _AuthForm extends StatelessWidget {
+  const _AuthForm({
+    required this.title,
+    required this.fields,
+    required this.error,
+    required this.actions,
+  });
+
+  final String? title;
+  final List<Widget> fields;
+  final String? error;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 32),
+        const Center(child: BrandLockup(width: BrandAssets.splashLockupWidth)),
+        if (title != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            title!,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(color: BrandColors.forest, fontSize: 28),
+          ),
+        ],
+        const SizedBox(height: 32),
+        ...fields,
+        if (error != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            error!,
+            key: const Key('auth-error'),
+            style: const TextStyle(
+              color: BrandColors.error,
+              fontSize: AppTheme.labelSize,
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        ...actions,
+      ],
+    );
+  }
+}
+
+/// Wide-login brand pane. No landscape photo ships in the repo, so this
+/// uses the existing on-primary lockup on forest.
+class _AuthBrandPanel extends StatelessWidget {
+  const _AuthBrandPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: BrandColors.forest,
+      child: Center(
+        child: BrandLockup(
+          width: BrandAssets.splashLockupWidth,
+          onPrimary: true,
+        ),
       ),
     );
   }

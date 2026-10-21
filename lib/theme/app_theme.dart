@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'app_button.dart';
 import 'brand_colors.dart';
 
+export 'app_button.dart';
 export 'brand_colors.dart' show BrandColors, MapPalette;
 
 /// App-wide Material theme. Colors come from [BrandColors] / [MapPalette].
@@ -17,6 +19,38 @@ abstract final class AppTheme {
   static const muted = BrandColors.muted;
   static const success = BrandColors.success;
   static const warning = BrandColors.warning;
+
+  /// Type scale. Nothing is smaller than [captionSize].
+  static const displaySize = 32.0;
+  static const titleSize = 22.0;
+  static const bodySize = 16.0;
+  static const labelSize = 14.0;
+  static const captionSize = 12.0;
+
+  static const radiusCard = 12.0;
+  static const radiusPill = 999.0;
+  static const radiusSheet = 20.0;
+
+  static const space4 = 4.0;
+  static const space8 = 8.0;
+  static const space12 = 12.0;
+  static const space16 = 16.0;
+  static const space24 = 24.0;
+  static const space32 = 32.0;
+
+  /// Primary pill height. Secondary controls stay at least [minTap].
+  static const ctaHeight = 52.0;
+  static const minTap = 48.0;
+
+  static const displayFont = 'Playfair Display';
+
+  static const cardShadow = [
+    BoxShadow(
+      color: Color(0x1435483C),
+      blurRadius: 16,
+      offset: Offset(0, 4),
+    ),
+  ];
 
   static ThemeData light() {
     const scheme = ColorScheme(
@@ -45,15 +79,43 @@ abstract final class AppTheme {
       surfaceContainerHigh: BrandColors.neutral,
       surfaceContainerHighest: BrandColors.neutral,
     );
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(radiusCard);
+    const ink = BrandColors.ink;
+    const playfair = TextStyle(
+      fontFamily: displayFont,
+      color: ink,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+    );
+    const sans = TextStyle(color: ink, height: 1.35);
+    final textTheme = TextTheme(
+      displaySmall: playfair.copyWith(fontSize: displaySize),
+      headlineMedium: playfair.copyWith(fontSize: 28),
+      headlineSmall: playfair.copyWith(fontSize: titleSize),
+      titleLarge: playfair.copyWith(fontSize: titleSize),
+      titleMedium: sans.copyWith(
+        fontSize: bodySize,
+        fontWeight: FontWeight.w700,
+      ),
+      bodyLarge: sans.copyWith(fontSize: bodySize),
+      bodyMedium: sans.copyWith(fontSize: bodySize),
+      bodySmall: sans.copyWith(fontSize: captionSize, color: BrandColors.bark),
+      labelLarge: sans.copyWith(
+        fontSize: labelSize,
+        fontWeight: FontWeight.w600,
+      ),
+      labelMedium: sans.copyWith(fontSize: labelSize),
+      labelSmall: sans.copyWith(fontSize: captionSize, color: BrandColors.bark),
+    );
+    const buttonSizes = AppButtonSizes.standard;
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
+      extensions: const [buttonSizes],
       scaffoldBackgroundColor: BrandColors.cream,
       canvasColor: BrandColors.cream,
       dividerColor: BrandColors.beige,
-      textTheme: ThemeData(brightness: Brightness.light).textTheme
-          .apply(bodyColor: BrandColors.ink, displayColor: BrandColors.ink),
+      textTheme: textTheme,
       appBarTheme: const AppBarTheme(
         backgroundColor: BrandColors.cream,
         foregroundColor: BrandColors.forest,
@@ -73,40 +135,32 @@ abstract final class AppTheme {
         clipBehavior: Clip.antiAlias,
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: BrandColors.forest,
-          foregroundColor: BrandColors.onPrimary,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: radius),
-        ),
+        style: AppButtonThemes.filled(buttonSizes),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: BrandColors.cream,
-          foregroundColor: BrandColors.forest,
-          side: const BorderSide(color: BrandColors.beige),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: radius),
-        ),
+        style: AppButtonThemes.outlined(buttonSizes),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: BrandColors.forest),
+        style: AppButtonThemes.text(buttonSizes),
       ),
+      iconButtonTheme: IconButtonThemeData(style: AppButtonThemes.icon()),
       chipTheme: ChipThemeData(
-        backgroundColor: BrandColors.cream,
+        backgroundColor: BrandColors.beige,
         selectedColor: BrandColors.forest,
-        disabledColor: BrandColors.cream,
+        disabledColor: BrandColors.beige,
         labelStyle: const TextStyle(
-          color: BrandColors.bark,
+          color: BrandColors.forest,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
         ),
         secondaryLabelStyle: const TextStyle(
           color: BrandColors.onPrimary,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
         ),
-        side: const BorderSide(color: BrandColors.beige),
+        side: BorderSide.none,
         shape: const StadiumBorder(),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         checkmarkColor: BrandColors.onPrimary,
         surfaceTintColor: Colors.transparent,
       ),
@@ -146,8 +200,14 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: BrandColors.neutral,
-        labelStyle: const TextStyle(color: BrandColors.muted),
-        hintStyle: const TextStyle(color: BrandColors.muted),
+        labelStyle: const TextStyle(
+          color: BrandColors.muted,
+          fontSize: labelSize,
+        ),
+        hintStyle: const TextStyle(
+          color: BrandColors.muted,
+          fontSize: labelSize,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: radius,
           borderSide: const BorderSide(color: BrandColors.beige),

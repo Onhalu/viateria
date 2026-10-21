@@ -488,6 +488,10 @@ void main() {
         rank: 4,
       ),
     );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       wrapApp(
         buildServices(leaderboard: board),

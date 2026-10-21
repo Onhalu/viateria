@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../data/app_services.dart';
 import 'diploma_file_share_io.dart'
     if (dart.library.js_interop) 'diploma_file_share_web.dart';
+import 'diploma_story_frame.dart';
 
 /// Tests replace this with [MemoryImage].
 ImageProvider<Object> Function(String url) diplomaImageProvider =
@@ -19,7 +20,8 @@ DiplomaSharer diplomaSharer = shareDiplomaFile;
 DiplomaBytesLoader diplomaBytesLoader = _download;
 
 /// Optional Meta app id (`--dart-define=FACEBOOK_APP_ID=...`).
-/// Empty means Instagram Stories is skipped and the share sheet is used.
+/// Empty means Instagram and Facebook Stories are skipped and the share
+/// sheet is used. Ondřej supplies the real id later.
 const diplomaFacebookAppId = String.fromEnvironment('FACEBOOK_APP_ID');
 
 const diplomaShareChannel = MethodChannel('viateria/diploma_share');
@@ -42,6 +44,7 @@ class DiplomaShareEffects {
     required this.canShareFiles,
     required this.facebookAppId,
     required this.storiesSupported,
+    required this.storyFrame,
     required this.stories,
     required this.sheet,
     required this.download,
@@ -53,7 +56,8 @@ class DiplomaShareEffects {
       canShareFiles: platformCanShareDiplomaFiles,
       facebookAppId: () => diplomaFacebookAppId,
       storiesSupported: defaultStoriesSupported,
-      stories: shareDiplomaToInstagramStory,
+      storyFrame: renderDiplomaStoryFrame,
+      stories: shareDiplomaToStory,
       sheet: shareDiplomaSheet,
       download: shareDiplomaFile,
       openUrl: launchExternalUrl,
@@ -63,7 +67,13 @@ class DiplomaShareEffects {
   final Future<bool> Function() canShareFiles;
   final String Function() facebookAppId;
   final bool Function() storiesSupported;
-  final Future<bool> Function(Uint8List bytes, String appId) stories;
+  final Future<Uint8List> Function(Uint8List bytes) storyFrame;
+  final Future<bool> Function(
+    Uint8List bytes,
+    String appId,
+    DiplomaShareTarget target,
+  )
+  stories;
   final Future<void> Function(Uint8List bytes, String filename, String caption)
   sheet;
   final Future<void> Function(Uint8List bytes, String filename) download;
@@ -135,27 +145,39 @@ XFile _pngFile(Uint8List bytes, String filename) {
   return XFile.fromData(bytes, mimeType: 'image/png', name: filename);
 }
 
-/// Instagram Stories needs a Facebook App ID and the native app.
-/// Returns false when the define is missing, the platform has no intent,
-/// or Instagram is not installed. Callers then use the share sheet.
-Future<bool> shareDiplomaToInstagramStory(Uint8List bytes, String appId) async {
+/// Instagram or Facebook Stories. The PNG is the 9:16 frame. Returns false
+/// when the app id is missing, the platform has no bridge, or the app is
+/// not installed. Callers then use the share sheet.
+Future<bool> shareDiplomaToStory(
+  Uint8List bytes,
+  String appId,
+  DiplomaShareTarget target,
+) async {
   final id = appId.trim();
-  if (id.isEmpty || !defaultStoriesSupported()) return false;
+  final method = switch (target) {
+    DiplomaShareTarget.instagram => 'shareInstagramStory',
+    DiplomaShareTarget.facebook => 'shareFacebookStory',
+    DiplomaShareTarget.generic => '',
+  };
+  if (id.isEmpty || method.isEmpty || !defaultStoriesSupported()) return false;
   try {
-    final shared = await diplomaShareChannel.invokeMethod<bool>(
-      'shareInstagramStory',
-      {'bytes': bytes, 'appId': id},
-    );
+    final shared = await diplomaShareChannel.invokeMethod<bool>(method, {
+      'bytes': bytes,
+      'appId': id,
+    });
     return shared == true;
   } catch (_) {
     return false;
   }
 }
 
-/// Shares the diploma PNG. Instagram Stories runs only when [facebookAppId]
-/// is set and the native bridge is available; otherwise the PNG goes to the
+/// Shares the diploma PNG.
+///
+/// Instagram and Facebook Stories run only when [facebookAppId] is set and
+/// the native bridge is available. The image they receive is the 9:16 frame.
+/// A missing id, a missing app, or a failed story intent falls back to the
 /// system share sheet. Desktop web, where file sharing is unavailable,
-/// downloads the PNG and, for Instagram or Facebook, opens that site.
+/// downloads the original PNG and, for Instagram or Facebook, opens that site.
 Future<DiplomaShareOutcome> runDiplomaShare({
   required DiplomaShareTarget target,
   required Uint8List bytes,
@@ -165,15 +187,30 @@ Future<DiplomaShareOutcome> runDiplomaShare({
   final effects = diplomaShareEffects;
   final canShare = await effects.canShareFiles();
   final appId = effects.facebookAppId().trim();
+  final storiesTarget =
+      target == DiplomaShareTarget.instagram ||
+      target == DiplomaShareTarget.facebook;
   final tryStories =
-      target == DiplomaShareTarget.instagram &&
-      appId.isNotEmpty &&
-      effects.storiesSupported();
+      storiesTarget && appId.isNotEmpty && effects.storiesSupported();
 
   if (tryStories) {
-    final shared = await effects.stories(bytes, appId);
+    Uint8List framed = bytes;
+    try {
+      framed = await effects.storyFrame(bytes);
+    } catch (_) {
+      framed = bytes;
+    }
+    final shared = await effects.stories(framed, appId, target);
     if (shared) {
       return const DiplomaShareOutcome(route: DiplomaShareRoute.stories);
+    }
+    if (canShare) {
+      try {
+        await effects.sheet(framed, filename, caption);
+        return const DiplomaShareOutcome(route: DiplomaShareRoute.sheet);
+      } catch (_) {
+        // The sheet refused the story frame. Download the original below.
+      }
     }
   }
 

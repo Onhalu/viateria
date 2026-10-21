@@ -1001,15 +1001,18 @@ void main() {
       tester,
       const Key('catalog-filter-mode-story'),
     );
-    expect(unselected.color, BrandColors.creamPill);
-    expect((unselected.shape as RoundedRectangleBorder).side, BorderSide.none);
+    expect(unselected.color, BrandColors.cream);
+    expect(
+      (unselected.shape as RoundedRectangleBorder).side,
+      const BorderSide(color: BrandColors.beige),
+    );
     final unselectedLabel = tester.widget<Text>(
       find.descendant(
         of: find.byKey(const Key('catalog-filter-mode-story')),
         matching: find.byType(Text),
       ),
     );
-    expect(unselectedLabel.style?.color, BrandColors.cream);
+    expect(unselectedLabel.style?.color, BrandColors.forest);
     expect(unselectedLabel.style?.fontWeight, FontWeight.w600);
     expect(unselectedLabel.style?.fontSize, CatalogFilterChip.fontSize);
 
@@ -1019,7 +1022,7 @@ void main() {
       tester,
       const Key('catalog-filter-mode-story'),
     );
-    expect(selected.color, BrandColors.cream);
+    expect(selected.color, BrandColors.forest);
     expect((selected.shape as RoundedRectangleBorder).side, BorderSide.none);
     final selectedLabel = tester.widget<Text>(
       find.descendant(
@@ -1027,7 +1030,7 @@ void main() {
         matching: find.byType(Text),
       ),
     );
-    expect(selectedLabel.style?.color, BrandColors.forest);
+    expect(selectedLabel.style?.color, BrandColors.cream);
     expect(selectedLabel.style?.fontWeight, FontWeight.w600);
 
     final clear = tester.widget<TextButton>(
@@ -1093,7 +1096,7 @@ void main() {
       find.byKey(const Key('catalog-featured')),
     );
     final promoRect = tester.getRect(find.byKey(const Key('promo-widget')));
-    final list = tester.widget<ListView>(
+    final list = tester.widget<CustomScrollView>(
       find.byKey(const Key('catalog-results')),
     );
     _expectAccessAndDifficultyAboveCountries(tester);
@@ -1112,7 +1115,15 @@ void main() {
       find.byKey(const Key('catalog-country-results')),
     );
     expect(resultsRect.top - countryRect.bottom, closeTo(16, 1));
-    expect(list.padding, const EdgeInsets.fromLTRB(16, 8, 16, 16));
+    expect(list.scrollDirection, Axis.vertical);
+    expect(
+      tester
+          .widget<SliverPadding>(
+            find.byKey(const Key('catalog-results-padding')),
+          )
+          .padding,
+      const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    );
     expect(
       tester
           .widget<Material>(find.byKey(const Key('promo-surface-promo-1')))

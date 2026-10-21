@@ -116,9 +116,20 @@ void main() {
       theme.outlinedButtonTheme.style?.foregroundColor?.resolve({}),
       BrandColors.forest,
     );
-    expect(theme.chipTheme.backgroundColor, BrandColors.cream);
+    expect(theme.chipTheme.backgroundColor, BrandColors.beige);
     expect(theme.chipTheme.selectedColor, BrandColors.forest);
-    expect(theme.chipTheme.labelStyle?.color, BrandColors.bark);
+    expect(theme.chipTheme.labelStyle?.color, BrandColors.forest);
+    expect(theme.chipTheme.secondaryLabelStyle?.color, BrandColors.cream);
+    expect(
+      theme.filledButtonTheme.style?.minimumSize?.resolve({}),
+      const Size(64, 44),
+    );
+    expect(
+      theme.filledButtonTheme.style?.animationDuration,
+      const Duration(milliseconds: 120),
+    );
+    expect(theme.extension<AppButtonSizes>()?.lHeight, 52);
+    expect(theme.extension<AppButtonSizes>()?.gapFloating, 32);
   });
 
   test('user-facing appName is VANDERY in cs, en and de', () {

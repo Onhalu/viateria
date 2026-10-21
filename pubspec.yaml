@@ -44,6 +44,7 @@ flutter:
     - assets/map/icons/historical@2x.png
     - assets/brand/
     - assets/flags/
+    - assets/challenges/
   fonts:
     - family: Playfair Display
       fonts:

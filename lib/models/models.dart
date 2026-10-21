@@ -64,6 +64,7 @@ class Challenge {
     required this.status,
     required this.translations,
     this.coverImageUrl,
+    this.heroFocalY,
     this.region,
     this.countryCode,
     this.difficulty,
@@ -95,6 +96,11 @@ class Challenge {
   final PublishStatus status;
   final List<LocalizedText> translations;
   final String? coverImageUrl;
+
+  /// Optional vertical focal point for the cover crop, in Alignment space
+  /// (−1 top … 1 bottom). Read only when the row already has `hero_focal_y`.
+  /// There is no editor and no migration; a missing value uses −0.2.
+  final double? heroFocalY;
 
   /// Free-text place label from `challenges.region` (Beskydy, Česko, …).
   /// Catalog country chips use [countryCode], not this string.

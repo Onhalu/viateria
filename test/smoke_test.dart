@@ -133,6 +133,10 @@ void main() {
   testWidgets('catalog controls render at the bottom, not in an AppBar', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(wrapApp(buildServices()));
     await tester.pumpAndSettle();
 
@@ -151,10 +155,10 @@ void main() {
     final navTop = tester.getTopLeft(nav).dy;
     expect(navTop, greaterThan(screenSize.height / 2));
 
-    final list = find.byType(ListView);
-    expect(list, findsWidgets);
+    final list = find.byType(CustomScrollView);
+    expect(list, findsOneWidget);
     expect(
-      tester.getBottomLeft(list.first).dy,
+      tester.getBottomLeft(list).dy,
       lessThanOrEqualTo(navTop + 0.5),
     );
     await tester.scrollUntilVisible(

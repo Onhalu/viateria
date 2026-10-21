@@ -17,20 +17,26 @@ import UIKit
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     channel.setMethodCallHandler { call, result in
-      guard call.method == "shareInstagramStory",
-            let args = call.arguments as? [String: Any],
+      guard let args = call.arguments as? [String: Any],
             let bytes = args["bytes"] as? FlutterStandardTypedData,
             let appId = args["appId"] as? String,
             !appId.isEmpty
       else {
-        if call.method == "shareInstagramStory" {
+        if call.method == "shareInstagramStory" || call.method == "shareFacebookStory" {
           result(false)
         } else {
           result(FlutterMethodNotImplemented)
         }
         return
       }
-      result(Self.shareInstagramStory(bytes: bytes.data, appId: appId))
+      switch call.method {
+      case "shareInstagramStory":
+        result(Self.shareInstagramStory(bytes: bytes.data, appId: appId))
+      case "shareFacebookStory":
+        result(Self.shareFacebookStory(bytes: bytes.data, appId: appId))
+      default:
+        result(FlutterMethodNotImplemented)
+      }
     }
   }
 
@@ -49,6 +55,30 @@ import UIKit
     }
     let items: [[String: Any]] = [
       ["com.instagram.sharedSticker.backgroundImage": bytes],
+    ]
+    UIPasteboard.general.setItems(
+      items,
+      options: [
+        .expirationDate: Date().addingTimeInterval(5 * 60),
+      ]
+    )
+    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+    return true
+  }
+
+  /// Facebook Stories uses facebook-stories://share and the pasteboard.
+  /// A missing app returns false so Dart opens the system share sheet.
+  private static func shareFacebookStory(bytes: Data, appId: String) -> Bool {
+    guard let url = URL(string: "facebook-stories://share"),
+          UIApplication.shared.canOpenURL(url)
+    else {
+      return false
+    }
+    let items: [[String: Any]] = [
+      [
+        "com.facebook.sharedSticker.backgroundImage": bytes,
+        "com.facebook.sharedSticker.appID": appId,
+      ],
     ]
     UIPasteboard.general.setItems(
       items,

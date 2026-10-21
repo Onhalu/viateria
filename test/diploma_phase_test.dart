@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -453,7 +454,7 @@ void main() {
     );
     expect(story.route, DiplomaShareRoute.stories);
     expect(story.showUploadHint, isFalse);
-    expect(events, ['stories:12345:3']);
+    expect(events, ['frame:3', 'stories:instagram:12345:4']);
 
     events.clear();
     diplomaShareEffects = _shareEffects(
@@ -470,7 +471,11 @@ void main() {
       caption: 'caption',
     );
     expect(sheet.route, DiplomaShareRoute.sheet);
-    expect(events, ['stories:12345:1', 'sheet:diplom.png:caption']);
+    expect(events, [
+      'frame:1',
+      'stories:instagram:12345:4',
+      'sheet:diplom.png:caption:4',
+    ]);
 
     events.clear();
     diplomaShareEffects = _shareEffects(
@@ -485,7 +490,7 @@ void main() {
       caption: 'caption',
     );
     expect(missingId.route, DiplomaShareRoute.sheet);
-    expect(events, ['sheet:diplom.png:caption']);
+    expect(events, ['sheet:diplom.png:caption:1']);
   });
 
   test('desktop web downloads the png and opens the social site', () async {
@@ -582,7 +587,7 @@ void main() {
 
     expect(events, [
       'sheet:vyslapni-diplom-open-trail.png:'
-          'Zdolal(a) jsem výzvu Otevřená stezka s VANDERY',
+          'Zdolal(a) jsem výzvu Otevřená stezka s VANDERY:${_tinyPng.length}',
     ]);
     expect(find.byKey(const Key('diploma-share-hint')), findsNothing);
   });
@@ -619,6 +624,145 @@ void main() {
     expect(events, [
       'download:vyslapni-diplom-open-trail.png:${_tinyPng.length}',
     ]);
+  });
+
+  test('every runDiplomaShare path', () async {
+    final events = <String>[];
+    final previous = diplomaShareEffects;
+    addTearDown(() => diplomaShareEffects = previous);
+    final bytes = Uint8List.fromList([1, 2]);
+
+    Future<DiplomaShareOutcome> run(
+      DiplomaShareTarget target, {
+      required bool canShare,
+      String appId = '',
+      bool storiesSupported = false,
+      bool storiesOk = true,
+      bool sheetThrows = false,
+    }) {
+      events.clear();
+      diplomaShareEffects = _shareEffects(
+        events,
+        canShare: canShare,
+        appId: appId,
+        storiesSupported: storiesSupported,
+        storiesOk: storiesOk,
+        sheetThrows: sheetThrows,
+      );
+      return runDiplomaShare(
+        target: target,
+        bytes: bytes,
+        filename: 'diplom.png',
+        caption: 'caption',
+      );
+    }
+
+    final igStory = await run(
+      DiplomaShareTarget.instagram,
+      canShare: true,
+      appId: 'meta',
+      storiesSupported: true,
+    );
+    expect(igStory.route, DiplomaShareRoute.stories);
+    expect(events, ['frame:2', 'stories:instagram:meta:4']);
+
+    final igSheet = await run(
+      DiplomaShareTarget.instagram,
+      canShare: true,
+      appId: 'meta',
+      storiesSupported: true,
+      storiesOk: false,
+    );
+    expect(igSheet.route, DiplomaShareRoute.sheet);
+    expect(events.last, 'sheet:diplom.png:caption:4');
+
+    final igNoId = await run(
+      DiplomaShareTarget.instagram,
+      canShare: true,
+      storiesSupported: true,
+    );
+    expect(igNoId.route, DiplomaShareRoute.sheet);
+    expect(events, ['sheet:diplom.png:caption:2']);
+
+    final fbStory = await run(
+      DiplomaShareTarget.facebook,
+      canShare: true,
+      appId: 'meta',
+      storiesSupported: true,
+    );
+    expect(fbStory.route, DiplomaShareRoute.stories);
+    expect(events, ['frame:2', 'stories:facebook:meta:4']);
+
+    final fbSheet = await run(
+      DiplomaShareTarget.facebook,
+      canShare: true,
+      appId: 'meta',
+      storiesSupported: true,
+      storiesOk: false,
+    );
+    expect(fbSheet.route, DiplomaShareRoute.sheet);
+    expect(events, [
+      'frame:2',
+      'stories:facebook:meta:4',
+      'sheet:diplom.png:caption:4',
+    ]);
+
+    final fbNoId = await run(DiplomaShareTarget.facebook, canShare: true);
+    expect(fbNoId.route, DiplomaShareRoute.sheet);
+    expect(events, ['sheet:diplom.png:caption:2']);
+
+    final genericSheet = await run(
+      DiplomaShareTarget.generic,
+      canShare: true,
+      appId: 'meta',
+      storiesSupported: true,
+    );
+    expect(genericSheet.route, DiplomaShareRoute.sheet);
+    expect(genericSheet.showUploadHint, isFalse);
+    expect(events, ['sheet:diplom.png:caption:2']);
+
+    final sheetFails = await run(
+      DiplomaShareTarget.generic,
+      canShare: true,
+      sheetThrows: true,
+    );
+    expect(sheetFails.route, DiplomaShareRoute.download);
+    expect(sheetFails.showUploadHint, isFalse);
+    expect(events, ['sheet:diplom.png:caption:2', 'download:diplom.png:2']);
+
+    final desktopIg = await run(DiplomaShareTarget.instagram, canShare: false);
+    expect(desktopIg.route, DiplomaShareRoute.download);
+    expect(desktopIg.showUploadHint, isTrue);
+    expect(events, ['download:diplom.png:2', 'url:https://www.instagram.com/']);
+
+    final desktopFb = await run(DiplomaShareTarget.facebook, canShare: false);
+    expect(desktopFb.showUploadHint, isTrue);
+    expect(events, ['download:diplom.png:2', 'url:https://www.facebook.com/']);
+
+    final desktopGeneric = await run(
+      DiplomaShareTarget.generic,
+      canShare: false,
+    );
+    expect(desktopGeneric.showUploadHint, isFalse);
+    expect(events, ['download:diplom.png:2']);
+
+    final manifest = File('android/app/src/main/AndroidManifest.xml')
+        .readAsStringSync();
+    expect(manifest, contains('com.instagram.android'));
+    expect(manifest, contains('com.instagram.share.ADD_TO_STORY'));
+    expect(manifest, contains('com.facebook.katana'));
+    expect(manifest, contains('com.facebook.stories.ADD_TO_STORY'));
+    final kotlin = File(
+      'android/app/src/main/kotlin/com/viateria/viateria/MainActivity.kt',
+    ).readAsStringSync();
+    expect(kotlin, contains('source_application'));
+    expect(kotlin, contains('FileProvider'));
+    final plist = File('ios/Runner/Info.plist').readAsStringSync();
+    expect(plist, contains('instagram-stories'));
+    expect(plist, contains('facebook-stories'));
+    final swift = File('ios/Runner/AppDelegate.swift').readAsStringSync();
+    expect(swift, contains('facebook-stories://share'));
+    expect(swift, contains('instagram-stories'));
   });
 }
 
@@ -675,17 +819,23 @@ DiplomaShareEffects _shareEffects(
   String appId = '',
   bool storiesSupported = false,
   bool storiesOk = true,
+  bool sheetThrows = false,
 }) {
   return DiplomaShareEffects(
     canShareFiles: () async => canShare,
     facebookAppId: () => appId,
     storiesSupported: () => storiesSupported,
-    stories: (bytes, id) async {
-      events.add('stories:$id:${bytes.length}');
+    storyFrame: (bytes) async {
+      events.add('frame:${bytes.length}');
+      return Uint8List.fromList(const [9, 9, 9, 9]);
+    },
+    stories: (bytes, id, target) async {
+      events.add('stories:${target.name}:$id:${bytes.length}');
       return storiesOk;
     },
     sheet: (bytes, filename, caption) async {
-      events.add('sheet:$filename:$caption');
+      events.add('sheet:$filename:$caption:${bytes.length}');
+      if (sheetThrows) throw StateError('sheet');
     },
     download: (bytes, filename) async {
       events.add('download:$filename:${bytes.length}');

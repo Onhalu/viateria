@@ -122,6 +122,9 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
     currency: row['currency'] as String? ?? 'eur',
     status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
     coverImageUrl: row['cover_image_url'] as String?,
+    heroFocalY: row['hero_focal_y'] is num
+        ? (row['hero_focal_y'] as num).toDouble()
+        : null,
     region: row['region'] as String?,
     countryCode: resolveCountryCode(
       countryCode: row['country_code'] as String?,
