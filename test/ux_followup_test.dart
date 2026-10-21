@@ -21,6 +21,8 @@ import 'package:viateria/ui/layout/breakpoints.dart';
 import 'package:viateria/ui/layout/map_search_metrics.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
+import 'package:viateria/ui/widgets/app_shell.dart';
+import 'package:viateria/ui/widgets/challenge_cta_panel.dart';
 import 'package:viateria/ui/widgets/challenge_hero.dart';
 import 'package:viateria/ui/widgets/cooperative_map_gestures.dart';
 import 'package:viateria/ui/widgets/route_start_field.dart';
@@ -589,21 +591,20 @@ void main() {
     final medal = tester.getRect(
       find.byKey(const Key('challenge-floating-pay-medal')),
     );
-    expect(
-      diploma.width,
-      lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
-    );
-    expect(
-      medal.width,
-      lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
-    );
+    expect(diploma.width, closeTo(medal.width, 0.5));
     expect(
       medal.left - diploma.right,
       closeTo(ChallengePaymentBarMetrics.rowGap, 0.5),
     );
     expect((diploma.left + medal.right) / 2, closeTo(195, 1));
+    final panel = tester.getRect(find.byKey(const Key('challenge-cta-panel')));
     final nav = tester.getRect(find.byKey(const Key('app-bottom-nav')));
-    expect(nav.top - diploma.bottom, closeTo(12, 1));
+    expect(panel.left, closeTo(kNavSideInset, 1));
+    expect(panel.right, closeTo(390 - kNavSideInset, 1));
+    expect(
+      nav.top - panel.bottom,
+      closeTo(AppShell.topInset + ChallengeCtaPanel.aboveNav, 1),
+    );
     expect(
       tester.widget(find.byKey(const Key('challenge-payment-bar'))),
       isA<Padding>(),

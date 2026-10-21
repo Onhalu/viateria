@@ -17,6 +17,7 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
+import 'package:viateria/ui/widgets/challenge_cta_panel.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/challenge_reward_section.dart';
 import 'package:viateria/ui/widgets/fapi_checkout_webview.dart';
@@ -995,7 +996,18 @@ void main() {
         isA<Row>(),
       );
       expect(find.text('Accept the challenge'), findsNWidgets(2));
-      expect(find.byKey(const Key('challenge-paybar-heading')), findsOneWidget);
+      final floatingHeading = tester.widget<Text>(
+        find.byKey(const Key('challenge-paybar-heading')),
+      );
+      expect(floatingHeading.textAlign, TextAlign.center);
+      expect(floatingHeading.style?.fontFamily, AppTheme.displayFont);
+      expect(floatingHeading.style?.fontWeight, FontWeight.w700);
+      expect(floatingHeading.style?.fontSize, ChallengeCtaPanel.headingSize);
+      expect(
+        floatingHeading.style?.height,
+        ChallengeCtaPanel.headingLineHeight / ChallengeCtaPanel.headingSize,
+      );
+      expect(floatingHeading.style?.color, BrandColors.forest);
       expect(
         tester.widget(find.byKey(const Key('challenge-payment-bar'))),
         isA<Padding>(),
@@ -1008,15 +1020,7 @@ void main() {
       );
       expect(diploma.right, lessThanOrEqualTo(medal.left));
       expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
-      expect(
-        diploma.width,
-        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
-      );
-      expect(
-        medal.width,
-        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
-      );
-      expect(diploma.width, lessThan(180));
+      expect(diploma.width, closeTo(medal.width, 0.5));
       expect((diploma.left + medal.right) / 2, closeTo(195, 1));
       expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
       expect(medal.height, ChallengePaymentBarMetrics.tapTarget);
@@ -1039,9 +1043,14 @@ void main() {
       expect(bar.height, ChallengePaymentBarMetrics.bodyHeight(390));
       expect(
         diploma.top - bar.top,
-        ChallengePaymentBarMetrics.topPadding +
-            ChallengePaymentBarMetrics.headingHeight +
-            ChallengePaymentBarMetrics.headingGap,
+        closeTo(
+          ChallengePaymentBarMetrics.topPadding +
+              tester
+                  .getSize(find.byKey(const Key('challenge-paybar-heading')))
+                  .height +
+              ChallengePaymentBarMetrics.headingGap,
+          1,
+        ),
       );
       final label = tester.widget<Text>(
         find.descendant(
@@ -1128,14 +1137,7 @@ void main() {
       expect(diploma.right, lessThanOrEqualTo(medal.left));
       expect(medal.left - diploma.right, ChallengePaymentBarMetrics.rowGap);
       expect((diploma.height - medal.height).abs(), lessThan(1));
-      expect(
-        diploma.width,
-        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
-      );
-      expect(
-        medal.width,
-        lessThanOrEqualTo(ChallengePaymentBarMetrics.buttonMaxWidth),
-      );
+      expect(diploma.width, closeTo(medal.width, 0.5));
       expect(diploma.height, ChallengePaymentBarMetrics.tapTarget);
       final outlined = tester.widget<OutlinedButton>(
         find.descendant(
@@ -1188,13 +1190,16 @@ void main() {
       },
     );
 
-    test('floating button widths follow the window', () {
-      expect(floatingPayGap(339), ChallengePaymentBarMetrics.narrowGap);
-      expect(floatingPayGap(340), ChallengePaymentBarMetrics.rowGap);
-      expect(floatingPayGap(600), ChallengePaymentBarMetrics.wideGap);
-      expect(floatingPayButtonWidth(390), closeTo(163, 0.01));
-      expect(floatingPayButtonWidth(600), 176);
-      expect(floatingPayButtonWidth(800), 176);
+    test('the floating panel stacks under 360 and clears the nav', () {
+      expect(ChallengeCtaPanel.buttonsStack(359), isTrue);
+      expect(ChallengeCtaPanel.buttonsStack(360), isFalse);
+      expect(ChallengeCtaPanel.bottomMargin(390), ChallengeCtaPanel.aboveNav);
+      expect(
+        ChallengeCtaPanel.bottomMargin(600),
+        ChallengeCtaPanel.restingBottom,
+      );
+      expect(ChallengeCtaPanel.rowGap, 32);
+      expect(ChallengeCtaPanel.stackGap, 12);
     });
 
     test('payment bar labels scale from 15 down to 14 and stop', () {
@@ -1286,6 +1291,11 @@ void main() {
       scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
+        Offset.zero,
+        reason: 'the floating panel has to be on screen for its semantics',
+      );
 
       final muted = BrandColors.forest.withValues(alpha: 0.4);
       final medal = tester.widget<FilledButton>(
@@ -1696,7 +1706,13 @@ void main() {
         find.byKey(const Key('challenge-reward-lock-overlay')),
         findsOneWidget,
       );
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('challenge-reward-section')),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('challenge-reward-medal')), findsNothing);
       expect(find.byKey(const Key('challenge-reward-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-save-diploma')), findsNothing);

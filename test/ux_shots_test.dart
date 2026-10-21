@@ -17,6 +17,7 @@ import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
+import 'package:viateria/ui/widgets/challenge_cta_panel.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 
 import 'auth_register_form_test.dart';
@@ -583,6 +584,218 @@ void main() {
     await saveShot(tester, 'detail-map-sheet-cs.png');
     debugDisableShadows = true;
   });
+
+  testWidgets('challenge cta panel frames', (tester) async {
+    await tester.runAsync(loadFonts);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Future<void> resetTree() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }
+
+    final story = sampleStoryChallenge(
+      coverImageUrl: 'asset://assets/challenges/beskydy-autumn.jpg',
+    );
+    final open = sampleOpenChallenge();
+    const photo = AssetImage('assets/challenges/beskydy-autumn.jpg');
+
+    Widget detailPage(String locale, {required bool nav}) {
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => LocaleController(initial: locale),
+          ),
+          ChangeNotifierProvider(
+            create: (_) =>
+                LastOpenedChallengeStore(initialId: story.challenge.id),
+          ),
+          Provider.value(
+            value: buildServices(
+              challenges: [story.challenge, open.challenge],
+              details: [story, open],
+              places: const MemoryPlaceCatalog([]),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: ChallengeScreen(challengeId: story.challenge.id),
+            bottomNavigationBar: nav ? const _ShotBottomNav() : null,
+          ),
+        ),
+      );
+    }
+
+    Future<void> revealFloatingPanel() async {
+      final feed = find.byKey(const Key('challenge-feed-scroll'));
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(of: feed, matching: find.byType(Scrollable)).first,
+      );
+      final position = scrollable.position;
+      if (position.maxScrollExtent > 0) {
+        position.jumpTo(position.maxScrollExtent);
+      }
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+
+    Future<void> backdrop({
+      required Size size,
+      required String locale,
+      required Widget background,
+      required String name,
+      bool nav = false,
+    }) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      await resetTree();
+      final strings = AppStrings(locale);
+      await tester.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                background,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ChallengeCtaPanelMotion(
+                    shown: true,
+                    child: ChallengeCtaPanelBar(
+                      heading: strings.joinChallenge,
+                      diplomaLabel: strings.payDigitalDiploma,
+                      medalLabel: strings.payMedalAndDiploma,
+                      loadingLabel: strings.buttonLoading,
+                      onDiploma: () {},
+                      onMedal: () {},
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottomNavigationBar: nav ? const _ShotBottomNav() : null,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(
+        () => precacheImage(photo, tester.element(find.byType(Scaffold))),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(strings.joinChallenge), findsOneWidget);
+      await saveShot(tester, name);
+    }
+
+    final previousError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      if ('${details.exception}'.contains('PlacesMapController')) return;
+      previousError?.call(details);
+    };
+    try {
+      for (final locale in ['cs', 'en', 'de']) {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(390, 844);
+        await resetTree();
+        await tester.pumpWidget(detailPage(locale, nav: true));
+        await tester.pumpAndSettle();
+        await revealFloatingPanel();
+        expect(
+          tester
+              .widget<AnimatedSlide>(
+                find.descendant(
+                  of: find.byKey(const Key('challenge-cta-motion')),
+                  matching: find.byType(AnimatedSlide),
+                ),
+              )
+              .offset,
+          Offset.zero,
+          reason: 'floating panel at 390 $locale',
+        );
+        await saveShot(tester, 'detail-cta-$locale-390.png');
+      }
+
+      // At 1280 the in-page block stays on screen, so the hide rule keeps
+      // the floating panel down. These frames still show it at that width.
+      for (final locale in ['cs', 'en', 'de']) {
+        await backdrop(
+          size: const Size(1280, 900),
+          locale: locale,
+          background: const Row(
+            children: [
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(image: photo, fit: BoxFit.cover),
+                  ),
+                ),
+              ),
+              Expanded(child: ColoredBox(color: BrandColors.cream)),
+            ],
+          ),
+          name: 'detail-cta-$locale-1280.png',
+        );
+      }
+
+      await backdrop(
+        size: const Size(390, 844),
+        locale: 'de',
+        nav: true,
+        background: const DecoratedBox(
+          decoration: BoxDecoration(
+            image: DecorationImage(image: photo, fit: BoxFit.cover),
+          ),
+        ),
+        name: 'detail-cta-over-photo-de-390.png',
+      );
+      await backdrop(
+        size: const Size(390, 844),
+        locale: 'cs',
+        nav: true,
+        background: const ColoredBox(color: BrandColors.cream),
+        name: 'detail-cta-over-light-cs-390.png',
+      );
+      await backdrop(
+        size: const Size(1280, 900),
+        locale: 'de',
+        background: const DecoratedBox(
+          decoration: BoxDecoration(
+            image: DecorationImage(image: photo, fit: BoxFit.cover),
+          ),
+        ),
+        name: 'detail-cta-over-photo-de-1280.png',
+      );
+    } finally {
+      FlutterError.onError = previousError;
+      debugDisableShadows = true;
+    }
+  });
+}
+
+class _ShotBottomNav extends StatelessWidget {
+  const _ShotBottomNav();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Material(
+          color: BrandColors.shellFill,
+          borderRadius: BorderRadius.all(Radius.circular(28)),
+          child: SizedBox(key: Key('app-bottom-nav'), height: 64),
+        ),
+      ),
+    );
+  }
 }
 
 /// Brings a challenge block on screen. Below the map it starts offstage, so
