@@ -107,7 +107,7 @@ class HeroBackButton extends StatelessWidget {
 
 /// Pinned cover. Expanded height follows [challengeHeroExtent]. Scrolling
 /// collapses it into a forest bar with the same back circle, the place, and
-/// one Bricolage Grotesque line of the challenge name.
+/// one Onest line of the challenge name.
 class ChallengeCollapsingHero extends StatelessWidget {
   const ChallengeCollapsingHero({
     super.key,

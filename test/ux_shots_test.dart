@@ -50,8 +50,8 @@ void main() {
       '/usr/share/fonts/truetype/macos/Inter-SemiBold.ttf',
       '/usr/share/fonts/truetype/macos/Inter-Bold.ttf',
     ]);
-    await _loadFamily('Bricolage Grotesque', const [
-      'assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf',
+    await _loadFamily('Onest', const [
+      'assets/fonts/Onest[wght].ttf',
     ], fromBundle: true);
     await _loadFamily('MaterialIcons', const [
       '/home/ubuntu/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

@@ -2,24 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Bricolage Grotesque display type (SIL OFL 1.1).
+/// Onest display type (SIL OFL 1.1).
 ///
 /// Body text and catalog card titles stay on Material Roboto.
 ///
-/// The bundled variable font's default master is 96pt ExtraBold
-/// (opsz 96, wght 800, wdth 100), so every display style sets an explicit
-/// weight. Optical size follows the font size, clamped to the axis
-/// (12–96). Width stays on the axis default. Former Playfair Display
-/// 600 and 700 both map to Bricolage 700.
+/// The bundled variable font's default instance is Regular (wght 400),
+/// so every display style sets an explicit weight. Onest has a `wght`
+/// axis (100–900) and no `opsz` axis. Former Playfair Display 600 and
+/// 700 both map to Onest 700.
 abstract final class BrandTypography {
-  static const family = 'Bricolage Grotesque';
+  static const family = 'Onest';
+
+  /// Variable font bundled from google/fonts `ofl/onest`.
+  static const fontAsset = 'assets/fonts/Onest[wght].ttf';
 
   /// Uppercase Czech carons (Ž, Ř, Ů, Ď, Ť) need at least this line height.
   static const minLineHeight = 1.2;
-
-  /// `opsz` axis of `BricolageGrotesque[opsz,wdth,wght].ttf`.
-  static const opszMin = 12.0;
-  static const opszMax = 96.0;
 
   static const licenseAsset = 'assets/licenses/OFL.txt';
 
@@ -27,11 +25,7 @@ abstract final class BrandTypography {
   static double letterSpacingFor(double fontSize) =>
       fontSize >= 24 ? fontSize * -0.01 : 0;
 
-  /// Optical size for [fontSize], clamped to the font's `opsz` axis.
-  static double opszFor(double fontSize) =>
-      fontSize.clamp(opszMin, opszMax).toDouble();
-
-  /// Former Playfair Display weight. 600 and 700 both become 700.
+  /// Former Playfair Display weight. 600 and 700 both become Onest 700.
   static FontWeight mapPlayfairWeight(FontWeight weight) =>
       weight == FontWeight.w600 || weight == FontWeight.w700
       ? FontWeight.w700
@@ -48,7 +42,7 @@ abstract final class BrandTypography {
       fontFamily: family,
       fontSize: fontSize,
       fontWeight: fontWeight,
-      fontVariations: [FontVariation('opsz', opszFor(fontSize))],
+      fontVariations: [FontVariation('wght', fontWeight.value.toDouble())],
       height: height < minLineHeight ? minLineHeight : height,
       letterSpacing: letterSpacing ?? letterSpacingFor(fontSize),
       color: color,
@@ -56,15 +50,15 @@ abstract final class BrandTypography {
   }
 }
 
-bool _bricolageLicenseRegistered = false;
+bool _onestLicenseRegistered = false;
 
-/// Registers the Bricolage Grotesque OFL with [LicenseRegistry].
+/// Registers the Onest OFL with [LicenseRegistry].
 /// Safe to call once.
-void registerBricolageLicense() {
-  if (_bricolageLicenseRegistered) return;
-  _bricolageLicenseRegistered = true;
+void registerOnestLicense() {
+  if (_onestLicenseRegistered) return;
+  _onestLicenseRegistered = true;
   LicenseRegistry.addLicense(() async* {
     final text = await rootBundle.loadString(BrandTypography.licenseAsset);
-    yield LicenseEntryWithLineBreaks(const ['Bricolage Grotesque'], text);
+    yield LicenseEntryWithLineBreaks(const ['Onest'], text);
   });
 }
