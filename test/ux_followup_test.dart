@@ -558,6 +558,7 @@ void main() {
     await tester.tap(card);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
     expect(find.byKey(const Key('challenge-back')), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
     final scrollable = tester.state<ScrollableState>(
@@ -574,15 +575,21 @@ void main() {
       greaterThanOrEqualTo(position.viewportDimension * 0.5),
     );
     expect(
-      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
-      const Offset(0, 1),
+      tester
+          .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+          .sizeFactor
+          .value,
+      0,
     );
     position.jumpTo(position.maxScrollExtent);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
     expect(
-      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
-      Offset.zero,
+      tester
+          .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+          .sizeFactor
+          .value,
+      1,
     );
     expect(find.text('Accept the challenge'), findsOneWidget);
     final diploma = tester.getRect(
@@ -601,14 +608,23 @@ void main() {
     final nav = tester.getRect(find.byKey(const Key('app-bottom-nav')));
     expect(panel.left, closeTo(kNavSideInset, 1));
     expect(panel.right, closeTo(390 - kNavSideInset, 1));
+    expect(nav.top - panel.bottom, closeTo(0, 0.5));
+    expect(panel.left, closeTo(nav.left, 0.5));
+    expect(panel.right, closeTo(nav.right, 0.5));
     expect(
-      nav.top - panel.bottom,
-      closeTo(AppShell.topInset + ChallengeCtaPanel.aboveNav, 1),
+      tester.widget(find.byKey(const Key('challenge-cta-panel'))),
+      isA<Column>(),
     );
-    expect(
-      tester.widget(find.byKey(const Key('challenge-payment-bar'))),
-      isA<Padding>(),
+    final shell = tester.widget<Material>(
+      find.byKey(const Key('app-bottom-nav-shell')),
     );
+    expect(shell.color, BrandColors.shellFill);
+    expect(shell.elevation, 0);
+    final shadow = tester.widget<DecoratedBox>(
+      find.byKey(const Key('shell-bottom-shadow')),
+    );
+    final decoration = shadow.decoration as BoxDecoration;
+    expect(decoration.boxShadow, [ChallengeCtaPanel.mergedShadow]);
     expect(
       tester
           .getSize(find.byKey(const Key('challenge-floating-pay-diploma')))
@@ -617,7 +633,7 @@ void main() {
     );
   });
 
-  test('payment bar uses a 40 dp hysteresis around half the viewport', () {
+  test('payment bar shows above half a viewport and hides below 0.4', () {
     expect(
       paymentBarShouldShow(currentlyVisible: false, offset: 199, viewport: 400),
       isFalse,
@@ -633,6 +649,38 @@ void main() {
     expect(
       paymentBarShouldShow(currentlyVisible: true, offset: 159, viewport: 400),
       isFalse,
+    );
+    expect(
+      paymentBarShouldShow(
+        currentlyVisible: true,
+        offset: 399,
+        viewport: 1000,
+      ),
+      isFalse,
+    );
+    expect(
+      paymentBarShouldShow(
+        currentlyVisible: true,
+        offset: 400,
+        viewport: 1000,
+      ),
+      isTrue,
+    );
+    expect(
+      paymentBarShouldShow(
+        currentlyVisible: false,
+        offset: 499,
+        viewport: 1000,
+      ),
+      isFalse,
+    );
+    expect(
+      paymentBarShouldShow(
+        currentlyVisible: false,
+        offset: 500,
+        viewport: 1000,
+      ),
+      isTrue,
     );
   });
 

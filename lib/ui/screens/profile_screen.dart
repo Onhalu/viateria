@@ -93,7 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final initial = identity.isNotEmpty ? identity[0].toUpperCase() : '?';
 
     return SafeArea(
-      bottom: false,
       child: Material(
         color: BrandColors.cream,
         child: AppContentWidth(

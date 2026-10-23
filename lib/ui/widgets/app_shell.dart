@@ -5,11 +5,13 @@ import 'package:provider/provider.dart';
 import '../../l10n/locale_controller.dart';
 import '../../theme/app_theme.dart';
 import '../layout/breakpoints.dart';
+import 'bottom_bar_extension.dart';
+import 'shell_bottom_surface.dart';
 
 /// Shared left and right inset for the bottom nav pill and the payment bar.
 const kNavSideInset = 16.0;
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
@@ -28,6 +30,19 @@ class AppShell extends StatelessWidget {
       BrandColors.forest.withValues(alpha: unselectedOpacity);
 
   static Color get selectedPill => BrandColors.creamPill;
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  final _bar = BottomBarExtensionController();
+
+  @override
+  void dispose() {
+    _bar.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,63 +70,79 @@ class AppShell extends StatelessWidget {
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final rail = Breakpoints.usesNavigationRail(constraints.maxWidth);
-        if (rail) {
-          final compactRail =
-              Breakpoints.ofWidth(constraints.maxWidth) == WindowClass.medium;
+    return BottomBarExtension(
+      controller: _bar,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final rail = Breakpoints.usesNavigationRail(constraints.maxWidth);
+          if (rail) {
+            final compactRail =
+                Breakpoints.ofWidth(constraints.maxWidth) == WindowClass.medium;
+            return Scaffold(
+              body: Row(
+                children: [
+                  _NavRail(
+                    destinations: destinations,
+                    selectedIndex: widget.navigationShell.currentIndex,
+                    compact: compactRail,
+                    onSelected: (index) {
+                      widget.navigationShell.goBranch(
+                        index,
+                        initialLocation:
+                            index == widget.navigationShell.currentIndex,
+                      );
+                    },
+                  ),
+                  Expanded(child: widget.navigationShell),
+                ],
+              ),
+            );
+          }
           return Scaffold(
-            body: Row(
-              children: [
-                _NavRail(
-                  destinations: destinations,
-                  selectedIndex: navigationShell.currentIndex,
-                  compact: compactRail,
-                  onSelected: (index) {
-                    navigationShell.goBranch(
-                      index,
-                      initialLocation: index == navigationShell.currentIndex,
-                    );
-                  },
-                ),
-                Expanded(child: navigationShell),
-              ],
+            extendBody: true,
+            body: widget.navigationShell,
+            bottomNavigationBar: _ShellBottomSlot(
+              controller: _bar,
+              destinations: destinations,
+              navigationShell: widget.navigationShell,
             ),
           );
-        }
-        return Scaffold(
-          body: navigationShell,
-          bottomNavigationBar: _bottomBar(destinations),
-        );
-      },
+        },
+      ),
     );
   }
+}
 
-  Widget _bottomBar(
-    List<({IconData icon, IconData selectedIcon, String label})> destinations,
-  ) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          kNavSideInset,
-          topInset,
-          kNavSideInset,
-          bottomInset,
-        ),
-        child: Material(
-          key: const Key('app-bottom-nav-shell'),
-          elevation: 3,
-          color: BrandColors.shellFill,
-          shadowColor: BrandColors.shellShadow,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(barRadius),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
+class _ShellBottomSlot extends StatelessWidget {
+  const _ShellBottomSlot({
+    required this.controller,
+    required this.destinations,
+    required this.navigationShell,
+  });
+
+  final BottomBarExtensionController controller;
+  final List<({IconData icon, IconData selectedIcon, String label})>
+  destinations;
+  final StatefulNavigationShell navigationShell;
+
+  bool _onDetail(String path) =>
+      path.contains('/challenge/') || path == '/last';
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([controller, controller.visible]),
+      builder: (context, _) {
+        final path = GoRouter.of(context).state.uri.path;
+        final match = controller.owner == path && _onDetail(path);
+        final panel = match ? controller.content : null;
+        final shown = match && controller.visible.value && panel != null;
+        return ShellBottomSurface(
+          shown: shown,
+          panel: panel,
+          nav: SizedBox(
             key: const Key('app-bottom-nav'),
-            height: barHeight,
+            height: AppShell.barHeight,
             child: Row(
               children: [
                 for (var index = 0; index < destinations.length; index++)
@@ -124,8 +155,7 @@ class AppShell extends StatelessWidget {
                       onTap: () {
                         navigationShell.goBranch(
                           index,
-                          initialLocation:
-                              index == navigationShell.currentIndex,
+                          initialLocation: index == navigationShell.currentIndex,
                         );
                       },
                     ),
@@ -133,8 +163,8 @@ class AppShell extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

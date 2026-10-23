@@ -89,7 +89,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
           Expanded(
             child: SafeArea(
               top: false,
-              bottom: false,
               child: FutureBuilder<_CatalogData>(
                 future: _future,
                 builder: (context, snapshot) =>
