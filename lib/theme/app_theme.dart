@@ -6,7 +6,7 @@ import 'brand_typography.dart';
 
 export 'app_button.dart';
 export 'brand_colors.dart' show BrandColors, MapPalette;
-export 'brand_typography.dart' show BrandTypography, registerBricolageLicense;
+export 'brand_typography.dart' show BrandTypography, registerOnestLicense;
 
 /// App-wide Material theme. Colors come from [BrandColors] / [MapPalette].
 abstract final class AppTheme {

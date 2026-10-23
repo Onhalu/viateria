@@ -199,39 +199,36 @@ void main() {
     expect(size.height, greaterThanOrEqualTo(24));
   });
 
-  test('heading TextStyle family is Bricolage Grotesque', () {
+  test('heading TextStyle family is Onest', () {
     final theme = AppTheme.light();
-    expect(theme.textTheme.displaySmall?.fontFamily, 'Bricolage Grotesque');
-    expect(theme.textTheme.headlineMedium?.fontFamily, 'Bricolage Grotesque');
-    expect(theme.textTheme.headlineSmall?.fontFamily, 'Bricolage Grotesque');
-    expect(theme.textTheme.titleLarge?.fontFamily, 'Bricolage Grotesque');
-    expect(AppTheme.displayFont, 'Bricolage Grotesque');
-    expect(
-      BrandTypography.display(fontSize: 20).fontFamily,
-      'Bricolage Grotesque',
-    );
+    expect(theme.textTheme.displaySmall?.fontFamily, 'Onest');
+    expect(theme.textTheme.headlineMedium?.fontFamily, 'Onest');
+    expect(theme.textTheme.headlineSmall?.fontFamily, 'Onest');
+    expect(theme.textTheme.titleLarge?.fontFamily, 'Onest');
+    expect(AppTheme.displayFont, 'Onest');
+    expect(BrandTypography.display(fontSize: 20).fontFamily, 'Onest');
 
-    // Former Playfair 600 and 700 both map to Bricolage 700.
+    // Former Playfair 600 and 700 both map to Onest 700.
     expect(theme.textTheme.headlineSmall?.fontWeight, FontWeight.w700);
     expect(BrandTypography.mapPlayfairWeight(FontWeight.w600), FontWeight.w700);
     expect(BrandTypography.mapPlayfairWeight(FontWeight.w700), FontWeight.w700);
-
-    // Optical size tracks the font size and stays inside the opsz axis.
     expect(theme.textTheme.displaySmall?.fontVariations, [
-      const FontVariation('opsz', 32),
+      const FontVariation('wght', 700),
     ]);
     expect(BrandTypography.display(fontSize: 20).fontVariations, [
-      const FontVariation('opsz', 20),
+      const FontVariation('wght', 700),
     ]);
-    expect(BrandTypography.display(fontSize: 24).fontVariations, [
-      const FontVariation('opsz', 24),
-    ]);
-    expect(BrandTypography.display(fontSize: 120).fontVariations, [
-      const FontVariation('opsz', BrandTypography.opszMax),
-    ]);
-    expect(BrandTypography.display(fontSize: 8).fontVariations, [
-      const FontVariation('opsz', BrandTypography.opszMin),
-    ]);
+    expect(
+      BrandTypography.display(
+        fontSize: 24,
+        fontWeight: FontWeight.w400,
+      ).fontVariations,
+      [const FontVariation('wght', 400)],
+    );
+    expect(
+      BrandTypography.display(fontSize: 32).fontVariations?.map((v) => v.axis),
+      ['wght'],
+    );
 
     // −1% tracking from 24 sp. „Přijmi výzvu“ stays 20 / 26.
     expect(theme.textTheme.displaySmall?.fontSize, 32);
@@ -249,59 +246,189 @@ void main() {
     expect(BrandTypography.display(fontSize: 24, height: 1.15).height, 1.2);
 
     // Body and catalog card titles stay on the Material sans.
-    expect(theme.textTheme.bodyLarge?.fontFamily, isNot('Bricolage Grotesque'));
-    expect(
-      theme.textTheme.bodyMedium?.fontFamily,
-      isNot('Bricolage Grotesque'),
-    );
-    expect(theme.textTheme.bodySmall?.fontFamily, isNot('Bricolage Grotesque'));
-    expect(
-      theme.textTheme.labelLarge?.fontFamily,
-      isNot('Bricolage Grotesque'),
-    );
-    expect(
-      theme.textTheme.titleMedium?.fontFamily,
-      isNot('Bricolage Grotesque'),
-    );
+    for (final style in [
+      theme.textTheme.bodyLarge,
+      theme.textTheme.bodyMedium,
+      theme.textTheme.bodySmall,
+      theme.textTheme.labelLarge,
+      theme.textTheme.titleMedium,
+    ]) {
+      expect(style?.fontFamily, anyOf(isNull, 'Roboto'));
+      expect(style?.fontFamily, isNot('Onest'));
+    }
 
-    final license = File('assets/licenses/OFL.txt').readAsStringSync();
+    final license = File(BrandTypography.licenseAsset).readAsStringSync();
     expect(license, contains('SIL OPEN FONT LICENSE'));
-    expect(license, contains('Bricolage Grotesque'));
+    expect(license, contains('Onest'));
+    expect(license, isNot(contains('Bricolage')));
+
+    final cards = File('lib/ui/widgets/catalog_cards.dart').readAsStringSync();
+    expect(cards.contains('fontFamily'), isFalse);
+    expect(cards.contains('Onest'), isFalse);
+    expect(cards.contains('BrandTypography'), isFalse);
   });
 
-  testWidgets('opsz follows size and weight still paints', (tester) async {
+  test('bundled Onest covers Czech heading diacritics', () {
+    final bytes = File(BrandTypography.fontAsset).readAsBytesSync();
+    final covered = _cmapCoverage(bytes);
+    const sample = 'ěščřžýáíéůúďťňĚŠČŘŽÝÁÍÉŮÚĎŤŇ';
+    for (final rune in sample.runes) {
+      expect(
+        covered.contains(rune),
+        isTrue,
+        reason: 'U+${rune.toRadixString(16).toUpperCase()} $sample',
+      );
+    }
+    expect(_fvarAxes(bytes), ['wght']);
+  });
+
+  testWidgets('wght axis paints Czech headings', (tester) async {
     final loader = FontLoader(BrandTypography.family);
-    loader.addFont(
-      rootBundle.load('assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf'),
-    );
+    loader.addFont(rootBundle.load(BrandTypography.fontAsset));
     await tester.runAsync(loader.load);
+
+    const sample = 'ěščřžýáíéůú ďťň ĚŠČŘŽÝÁÍÉŮÚ ĎŤŇ';
 
     double painted(TextStyle style) {
       final painter = TextPainter(
-        text: TextSpan(text: 'Žďár Šumava', style: style),
+        text: TextSpan(text: sample, style: style),
         textDirection: TextDirection.ltr,
       )..layout();
       return painter.width;
     }
 
+    final light = painted(
+      BrandTypography.display(fontSize: 32, fontWeight: FontWeight.w100),
+    );
     final regular = painted(
       BrandTypography.display(fontSize: 32, fontWeight: FontWeight.w400),
     );
     final bold = painted(BrandTypography.display(fontSize: 32));
-    final displayOpsz = painted(
-      BrandTypography.display(fontSize: 32)
-          .copyWith(fontVariations: const [FontVariation('opsz', 96)]),
+    final black = painted(
+      BrandTypography.display(fontSize: 32, fontWeight: FontWeight.w900),
     );
-    // opsz 32 / wght 700 is wider than both wght 400 at the same opsz and
-    // wght 700 at the default display opsz. A missing axis collapses these.
+    // A missing wght axis collapses these to the Regular master.
+    expect(regular - light, greaterThan(4));
     expect(bold - regular, greaterThan(4));
-    expect(bold - displayOpsz, greaterThan(4));
+    expect(black - bold, greaterThan(4));
+
+    final style = BrandTypography.display(fontSize: 32);
+    expect(style.height, greaterThanOrEqualTo(BrandTypography.minLineHeight));
+    final painter = TextPainter(
+      text: TextSpan(text: sample, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    // Skia rounds the strut. The style multiplier stays at least 1.2.
+    expect(
+      painter.preferredLineHeight,
+      closeTo(style.fontSize! * style.height!, 1),
+    );
 
     final title = AppTheme.light().textTheme.titleLarge!;
+    expect(title.fontFamily, 'Onest');
+    expect(title.fontVariations, [const FontVariation('wght', 700)]);
+    TextStyle weighted(FontWeight weight) => title.copyWith(
+      fontWeight: weight,
+      fontVariations: [FontVariation('wght', weight.value.toDouble())],
+    );
     expect(
-      painted(title.copyWith(fontWeight: FontWeight.w800)) -
-          painted(title.copyWith(fontWeight: FontWeight.w400)),
+      painted(weighted(FontWeight.w800)) - painted(weighted(FontWeight.w400)),
       greaterThan(2),
     );
   });
+}
+
+/// Unicode coverage from the font's cmap (format 4 and 12).
+Set<int> _cmapCoverage(List<int> data) {
+  int u16(int o) => (data[o] << 8) | data[o + 1];
+  int u32(int o) =>
+      (data[o] << 24) | (data[o + 1] << 16) | (data[o + 2] << 8) | data[o + 3];
+  int i16(int o) {
+    final v = u16(o);
+    return v >= 0x8000 ? v - 0x10000 : v;
+  }
+
+  final numTables = u16(4);
+  var cmapOffset = -1;
+  var rec = 12;
+  for (var i = 0; i < numTables; i++) {
+    final tag = String.fromCharCodes(data.sublist(rec, rec + 4));
+    if (tag == 'cmap') {
+      cmapOffset = u32(rec + 8);
+      break;
+    }
+    rec += 16;
+  }
+  expect(cmapOffset, greaterThan(0));
+  final covered = <int>{};
+  final nsub = u16(cmapOffset + 2);
+  for (var i = 0; i < nsub; i++) {
+    final platform = u16(cmapOffset + 4 + i * 8);
+    final encoding = u16(cmapOffset + 6 + i * 8);
+    final start = cmapOffset + u32(cmapOffset + 8 + i * 8);
+    final unicode =
+        platform == 0 || (platform == 3 && (encoding == 1 || encoding == 10));
+    if (!unicode) continue;
+    final format = u16(start);
+    if (format == 4) {
+      final segCount = u16(start + 6) >> 1;
+      final ends = start + 14;
+      final starts = ends + 2 * segCount + 2;
+      final deltas = starts + 2 * segCount;
+      final offsets = deltas + 2 * segCount;
+      for (var s = 0; s < segCount; s++) {
+        final end = u16(ends + 2 * s);
+        final first = u16(starts + 2 * s);
+        if (first == 0xFFFF) continue;
+        final delta = i16(deltas + 2 * s);
+        final rangeOffset = u16(offsets + 2 * s);
+        for (var code = first; code <= end; code++) {
+          var gid = rangeOffset == 0
+              ? (code + delta) & 0xFFFF
+              : u16(offsets + 2 * s + rangeOffset + 2 * (code - first));
+          if (rangeOffset != 0 && gid != 0) gid = (gid + delta) & 0xFFFF;
+          if (gid != 0) covered.add(code);
+        }
+      }
+    } else if (format == 12) {
+      final groups = u32(start + 12);
+      var p = start + 16;
+      for (var g = 0; g < groups; g++) {
+        final first = u32(p);
+        final end = u32(p + 4);
+        final glyph = u32(p + 8);
+        p += 12;
+        for (var code = first; code <= end; code++) {
+          if (glyph + (code - first) != 0) covered.add(code);
+        }
+      }
+    }
+  }
+  return covered;
+}
+
+List<String> _fvarAxes(List<int> data) {
+  int u16(int o) => (data[o] << 8) | data[o + 1];
+  int u32(int o) =>
+      (data[o] << 24) | (data[o + 1] << 16) | (data[o + 2] << 8) | data[o + 3];
+  final numTables = u16(4);
+  var offset = -1;
+  var rec = 12;
+  for (var i = 0; i < numTables; i++) {
+    final tag = String.fromCharCodes(data.sublist(rec, rec + 4));
+    if (tag == 'fvar') {
+      offset = u32(rec + 8);
+      break;
+    }
+    rec += 16;
+  }
+  expect(offset, greaterThan(0));
+  final axisCount = u16(offset + 8);
+  final axisSize = u16(offset + 10);
+  final axes = <String>[];
+  for (var i = 0; i < axisCount; i++) {
+    final at = offset + 16 + i * axisSize;
+    axes.add(String.fromCharCodes(data.sublist(at, at + 4)));
+  }
+  return axes;
 }

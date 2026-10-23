@@ -47,6 +47,6 @@ flutter:
     - assets/challenges/
     - assets/licenses/OFL.txt
   fonts:
-    - family: Bricolage Grotesque
+    - family: Onest
       fonts:
-        - asset: "assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf"
+        - asset: "assets/fonts/Onest[wght].ttf"
