@@ -17,7 +17,9 @@ void main() {
     expect(Breakpoints.ofWidth(1199), WindowClass.expanded);
     expect(Breakpoints.ofWidth(1280), WindowClass.large);
     expect(Breakpoints.usesNavigationRail(599), isFalse);
-    expect(Breakpoints.usesNavigationRail(600), isTrue);
+    expect(Breakpoints.usesNavigationRail(600), isFalse);
+    expect(Breakpoints.usesNavigationRail(839), isFalse);
+    expect(Breakpoints.usesNavigationRail(840), isTrue);
     expect(Breakpoints.challengeTwoColumn(839), isFalse);
     expect(Breakpoints.challengeTwoColumn(840), isTrue);
     expect(Breakpoints.catalogColumns(390), 1);

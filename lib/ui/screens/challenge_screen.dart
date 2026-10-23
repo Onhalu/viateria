@@ -27,6 +27,7 @@ import '../../theme/app_theme.dart';
 import '../challenge_route_controller.dart';
 import '../layout/breakpoints.dart';
 import '../layout/map_search_metrics.dart';
+import '../widgets/bottom_bar_extension.dart';
 import '../widgets/challenge_cta_panel.dart';
 import '../widgets/challenge_hero.dart';
 import '../widgets/challenge_map.dart';
@@ -63,6 +64,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   final _feedScroll = ScrollController();
   final _route = ChallengeRouteController();
   final _payBarShown = ValueNotifier<bool>(false);
+  BottomBarExtensionController? _extension;
+  String? _barOwner;
+  String? _barSignature;
 
   int _routeToken = 0;
   String? _pendingRevealId;
@@ -90,6 +94,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _extension = BottomBarExtension.maybeOf(context);
     _future ??= _load();
     context.read<LastOpenedChallengeStore>().remember(widget.challengeId);
   }
@@ -121,6 +126,11 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       paid: _payPaid,
     );
     if (visible != _payBarShown.value) _payBarShown.value = visible;
+    final ext = _extension;
+    final owner = _barOwner;
+    if (ext != null && owner != null && ext.owner == owner) {
+      if (ext.visible.value != visible) ext.visible.value = visible;
+    }
   }
 
   var _payPaid = false;
@@ -194,6 +204,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 
   @override
   void dispose() {
+    final owner = _barOwner;
+    final ext = _extension;
+    if (owner != null) ext?.release(owner);
     _feedScroll.removeListener(_onFeedOffset);
     _startController.dispose();
     _feedScroll.dispose();
@@ -278,6 +291,61 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     }
     if (!mounted) return;
     await _reload();
+  }
+
+  Widget _floatingPanel(Challenge challenge, AppStrings strings) {
+    return ChallengeCtaPanel(
+      heading: strings.joinChallenge,
+      diplomaLabel: strings.payDigitalDiploma,
+      medalLabel: strings.payMedalAndDiploma,
+      loadingLabel: strings.buttonLoading,
+      onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
+          ? null
+          : () => _unlockPaid(RewardVariant.diploma),
+      onMedal: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
+          ? null
+          : () => _unlockPaid(RewardVariant.medalAndDiploma),
+    );
+  }
+
+  Widget _stickyCard(Challenge challenge, AppStrings strings) {
+    return ChallengeStickyCta(
+      heading: strings.joinChallenge,
+      diplomaLabel: strings.payDigitalDiploma,
+      medalLabel: strings.payMedalAndDiploma,
+      loadingLabel: strings.buttonLoading,
+      onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
+          ? null
+          : () => _unlockPaid(RewardVariant.diploma),
+      onMedal: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
+          ? null
+          : () => _unlockPaid(RewardVariant.medalAndDiploma),
+    );
+  }
+
+  void _scheduleBar({
+    required bool active,
+    required bool slideUp,
+    required String? path,
+    required Widget? panel,
+    required String signature,
+  }) {
+    final ext = _extension;
+    if (ext == null || !active || path == null) return;
+    if (_barSignature == signature && _barOwner == path) return;
+    _barSignature = signature;
+    _barOwner = path;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!slideUp || panel == null) {
+        ext.release(path);
+        return;
+      }
+      ext.publish(path: path, content: panel);
+      if (ext.visible.value != _payBarShown.value) {
+        ext.visible.value = _payBarShown.value;
+      }
+    });
   }
 
   Widget _payCtas(Challenge challenge, AppStrings strings, {String? note}) {
@@ -605,6 +673,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final branchActive = TickerMode.valuesOf(context).enabled;
     final locale = context.watch<LocaleController>().locale;
     final strings = context.watch<LocaleController>().strings;
     final body = FutureBuilder<_ChallengePageData>(
@@ -877,20 +946,18 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                         message: strings.challengePhotosEmpty,
                       ),
                       const SizedBox(height: 16),
+                      const _BottomClearance(),
                     ],
-                    if (!purchasePaid)
-                      SizedBox(
-                        key: const Key('challenge-payment-spacer'),
-                        height: ChallengePaymentBarMetrics.occupiedHeight(
-                          MediaQuery.sizeOf(context).width,
-                          MediaQuery.paddingOf(context).bottom,
-                        ),
-                      ),
                   ]),
                 ),
                 if (gallery.isNotEmpty)
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      10,
+                      16,
+                      16 + MediaQuery.paddingOf(context).bottom,
+                    ),
                     sliver: ChallengePhotoMosaicSliver(
                       photos: gallery,
                       waypoints: waypoints,
@@ -898,25 +965,69 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   ),
               ],
             );
-            final page = twoColumn
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+            final windowWidth = MediaQuery.sizeOf(context).width;
+            final slideUp =
+                !Breakpoints.usesNavigationRail(windowWidth) && !purchasePaid;
+            final sticky =
+                Breakpoints.challengeTwoColumn(windowWidth) && !purchasePaid;
+            final panel = purchasePaid
+                ? null
+                : _floatingPanel(challenge, strings);
+            final routePath = _extension == null
+                ? null
+                : GoRouter.maybeOf(context)?.state.uri.path;
+            _scheduleBar(
+              active: branchActive,
+              slideUp: slideUp,
+              path: routePath,
+              panel: panel,
+              signature: purchasePaid
+                  ? 'paid'
+                  : '${strings.joinChallenge}|${strings.payDigitalDiploma}|'
+                        '${strings.payMedalAndDiploma}|'
+                        '${challenge.fapiFormUrlDiploma}|'
+                        '${challenge.fapiFormUrlMedal}|$slideUp',
+            );
+            final split = Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _ChallengeSideMap(
+                    onScroll: _publishPayBar,
+                    below: intro,
+                    mapForHeight: (height) => routeBlock(
+                      includeMap: true,
+                      mapOnly: true,
+                      mapHeight: height,
+                    ),
+                  ),
+                ),
+                Expanded(child: scroll),
+              ],
+            );
+            final splitOrFeed = twoColumn ? split : scroll;
+            final page = sticky
+                ? Stack(
                     children: [
-                      Expanded(
-                        child: _ChallengeSideMap(
-                          onScroll: _publishPayBar,
-                          below: intro,
-                          mapForHeight: (height) => routeBlock(
-                            includeMap: true,
-                            mapOnly: true,
-                            mapHeight: height,
-                          ),
+                      splitOrFeed,
+                      Positioned(
+                        top: 24,
+                        right: 24,
+                        width: ChallengeStickyCta.width,
+                        child: ValueListenableBuilder<bool>(
+                          valueListenable: _payBarShown,
+                          builder: (context, shown, child) {
+                            return ChallengeCtaPanelMotion(
+                              shown: shown,
+                              child: child!,
+                            );
+                          },
+                          child: _stickyCard(challenge, strings),
                         ),
                       ),
-                      Expanded(child: scroll),
                     ],
                   )
-                : scroll;
+                : splitOrFeed;
             final column = Column(
               children: [
                 if (!hasCover && !widget.embedded)
@@ -936,50 +1047,26 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _publishPayBar();
             });
-            if (purchasePaid) return column;
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                column,
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: _payBarShown,
-                    builder: (context, shown, child) {
-                      return ChallengeCtaPanelMotion(
-                        shown: shown,
-                        child: child!,
-                      );
-                    },
-                    child: ChallengeCtaPanelBar(
-                      heading: strings.joinChallenge,
-                      diplomaLabel: strings.payDigitalDiploma,
-                      medalLabel: strings.payMedalAndDiploma,
-                      loadingLabel: strings.buttonLoading,
-                      onDiploma:
-                          challenge.fapiFormUrlFor(RewardVariant.diploma) ==
-                              null
-                          ? null
-                          : () => _unlockPaid(RewardVariant.diploma),
-                      onMedal:
-                          challenge.fapiFormUrlFor(
-                                RewardVariant.medalAndDiploma,
-                              ) ==
-                              null
-                          ? null
-                          : () => _unlockPaid(RewardVariant.medalAndDiploma),
-                    ),
-                  ),
-                ),
-              ],
+            final hostedByShell = _extension != null && routePath != null;
+            if (hostedByShell || panel == null || !slideUp) return column;
+            return Scaffold(
+              extendBody: true,
+              backgroundColor: Colors.transparent,
+              bottomNavigationBar: ValueListenableBuilder<bool>(
+                valueListenable: _payBarShown,
+                builder: (context, shown, child) {
+                  return ChallengeCtaPanelMotion(shown: shown, child: child!);
+                },
+                child: panel,
+              ),
+              body: column,
             );
           },
         );
       },
     );
     return Scaffold(
+      extendBody: true,
       body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
     );
   }
@@ -1298,6 +1385,7 @@ class _ChallengeSideMap extends StatelessWidget {
                   key: const Key('challenge-map-column'),
                   shrinkWrap: true,
                   primary: false,
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(2000),
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   children: [below],
                 ),
@@ -1457,28 +1545,33 @@ abstract final class ChallengePaymentBarMetrics {
   static const headingHeight = ChallengeCtaPanel.headingLineHeight;
   static const topPadding = ChallengeCtaPanel.padTop;
   static const headingGap = ChallengeCtaPanel.headingGap;
-  static const phoneBottom = ChallengeCtaPanel.aboveNav;
-  static const desktopBottom = ChallengeCtaPanel.restingBottom;
   static const visualHeight = 44.0;
   static const tapTarget = ChallengeCtaPanel.buttonHeight;
   static const labelSize = 15.0;
   static const minLabelSize = 14.0;
   static const letterSpacing = 0.1;
   static const rowGap = ChallengeCtaPanel.rowGap;
-  static const wideBreakpoint = ChallengeCtaPanel.wideFrom;
+  static const wideBreakpoint = 600.0;
   static const narrowBreakpoint = 340.0;
   static const inlineMaxWidth = 440.0;
   static const inlineHeadingGap = 20.0;
   static const inlineNarrowGap = 8.0;
   static const spinner = 18.0;
 
-  static double bottomPadding(double width) =>
-      ChallengeCtaPanel.bottomMargin(width);
+  static double bodyHeight(double width, {int headingLines = 1}) =>
+      ChallengeCtaPanel.bodyHeight(width, headingLines: headingLines);
+}
 
-  static double bodyHeight(double width) => ChallengeCtaPanel.bodyHeight(width);
+class _BottomClearance extends StatelessWidget {
+  const _BottomClearance();
 
-  static double occupiedHeight(double width, double safeBottom) =>
-      ChallengeCtaPanel.occupiedHeight(width, safeBottom);
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const Key('challenge-payment-spacer'),
+      height: MediaQuery.paddingOf(context).bottom,
+    );
+  }
 }
 
 /// Font size for a payment label. Starts at 15 and may scale down to 14.

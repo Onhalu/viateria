@@ -22,8 +22,9 @@ abstract final class Breakpoints {
     return WindowClass.large;
   }
 
-  /// Floating bottom nav only on a compact (phone portrait) window.
-  static bool usesNavigationRail(double width) => width >= compactMax;
+  /// Bottom pill through the medium window (600–839). The rail starts at 840,
+  /// where the challenge detail also becomes two columns.
+  static bool usesNavigationRail(double width) => width >= mediumMax;
 
   /// Challenge detail from 840 dp: the map stays in a side column, and the
   /// description plus the payment block sit under that map.
