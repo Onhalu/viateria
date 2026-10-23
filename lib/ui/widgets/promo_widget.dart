@@ -5,6 +5,7 @@ import '../../domain/promo.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import '../../theme/brand_typography.dart';
 
 /// Catalog promo slot between Featured and the country flags.
 ///
@@ -90,12 +91,10 @@ class PromoStrip extends StatelessWidget {
           key: Key('promo-title-${promo.id}'),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontFamily: 'Playfair Display',
-            color: BrandColors.cream,
+          style: BrandTypography.display(
             fontSize: 20,
-            fontWeight: FontWeight.w700,
             height: 1.2,
+            color: BrandColors.cream,
           ),
         ),
         if (subtitle.isNotEmpty) ...[

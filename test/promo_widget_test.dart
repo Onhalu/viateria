@@ -435,7 +435,7 @@ void main() {
     final title = tester.widget<Text>(
       find.byKey(const Key('promo-title-promo-1')),
     );
-    expect(title.style?.fontFamily, 'Playfair Display');
+    expect(title.style?.fontFamily, 'Bricolage Grotesque');
     expect(title.style?.color, BrandColors.cream);
     expect(title.style?.fontWeight, FontWeight.w700);
     expect(title.style?.fontSize, 20);

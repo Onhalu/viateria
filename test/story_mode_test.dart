@@ -1334,8 +1334,8 @@ Future<void> _loadShotFonts() async {
     '/usr/share/fonts/truetype/macos/Inter-SemiBold.ttf',
     '/usr/share/fonts/truetype/macos/Inter-Bold.ttf',
   ]);
-  await family('Playfair Display', const [
-    'assets/fonts/PlayfairDisplay-Variable.ttf',
+  await family('Bricolage Grotesque', const [
+    'assets/fonts/BricolageGrotesque[opsz,wdth,wght].ttf',
   ], fromBundle: true);
   await family('MaterialIcons', const [
     '/home/ubuntu/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

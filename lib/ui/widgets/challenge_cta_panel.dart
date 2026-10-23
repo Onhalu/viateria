@@ -163,12 +163,10 @@ class ChallengeCtaPanel extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: headingLines,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: AppTheme.displayFont,
-                      color: BrandColors.forest,
+                    style: BrandTypography.display(
                       fontSize: headingSize,
-                      fontWeight: FontWeight.w700,
                       height: headingLineHeight / headingSize,
+                      color: BrandColors.forest,
                     ),
                   ),
                   const SizedBox(height: headingGap),

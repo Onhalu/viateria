@@ -107,7 +107,7 @@ class HeroBackButton extends StatelessWidget {
 
 /// Pinned cover. Expanded height follows [challengeHeroExtent]. Scrolling
 /// collapses it into a forest bar with the same back circle, the place, and
-/// one Playfair line of the challenge name.
+/// one Bricolage Grotesque line of the challenge name.
 class ChallengeCollapsingHero extends StatelessWidget {
   const ChallengeCollapsingHero({
     super.key,
@@ -322,12 +322,9 @@ class CroppedCover extends StatelessWidget {
             key: const Key('challenge-title'),
             maxLines: wide ? 2 : 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTheme.displayFont,
-              fontWeight: FontWeight.w600,
-              color: BrandColors.cream,
+            style: BrandTypography.display(
               fontSize: wide ? 28 : 24,
-              height: 1.15,
+              color: BrandColors.cream,
             ),
           ),
         ),
@@ -467,12 +464,9 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
                         key: const Key('challenge-collapsed-title'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: AppTheme.displayFont,
-                          fontWeight: FontWeight.w600,
-                          color: BrandColors.cream,
+                        style: BrandTypography.display(
                           fontSize: 18,
-                          height: 1.15,
+                          color: BrandColors.cream,
                         ),
                       ),
                     ],

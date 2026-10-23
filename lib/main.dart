@@ -17,6 +17,7 @@ import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
 import 'data/verified_places.dart';
 import 'l10n/locale_controller.dart';
+import 'theme/brand_typography.dart';
 
 Future<void> syncLocaleFromProfile(
   LocaleController controller,
@@ -46,6 +47,7 @@ Future<void> syncLocaleFromProfile(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerBricolageLicense();
   final config = AppConfig.fromEnvironment();
   final localeController = LocaleController();
   await localeController.load();
