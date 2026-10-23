@@ -1,6 +1,6 @@
 import opentype from "npm:opentype.js@1.3.4";
 
-/** Fallback when the TTF cannot be parsed. Bricolage Grotesque Regular averages ~0.53 em. */
+/** Fallback when the TTF cannot be parsed: Playfair Regular averages ~0.45–0.50 em. */
 export const FALLBACK_EM_PER_CHAR = 0.52;
 
 export type Measure = (text: string, size: number, letterSpacing?: number) => number;

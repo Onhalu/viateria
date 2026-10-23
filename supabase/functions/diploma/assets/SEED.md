@@ -1,10 +1,8 @@
 # diploma-assets seed
 
 Temporary files for the private `diploma-assets` bucket. Final backgrounds and
-the black Vyšlápni logo replace these later. Bricolage Grotesque is OFL
-(`fonts/OFL.txt`). Regular and Bold are static instances of
-`BricolageGrotesque[opsz,wdth,wght].ttf` from google/fonts @ b9f6c712059d
-(opsz 96, wdth 100, weights 400 and 700).
+the black Vyšlápni logo replace these later. Playfair Display is OFL
+(`fonts/OFL-Playfair.txt`).
 
 Upload with the service role (the bucket has no client policies):
 
@@ -15,8 +13,8 @@ Upload with the service role (the bucket has no client policies):
 | `bg/3.png` | `assets/bg/3.png` |
 | `bg/4.png` | `assets/bg/4.png` |
 | `logo/vandery-lockup.png` | `assets/logo/vandery-lockup.png` (= `assets/brand/vandery-lockup@3x.png`) |
-| `fonts/BricolageGrotesque-Regular.ttf` | `assets/fonts/BricolageGrotesque-Regular.ttf` |
-| `fonts/BricolageGrotesque-Bold.ttf` | `assets/fonts/BricolageGrotesque-Bold.ttf` |
+| `fonts/PlayfairDisplay.ttf` | `assets/fonts/PlayfairDisplay.ttf` |
+| `fonts/PlayfairDisplay-Italic.ttf` | `assets/fonts/PlayfairDisplay-Italic.ttf` (OFL, google/fonts `PlayfairDisplay-Italic[wght].ttf`) |
 
 The Edge function reads the bucket first and falls back to these bundled copies
 so a render still works before the upload. `background_variant` is chosen once

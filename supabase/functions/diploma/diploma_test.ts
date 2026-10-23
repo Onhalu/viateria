@@ -140,7 +140,7 @@ Deno.test("v4 long titles wrap to two lines and shrink", () => {
   const short = layoutTitle("Pálava");
   assert(short.fontSize === 60 && short.lines.length === 1, "short");
   const long = layoutTitle(
-    "Velmi dlouhý název výzvy který se nevejde na jeden řádek diplomu",
+    "Velmi dlouhý název výzvy který se nevejde na jeden řádek Playfair",
   );
   assert(long.lines.length <= 2, "max two lines");
   assert(long.fontSize === 60 || long.fontSize === 44, "size step");
@@ -162,10 +162,8 @@ Deno.test("T1 render is a rounded 1080 PNG under 1.5s", async () => {
 Deno.test("layout B is the default and keeps every line inside the panel", async () => {
   assert(DIPLOMA_LAYOUT === "B", "B is active");
   const assets = await loadBundledRenderAssets(4);
-  assert(assets.fontBold.byteLength > 0, "Bricolage Bold bundled");
-  assert(!assets.fontItalic, "Bricolage Grotesque has no italic cut");
+  assert(assets.fontItalic && assets.fontItalic.byteLength > 0, "italic font bundled");
   const measure = createMeasure(assets.font);
-  const bold = createMeasure(assets.fontBold);
   const maxW = 720 - 2 * 72;
   for (
     const [name, title] of [
@@ -175,24 +173,16 @@ Deno.test("layout B is the default and keeps every line inside the panel", async
     ]
   ) {
     const copy = diplomaCopy(row({ recipient_name_display: name, challenge_title: title }));
-    const result = layoutVariant("B", copy, measure, false, bold);
+    const result = layoutVariant("B", copy, measure, true);
     assert(result.panel.opacity === 0.62, "B panel 62 %");
     for (const op of result.ops) {
       if (op.kind !== "text") continue;
-      const ruler = op.fontWeight === 700 ? bold : measure;
-      const w = ruler(op.text, op.size, op.letterSpacing ?? 0);
+      const w = measure(op.text, op.size, op.letterSpacing ?? 0);
       assert(w <= maxW, `${op.text} fits (${w.toFixed(0)} > ${maxW})`);
       assert(op.y > result.panel.y + 40 && op.y < result.panel.y + result.panel.h - 40, `${op.text} inside panel`);
-      if (op.fontWeight === 700) {
-        assert(op.text === op.text.toLocaleUpperCase("cs"), `${op.text} is uppercase`);
-        assert(
-          Math.abs((op.letterSpacing ?? 0) - 0.04 * op.size) < 0.01,
-          `${op.text} tracks at +4%`,
-        );
-      }
     }
     const italic = result.ops.filter((op) => op.kind === "text" && op.italic);
-    assert(italic.length === 0, "pro + body stay upright");
+    assert(italic.length === 2, "pro + body italic");
   }
 });
 
@@ -201,7 +191,7 @@ Deno.test("measured titles and names: short = 1 line, long = 2 lines without ell
   const measure = createMeasure(assets.font);
   // Real TTF metrics, not the 0.52 estimate (estimate would give 434.7 / 611.5).
   const nameWidth = measure("Ondrej_test", 76);
-  assert(Math.abs(nameWidth - 380.2) < 2, `opentype metrics in use (got ${nameWidth.toFixed(1)})`);
+  assert(Math.abs(nameWidth - 409.6) < 2, `opentype metrics in use (got ${nameWidth.toFixed(1)})`);
   const short = fitTitle(measure, "Tajemství Českého středohoří", [42, 38, 32], 576);
   assert(short.lines.length === 1 && short.size === 42, "short title one line at 42 (estimate would drop to 38)");
   const long = fitTitle(measure, "Hrady a zámky Libereckého kraje: velký okruh kolem Ještědu", [42, 38, 32], 576);

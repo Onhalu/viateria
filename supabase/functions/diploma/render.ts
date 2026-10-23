@@ -1,6 +1,6 @@
 import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
 import { diplomaCopy, layoutTitle, type IssuedDiplomaRow } from "./access.ts";
-import { CAP, type DiplomaLayout, type DrawOp, type LayoutResult, layoutVariant } from "./layouts.ts";
+import { type DiplomaLayout, type DrawOp, type LayoutResult, layoutVariant } from "./layouts.ts";
 import { createMeasure, type Measure } from "./measure.ts";
 
 export type { DiplomaLayout } from "./layouts.ts";
@@ -28,15 +28,12 @@ const assetCache = new Map<string, Uint8Array>();
 const BUNDLED_ASSET_FALLBACK_COMMIT = "f885408";
 const BUNDLED_ASSET_FALLBACK_BASE =
   `https://raw.githubusercontent.com/Onhalu/viateria/${BUNDLED_ASSET_FALLBACK_COMMIT}/supabase/functions/diploma/assets/`;
-/**
- * Static cuts are instanced from google/fonts
- * BricolageGrotesque[opsz,wdth,wght].ttf @ b9f6c712059d. The variable file's
- * default master is 96pt ExtraBold, and opentype.js 1.3.4 cannot set axes,
- * so the renderer loads Regular (wght 400) and Bold (wght 700) at the axis
- * defaults opsz 96 and wdth 100. No remote override: a missing cut must fail
- * rather than fall back to a different family.
- */
-const BUNDLED_ASSET_FALLBACK_OVERRIDES: Record<string, string> = {};
+/** Assets newer than the pinned commit resolve from a pinned upstream copy. */
+const BUNDLED_ASSET_FALLBACK_OVERRIDES: Record<string, string> = {
+  // OFL, byte-identical to assets/fonts/PlayfairDisplay-Italic.ttf (google/fonts @ 1e1aa08).
+  "fonts/PlayfairDisplay-Italic.ttf":
+    "https://raw.githubusercontent.com/google/fonts/1e1aa08e994ff7db50116e86ccc7b52a4e4ae5b8/ofl/playfairdisplay/PlayfairDisplay-Italic%5Bwght%5D.ttf",
+};
 
 export async function readBundledAsset(relativePath: string): Promise<Uint8Array> {
   const hit = assetCache.get(relativePath);
@@ -82,27 +79,24 @@ const LOGO_ASPECT = 557 / 960;
 export type RenderAssets = {
   background: Uint8Array;
   logo: Uint8Array;
-  /** Bricolage Grotesque Regular (weight 400). */
   font: Uint8Array;
-  /** Bricolage Grotesque Bold (weight 700), used for the challenge name. */
-  fontBold: Uint8Array;
-  /**
-   * Bricolage Grotesque has no italic cut. Layout B draws `pro` and the body
-   * upright when this is null.
-   */
+  /** PlayfairDisplay-Italic.ttf (OFL, google/fonts). Optional: layout B falls back to Regular. */
   fontItalic?: Uint8Array | null;
 };
 
-export const FONT_FAMILY = "Bricolage Grotesque";
-export const FONT_ASSET = "fonts/BricolageGrotesque-Regular.ttf";
-export const BOLD_FONT_ASSET = "fonts/BricolageGrotesque-Bold.ttf";
+export const ITALIC_FONT_ASSET = "fonts/PlayfairDisplay-Italic.ttf";
 
 export async function loadBundledRenderAssets(variant: number): Promise<RenderAssets> {
   const background = await readBundledAsset(`bg/${variant}.png`);
   const logo = await readBundledAsset(LOGO_ASSET);
-  const font = await readBundledAsset(FONT_ASSET);
-  const fontBold = await readBundledAsset(BOLD_FONT_ASSET);
-  return { background, logo, font, fontBold, fontItalic: null };
+  const font = await readBundledAsset("fonts/PlayfairDisplay.ttf");
+  let fontItalic: Uint8Array | null = null;
+  try {
+    fontItalic = await readBundledAsset(ITALIC_FONT_ASSET);
+  } catch {
+    fontItalic = null;
+  }
+  return { background, logo, font, fontItalic };
 }
 
 const measureCache = new WeakMap<Uint8Array, Measure>();
@@ -127,8 +121,7 @@ function opSvg(op: DrawOp, logoHref: string): string {
       const ls = op.letterSpacing ? ` letter-spacing="${op.letterSpacing.toFixed(2)}"` : "";
       const opacity = op.opacity != null && op.opacity < 1 ? ` fill-opacity="${op.opacity}"` : "";
       const italic = op.italic ? ` font-style="italic"` : "";
-      const weight = op.fontWeight ?? 400;
-      return `<text x="${op.x}" y="${op.y}" font-size="${op.size}" font-family="${FONT_FAMILY}" font-weight="${weight}"${italic} text-anchor="${op.anchor}"${ls} fill="#000000"${opacity}>${xml(op.text)}</text>`;
+      return `<text x="${op.x}" y="${op.y}" font-size="${op.size}" font-family="Playfair Display"${italic} text-anchor="${op.anchor}"${ls} fill="#000000"${opacity}>${xml(op.text)}</text>`;
     }
   }
 }
@@ -155,18 +148,12 @@ const LOGO_W = 250;
 const LOGO_H = Math.round(LOGO_W * LOGO_ASPECT);
 const CX = CANVAS / 2;
 
-type Line = {
-  text: string;
-  size: number;
-  gapBefore: number;
-  letterSpacing?: number;
-  fontWeight?: number;
-};
+type Line = { text: string; size: number; gapBefore: number };
 
 /**
  * 1080×1080 PNG with transparent rounded corners (r60). A translucent white
  * panel holds every element: black lockup, DIPLOM, pro, name, body, title,
- * date. imagescript cannot draw Bricolage Grotesque, so the layout is SVG rasterized by resvg.
+ * date. imagescript cannot draw Playfair, so the layout is SVG rasterized by resvg.
  */
 export async function renderDiploma(
   row: IssuedDiplomaRow,
@@ -180,13 +167,7 @@ export async function renderDiploma(
   if (layout === "v4") {
     body = v4Body(copy, logoHref);
   } else {
-    const result = layoutVariant(
-      layout,
-      copy,
-      measureFor(assets.font),
-      !!assets.fontItalic,
-      measureFor(assets.fontBold),
-    );
+    const result = layoutVariant(layout, copy, measureFor(assets.font), !!assets.fontItalic);
     body = variantBody(result, logoHref);
   }
 
@@ -204,15 +185,13 @@ export async function renderDiploma(
   </g>
 </svg>`;
 
-  const fontBuffers = assets.fontItalic
-    ? [assets.font, assets.fontBold, assets.fontItalic]
-    : [assets.font, assets.fontBold];
+  const fontBuffers = assets.fontItalic ? [assets.font, assets.fontItalic] : [assets.font];
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: CANVAS },
     font: {
       fontBuffers,
       loadSystemFonts: false,
-      defaultFontFamily: FONT_FAMILY,
+      defaultFontFamily: "Playfair Display",
     },
   });
   return resvg.render().asPng();
@@ -220,8 +199,8 @@ export async function renderDiploma(
 
 /** Prod v4 layout, unchanged. */
 function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string {
-  const title = layoutTitle(copy.title.toLocaleUpperCase("cs"));
-  const titleLineHeight = Math.round(title.fontSize * 1.2);
+  const title = layoutTitle(copy.title);
+  const titleLineHeight = Math.round(title.fontSize * 1.15);
 
   // Baseline-to-baseline gaps (gapBefore) measured on the reference.
   const lines: Line[] = [
@@ -233,13 +212,11 @@ function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string 
       text,
       size: title.fontSize,
       gapBefore: index === 0 ? 86 : titleLineHeight,
-      letterSpacing: 0.04 * title.fontSize,
-      fontWeight: 700,
     })),
     { text: copy.duration, size: 36, gapBefore: 64 },
   ];
 
-  const logoToHeadline = 70 + 92 * CAP; // logo bottom → DIPLOM baseline
+  const logoToHeadline = 70 + 92 * 0.72; // logo bottom → DIPLOM baseline
   const textSpan = lines.reduce((sum, line) => sum + line.gapBefore, 0);
   const contentH = LOGO_H + logoToHeadline + textSpan + 12; // + descender
   const free = PANEL_H - contentH;
@@ -253,9 +230,7 @@ function v4Body(copy: ReturnType<typeof diplomaCopy>, logoHref: string): string 
     if (index > 0) y += line.gapBefore;
     // The date is anchored to the panel bottom; the block above keeps its place.
     if (index === lastIndex) y = PANEL_Y + PANEL_H - DATE_BOTTOM_PADDING;
-    const weight = line.fontWeight ?? 400;
-    const ls = line.letterSpacing ? ` letter-spacing="${line.letterSpacing.toFixed(2)}"` : "";
-    return `<text x="${CX}" y="${Math.round(y)}" font-size="${line.size}" font-family="${FONT_FAMILY}" font-weight="${weight}"${ls} text-anchor="middle" fill="#000000">${xml(line.text)}</text>`;
+    return `<text x="${CX}" y="${Math.round(y)}" font-size="${line.size}" font-family="Playfair Display" text-anchor="middle" fill="#000000">${xml(line.text)}</text>`;
   }).join("\n    ");
 
   return [

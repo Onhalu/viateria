@@ -193,7 +193,7 @@ Prices under the CTAs come from `fapi-offer` (the public FAPI form resource for 
 
 Draft only. Apply order on prod, after an explicit OK, is **0018 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026**. `0018_verify_waypoint_challenge_readable.sql` is already in `main` and may not be applied on prod yet. W0 (`0020` / history `20261005125735`) is already on prod. W4 (`0027`, dropping legacy columns) is not in this change. Do not `db push` these files to production from a pull request.
 
-`20261006190006_diploma_generation.sql` is the DBA file synced on 2026-10-07 (no `set_diploma_name` / `name_edits`, PNG paths, buckets `diplomas` and `diploma-assets`). It is not applied on prod. The `diploma` Edge Function (`POST`, user JWT) checks entitlement, caches by `render_hash`, and returns a one-hour signed URL. Without entitlement it responds `402 not_entitled` and does not write the file. The app shows a blurred preview until then. Temporary backgrounds, the VANDERY mark, and Bricolage Grotesque live under `supabase/functions/diploma/assets/` (see `SEED.md`). The Flutter client never receives `service_role`.
+`20261006190006_diploma_generation.sql` is the DBA file synced on 2026-10-07 (no `set_diploma_name` / `name_edits`, PNG paths, buckets `diplomas` and `diploma-assets`). It is not applied on prod. The `diploma` Edge Function (`POST`, user JWT) checks entitlement, caches by `render_hash`, and returns a one-hour signed URL. Without entitlement it responds `402 not_entitled` and does not write the file. The app shows a blurred preview until then. Temporary backgrounds, the VANDERY mark, and Playfair live under `supabase/functions/diploma/assets/` (see `SEED.md`). The Flutter client never receives `service_role`.
 
 ### Stripe (unused by CTAs)
 
