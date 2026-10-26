@@ -79,14 +79,13 @@ void main() {
   test('category icon filenames match their silhouettes', () async {
     // On-disk graphic contract. Category → filename stays 1:1 in code;
     // these bytes are what each name must contain:
-    // city = town/skyline, nature = tree, technical = derrick + gear,
-    // historical = castle. A previous batch had the three non-nature
-    // files rotated relative to those names.
+    // city = houses, nature = tree, technical = gear on pedestal,
+    // historical = castle.
     const expected = <String, (int, int)>{
-      'city': (707, 0x58703650),
-      'nature': (1030, 0x007a7bce),
-      'technical': (780, 0xaecae4f1),
-      'historical': (526, 0x56e7ca30),
+      'city': (486, 0xe30f36a1),
+      'nature': (497, 0x95fe27aa),
+      'technical': (587, 0xb91c64d9),
+      'historical': (420, 0x6cae2a35),
     };
     for (final entry in expected.entries) {
       final data = await rootBundle.load(
