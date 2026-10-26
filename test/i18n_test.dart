@@ -158,6 +158,21 @@ void main() {
     );
   });
 
+  test('pending payment copy explains what payment unlocks', () {
+    expect(
+      AppStrings('cs').purchasePending,
+      'Platbou se otevře výzva a odměna',
+    );
+    expect(
+      AppStrings('en').purchasePending,
+      'Payment unlocks the challenge and reward',
+    );
+    expect(
+      AppStrings('de').purchasePending,
+      'Mit der Zahlung werden Challenge und Belohnung freigeschaltet',
+    );
+  });
+
   test('leaderboard copy and point plurals are localized', () {
     expect(AppStrings('cs').navLeaderboard, 'Žebříček');
     expect(AppStrings('cs').leaderboardTitle, 'Žebříček');

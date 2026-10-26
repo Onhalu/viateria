@@ -1,3 +1,7 @@
+import 'package:intl/intl.dart';
+
+import 'local_dates.dart';
+
 /// Custom i18n (cs / en / de) — no generated ARB catalog.
 class AppStrings {
   AppStrings(this.locale) : _table = _tables[locale] ?? _tables['en']!;
@@ -19,7 +23,6 @@ class AppStrings {
     'catalogNoMatches',
     'catalogNoMatchesHint',
     'catalogFeatured',
-    'catalogRegions',
     'catalogLengthShort',
     'catalogLengthMedium',
     'catalogLengthLong',
@@ -50,6 +53,10 @@ class AppStrings {
     'bike',
     'distance',
     'elevation',
+    'elevationGain',
+    'elevationLoss',
+    'routeModeWalk',
+    'routeModeBike',
     'time',
     'difficulty',
     'openInOsm',
@@ -63,6 +70,8 @@ class AppStrings {
     'expert',
     'challengeLockedPaid',
     'storyLockedHint',
+    'storyNextStop',
+    'storyFogLocked',
     'missingConfig',
     'errorGeneric',
     'purchasePending',
@@ -184,12 +193,37 @@ class AppStrings {
     'deadlineAfterPayment',
     'rewardTitle',
     'rewardUnlocksAfterComplete',
-    'rewardDependsOnPaidOption',
+    'rewardLockedLabel',
+    'rewardUnlockDiploma',
     'saveDiploma',
-    'woodenMedal',
+    'diplomaBlurred',
+    'diplomaNeedName',
+    'diplomaGenerating',
+    'diplomaDownload',
+    'diplomaShare',
+    'diplomaShareInstagram',
+    'diplomaShareFacebook',
+    'diplomaShareCaption',
+    'diplomaShareDownloadedHint',
+    'diplomaError',
+    'diplomaRevoked',
+    'diplomaIncomplete',
     'diplomaLabel',
+    'diplomaEditName',
+    'diplomaNameFromProfile',
+    'diplomaNameEdited',
+    'diplomaNameConfirm',
+    'diplomaNameInvalid',
+    'diplomaNameSave',
+    'diplomaNameCancel',
+    'joinChallenge',
+    'buttonLoading',
     'payDigitalDiploma',
     'payMedalAndDiploma',
+    'payPriceFree',
+    'payPriceLoading',
+    'payPriceUnavailable',
+    'payTerms',
     'paymentTitle',
     'paymentLoadingForm',
     'paymentProcessingTitle',
@@ -202,6 +236,11 @@ class AppStrings {
     'paymentLeaveConfirm',
     'paymentLeave',
     'paymentStay',
+    'paymentClose',
+    'paymentPopupTitle',
+    'paymentPopupBody',
+    'paymentPopupBlocked',
+    'paymentPopupRetry',
     'visitedPlaces',
     'profileCatCity',
     'profileCatNature',
@@ -229,6 +268,20 @@ class AppStrings {
     'pointsOne',
     'pointsFew',
     'pointsMany',
+    'buyChallenge',
+    'paymentTrust',
+    'challengeProgressFormat',
+    'verifyDistanceAway',
+    'openSettings',
+    'errorOfflineHint',
+    'continueChallenge',
+    'planRoute',
+    'addToRoute',
+    'cancelRoute',
+    'expandMap',
+    'deadlinePassed',
+    'featuredPrevious',
+    'featuredNext',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -244,7 +297,6 @@ class AppStrings {
   String get catalogNoMatches => t('catalogNoMatches');
   String get catalogNoMatchesHint => t('catalogNoMatchesHint');
   String get catalogFeatured => t('catalogFeatured');
-  String get catalogRegions => t('catalogRegions');
   String get catalogLengthShort => t('catalogLengthShort');
   String get catalogLengthMedium => t('catalogLengthMedium');
   String get catalogLengthLong => t('catalogLengthLong');
@@ -275,6 +327,10 @@ class AppStrings {
   String get bike => t('bike');
   String get distance => t('distance');
   String get elevation => t('elevation');
+  String get elevationGain => t('elevationGain');
+  String get elevationLoss => t('elevationLoss');
+  String get routeModeWalk => t('routeModeWalk');
+  String get routeModeBike => t('routeModeBike');
   String get time => t('time');
   String get difficulty => t('difficulty');
   String get openInOsm => t('openInOsm');
@@ -288,6 +344,8 @@ class AppStrings {
   String get expert => t('expert');
   String get challengeLockedPaid => t('challengeLockedPaid');
   String get storyLockedHint => t('storyLockedHint');
+  String get storyNextStop => t('storyNextStop');
+  String get storyFogLocked => t('storyFogLocked');
   String get missingConfig => t('missingConfig');
   String get errorGeneric => t('errorGeneric');
   String get purchasePending => t('purchasePending');
@@ -408,12 +466,38 @@ class AppStrings {
   String get deadlineAfterPayment => t('deadlineAfterPayment');
   String get rewardTitle => t('rewardTitle');
   String get rewardUnlocksAfterComplete => t('rewardUnlocksAfterComplete');
-  String get rewardDependsOnPaidOption => t('rewardDependsOnPaidOption');
+  String get rewardLockedLabel => t('rewardLockedLabel');
+  String get rewardUnlockDiploma => t('rewardUnlockDiploma');
   String get saveDiploma => t('saveDiploma');
-  String get woodenMedal => t('woodenMedal');
+  String get diplomaBlurred => t('diplomaBlurred');
+  String get diplomaNeedName => t('diplomaNeedName');
+  String get diplomaGenerating => t('diplomaGenerating');
+  String get diplomaDownload => t('diplomaDownload');
+  String get diplomaShare => t('diplomaShare');
+  String get diplomaShareInstagram => t('diplomaShareInstagram');
+  String get diplomaShareFacebook => t('diplomaShareFacebook');
+  String diplomaShareCaption(String title) =>
+      t('diplomaShareCaption').replaceAll('{title}', title);
+  String get diplomaShareDownloadedHint => t('diplomaShareDownloadedHint');
+  String get diplomaError => t('diplomaError');
+  String get diplomaRevoked => t('diplomaRevoked');
+  String get diplomaIncomplete => t('diplomaIncomplete');
   String get diplomaLabel => t('diplomaLabel');
+  String get diplomaEditName => t('diplomaEditName');
+  String get diplomaNameFromProfile => t('diplomaNameFromProfile');
+  String get diplomaNameEdited => t('diplomaNameEdited');
+  String get diplomaNameConfirm => t('diplomaNameConfirm');
+  String get diplomaNameInvalid => t('diplomaNameInvalid');
+  String get diplomaNameSave => t('diplomaNameSave');
+  String get diplomaNameCancel => t('diplomaNameCancel');
+  String get joinChallenge => t('joinChallenge');
+  String get buttonLoading => t('buttonLoading');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
+  String get payPriceFree => t('payPriceFree');
+  String get payPriceLoading => t('payPriceLoading');
+  String get payPriceUnavailable => t('payPriceUnavailable');
+  String get payTerms => t('payTerms');
   String get paymentTitle => t('paymentTitle');
   String get paymentLoadingForm => t('paymentLoadingForm');
   String get paymentProcessingTitle => t('paymentProcessingTitle');
@@ -426,6 +510,11 @@ class AppStrings {
   String get paymentLeaveConfirm => t('paymentLeaveConfirm');
   String get paymentLeave => t('paymentLeave');
   String get paymentStay => t('paymentStay');
+  String get paymentClose => t('paymentClose');
+  String get paymentPopupTitle => t('paymentPopupTitle');
+  String get paymentPopupBody => t('paymentPopupBody');
+  String get paymentPopupBlocked => t('paymentPopupBlocked');
+  String get paymentPopupRetry => t('paymentPopupRetry');
   String get visitedPlaces => t('visitedPlaces');
   String get profileCatCity => t('profileCatCity');
   String get profileCatNature => t('profileCatNature');
@@ -452,6 +541,80 @@ class AppStrings {
   String get pointsOne => t('pointsOne');
   String get pointsFew => t('pointsFew');
   String get pointsMany => t('pointsMany');
+  String get buyChallenge => t('buyChallenge');
+  String get paymentTrust => t('paymentTrust');
+  String get openSettings => t('openSettings');
+  String get errorOfflineHint => t('errorOfflineHint');
+  String get continueChallenge => t('continueChallenge');
+  String get planRoute => t('planRoute');
+  String get addToRoute => t('addToRoute');
+  String get cancelRoute => t('cancelRoute');
+  String get expandMap => t('expandMap');
+  String get deadlinePassed => t('deadlinePassed');
+  String get featuredPrevious => t('featuredPrevious');
+  String get featuredNext => t('featuredNext');
+
+  /// "Splň do {date}" / "Complete by {date}" / "Abschließen bis {date}".
+  String rewardDeadlineLabel(String formattedDate) {
+    return switch (locale) {
+      'cs' => 'Splň do $formattedDate',
+      'de' => 'Abschließen bis $formattedDate',
+      _ => 'Complete by $formattedDate',
+    };
+  }
+
+  /// Suffix when the deadline is within 7 calendar days. Null otherwise.
+  String? rewardDaysLeftSuffix(DateTime completeBy, DateTime now) {
+    if (rewardDeadlinePassed(completeBy, now)) return null;
+    final days = _calendarDaysUntil(completeBy, now);
+    if (days > 7) return null;
+    return switch (locale) {
+      'cs' =>
+        '· zbývá $days ${Intl.plural(days, locale: locale, one: 'den', few: 'dny', other: 'dní')}',
+      'de' =>
+        '· noch $days ${Intl.plural(days, locale: locale, one: 'Tag', other: 'Tage')}',
+      _ =>
+        '· $days ${Intl.plural(days, locale: locale, one: 'day', other: 'days')} left',
+    };
+  }
+
+  /// Profile line: "Dokončeno dne {date}" with [DateFormat.yMMMd].
+  String completedOnLabel(DateTime date) {
+    final formatted = formatLocaleDate(date, locale);
+    return switch (locale) {
+      'cs' => 'Dokončeno dne $formatted',
+      'de' => 'Abgeschlossen am $formatted',
+      _ => 'Completed on $formatted',
+    };
+  }
+
+  bool rewardDeadlinePassed(DateTime completeBy, DateTime now) {
+    return now.isAfter(completeBy);
+  }
+
+  String routeStopsSummary(int count, double km) {
+    final distance = km.toStringAsFixed(1);
+    final places = switch (locale) {
+      'cs' => Intl.plural(
+        count,
+        locale: locale,
+        one: 'místo',
+        few: 'místa',
+        other: 'míst',
+      ),
+      'de' => Intl.plural(count, locale: locale, one: 'Ort', other: 'Orte'),
+      _ => Intl.plural(count, locale: locale, one: 'place', other: 'places'),
+    };
+    return '$count $places · $distance km';
+  }
+
+  String challengeProgress(int done, int total) =>
+      t('challengeProgressFormat')
+          .replaceAll('{done}', '$done')
+          .replaceAll('{total}', '$total');
+
+  String verifyDistanceAway(int meters) =>
+      t('verifyDistanceAway').replaceAll('{n}', '$meters');
 
   String leaderboardBreakdown(int places, int challenges) =>
       t('leaderboardBreakdown')
@@ -529,7 +692,6 @@ class AppStrings {
       'catalogNoMatches': 'No matches',
       'catalogNoMatchesHint': 'Try different filters or search.',
       'catalogFeatured': 'Featured',
-      'catalogRegions': 'Regions',
       'catalogLengthShort': 'Short',
       'catalogLengthMedium': 'Medium',
       'catalogLengthLong': 'Long',
@@ -560,6 +722,10 @@ class AppStrings {
       'bike': 'Bike',
       'distance': 'Distance',
       'elevation': 'Elevation',
+      'elevationGain': 'Ascent',
+      'elevationLoss': 'Descent',
+      'routeModeWalk': 'Walk',
+      'routeModeBike': 'Bike',
       'time': 'Time',
       'difficulty': 'Difficulty',
       'openInOsm': 'Open in OpenStreetMap',
@@ -573,9 +739,11 @@ class AppStrings {
       'expert': 'Expert',
       'challengeLockedPaid': 'Purchase this challenge to access waypoints.',
       'storyLockedHint': 'Complete the previous waypoint to unlock the next.',
+      'storyNextStop': 'Next stop',
+      'storyFogLocked': 'Verify the previous place first',
       'missingConfig': 'Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY via env.',
       'errorGeneric': 'Something went wrong. Please try again.',
-      'purchasePending': 'Payment is still pending.',
+      'purchasePending': 'Payment unlocks the challenge and reward',
       'retry': 'Retry',
       'cameraDenied': 'Camera permission is required for verification.',
       'noAccount': 'Need an account? Sign up',
@@ -704,12 +872,38 @@ class AppStrings {
       'deadlineAfterPayment': 'Deadline after payment',
       'rewardTitle': 'Reward',
       'rewardUnlocksAfterComplete': 'Unlocks when you complete the challenge',
-      'rewardDependsOnPaidOption': 'Reward depends on your paid option',
+      'rewardLockedLabel': 'The reward unlocks after you pay for the challenge',
+      'rewardUnlockDiploma': 'Unlock diploma',
       'saveDiploma': 'Save diploma',
-      'woodenMedal': 'Wooden medal',
+      'diplomaBlurred': 'Preview stays blurred until the diploma is unlocked.',
+      'diplomaNeedName': 'Add your name in your profile.',
+      'diplomaGenerating': 'Creating the diploma…',
+      'diplomaDownload': 'Download',
+      'diplomaShare': 'Share',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption': 'I completed the {title} challenge with VANDERY',
+      'diplomaShareDownloadedHint':
+          'The image is downloaded. Upload it to Instagram / Facebook.',
+      'diplomaError': 'The diploma could not be created.',
+      'diplomaRevoked': 'This diploma was revoked.',
+      'diplomaIncomplete': 'The diploma opens after you finish the challenge.',
       'diplomaLabel': 'Diploma',
+      'diplomaEditName': 'Edit name',
+      'diplomaNameFromProfile': 'The name is loaded from the display name in your profile. You can edit it on the diploma once.',
+      'diplomaNameEdited': 'The name has been edited',
+      'diplomaNameConfirm': "This change can't be made again.",
+      'diplomaNameInvalid': 'Enter 1–40 characters and no control characters.',
+      'diplomaNameSave': 'Save',
+      'diplomaNameCancel': 'Cancel',
+      'joinChallenge': 'Accept the challenge',
+      'buttonLoading': 'Loading',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
+      'payPriceFree': 'Free',
+      'payPriceLoading': 'Loading price…',
+      'payPriceUnavailable': 'Price unavailable',
+      'payTerms': 'Terms',
       'paymentTitle': 'Payment',
       'paymentLoadingForm': 'Loading payment form…',
       'paymentProcessingTitle': 'Processing payment',
@@ -723,6 +917,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Payment is still running. Leave anyway?',
       'paymentLeave': 'Leave',
       'paymentStay': 'Stay',
+      'paymentClose': 'Close',
+      'paymentPopupTitle': 'Payment opened in a window',
+      'paymentPopupBody': 'This payment page cannot be embedded, so it opened in a centered window. Finish paying there — the reward unlocks when the payment is confirmed.',
+      'paymentPopupBlocked': 'The browser blocked the payment window. Allow pop-up windows and try again.',
+      'paymentPopupRetry': 'Open payment window',
       'visitedPlaces': 'Visited places',
       'profileCatCity': 'City',
       'profileCatNature': 'Nature',
@@ -751,6 +950,20 @@ class AppStrings {
       'pointsOne': 'point',
       'pointsFew': 'points',
       'pointsMany': 'points',
+      'buyChallenge': 'Buy challenge',
+      'paymentTrust': 'Payment via FAPI · card/transfer',
+      'challengeProgressFormat': '{done}/{total} places',
+      'verifyDistanceAway': 'You are {n} m from this place',
+      'openSettings': 'Open settings',
+      'errorOfflineHint': 'Check your connection and try again.',
+      'continueChallenge': 'Continue',
+      'planRoute': 'Plan a route',
+      'addToRoute': 'Add to route',
+      'cancelRoute': 'Cancel',
+      'expandMap': 'Expand map',
+      'deadlinePassed': 'Deadline passed',
+      'featuredPrevious': 'Previous',
+      'featuredNext': 'Next',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -765,7 +978,6 @@ class AppStrings {
       'catalogNoMatches': 'Nic nesedí',
       'catalogNoMatchesHint': 'Uprav filtry nebo hledaný text.',
       'catalogFeatured': 'Vybrané',
-      'catalogRegions': 'Regiony',
       'catalogLengthShort': 'Krátká',
       'catalogLengthMedium': 'Střední',
       'catalogLengthLong': 'Dlouhá',
@@ -796,6 +1008,10 @@ class AppStrings {
       'bike': 'Kolo',
       'distance': 'Vzdálenost',
       'elevation': 'Převýšení',
+      'elevationGain': 'Stoupání',
+      'elevationLoss': 'Klesání',
+      'routeModeWalk': 'Chůze',
+      'routeModeBike': 'Kolo',
       'time': 'Čas',
       'difficulty': 'Obtížnost',
       'openInOsm': 'Otevřít v OpenStreetMap',
@@ -809,9 +1025,11 @@ class AppStrings {
       'expert': 'Expert',
       'challengeLockedPaid': 'Pro přístup k zastávkám výzvu zakupte.',
       'storyLockedHint': 'Další zastávku odemknete dokončením předchozí.',
+      'storyNextStop': 'Další zastávka',
+      'storyFogLocked': 'Nejdřív dolož předchozí místo',
       'missingConfig': 'Supabase není nastavené. Doplňte SUPABASE_URL a SUPABASE_ANON_KEY v env.',
       'errorGeneric': 'Něco se pokazilo. Zkuste to znovu.',
-      'purchasePending': 'Platba ještě není dokončená.',
+      'purchasePending': 'Platbou se otevře výzva a odměna',
       'retry': 'Zkusit znovu',
       'cameraDenied': 'Pro ověření je potřeba oprávnění k fotoaparátu.',
       'noAccount': 'Nemáte účet? Registrace',
@@ -938,12 +1156,38 @@ class AppStrings {
       'deadlineAfterPayment': 'Termín po zaplacení',
       'rewardTitle': 'Odměna',
       'rewardUnlocksAfterComplete': 'Odemkne se po splnění výzvy',
-      'rewardDependsOnPaidOption': 'Odměna podle zvolené varianty po zaplacení',
+      'rewardLockedLabel': 'Odměna se odemkne po zaplacení výzvy',
+      'rewardUnlockDiploma': 'Odemknout diplom',
       'saveDiploma': 'Uložit diplom',
-      'woodenMedal': 'Dřevěná medaile',
+      'diplomaBlurred': 'Náhled je rozmazaný, dokud diplom není odemčený.',
+      'diplomaNeedName': 'Doplň jméno v profilu.',
+      'diplomaGenerating': 'Generuji diplom…',
+      'diplomaDownload': 'Stáhnout',
+      'diplomaShare': 'Sdílet',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption': 'Zdolal(a) jsem výzvu {title} s VANDERY',
+      'diplomaShareDownloadedHint':
+          'Obrázek je stažený, nahraj ho na Instagram / Facebook',
+      'diplomaError': 'Diplom se nepodařilo vytvořit.',
+      'diplomaRevoked': 'Diplom byl odebrán.',
+      'diplomaIncomplete': 'Diplom se otevře po dokončení výzvy.',
       'diplomaLabel': 'Diplom',
+      'diplomaEditName': 'Upravit jméno',
+      'diplomaNameFromProfile': 'Jméno se načítá z tvého zobrazovaného jména v profilu. Na diplomu ho můžeš jednou upravit.',
+      'diplomaNameEdited': 'Jméno bylo upraveno',
+      'diplomaNameConfirm': 'Tuhle změnu už nepůjde zopakovat.',
+      'diplomaNameInvalid': 'Zadej 1–40 znaků bez řídicích znaků.',
+      'diplomaNameSave': 'Uložit',
+      'diplomaNameCancel': 'Zrušit',
+      'joinChallenge': 'Přijmi výzvu',
+      'buttonLoading': 'Načítání',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
+      'payPriceFree': 'Zdarma',
+      'payPriceLoading': 'Načítám cenu…',
+      'payPriceUnavailable': 'Cena není k dispozici',
+      'payTerms': 'Podmínky',
       'paymentTitle': 'Platba',
       'paymentLoadingForm': 'Načítám platební formulář…',
       'paymentProcessingTitle': 'Platba se zpracovává',
@@ -957,6 +1201,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Platba ještě běží. Opravdu odejít?',
       'paymentLeave': 'Odejít',
       'paymentStay': 'Zůstat',
+      'paymentClose': 'Zavřít',
+      'paymentPopupTitle': 'Platba se otevřela v okně',
+      'paymentPopupBody': 'Tuto platební stránku nejde vložit do aplikace, proto se otevřela ve vycentrovaném okně. Dokonči platbu tam — odměna se odemkne po potvrzení platby.',
+      'paymentPopupBlocked': 'Prohlížeč platební okno zablokoval. Povol vyskakovací okna a zkus to znovu.',
+      'paymentPopupRetry': 'Otevřít platební okno',
       'visitedPlaces': 'Navštívená místa',
       'profileCatCity': 'Město',
       'profileCatNature': 'Příroda',
@@ -985,6 +1234,20 @@ class AppStrings {
       'pointsOne': 'bod',
       'pointsFew': 'body',
       'pointsMany': 'bodů',
+      'buyChallenge': 'Koupit výzvu',
+      'paymentTrust': 'Platba přes FAPI · karta/převod',
+      'challengeProgressFormat': '{done}/{total} míst',
+      'verifyDistanceAway': 'Jsi {n} m od místa',
+      'openSettings': 'Otevřít nastavení',
+      'errorOfflineHint': 'Zkontrolujte připojení a zkuste to znovu.',
+      'continueChallenge': 'Pokračovat',
+      'planRoute': 'Naplánovat trasu',
+      'addToRoute': 'Přidat do trasy',
+      'cancelRoute': 'Zrušit',
+      'expandMap': 'Zvětšit mapu',
+      'deadlinePassed': 'Termín vypršel',
+      'featuredPrevious': 'Předchozí',
+      'featuredNext': 'Další',
     },
     'de': {
       'appName': 'VANDERY',
@@ -999,7 +1262,6 @@ class AppStrings {
       'catalogNoMatches': 'Keine Treffer',
       'catalogNoMatchesHint': 'Andere Filter oder Suche versuchen.',
       'catalogFeatured': 'Ausgewählt',
-      'catalogRegions': 'Regionen',
       'catalogLengthShort': 'Kurz',
       'catalogLengthMedium': 'Mittel',
       'catalogLengthLong': 'Lang',
@@ -1030,6 +1292,10 @@ class AppStrings {
       'bike': 'Rad',
       'distance': 'Distanz',
       'elevation': 'Höhenmeter',
+      'elevationGain': 'Anstieg',
+      'elevationLoss': 'Abstieg',
+      'routeModeWalk': 'Gehen',
+      'routeModeBike': 'Rad',
       'time': 'Zeit',
       'difficulty': 'Schwierigkeit',
       'openInOsm': 'In OpenStreetMap öffnen',
@@ -1044,9 +1310,12 @@ class AppStrings {
       'challengeLockedPaid':
           'Kaufen Sie diese Challenge, um Wegpunkte zu sehen.',
       'storyLockedHint': 'Schließen Sie den vorherigen Wegpunkt ab, um den nächsten zu öffnen.',
+      'storyNextStop': 'Nächster Halt',
+      'storyFogLocked': 'Belege zuerst den vorherigen Ort',
       'missingConfig': 'Supabase ist nicht konfiguriert. Setzen Sie SUPABASE_URL und SUPABASE_ANON_KEY per Env.',
       'errorGeneric': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
-      'purchasePending': 'Zahlung steht noch aus.',
+      'purchasePending':
+          'Mit der Zahlung werden Challenge und Belohnung freigeschaltet',
       'retry': 'Erneut versuchen',
       'cameraDenied': 'Für die Prüfung ist die Kameraberechtigung nötig.',
       'noAccount': 'Noch kein Konto? Registrieren',
@@ -1173,12 +1442,41 @@ class AppStrings {
       'deadlineAfterPayment': 'Frist nach Zahlung',
       'rewardTitle': 'Belohnung',
       'rewardUnlocksAfterComplete': 'Wird nach Abschluss freigeschaltet',
-      'rewardDependsOnPaidOption': 'Belohnung je nach gewählter Variante',
+      'rewardLockedLabel':
+          'Die Belohnung wird nach der Zahlung der Challenge freigeschaltet',
+      'rewardUnlockDiploma': 'Diplom freischalten',
       'saveDiploma': 'Diplom speichern',
-      'woodenMedal': 'Holzmedaille',
+      'diplomaBlurred':
+          'Die Vorschau bleibt unscharf, bis das Diplom freigeschaltet ist.',
+      'diplomaNeedName': 'Ergänze den Namen im Profil.',
+      'diplomaGenerating': 'Diplom wird erstellt…',
+      'diplomaDownload': 'Herunterladen',
+      'diplomaShare': 'Teilen',
+      'diplomaShareInstagram': 'Instagram',
+      'diplomaShareFacebook': 'Facebook',
+      'diplomaShareCaption':
+          'Ich habe die Challenge {title} mit VANDERY geschafft',
+      'diplomaShareDownloadedHint': 'Das Bild wurde heruntergeladen. Lade es auf Instagram / Facebook hoch.',
+      'diplomaError': 'Das Diplom konnte nicht erstellt werden.',
+      'diplomaRevoked': 'Dieses Diplom wurde entzogen.',
+      'diplomaIncomplete':
+          'Das Diplom öffnet sich nach Abschluss der Challenge.',
       'diplomaLabel': 'Diplom',
+      'diplomaEditName': 'Namen bearbeiten',
+      'diplomaNameFromProfile': 'Der Name wird aus deinem Anzeigenamen im Profil geladen. Auf dem Diplom kannst du ihn einmal ändern.',
+      'diplomaNameEdited': 'Der Name wurde geändert',
+      'diplomaNameConfirm': 'Diese Änderung lässt sich nicht wiederholen.',
+      'diplomaNameInvalid': 'Gib 1–40 Zeichen ohne Steuerzeichen ein.',
+      'diplomaNameSave': 'Speichern',
+      'diplomaNameCancel': 'Abbrechen',
+      'joinChallenge': 'Nimm die Herausforderung an',
+      'buttonLoading': 'Wird geladen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
+      'payPriceFree': 'Kostenlos',
+      'payPriceLoading': 'Preis wird geladen…',
+      'payPriceUnavailable': 'Preis nicht verfügbar',
+      'payTerms': 'Bedingungen',
       'paymentTitle': 'Zahlung',
       'paymentLoadingForm': 'Zahlungsformular wird geladen…',
       'paymentProcessingTitle': 'Zahlung wird verarbeitet',
@@ -1191,6 +1489,11 @@ class AppStrings {
       'paymentLeaveConfirm': 'Die Zahlung läuft noch. Wirklich verlassen?',
       'paymentLeave': 'Verlassen',
       'paymentStay': 'Bleiben',
+      'paymentClose': 'Schließen',
+      'paymentPopupTitle': 'Zahlung in einem Fenster geöffnet',
+      'paymentPopupBody': 'Diese Zahlungsseite lässt sich nicht einbetten und wurde deshalb in einem zentrierten Fenster geöffnet. Schließe die Zahlung dort ab — die Belohnung wird nach der Bestätigung freigeschaltet.',
+      'paymentPopupBlocked': 'Der Browser hat das Zahlungsfenster blockiert. Erlaube Pop-up-Fenster und versuche es erneut.',
+      'paymentPopupRetry': 'Zahlungsfenster öffnen',
       'visitedPlaces': 'Besuchte Orte',
       'profileCatCity': 'Stadt',
       'profileCatNature': 'Natur',
@@ -1219,6 +1522,26 @@ class AppStrings {
       'pointsOne': 'Punkt',
       'pointsFew': 'Punkte',
       'pointsMany': 'Punkte',
+      'buyChallenge': 'Challenge kaufen',
+      'paymentTrust': 'Zahlung über FAPI · Karte/Überweisung',
+      'challengeProgressFormat': '{done}/{total} Orte',
+      'verifyDistanceAway': 'Du bist {n} m vom Ort entfernt',
+      'openSettings': 'Einstellungen öffnen',
+      'errorOfflineHint': 'Prüfe die Verbindung und versuche es erneut.',
+      'continueChallenge': 'Weiter',
+      'planRoute': 'Route planen',
+      'addToRoute': 'Zur Route hinzufügen',
+      'cancelRoute': 'Abbrechen',
+      'expandMap': 'Karte vergrößern',
+      'deadlinePassed': 'Frist abgelaufen',
+      'featuredPrevious': 'Zurück',
+      'featuredNext': 'Weiter',
     },
   };
+}
+
+int _calendarDaysUntil(DateTime completeBy, DateTime now) {
+  final end = DateTime(completeBy.year, completeBy.month, completeBy.day);
+  final today = DateTime(now.year, now.month, now.day);
+  return end.difference(today).inDays;
 }

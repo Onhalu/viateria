@@ -3,14 +3,20 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/locale_controller.dart';
-import '../../theme/brand_colors.dart';
+import '../../theme/app_theme.dart';
+import '../layout/breakpoints.dart';
+import 'bottom_bar_extension.dart';
+import 'shell_bottom_surface.dart';
 
-class AppShell extends StatelessWidget {
+/// Shared left and right inset for the bottom nav pill and the payment bar.
+const kNavSideInset = 16.0;
+
+class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  static const horizontalInset = 16.0;
+  static const horizontalInset = kNavSideInset;
   static const bottomInset = 12.0;
   static const topInset = 8.0;
   static const barRadius = 28.0;
@@ -24,6 +30,19 @@ class AppShell extends StatelessWidget {
       BrandColors.forest.withValues(alpha: unselectedOpacity);
 
   static Color get selectedPill => BrandColors.creamPill;
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  final _bar = BottomBarExtensionController();
+
+  @override
+  void dispose() {
+    _bar.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,53 +70,153 @@ class AppShell extends StatelessWidget {
       ),
     ];
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            horizontalInset,
-            topInset,
-            horizontalInset,
-            bottomInset,
-          ),
-          child: Material(
-            key: const Key('app-bottom-nav-shell'),
-            elevation: 3,
-            color: BrandColors.shellFill,
-            shadowColor: BrandColors.shellShadow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(barRadius),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: SizedBox(
-              key: const Key('app-bottom-nav'),
-              height: barHeight,
-              child: Row(
+    return BottomBarExtension(
+      controller: _bar,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final rail = Breakpoints.usesNavigationRail(constraints.maxWidth);
+          if (rail) {
+            final compactRail =
+                Breakpoints.ofWidth(constraints.maxWidth) == WindowClass.medium;
+            return Scaffold(
+              body: Row(
                 children: [
-                  for (var index = 0; index < destinations.length; index++)
-                    Expanded(
-                      child: _SageNavDestination(
-                        icon: destinations[index].icon,
-                        selectedIcon: destinations[index].selectedIcon,
-                        label: destinations[index].label,
-                        selected: navigationShell.currentIndex == index,
-                        onTap: () {
-                          navigationShell.goBranch(
-                            index,
-                            initialLocation:
-                                index == navigationShell.currentIndex,
-                          );
-                        },
-                      ),
-                    ),
+                  _NavRail(
+                    destinations: destinations,
+                    selectedIndex: widget.navigationShell.currentIndex,
+                    compact: compactRail,
+                    onSelected: (index) {
+                      widget.navigationShell.goBranch(
+                        index,
+                        initialLocation:
+                            index == widget.navigationShell.currentIndex,
+                      );
+                    },
+                  ),
+                  Expanded(child: widget.navigationShell),
                 ],
               ),
+            );
+          }
+          return Scaffold(
+            extendBody: true,
+            body: widget.navigationShell,
+            bottomNavigationBar: _ShellBottomSlot(
+              controller: _bar,
+              destinations: destinations,
+              navigationShell: widget.navigationShell,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ShellBottomSlot extends StatelessWidget {
+  const _ShellBottomSlot({
+    required this.controller,
+    required this.destinations,
+    required this.navigationShell,
+  });
+
+  final BottomBarExtensionController controller;
+  final List<({IconData icon, IconData selectedIcon, String label})>
+  destinations;
+  final StatefulNavigationShell navigationShell;
+
+  bool _onDetail(String path) =>
+      path.contains('/challenge/') || path == '/last';
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([controller, controller.visible]),
+      builder: (context, _) {
+        final path = GoRouter.of(context).state.uri.path;
+        final match = controller.owner == path && _onDetail(path);
+        final panel = match ? controller.content : null;
+        final shown = match && controller.visible.value && panel != null;
+        return ShellBottomSurface(
+          shown: shown,
+          panel: panel,
+          nav: SizedBox(
+            key: const Key('app-bottom-nav'),
+            height: AppShell.barHeight,
+            child: Row(
+              children: [
+                for (var index = 0; index < destinations.length; index++)
+                  Expanded(
+                    child: _SageNavDestination(
+                      icon: destinations[index].icon,
+                      selectedIcon: destinations[index].selectedIcon,
+                      label: destinations[index].label,
+                      selected: navigationShell.currentIndex == index,
+                      onTap: () {
+                        navigationShell.goBranch(
+                          index,
+                          initialLocation: index == navigationShell.currentIndex,
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
+        );
+      },
+    );
+  }
+}
+
+class _NavRail extends StatelessWidget {
+  const _NavRail({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.compact,
+    required this.onSelected,
+  });
+
+  final List<({IconData icon, IconData selectedIcon, String label})>
+  destinations;
+  final int selectedIndex;
+  final bool compact;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationRail(
+      key: const Key('app-nav-rail'),
+      backgroundColor: BrandColors.shellFill,
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onSelected,
+      labelType: compact
+          ? NavigationRailLabelType.none
+          : NavigationRailLabelType.all,
+      minWidth: AppTheme.minTap + 16,
+      minExtendedWidth: 180,
+      indicatorColor: BrandColors.creamPill,
+      selectedIconTheme: const IconThemeData(color: BrandColors.cream),
+      unselectedIconTheme: IconThemeData(color: AppShell.unselectedForeground),
+      selectedLabelTextStyle: const TextStyle(
+        color: BrandColors.cream,
+        fontSize: AppTheme.labelSize,
+        fontWeight: FontWeight.w600,
       ),
+      unselectedLabelTextStyle: TextStyle(
+        color: AppShell.unselectedForeground,
+        fontSize: AppTheme.labelSize,
+        fontWeight: FontWeight.w500,
+      ),
+      destinations: [
+        for (final destination in destinations)
+          NavigationRailDestination(
+            icon: Icon(destination.icon),
+            selectedIcon: Icon(destination.selectedIcon),
+            label: Text(destination.label),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+          ),
+      ],
     );
   }
 }
@@ -175,7 +294,7 @@ class _SageNavDestinationState extends State<_SageNavDestination> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12,
+                  fontSize: AppTheme.labelSize,
                   fontWeight: widget.selected
                       ? FontWeight.w600
                       : FontWeight.w500,

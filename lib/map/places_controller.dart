@@ -19,6 +19,7 @@ class PlacesMapController extends ChangeNotifier {
   Set<PlaceCategory> _categories = {...PlaceCategory.values};
   var _challengeOnly = false;
   Set<String> _challengePlaceIds = const {};
+  Set<String> _suppressedPlaceIds = const {};
   Set<String> _verifiedPlaceIds = const {};
   String _query = '';
   GeoBounds _viewport = GeoBounds.czechRepublic;
@@ -33,6 +34,10 @@ class PlacesMapController extends ChangeNotifier {
   Set<PlaceCategory> get categories => _categories;
   bool get challengeOnly => _challengeOnly;
   Set<String> get challengePlaceIds => _challengePlaceIds;
+
+  /// Catalog places hidden on a story map so a locked stop's true
+  /// coordinate is not searchable or tappable.
+  Set<String> get suppressedPlaceIds => _suppressedPlaceIds;
   Set<String> get verifiedPlaceIds => _verifiedPlaceIds;
   String get query => _query;
   GeoBounds get viewport => _viewport;
@@ -44,13 +49,20 @@ class PlacesMapController extends ChangeNotifier {
   bool get loading => _loading;
   bool get hasError => _error != null;
 
-  List<Place> get filtered => applyPlaceFilters(
-    _all,
-    categories: _categories,
-    challengeOnly: _challengeOnly,
-    challengePlaceIds: _challengePlaceIds,
-    verifiedPlaceIds: _verifiedPlaceIds,
-  );
+  List<Place> get filtered {
+    final visible = applyPlaceFilters(
+      _all,
+      categories: _categories,
+      challengeOnly: _challengeOnly,
+      challengePlaceIds: _challengePlaceIds,
+      verifiedPlaceIds: _verifiedPlaceIds,
+    );
+    if (_suppressedPlaceIds.isEmpty) return visible;
+    return [
+      for (final place in visible)
+        if (!_suppressedPlaceIds.contains(place.id)) place,
+    ];
+  }
 
   int get visibleCount => countInViewport(filtered, _viewport);
 
@@ -109,6 +121,13 @@ class PlacesMapController extends ChangeNotifier {
   void setChallengePlaceIds(Set<String> ids) {
     if (setEquals(_challengePlaceIds, ids)) return;
     _challengePlaceIds = Set<String>.from(ids);
+    _dropSelectedIfFilteredOut();
+    notifyListeners();
+  }
+
+  void setSuppressedPlaceIds(Set<String> ids) {
+    if (setEquals(_suppressedPlaceIds, ids)) return;
+    _suppressedPlaceIds = Set<String>.from(ids);
     _dropSelectedIfFilteredOut();
     notifyListeners();
   }

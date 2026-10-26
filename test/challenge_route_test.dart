@@ -173,7 +173,8 @@ void main() {
     expect(find.textContaining('1.6 km'), findsOneWidget);
     expect(find.textContaining('1.2 km'), findsOneWidget);
     expect(find.textContaining(' m'), findsWidgets);
-    expect(find.text('0 m'), findsNothing);
+    // The memory profile only climbs, so each mode's descent is a real 0 m.
+    expect(find.text('0 m'), findsNWidgets(2));
     expect(find.text(strings.routeElevationFailed), findsNothing);
     expect(find.text('Ridge'), findsWidgets);
   });
@@ -368,7 +369,7 @@ void main() {
 
       final map = find.byType(ChallengeMap);
       expect(map, findsOneWidget);
-      expect(tester.getSize(map).height, 280);
+      expect(tester.getSize(map).height, 480);
       expect(
         find.descendant(
           of: map,
@@ -465,7 +466,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(tester.getSize(map).height, 280);
+      expect(tester.getSize(map).height, 480);
     },
   );
 
@@ -504,7 +505,20 @@ void main() {
 
     expect(find.widgetWithText(FilledButton, strings.verify), findsNWidgets(2));
     expect(find.byIcon(Icons.check_circle), findsNothing);
-    expect(find.byIcon(Icons.lock_outline), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('waypoint-tile-ow-1')),
+        matching: find.byIcon(Icons.lock_outline),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('waypoint-tile-ow-2')),
+        matching: find.byIcon(Icons.lock_outline),
+      ),
+      findsNothing,
+    );
 
     final startRect = tester.getRect(
       find.byKey(const Key('waypoint-category-ow-1')),

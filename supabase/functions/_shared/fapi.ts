@@ -34,6 +34,10 @@ export type FapiInvoice = {
   notes?: unknown;
   clients_note?: unknown;
   client_note?: unknown;
+  /** FAPI client id (integer on the wire). */
+  client?: unknown;
+  /** Invoice total in major units of [currency] (199.00 CZK → 199). */
+  total?: unknown;
   currency?: unknown;
   custom_fields?: FapiCustomField[] | null;
   items?: FapiInvoiceItem[] | null;
@@ -167,15 +171,56 @@ export async function isInvoiceSecurityValid(
   return timingSafeEqual(actual, expectedSecurity);
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  const left = a.toLowerCase();
-  const right = b.toLowerCase();
-  if (left.length !== right.length) return false;
+/** Case-sensitive constant-time compare. A length mismatch returns false. */
+export function timingSafeEqualExact(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   let diff = 0;
-  for (let i = 0; i < left.length; i++) {
-    diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return diff === 0;
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  return timingSafeEqualExact(a.toLowerCase(), b.toLowerCase());
+}
+
+/**
+ * Shared-secret gate for `fapi-webhook`.
+ * Missing secret, missing token, or a mismatch all fail. Never treats an
+ * empty secret as "check skipped".
+ */
+export function isWebhookTokenValid(
+  secret: string | null | undefined,
+  token: string | null | undefined,
+): boolean {
+  if (secret == null || secret.length === 0) return false;
+  if (token == null || token.length === 0) return false;
+  return timingSafeEqualExact(secret, token);
+}
+
+export type PurchaseUnlockPlan = "already_paid" | "mark_paid" | "reject";
+
+/**
+ * Paid unlock only updates an existing pending row.
+ * An already-paid row is an idempotent replay. Anything else (no row,
+ * failed, refunded) must not insert a paid purchase.
+ */
+export function purchaseUnlockPlan(
+  existing: { status?: string | null } | null | undefined,
+): PurchaseUnlockPlan {
+  const status = existing?.status;
+  if (status === "paid") return "already_paid";
+  if (status === "pending") return "mark_paid";
+  return "reject";
+}
+
+/** Catalog readability RPC: only a literal true with no error may proceed. */
+export function callerCanReadChallenge(
+  readable: unknown,
+  rpcError: unknown,
+): boolean {
+  return rpcError == null && readable === true;
 }
 
 const USER_FIELD_NAMES = ["user_id", "userid", "viateria_user_id"];
@@ -266,6 +311,44 @@ function stringish(value: unknown): string | undefined {
   if (value == null) return undefined;
   const text = String(value).trim();
   return text ? text : undefined;
+}
+
+export function fapiInvoiceId(invoice: FapiInvoice): string | null {
+  return stringish(invoice.id) ?? null;
+}
+
+export function fapiClientId(invoice: FapiInvoice): string | null {
+  return stringish(invoice.client) ?? null;
+}
+
+/** Lowercase ISO currency from the invoice. Empty or non-3-letter → null. */
+export function invoiceCurrencyCode(invoice: FapiInvoice): string | null {
+  const raw = stringish(invoice.currency);
+  if (!raw) return null;
+  const code = raw.toLowerCase();
+  if (!/^[a-z]{3}$/.test(code)) return null;
+  return code;
+}
+
+/**
+ * `invoice.total` is major currency units. Purchases store integer cents
+ * (199.00 CZK → 19900), matching `challenges.*_price_cents`.
+ */
+export function invoiceTotalCents(invoice: FapiInvoice): number | null {
+  const major = finiteNumber(invoice.total);
+  if (major == null || major < 0) return null;
+  return Math.round(major * 100);
+}
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 export async function fetchFapiInvoice(
@@ -391,6 +474,94 @@ export function checkoutAmountCents(options: {
     ? options.promoMedalPriceCents
     : options.promoDiplomaPriceCents;
   return promo ?? fallback;
+}
+
+/** Table or function not in this database yet (expand migration not applied). */
+export function isMissingSchemaObject(
+  error: { code?: string; message?: string } | null | undefined,
+): boolean {
+  if (!error) return false;
+  const code = error.code ?? "";
+  if (
+    code === "42P01" ||
+    code === "42883" ||
+    code === "PGRST202" ||
+    code === "PGRST205"
+  ) {
+    return true;
+  }
+  const message = (error.message ?? "").toLowerCase();
+  return message.includes("does not exist") ||
+    message.includes("could not find the function") ||
+    message.includes("could not find the table") ||
+    message.includes("schema cache");
+}
+
+export type SaleFormRow = {
+  locale: string;
+  reward_variant: string;
+  fapi_form_url: string;
+  status?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
+};
+
+export type PriceRow = {
+  diploma_price_cents?: number | null;
+  medal_price_cents?: number | null;
+  currency?: string | null;
+  status?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
+};
+
+function versionIsActive(
+  row: { status?: string; valid_from?: string | null; valid_to?: string | null },
+  now: Date,
+): boolean {
+  if (row.status != null && row.status !== "published") return false;
+  if (row.valid_from && Date.parse(row.valid_from) > now.getTime()) return false;
+  if (row.valid_to && Date.parse(row.valid_to) <= now.getTime()) return false;
+  return true;
+}
+
+/** preferred → cs → en → de, then newer valid_from. */
+export function saleFormLocaleRank(locale: string, preferred: string): number {
+  if (locale === preferred) return 0;
+  if (locale === "cs") return 1;
+  if (locale === "en") return 2;
+  return 3;
+}
+
+export function selectSaleFormUrl(
+  forms: SaleFormRow[],
+  rewardVariant: string,
+  preferredLocale: string,
+  now = new Date(),
+): string | null {
+  const matches = forms.filter((form) =>
+    form.reward_variant === rewardVariant &&
+    versionIsActive(form, now) &&
+    httpUrlOrNull(form.fapi_form_url) != null
+  );
+  matches.sort((a, b) => {
+    const rank = saleFormLocaleRank(a.locale, preferredLocale) -
+      saleFormLocaleRank(b.locale, preferredLocale);
+    if (rank !== 0) return rank;
+    return (b.valid_from ?? "").localeCompare(a.valid_from ?? "");
+  });
+  return httpUrlOrNull(matches[0]?.fapi_form_url);
+}
+
+export function selectActivePrice(
+  rows: PriceRow[],
+  now = new Date(),
+): PriceRow | null {
+  const matches = rows.filter((row) => versionIsActive(row, now));
+  matches.sort((a, b) =>
+    (b.valid_from ?? "").localeCompare(a.valid_from ?? "")
+  );
+  return matches[0] ?? null;
 }
 
 export function webhookTokenFromRequest(req: Request): string | null {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import '../domain/fapi_offer.dart';
 import '../domain/photo_verify.dart';
 import '../models/models.dart';
 import 'repositories.dart';
@@ -97,6 +98,9 @@ class UnconfiguredProgress implements ProgressRepository {
   Future<List<ChallengeProgress>> fetchCompleted() async => const [];
 
   @override
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId) async => null;
+
+  @override
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,
     required String waypointId,
@@ -124,6 +128,11 @@ class UnconfiguredPurchases implements PurchaseRepository {
     RewardVariant? rewardVariant,
   }) {
     throw StateError('Checkout is not configured');
+  }
+
+  @override
+  Future<FapiOffer> fetchOffer(String challengeId, {String? locale}) {
+    throw StateError('fapi-offer is not configured');
   }
 }
 

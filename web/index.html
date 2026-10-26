@@ -31,16 +31,58 @@
 
   <title>VANDERY</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #F3EFE5;
+    }
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      background: #F3EFE5;
+    }
+    #splash img {
+      width: 148px;
+      height: auto;
+    }
+    #splash .track {
+      width: 148px;
+      height: 2px;
+      background: rgba(53, 72, 60, 0.18);
+      overflow: hidden;
+    }
+    #splash .bar {
+      width: 40%;
+      height: 2px;
+      background: #35483C;
+      animation: vandery-splash 1.2s ease-in-out infinite;
+    }
+    @keyframes vandery-splash {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(320%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #splash .bar { animation: none; width: 100%; }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <div id="splash" role="progressbar" aria-label="VANDERY">
+    <img src="brand/vandery-lockup.png" alt="VANDERY" width="148">
+    <div class="track" aria-hidden="true"><div class="bar"></div></div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var splash = document.getElementById('splash');
+      if (splash) splash.remove();
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

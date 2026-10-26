@@ -1,6 +1,6 @@
 # Viateria
 
-Gamified tourist challenges (SPEC v1). Hikers and cyclists pick a published challenge, follow OSM-mapped waypoints, verify each stop with a **live camera photo**, and earn a 9:16 diploma.
+Gamified tourist challenges (SPEC v1). Hikers and cyclists pick a published challenge, follow OSM-mapped waypoints, verify each stop with a **live camera photo**, and earn a square diploma.
 
 Catalog content is **not** hardcoded in the app. Challenges, waypoints, and promo stripes are authored in **Supabase** (`draft` | `published` | `archived`). The client only renders `published` rows.
 
@@ -11,7 +11,7 @@ Catalog content is **not** hardcoded in the app. Challenges, waypoints, and prom
 - **VerifyWaypoint**: GPS within 120 m, otherwise a **live camera photo**
 - **RoutePlanner**: hike / bike, km, elevation, time, difficulty, OpenStreetMap link
 - Promo widget on the catalog welcome, between Featured and Regions. DB-driven stripes with audience targeting. Exclusive `is_promo` challenges stay out of the ordinary catalog.
-- Diploma **9:16** with confetti and medals on complete
+- Diploma **1080×1080 PNG** rendered by the `diploma` Edge Function (cs copy). Confetti still plays on a successful verify.
 - Custom i18n: **cs / en / de**
 - Secrets via environment — never committed
 - **Mapa tab**: MapLibre OSM basemap, památky by type, search/filters/list/locate
@@ -47,6 +47,9 @@ The compile-time names are the same as local `.env` / `String.fromEnvironment` i
 | `MAP_STYLE_URL` | No (falls back to OpenFreeMap Liberty) | `MapStyleConfig.styleUrlFromEnv` |
 | `STRIPE_PUBLISHABLE_KEY` | No (unused by pay CTAs) | `AppConfig.fromEnvironment` |
 | `USE_ASSET_PLACE_CATALOG` | No (default reads `public.places`) | `AppConfig.fromEnvironment` |
+| `FACEBOOK_APP_ID` | No (empty falls back to the system share sheet) | `diplomaFacebookAppId` |
+
+`FACEBOOK_APP_ID` is the Meta app id used as `source_application` for Instagram Stories and Facebook Stories. Leave it empty until Ondřej supplies the value. Without it, both story buttons share through the system sheet. Desktop web still downloads the PNG and opens the network.
 
 ### 1. GitHub Actions secrets
 
@@ -105,7 +108,7 @@ Code: `lib/map/map_style_config.dart`. Map places load from Supabase `public.pla
 
 Apply `supabase/migrations/0001_init.sql` (CLI: `supabase db push` or the SQL editor).
 
-Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `promo_segments`, `promo_segment_members`, `promo_assignments`, `purchases`, `places`.
+Tables: `profiles`, `challenges`, `challenge_i18n`, `waypoints`, `waypoint_i18n`, `challenge_story_steps`, `challenge_story_step_i18n`, `challenge_progress`, `waypoint_progress`, `promo_stripes`, `promo_stripe_i18n`, `promo_segments`, `promo_segment_members`, `promo_assignments`, `purchases`, `places`.
 
 ### Promo widget (SPEC-promo-widget)
 
@@ -142,11 +145,15 @@ Author content in the dashboard. Only `status = published` is visible. Publish t
 
 Edge functions:
 
-- `start-fapi-checkout` — authenticated; upserts a pending purchase and returns the FAPI form URL for the chosen reward variant
-- `fapi-webhook` — marks `purchases.status = paid` on a verified FAPI paid-invoice notification
+- `fapi-offer` — authenticated; reads the public FAPI form resource for both reward variants and returns price cents plus terms. Not deployed until `supabase functions deploy fapi-offer`. The app never reads `challenge_prices` for the pay buttons.
+- `start-fapi-checkout` — authenticated; calls `challenge_readable` (same promo gate as the catalog) before upserting a pending purchase and returning the FAPI form URL. Free challenges are accepted. Redeploy so a zero-price form can start checkout.
+- `fapi-webhook` — requires `FAPI_WEBHOOK_SECURITY`; marks an existing pending `purchases` row `paid` on a verified FAPI paid-invoice notification
+- `send-email` — Auth Send Email hook; requires `SEND_EMAIL_HOOK_SECRET` and a valid webhook signature before it sends
 - `create-checkout-session` / `stripe-webhook` — leftover Stripe path; not used by the Flutter pay CTAs
 
-Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, optional `FAPI_WEBHOOK_SECURITY` and `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, required `FAPI_WEBHOOK_SECURITY`, required `SEND_EMAIL_HOOK_SECRET`, and optional `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+
+`supabase/migrations/0018_verify_waypoint_challenge_readable.sql` makes `verify_waypoint` use `private.challenge_readable` and adds the public wrapper checkout calls. It is 0018 so it sorts after the story migrations `0016` / `0017`. Apply it yourself before deploying `start-fapi-checkout`. This change does not run it.
 
 Storage bucket: `waypoint-photos` (`{user_id}/{challenge_id}/{waypoint_id}/{uuid}.jpg`).
 
@@ -175,12 +182,18 @@ Dashboard checklist (providers, redirect URLs, Google web client, Apple Services
 
 ### FAPI
 
-1. Create two sales forms in FAPI (digital diploma, medal + diploma). Do not invent URLs in the repo — paste each public form-page URL into `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` when ready. A null/empty URL disables that pay CTA.
+1. Create sales forms in FAPI (digital diploma, medal + diploma) per locale. Do not invent URLs in the repo. After migrations 0023+, the checkout source of truth is `challenge_sale_forms` (locale → cs → en → de). `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` stay as the legacy fallback until a later contract migration. A null/empty URL disables that pay CTA.
 2. Create custom fields named `user_id`, `challenge_id`, `reward_variant` and add them to both forms (see `supabase/functions/fapi-webhook/README.md`).
-3. Deploy `start-fapi-checkout` and `fapi-webhook`.
-4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`.
+3. Deploy `fapi-offer`, `start-fapi-checkout`, and `fapi-webhook`. `fapi-offer` is the price and terms source for every challenge. `sync-fapi-prices` does not exist.
+4. Point the FAPI paid notification at `/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECURITY>`. The secret is required; an empty value rejects the notification.
 
-Prices under the CTAs still come from `diploma_price_cents` / `medal_price_cents` (`price_cents` is the catalog-card fallback). An active **discount** promo stripe for that challenge overrides the charged amount with `promo_diploma_price_cents` / `promo_medal_price_cents` when the column is set. Exclusive stripes do not change the price.
+Prices under the CTAs come from `fapi-offer` (the public FAPI form resource for the active sale-form URL). The challenge page does not render FAPI terms; the checkout form collects consent. A FAPI price of 0 is shown as free. A variant with no sale form stays disabled and omits the price line. While that call is in flight the buttons stay visible with a loading price; if the function is missing or the form cannot be read, the buttons show a fallback and do not use `challenge_prices` or `diploma_price_cents`. The pending purchase row prefers that same form price and falls back to the CMS cache only when the form cannot be read; `fapi-webhook` replaces the amount from the paid invoice. An active **discount** promo stripe still overrides that CMS placeholder with `promo_diploma_price_cents` / `promo_medal_price_cents` when the form price was not read. Exclusive stripes do not change the price. The catalog reads `challenge_catalog_v` when the view is present and falls back to `challenges` + `challenge_i18n` until then. Signed-in copy uses `profiles.locale` (fallback cs → en → de).
+
+### Challenge architecture migrations (not applied on prod)
+
+Draft only. Apply order on prod, after an explicit OK, is **0018 → 0021 → 0022 → 0023 → 0024 → 0025 → 0026**. `0018_verify_waypoint_challenge_readable.sql` is already in `main` and may not be applied on prod yet. W0 (`0020` / history `20261005125735`) is already on prod. W4 (`0027`, dropping legacy columns) is not in this change. Do not `db push` these files to production from a pull request.
+
+`20261006190006_diploma_generation.sql` is the DBA file synced on 2026-10-07 (no `set_diploma_name` / `name_edits`, PNG paths, buckets `diplomas` and `diploma-assets`). It is not applied on prod. The `diploma` Edge Function (`POST`, user JWT) checks entitlement, caches by `render_hash`, and returns a one-hour signed URL. Without entitlement it responds `402 not_entitled` and does not write the file. The app shows a blurred preview until then. Temporary backgrounds, the VANDERY mark, and Playfair live under `supabase/functions/diploma/assets/` (see `SEED.md`). The Flutter client never receives `service_role`.
 
 ### Stripe (unused by CTAs)
 
@@ -197,10 +210,20 @@ flutter test
 
 | Mode | After access |
 | --- | --- |
-| **open** | Every waypoint is available |
+| **open** | Every waypoint is available. Story steps are ignored. |
 | **story** | Waypoint *n+1* unlocks only after waypoint *n* is verified |
 
-Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enforces photo path, access, and story order on the server.
+Paid challenges require `purchases.status = paid`. The `verify_waypoint` RPC enforces photo path, access, story order, and the same promo readability rule as the catalog (`private.challenge_readable`). It does not check GPS or that a storage object exists.
+
+### Story mode (SPEC-story-mode)
+
+`supabase/migrations/0016_challenge_story_steps.sql` adds `challenge_story_steps` and `challenge_story_step_i18n` (`opening` | `before_waypoint` | `closing`). A `before_waypoint` row points at the waypoint it introduces. `0017_verify_waypoint_story_enrich.sql` returns `next_story_step_id`, `closing_story_step_id`, and `unlocked_waypoint_id` without changing the n+1 gate or the open-mode path. It keeps the exclusive-promo check from `0015`. `0018` then replaces that function with `private.challenge_readable` (published, and a promo audience match when `is_promo`) and still returns the three story ids.
+
+The stop list is one vertical sequence. The opening chapter is always first and stays visible before payment (its card starts expanded, and a YouTube URL on any chapter plays in the card above the body). Once the reader has access, each unlocked `before_waypoint` chapter sits immediately before the stop it introduces. The closing chapter is always last, including before the last verify and before payment. A step with no YouTube URL, image, or body is skipped. The paywall gates the places after the intro: unverified stops stay locked (“Další zastávka” / “Next stop” / “Nächster Halt”) until the purchase is paid and the previous stop is verified. A verified stop keeps its real name, category icon, and map coordinate even while the purchase is still pending. `StoryChapterCard` is an inline cream card (beige border, Onest forest title). `shellFill` stays off the card. After a successful verify the list scrolls to the new chapter and expands it once. Reduce-motion scrolls without expanding. Completing a story challenge returns to that list (the diploma stays on the page). Open mode still opens the diploma.
+
+On the map, unlocked and finished stops use the category icon on the real place coordinate. Locked stops are a sage `?` in a fog cluster at least 2 km from every true coordinate — not the real lat/lng and not a ±200 m jitter. Tapping `?` says “Nejdřív dolož předchozí místo” and does not pan. The route planner offers only unlocked stops.
+
+**story-mock** (slug, free, published, three waypoints) is the prod fixture. Open it while signed in to walk opening → verify → next chapter → closing. Apply `0016` and `0017` yourself if a database was created from this repo; prod already has them.
 
 ## Project layout
 

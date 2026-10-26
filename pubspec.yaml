@@ -22,6 +22,7 @@ dependencies:
   latlong2: ^0.9.1
   provider: ^6.1.5
   shared_preferences: ^2.5.3
+  share_plus: ^12.0.1
   supabase_flutter: ^2.9.0
   url_launcher: ^6.3.2
   uuid: ^4.5.1
@@ -43,7 +44,9 @@ flutter:
     - assets/map/icons/historical@2x.png
     - assets/brand/
     - assets/flags/
+    - assets/challenges/
+    - assets/licenses/OFL.txt
   fonts:
-    - family: Playfair Display
+    - family: Onest
       fonts:
-        - asset: assets/fonts/PlayfairDisplay-Variable.ttf
+        - asset: "assets/fonts/Onest[wght].ttf"

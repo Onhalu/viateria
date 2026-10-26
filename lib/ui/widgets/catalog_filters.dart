@@ -79,10 +79,10 @@ class CatalogFilterChipRow extends StatelessWidget {
   final AppStrings strings;
   final ValueChanged<CatalogFilter> onChanged;
 
-  /// Compact gap between the primary chip row and length/difficulty.
-  static const rowGap = 6.0;
+  /// Gap between the access/difficulty row and the country flags.
+  static const rowGap = 8.0;
 
-  /// Two 28px chip rows plus [rowGap]. Used by welcome-panel height tests.
+  /// Two chip rows plus [rowGap]. Used by welcome-panel height tests.
   static const areaHeight = CatalogFilterChip.height * 2 + rowGap;
 
   @override
@@ -92,156 +92,125 @@ class CatalogFilterChipRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: CatalogFilterChip.height,
-          child: SingleChildScrollView(
-            key: const Key('catalog-filter-primary-chips'),
-            scrollDirection: Axis.horizontal,
-            primary: false,
-            child: Row(
-              children: [
-                CatalogFilterChip(
-                  key: const Key('catalog-filter-price-free'),
-                  selected: filter.pricingTypes.contains(PricingType.free),
-                  label: strings.free,
-                  onShell: true,
-                  onTap: () => onChanged(
-                    filter.copyWith(
-                      pricingTypes: _toggle(
-                        filter.pricingTypes,
-                        PricingType.free,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: CatalogFilterChip.gap),
-                CatalogFilterChip(
-                  key: const Key('catalog-filter-price-paid'),
-                  selected: filter.pricingTypes.contains(PricingType.paid),
-                  label: strings.paid,
-                  onShell: true,
-                  onTap: () => onChanged(
-                    filter.copyWith(
-                      pricingTypes: _toggle(
-                        filter.pricingTypes,
-                        PricingType.paid,
-                      ),
-                    ),
-                  ),
-                ),
-                const _ChipGroupGap(),
-                CatalogFilterChip(
-                  key: const Key('catalog-filter-mode-open'),
-                  selected: filter.accessModes.contains(AccessMode.open),
-                  label: strings.catalogFilterOpen,
-                  onShell: true,
-                  onTap: () => onChanged(
-                    filter.copyWith(
-                      accessModes: _toggle(filter.accessModes, AccessMode.open),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: CatalogFilterChip.gap),
-                CatalogFilterChip(
-                  key: const Key('catalog-filter-mode-story'),
-                  selected: filter.accessModes.contains(AccessMode.story),
-                  label: strings.catalogFilterStory,
-                  onShell: true,
-                  onTap: () => onChanged(
-                    filter.copyWith(
-                      accessModes: _toggle(
-                        filter.accessModes,
-                        AccessMode.story,
-                      ),
-                    ),
-                  ),
-                ),
-                const _ChipGroupGap(),
-                for (var i = 0; i < catalogCountryCodes.length; i++) ...[
-                  if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
-                  CatalogFilterChip(
-                    key: Key(
-                      'catalog-filter-region-${catalogCountryCodes[i]}',
-                    ),
-                    selected: filter.countryCodes.contains(
-                      catalogCountryCodes[i],
-                    ),
-                    semanticLabel: catalogCountryCodes[i],
-                    flagCode: catalogCountryCodes[i],
-                    onShell: true,
-                    onTap: () => onChanged(
-                      filter.copyWith(
-                        countryCodes: _toggle(
-                          filter.countryCodes,
-                          catalogCountryCodes[i],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                if (filter.isActive) ...[
-                  const SizedBox(width: 12),
-                  Center(
-                    child: TextButton(
-                      key: const Key('catalog-clear-filters'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: BrandColors.cream,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: const Size(0, CatalogFilterChip.height),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      onPressed: () {
-                        onChanged(filter.cleared());
-                      },
-                      child: Text(
-                        strings.catalogClearFilters,
-                        style: const TextStyle(
-                          color: BrandColors.cream,
-                          fontSize: CatalogFilterChip.fontSize,
-                          decoration: TextDecoration.underline,
-                          decorationColor: BrandColors.cream,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+        _EqualOrScrollChips(
+          filter: filter,
+          strings: strings,
+          onChanged: onChanged,
         ),
         const SizedBox(height: rowGap),
-        SizedBox(
-          height: CatalogFilterChip.height,
-          child: SingleChildScrollView(
-            key: const Key('catalog-length-difficulty-chips'),
-            scrollDirection: Axis.horizontal,
-            primary: false,
-            child: Row(
-              children: [
-                CatalogLengthChipRow(
-                  filter: filter,
-                  strings: strings,
-                  onChanged: onChanged,
+        _FilterScrollRow(
+          rowKey: const Key('catalog-filter-country-chips'),
+          children: [
+            for (var i = 0; i < catalogCountryCodes.length; i++) ...[
+              if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+              CatalogFilterChip(
+                key: Key('catalog-filter-region-${catalogCountryCodes[i]}'),
+                selected: filter.countryCodes.contains(catalogCountryCodes[i]),
+                semanticLabel: catalogCountryCodes[i],
+                flagCode: catalogCountryCodes[i],
+                onShell: true,
+                onTap: () => onChanged(
+                  filter.copyWith(
+                    countryCodes: _toggle(
+                      filter.countryCodes,
+                      catalogCountryCodes[i],
+                    ),
+                  ),
                 ),
-                const _ChipGroupGap(),
-                CatalogDifficultyChipRow(
-                  filter: filter,
-                  strings: strings,
-                  onChanged: onChanged,
-                ),
-              ],
-            ),
-          ),
+              ),
+            ],
+          ],
         ),
       ],
     );
   }
 }
 
-class CatalogLengthChipRow extends StatelessWidget {
-  const CatalogLengthChipRow({
+/// Country flags under the promo. Same [CatalogFilter.countryCodes] as the
+/// header chips, so either row selects the country for the challenge list.
+class CatalogRegionsSection extends StatelessWidget {
+  const CatalogRegionsSection({
     super.key,
+    required this.filter,
+    required this.onChanged,
+  });
+
+  final CatalogFilter filter;
+  final ValueChanged<CatalogFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      key: const Key('catalog-regions'),
+      height: CatalogFilterChip.height,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        children: [
+          for (var i = 0; i < catalogCountryCodes.length; i++) ...[
+            if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+            CatalogFilterChip(
+              key: Key('catalog-regions-${catalogCountryCodes[i]}'),
+              selected: filter.countryCodes.contains(catalogCountryCodes[i]),
+              semanticLabel: catalogCountryCodes[i],
+              flagCode: catalogCountryCodes[i],
+              onTap: () => onChanged(
+                filter.copyWith(
+                  countryCodes: _toggle(
+                    filter.countryCodes,
+                    catalogCountryCodes[i],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipGroupGap extends StatelessWidget {
+  const _ChipGroupGap();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 16,
+      height: CatalogFilterChip.height,
+      child: Center(
+        child: SizedBox(
+          width: 1,
+          height: 12,
+          child: ColoredBox(color: BrandColors.cream.withValues(alpha: 0.4)),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterScrollRow extends StatelessWidget {
+  const _FilterScrollRow({required this.rowKey, required this.children});
+
+  final Key rowKey;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: CatalogFilterChip.height,
+      child: SingleChildScrollView(
+        key: rowKey,
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        child: Row(children: children),
+      ),
+    );
+  }
+}
+
+class _EqualOrScrollChips extends StatelessWidget {
+  const _EqualOrScrollChips({
     required this.filter,
     required this.strings,
     required this.onChanged,
@@ -253,30 +222,121 @@ class CatalogLengthChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      key: const Key('catalog-length-chips'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < CatalogLengthBand.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
-          CatalogFilterChip(
-            key: Key(
-              'catalog-filter-length-${CatalogLengthBand.values[i].name}',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = CatalogFilterChip.gap;
+        const groupGap = 16.0;
+        final clearSlot = filter.isActive ? 60.0 : 0.0;
+        final width = constraints.maxWidth;
+        final available = width - groupGap - clearSlot - gap * 3;
+        final each = available / 5;
+        final scroll = each < CatalogFilterChip.minOptionWidth;
+        final access = _accessChips(expand: !scroll);
+        final difficulty = CatalogDifficultyChipRow(
+          filter: filter,
+          strings: strings,
+          onChanged: onChanged,
+          expand: !scroll,
+        );
+        final clear = filter.isActive ? _clearButton() : null;
+        if (scroll) {
+          return SizedBox(
+            key: const Key('catalog-filter-access-chips'),
+            height: CatalogFilterChip.height,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              primary: false,
+              children: [
+                ...access,
+                const _ChipGroupGap(),
+                difficulty,
+                if (clear != null) ...[const SizedBox(width: 12), clear],
+              ],
             ),
-            selected: filter.lengthBands.contains(CatalogLengthBand.values[i]),
-            label: _lengthLabel(strings, CatalogLengthBand.values[i]),
-            onShell: true,
-            onTap: () => onChanged(
-              filter.copyWith(
-                lengthBands: _toggle(
-                  filter.lengthBands,
-                  CatalogLengthBand.values[i],
-                ),
-              ),
-            ),
+          );
+        }
+        return SizedBox(
+          key: const Key('catalog-filter-access-chips'),
+          height: CatalogFilterChip.height,
+          child: Row(
+            children: [
+              Expanded(flex: 2, child: Row(children: access)),
+              const _ChipGroupGap(),
+              Expanded(flex: 3, child: difficulty),
+              if (clear != null) ...[const SizedBox(width: 12), clear],
+            ],
           ),
-        ],
-      ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _accessChips({required bool expand}) {
+    Widget chip({
+      required Key key,
+      required bool selected,
+      required String label,
+      required VoidCallback onTap,
+    }) {
+      return CatalogFilterChip(
+        key: key,
+        selected: selected,
+        label: label,
+        onShell: true,
+        expand: expand,
+        onTap: onTap,
+      );
+    }
+
+    final story = chip(
+      key: const Key('catalog-filter-mode-story'),
+      selected: filter.accessModes.contains(AccessMode.story),
+      label: strings.catalogFilterStory,
+      onTap: () => onChanged(
+        filter.copyWith(
+          accessModes: _toggle(filter.accessModes, AccessMode.story),
+        ),
+      ),
+    );
+    final open = chip(
+      key: const Key('catalog-filter-mode-open'),
+      selected: filter.accessModes.contains(AccessMode.open),
+      label: strings.catalogFilterOpen,
+      onTap: () => onChanged(
+        filter.copyWith(
+          accessModes: _toggle(filter.accessModes, AccessMode.open),
+        ),
+      ),
+    );
+    if (expand) {
+      return [
+        Expanded(child: story),
+        const SizedBox(width: CatalogFilterChip.gap),
+        Expanded(child: open),
+      ];
+    }
+    return [story, const SizedBox(width: CatalogFilterChip.gap), open];
+  }
+
+  Widget _clearButton() {
+    return TextButton(
+      key: const Key('catalog-clear-filters'),
+      style: TextButton.styleFrom(
+        foregroundColor: BrandColors.cream,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        minimumSize: const Size(48, CatalogFilterChip.height),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: () => onChanged(filter.cleared()),
+      child: Text(
+        strings.catalogClearFilters,
+        style: const TextStyle(
+          color: BrandColors.cream,
+          fontSize: CatalogFilterChip.fontSize,
+          decoration: TextDecoration.underline,
+          decorationColor: BrandColors.cream,
+        ),
+      ),
     );
   }
 }
@@ -287,20 +347,42 @@ class CatalogDifficultyChipRow extends StatelessWidget {
     required this.filter,
     required this.strings,
     required this.onChanged,
+    this.expand = false,
   });
 
   final CatalogFilter filter;
   final AppStrings strings;
   final ValueChanged<CatalogFilter> onChanged;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      key: const Key('catalog-difficulty-chips'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
-          if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+    final chips = <Widget>[
+      for (var i = 0; i < CatalogDifficulty.values.length; i++) ...[
+        if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
+        if (expand)
+          Expanded(
+            child: CatalogFilterChip(
+              key: Key(
+                'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
+              ),
+              selected: filter.difficulties.contains(
+                CatalogDifficulty.values[i],
+              ),
+              label: _difficultyLabel(strings, CatalogDifficulty.values[i]),
+              onShell: true,
+              expand: true,
+              onTap: () => onChanged(
+                filter.copyWith(
+                  difficulties: _toggle(
+                    filter.difficulties,
+                    CatalogDifficulty.values[i],
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
           CatalogFilterChip(
             key: Key(
               'catalog-filter-difficulty-${CatalogDifficulty.values[i].name}',
@@ -317,77 +399,14 @@ class CatalogDifficultyChipRow extends StatelessWidget {
               ),
             ),
           ),
-        ],
       ],
+    ];
+    return Row(
+      key: const Key('catalog-difficulty-chips'),
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      children: chips,
     );
   }
-}
-
-class CatalogRegionsSection extends StatelessWidget {
-  const CatalogRegionsSection({
-    super.key,
-    required this.filter,
-    required this.strings,
-    required this.onChanged,
-  });
-
-  final CatalogFilter filter;
-  final AppStrings strings;
-  final ValueChanged<CatalogFilter> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const Key('catalog-regions'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          strings.catalogRegions,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: BrandColors.forest,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: CatalogFilterChip.height,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            primary: false,
-            children: [
-              for (var i = 0; i < catalogCountryCodes.length; i++) ...[
-                if (i > 0) const SizedBox(width: CatalogFilterChip.gap),
-                CatalogFilterChip(
-                  key: Key('catalog-regions-${catalogCountryCodes[i]}'),
-                  selected: filter.countryCodes.contains(
-                    catalogCountryCodes[i],
-                  ),
-                  semanticLabel: catalogCountryCodes[i],
-                  flagCode: catalogCountryCodes[i],
-                  onTap: () => onChanged(
-                    filter.copyWith(
-                      countryCodes: _toggle(
-                        filter.countryCodes,
-                        catalogCountryCodes[i],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-String _lengthLabel(AppStrings strings, CatalogLengthBand band) {
-  return switch (band) {
-    CatalogLengthBand.short => strings.catalogLengthShort,
-    CatalogLengthBand.medium => strings.catalogLengthMedium,
-    CatalogLengthBand.long => strings.catalogLengthLong,
-  };
 }
 
 String _difficultyLabel(AppStrings strings, CatalogDifficulty difficulty) {
@@ -407,6 +426,7 @@ class CatalogFilterChip extends StatelessWidget {
     this.flagCode,
     this.semanticLabel,
     this.onShell = false,
+    this.expand = false,
   });
 
   final bool selected;
@@ -414,24 +434,33 @@ class CatalogFilterChip extends StatelessWidget {
   final String? label;
   final String? flagCode;
   final String? semanticLabel;
+  final bool expand;
 
   /// When true, chips sit on [BrandColors.shellFill]: cream @ 22% unselected,
   /// solid cream selected, no border.
   final bool onShell;
 
-  static const height = 28.0;
-  static const gap = 6.0;
+  static const height = 40.0;
+  static const gap = 8.0;
   static const horizontalPadding = 8.0;
-  static const fontSize = 12.0;
-  static const radius = 14.0;
+  static const fontSize = 14.0;
+  static const radius = 20.0;
+  static const minOptionWidth = 72.0;
 
   @override
   Widget build(BuildContext context) {
     final isFlag = flagCode != null;
-    final fill = onShell
-        ? (selected ? BrandColors.cream : BrandColors.creamPill)
-        : (selected && !isFlag ? BrandColors.forest : BrandColors.cream);
-    final border = selected ? BrandColors.forest : BrandColors.beige;
+    final fill = isFlag
+        ? BrandColors.cream
+        : (selected ? BrandColors.forest : BrandColors.cream);
+    final side = isFlag
+        ? BorderSide(
+            color: selected ? BrandColors.forest : BrandColors.beige,
+            width: selected ? 1.5 : 1,
+          )
+        : (selected
+              ? BorderSide.none
+              : const BorderSide(color: BrandColors.beige));
     return Semantics(
       button: true,
       selected: selected,
@@ -440,59 +469,39 @@ class CatalogFilterChip extends StatelessWidget {
         color: fill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
-          side: onShell
-              ? BorderSide.none
-              : BorderSide(color: border, width: selected ? 2.0 : 1.0),
+          side: side,
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: SizedBox(
+            width: expand ? double.infinity : null,
             height: height,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
+              padding: EdgeInsets.symmetric(
+                horizontal: isFlag ? horizontalPadding : 4,
               ),
               child: Center(
                 child: isFlag
                     ? ExcludeSemantics(child: CountryFlag(code: flagCode!))
                     : Text(
                         label!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: fontSize,
                           height: 1.1,
                           fontWeight: FontWeight.w600,
-                          color: onShell
-                              ? (selected
+                          color: selected
+                              ? BrandColors.onPrimary
+                              : (onShell
                                     ? BrandColors.forest
-                                    : BrandColors.cream)
-                              : (selected
-                                    ? BrandColors.onPrimary
-                                    : BrandColors.bark),
+                                    : BrandColors.forest),
                         ),
                       ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChipGroupGap extends StatelessWidget {
-  const _ChipGroupGap();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 16,
-      height: CatalogFilterChip.height,
-      child: Center(
-        child: SizedBox(
-          width: 1,
-          height: 12,
-          child: ColoredBox(color: BrandColors.cream.withValues(alpha: 0.4)),
         ),
       ),
     );

@@ -39,8 +39,9 @@ class CatalogWelcomeHeader extends StatelessWidget {
     8,
   );
 
-  /// Greeting + search + two compact chip rows. Keep the painted panel under
-  /// ~1/3 of a typical phone viewport (800 logical px → 267).
+  /// Greeting + search + access/difficulty row and country flags.
+  /// Keep the painted panel under ~1/3 of a typical phone viewport
+  /// (800 logical px → 267).
   static const typicalPhoneViewportHeight = 800.0;
   static const maxViewportFraction = 1 / 3;
 

@@ -5,8 +5,9 @@ import '../../domain/promo.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import '../../theme/brand_typography.dart';
 
-/// Catalog promo slot between Featured and Regions.
+/// Catalog promo slot between Featured and the country flags.
 ///
 /// One active stripe is a single forest card. Two or more snap in a
 /// horizontal carousel with a 24px peek. None, expired, or out of audience
@@ -90,12 +91,10 @@ class PromoStrip extends StatelessWidget {
           key: Key('promo-title-${promo.id}'),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontFamily: 'Playfair Display',
-            color: BrandColors.cream,
+          style: BrandTypography.display(
             fontSize: 20,
-            fontWeight: FontWeight.w700,
             height: 1.2,
+            color: BrandColors.cream,
           ),
         ),
         if (subtitle.isNotEmpty) ...[
@@ -303,7 +302,9 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: i == _index ? BrandColors.forest : BrandColors.beige,
+                      color: i == _index
+                          ? BrandColors.forest
+                          : BrandColors.beige,
                     ),
                   ),
               ],

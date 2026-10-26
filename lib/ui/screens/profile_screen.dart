@@ -10,8 +10,8 @@ import '../../l10n/locale_controller.dart';
 import '../../map/place.dart';
 import '../../map/place_catalog.dart';
 import '../../models/models.dart';
-import '../../theme/brand_assets.dart';
 import '../../theme/brand_colors.dart';
+import '../layout/breakpoints.dart';
 import '../navigation.dart';
 import 'leaderboard_screen.dart';
 
@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   var _started = false;
   List<Place> _places = const [];
   List<Challenge> _completed = const [];
+  Map<String, DateTime> _completedAt = const {};
   LeaderboardEntry? _score;
 
   @override
@@ -68,6 +69,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         published: published,
         completedProgress: completed,
       );
+      _completedAt = {
+        for (final progress in completed)
+          if (progress.completedAt != null)
+            progress.challengeId: progress.completedAt!,
+      };
     });
   }
 
@@ -87,91 +93,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final initial = identity.isNotEmpty ? identity[0].toUpperCase() : '?';
 
     return SafeArea(
-      bottom: false,
       child: Material(
         color: BrandColors.cream,
-        child: ListView(
-          children: [
-            const SizedBox(height: 24),
-            const Center(child: BrandMark(size: 48)),
-            const SizedBox(height: 16),
-            Center(
-              child: CircleAvatar(
-                radius: 36,
-                child: Text(
-                  initial,
-                  style: Theme.of(context).textTheme.headlineSmall,
+        child: AppContentWidth(
+          maxWidth: Breakpoints.profileMaxWidth,
+          child: ListView(
+            children: [
+              const SizedBox(height: 24),
+              Center(
+                child: CircleAvatar(
+                  key: const Key('profile-avatar'),
+                  radius: 36,
+                  child: Text(
+                    initial,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              identity,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            if (email != null && email.isNotEmpty && email != identity) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 12),
               Text(
-                email,
+                identity,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
-            ],
-            const SizedBox(height: 24),
-            ListenableBuilder(
-              listenable: services.verifiedPlaces,
-              builder: (context, _) {
-                return _ProfileStatsBody(
-                  strings: strings,
-                  locale: localeController.locale,
-                  counts: visitedPlaceCountsByCategory(
-                    places: _places,
-                    verifiedIds: services.verifiedPlaces.ids,
-                  ),
-                  completed: _completed,
-                  score: _score,
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            ListTile(title: Text(strings.language)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'cs', label: Text('CS')),
-                  ButtonSegment(value: 'en', label: Text('EN')),
-                  ButtonSegment(value: 'de', label: Text('DE')),
-                ],
-                selected: {localeController.locale},
-                onSelectionChanged: (value) async {
-                  final next = value.first;
-                  final auth = context.read<AppServices>().auth;
-                  await localeController.setLocale(next);
-                  if (auth.currentUser != null) {
-                    await auth.updateLocale(next);
-                  }
+              if (email != null && email.isNotEmpty && email != identity) ...[
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+              const SizedBox(height: 24),
+              ListenableBuilder(
+                listenable: services.verifiedPlaces,
+                builder: (context, _) {
+                  return _ProfileStatsBody(
+                    strings: strings,
+                    locale: localeController.locale,
+                    counts: visitedPlaceCountsByCategory(
+                      places: _places,
+                      verifiedIds: services.verifiedPlaces.ids,
+                    ),
+                    completed: _completed,
+                    completedAt: _completedAt,
+                    score: _score,
+                  );
                 },
               ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: OutlinedButton(
-                onPressed: () => context.read<AppServices>().auth.signOut(),
-                child: Text(strings.signOut),
+              const SizedBox(height: 8),
+              ListTile(title: Text(strings.language)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'cs', label: Text('CS')),
+                    ButtonSegment(value: 'en', label: Text('EN')),
+                    ButtonSegment(value: 'de', label: Text('DE')),
+                  ],
+                  selected: {localeController.locale},
+                  onSelectionChanged: (value) async {
+                    final next = value.first;
+                    final auth = context.read<AppServices>().auth;
+                    await localeController.setLocale(next);
+                    if (auth.currentUser != null) {
+                      await auth.updateLocale(next);
+                    }
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: Text(
-                AppStrings.supported.join(' · '),
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: OutlinedButton(
+                  onPressed: () => context.read<AppServices>().auth.signOut(),
+                  child: Text(strings.signOut),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Center(
+                child: Text(
+                  AppStrings.supported.join(' · '),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -192,6 +200,7 @@ class _ProfileStatsBody extends StatelessWidget {
     required this.locale,
     required this.counts,
     required this.completed,
+    required this.completedAt,
     required this.score,
   });
 
@@ -199,6 +208,7 @@ class _ProfileStatsBody extends StatelessWidget {
   final String locale;
   final List<CategoryVisitCount> counts;
   final List<Challenge> completed;
+  final Map<String, DateTime> completedAt;
   final LeaderboardEntry? score;
 
   static const _gridGap = 12.0;
@@ -273,6 +283,16 @@ class _ProfileStatsBody extends StatelessWidget {
                           challenge.copyFor(locale).title,
                           style: const TextStyle(color: BrandColors.forest),
                         ),
+                        subtitle: completedAt[challenge.id] == null
+                            ? null
+                            : Text(
+                                strings.completedOnLabel(
+                                  completedAt[challenge.id]!,
+                                ),
+                                key: Key(
+                                  'profile-completed-date-${challenge.id}',
+                                ),
+                              ),
                         trailing: const Icon(
                           Icons.chevron_right,
                           color: BrandColors.forest,

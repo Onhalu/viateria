@@ -28,14 +28,23 @@ class LocalizedText {
   final String? hint;
 }
 
+/// Preferred locale, then Czech, then English, then German.
+///
+/// A blank title counts as missing, matching `private.pick_locale`.
 LocalizedText pickLocale(
   List<LocalizedText> texts,
   String locale, {
-  String fallback = 'en',
+  String fallback = 'cs',
 }) {
+  final order = <String>[];
   for (final candidate in [locale, fallback, 'cs', 'en', 'de']) {
+    if (!order.contains(candidate)) order.add(candidate);
+  }
+  for (final candidate in order) {
     for (final text in texts) {
-      if (text.locale == candidate) return text;
+      if (text.locale == candidate && text.title.trim().isNotEmpty) {
+        return text;
+      }
     }
   }
   if (texts.isEmpty) {
@@ -55,17 +64,17 @@ class Challenge {
     required this.status,
     required this.translations,
     this.coverImageUrl,
+    this.heroFocalY,
     this.region,
     this.countryCode,
     this.difficulty,
     this.stripePriceId,
-    this.stripePriceIdDiploma,
-    this.stripePriceIdMedal,
     this.fapiFormUrlDiploma,
     this.fapiFormUrlMedal,
     this.rewardVariant,
     this.diplomaPriceCents,
     this.medalPriceCents,
+    this.length,
     this.isPromo = false,
   });
 
@@ -88,19 +97,26 @@ class Challenge {
   final List<LocalizedText> translations;
   final String? coverImageUrl;
 
-  /// Free-text place / range label for cards (Pálava, Beskydy, …).
+  /// Optional vertical focal point for the cover crop, in Alignment space
+  /// (−1 top … 1 bottom). Read only when the row already has `hero_focal_y`.
+  /// There is no editor and no migration; a missing value uses −0.2.
+  final double? heroFocalY;
+
+  /// Free-text place label from `challenges.region` (Beskydy, Česko, …).
+  /// Catalog country chips use [countryCode], not this string.
   final String? region;
 
-  /// ISO 3166-1 alpha-2 used by catalog region chips: CZ SK AT DE PL.
+  /// ISO codes from `challenges.country_code` (`CZ` or `CZ,AT`), or one
+  /// code inferred from [region] when that column is empty. Catalog flags
+  /// match when the selected code is in this list.
   final String? countryCode;
 
   /// CMS `easy` / `normal` / `hard`. Null hides the catalog label.
   final CatalogDifficulty? difficulty;
 
-  /// Legacy shared Stripe Price id. Used when a per-SKU id is unset.
+  /// Legacy shared Stripe Price id (`challenges.stripe_price_id`).
+  /// `stripe_price_id_diploma` / `stripe_price_id_medal` are not on prod.
   final String? stripePriceId;
-  final String? stripePriceIdDiploma;
-  final String? stripePriceIdMedal;
 
   /// Public FAPI sales-form page for Digitální diplom. Null / blank disables
   /// that CTA. Prefill query params are added by `start-fapi-checkout`.
@@ -110,6 +126,10 @@ class Challenge {
   /// that CTA.
   final String? fapiFormUrlMedal;
   final RewardVariant? rewardVariant;
+
+  /// CMS `challenges.length` (`short` | `medium` | `long`). Null hides the
+  /// CMS band so cards fall back to hike-time length.
+  final ChallengeLength? length;
 
   /// Exclusive promo challenge. Ordinary catalog queries omit these rows.
   /// Detail still opens when the caller has a matching active promo.
@@ -131,9 +151,10 @@ class Challenge {
     return null;
   }
 
+  /// Both reward variants share [stripePriceId]. Per-SKU Stripe columns
+  /// are not read; they are not on prod.
   String? stripePriceIdFor(RewardVariant variant) => switch (variant) {
-    RewardVariant.diploma => stripePriceIdDiploma ?? stripePriceId,
-    RewardVariant.medalAndDiploma => stripePriceIdMedal ?? stripePriceId,
+    RewardVariant.diploma || RewardVariant.medalAndDiploma => stripePriceId,
   };
 
   /// http(s) FAPI form URL for [variant], or null when unset / not openable.
@@ -191,15 +212,70 @@ class Waypoint {
 }
 
 class ChallengeDetail {
-  const ChallengeDetail({required this.challenge, required this.waypoints});
+  const ChallengeDetail({
+    required this.challenge,
+    required this.waypoints,
+    this.storySteps = const [],
+  });
 
   final Challenge challenge;
   final List<Waypoint> waypoints;
+
+  /// Rows from `challenge_story_steps`. Ignored when [Challenge.accessMode]
+  /// is [AccessMode.open].
+  final List<StoryStep> storySteps;
 
   List<Waypoint> get orderedWaypoints {
     final copy = [...waypoints];
     copy.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return copy;
+  }
+
+  List<StoryStep> get orderedStorySteps {
+    final copy = [...storySteps];
+    copy.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return copy;
+  }
+}
+
+/// One `challenge_story_steps` row plus its `challenge_story_step_i18n` copy.
+class StoryStep {
+  const StoryStep({
+    required this.id,
+    required this.challengeId,
+    required this.sortOrder,
+    required this.kind,
+    required this.translations,
+    this.waypointId,
+    this.imageUrl,
+    this.youtubeUrl,
+  });
+
+  final String id;
+  final String challengeId;
+  final int sortOrder;
+  final StoryStepKind kind;
+
+  /// Set only for [StoryStepKind.beforeWaypoint].
+  final String? waypointId;
+  final String? imageUrl;
+  final String? youtubeUrl;
+  final List<LocalizedText> translations;
+
+  LocalizedText copyFor(String locale) => pickLocale(translations, locale);
+
+  /// YouTube, a cover image, or a non-empty body in any locale.
+  ///
+  /// A title with no media is skipped in the list. The place tile stays.
+  bool get hasChapterMedia {
+    final video = youtubeUrl?.trim();
+    if (video != null && video.isNotEmpty) return true;
+    final image = imageUrl?.trim();
+    if (image != null && image.isNotEmpty) return true;
+    for (final text in translations) {
+      if (text.description.trim().isNotEmpty) return true;
+    }
+    return false;
   }
 }
 
@@ -263,15 +339,158 @@ class ChallengeProgress {
     required this.challengeId,
     required this.status,
     required this.completedWaypointIds,
+    this.startedAt,
     this.completedAt,
+    this.duration,
+    this.nextStoryStepId,
+    this.closingStoryStepId,
+    this.unlockedWaypointId,
   });
 
   final String challengeId;
   final ChallengeRunStatus status;
   final Set<String> completedWaypointIds;
+
+  /// First successful verify (`challenge_participations.started_at`).
+  final DateTime? startedAt;
   final DateTime? completedAt;
 
+  /// `completed_at - started_at` when the participation row stores it.
+  final Duration? duration;
+
+  /// `verify_waypoint` → `next_story_step_id`. Null on a plain progress read.
+  final String? nextStoryStepId;
+
+  /// `verify_waypoint` → `closing_story_step_id` after the last stop.
+  final String? closingStoryStepId;
+
+  /// `verify_waypoint` → `unlocked_waypoint_id` (the next stop, if any).
+  final String? unlockedWaypointId;
+
   bool get isCompleted => status == ChallengeRunStatus.completed;
+
+  /// Chapter to scroll to after this verify. Closing wins when the run is done.
+  String? get revealStoryStepId => closingStoryStepId ?? nextStoryStepId;
+
+  /// Inclusive UTC day count from [startedAt] to [completedAt].
+  ///
+  /// Same calendar day is 1. Falls back to whole days of [duration].
+  int? get inclusiveDayCount {
+    final start = startedAt;
+    final end = completedAt;
+    if (start != null && end != null) {
+      final a = DateTime.utc(
+        start.toUtc().year,
+        start.toUtc().month,
+        start.toUtc().day,
+      );
+      final b = DateTime.utc(
+        end.toUtc().year,
+        end.toUtc().month,
+        end.toUtc().day,
+      );
+      final days = b.difference(a).inDays + 1;
+      if (days >= 1) return days;
+    }
+    final span = duration;
+    if (span != null && span.inDays >= 1) return span.inDays;
+    return null;
+  }
+}
+
+/// Issued `challenge_diplomas` row (`user_id` set). Templates stay on the
+/// catalog view (`diploma_headline` / `diploma_body`).
+class IssuedDiploma {
+  const IssuedDiploma({
+    required this.challengeId,
+    this.headline,
+    this.body,
+    this.recipientName,
+    this.recipientNameDisplay,
+    this.challengeTitle,
+    this.completedAt,
+    this.duration,
+    this.lang,
+    this.periodDays,
+  });
+
+  final String challengeId;
+  final String? headline;
+  final String? body;
+  final String? recipientName;
+  final String? recipientNameDisplay;
+  final String? challengeTitle;
+  final DateTime? completedAt;
+  final Duration? duration;
+  final String? lang;
+
+  /// Inclusive calendar days from migration 0026 (`period_days`). Audit only.
+  /// The diploma line is [formatDiplomaCompletedOn], not a day count.
+  final int? periodDays;
+
+  int? get displayDayCount {
+    final days = periodDays;
+    if (days != null && days >= 1) return days;
+    final span = duration;
+    if (span != null && span.inDays >= 1) return span.inDays;
+    return null;
+  }
+}
+
+/// Diploma line (cs v1): `dokončeno dne dd.mm.yyyy` from [completedAt] in Europe/Prague.
+String formatDiplomaCompletedOn(DateTime completedAt) {
+  final wall = pragueWallClock(completedAt);
+  final dd = wall.day.toString().padLeft(2, '0');
+  final mm = wall.month.toString().padLeft(2, '0');
+  return 'dokončeno dne $dd.$mm.${wall.year}';
+}
+
+/// Europe/Prague wall clock (CET/CEST). DST follows the EU rule.
+DateTime pragueWallClock(DateTime instant) {
+  final utc = instant.toUtc();
+  return utc.add(_pragueOffset(utc));
+}
+
+Duration _pragueOffset(DateTime utc) {
+  final start = _euDstStart(utc.year);
+  final end = _euDstEnd(utc.year);
+  final inDst = !utc.isBefore(start) && utc.isBefore(end);
+  return Duration(hours: inDst ? 2 : 1);
+}
+
+DateTime _euDstStart(int year) =>
+    _lastSundayUtc(year, 3).add(const Duration(hours: 1));
+
+DateTime _euDstEnd(int year) =>
+    _lastSundayUtc(year, 10).add(const Duration(hours: 1));
+
+DateTime _lastSundayUtc(int year, int month) {
+  final nextMonth = month == 12
+      ? DateTime.utc(year + 1, 1, 1)
+      : DateTime.utc(year, month + 1, 1);
+  var day = nextMonth.subtract(const Duration(days: 1));
+  while (day.weekday != DateTime.sunday) {
+    day = day.subtract(const Duration(days: 1));
+  }
+  return DateTime.utc(day.year, day.month, day.day);
+}
+
+/// `1 den` / `3 dny` / `5 dní`, with en/de plurals.
+String formatParticipationDays(String locale, int days) {
+  if (days < 1) return '';
+  switch (locale) {
+    case 'cs':
+      if (days % 10 == 1 && days % 100 != 11) return '$days den';
+      final teen = days % 100;
+      if (days % 10 >= 2 && days % 10 <= 4 && (teen < 12 || teen > 14)) {
+        return '$days dny';
+      }
+      return '$days dní';
+    case 'de':
+      return days == 1 ? '1 Tag' : '$days Tage';
+    default:
+      return days == 1 ? '1 day' : '$days days';
+  }
 }
 
 /// One `waypoint_progress` photo row for a challenge waypoint.

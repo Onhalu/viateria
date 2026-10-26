@@ -5,15 +5,22 @@ import {
 } from "https://esm.sh/@supabase/supabase-js@2.47.10";
 import {
   appendFapiPrefill,
+  callerCanReadChallenge,
   checkoutAmountCents,
   fapiPrefillParams,
   httpUrlOrNull,
+  isMissingSchemaObject,
   parseRewardVariant,
   selectActiveDiscountStripe,
+  selectActivePrice,
+  selectSaleFormUrl,
+  type PriceRow,
+  type SaleFormRow,
   type DiscountStripe,
   type PromoAssignment,
   type PromoTargetType,
 } from "../_shared/fapi.ts";
+import { fetchOfferForFormUrl } from "../_shared/fapi_offer.ts";
 
 /**
  * Authenticated start of a FAPI sales-form checkout.
@@ -58,6 +65,17 @@ Deno.serve(async (req) => {
   }
   const rewardVariant = parseRewardVariant(body.reward_variant);
 
+  // Same gate as catalog RLS (`private.challenge_readable` via the public
+  // wrapper). service_role below bypasses RLS, so this check has to happen
+  // on the user JWT first. A missing migration or any error fails closed.
+  const { data: readable, error: readableError } = await supabase.rpc(
+    "challenge_readable",
+    { p_challenge_id: challengeId },
+  );
+  if (!callerCanReadChallenge(readable, readableError)) {
+    return json({ error: "challenge not available" }, 404);
+  }
+
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -75,12 +93,15 @@ Deno.serve(async (req) => {
   if (error || !challenge) {
     return json({ error: "challenge not available" }, 404);
   }
-  if (challenge.pricing_type !== "paid") {
-    return json({ error: "challenge is free" }, 400);
-  }
 
   const isMedal = rewardVariant === "medal_and_diploma";
-  const formUrl = httpUrlOrNull(
+  const locale = await profileLocale(admin, user.id);
+  const formUrl = await activeSaleFormUrl(
+    admin,
+    challengeId,
+    rewardVariant,
+    locale,
+  ) ?? httpUrlOrNull(
     isMedal ? challenge.fapi_form_url_medal : challenge.fapi_form_url_diploma,
   );
   if (!formUrl) {
@@ -94,33 +115,60 @@ Deno.serve(async (req) => {
     .eq("challenge_id", challengeId)
     .maybeSingle();
   if (existing?.status === "paid") {
-    return json({ error: "already paid" }, 409);
+    // One purchase per challenge. medal_and_diploma already includes the
+    // diploma, so a second buy is rejected rather than upgraded.
+    return json({ error: "already_purchased" }, 409);
   }
 
+  const prices = await activeChallengePrice(admin, challengeId);
   const promoPrices = await activeDiscountPrices(
     admin,
     user.id,
     challengeId,
   );
-  const amountCents = checkoutAmountCents({
+  const listedCents = checkoutAmountCents({
     isMedal,
-    diplomaPriceCents: challenge.diploma_price_cents ?? challenge.price_cents,
-    medalPriceCents: challenge.medal_price_cents ?? challenge.price_cents,
+    diplomaPriceCents: prices?.diploma_price_cents ??
+      challenge.diploma_price_cents ?? challenge.price_cents,
+    medalPriceCents: prices?.medal_price_cents ??
+      challenge.medal_price_cents ?? challenge.price_cents,
     promoDiplomaPriceCents: promoPrices?.diploma ?? null,
     promoMedalPriceCents: promoPrices?.medal ?? null,
   });
+  // The form is what the customer pays. Use its price when the public
+  // form resource can be read, including 0. The CMS cache is only a
+  // placeholder for the pending row if that read fails; fapi-webhook
+  // replaces amount_cents from the paid invoice.
+  let amountCents = listedCents;
+  let currency = prices?.currency ?? challenge.currency ?? "eur";
+  try {
+    const offer = await fetchOfferForFormUrl(formUrl);
+    if (offer?.price_cents != null) {
+      amountCents = offer.price_cents;
+      if (offer.currency) currency = offer.currency;
+    }
+  } catch (offerError) {
+    console.error("fapi offer price lookup failed", offerError);
+  }
 
-  await admin.from("purchases").upsert(
+  const { error: purchaseError } = await admin.from("purchases").upsert(
     {
       user_id: user.id,
       challenge_id: challengeId,
       status: "pending",
       amount_cents: amountCents,
-      currency: challenge.currency ?? "eur",
+      currency,
       reward_variant: rewardVariant,
     },
     { onConflict: "user_id,challenge_id" },
   );
+  if (purchaseError) {
+    console.error(
+      "start-fapi-checkout purchase upsert failed",
+      purchaseError.message,
+    );
+    return json({ error: "purchase upsert failed" }, 500);
+  }
 
   const url = appendFapiPrefill(
     formUrl,
@@ -137,6 +185,62 @@ Deno.serve(async (req) => {
 
   return json({ url });
 });
+
+async function profileLocale(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<string> {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("locale")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return "cs";
+  const locale = (data as { locale?: string }).locale;
+  if (locale === "cs" || locale === "en" || locale === "de") return locale;
+  return "cs";
+}
+
+async function activeSaleFormUrl(
+  admin: SupabaseClient,
+  challengeId: string,
+  rewardVariant: string,
+  locale: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("challenge_sale_forms")
+    .select(
+      "locale, reward_variant, fapi_form_url, status, valid_from, valid_to",
+    )
+    .eq("challenge_id", challengeId)
+    .eq("reward_variant", rewardVariant)
+    .eq("status", "published");
+  if (error) {
+    if (isMissingSchemaObject(error)) return null;
+    console.error("sale form lookup failed", error.message);
+    return null;
+  }
+  return selectSaleFormUrl((data ?? []) as SaleFormRow[], rewardVariant, locale);
+}
+
+async function activeChallengePrice(
+  admin: SupabaseClient,
+  challengeId: string,
+): Promise<PriceRow | null> {
+  const { data, error } = await admin
+    .from("challenge_prices")
+    .select(
+      "diploma_price_cents, medal_price_cents, currency, status, valid_from, valid_to",
+    )
+    .eq("challenge_id", challengeId)
+    .eq("status", "published");
+  if (error) {
+    if (isMissingSchemaObject(error)) return null;
+    console.error("challenge price lookup failed", error.message);
+    return null;
+  }
+  return selectActivePrice((data ?? []) as PriceRow[]);
+}
 
 async function activeDiscountPrices(
   admin: SupabaseClient,

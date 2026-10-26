@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/app.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/diploma_client.dart';
 import 'package:viateria/data/repositories.dart';
+import 'package:viateria/data/route_services.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
@@ -28,10 +30,15 @@ AppServices buildServices({
   List<ChallengeDetail>? details,
   MemoryCatalog? catalog,
   MemoryProgress? progress,
+  MemoryPurchases? purchases,
   Profile? user,
   bool configured = true,
   LeaderboardRepository? leaderboard,
   PlaceCatalog? places,
+  DiplomaClient? diplomas,
+  RoutingClient? routing,
+  ElevationLookup? elevation,
+  DeviceLocation? deviceLocation,
 }) {
   final open = sampleOpenChallenge();
   final story = sampleStoryChallenge();
@@ -72,11 +79,15 @@ AppServices buildServices({
           promos: promos ?? [samplePromo()],
         ),
     progress: progress ?? MemoryProgress(details: resolvedDetails),
-    purchases: MemoryPurchases(),
+    purchases: purchases ?? MemoryPurchases(),
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     leaderboard: leaderboard,
     places: places,
+    diplomas: diplomas,
+    routing: routing,
+    elevation: elevation,
+    deviceLocation: deviceLocation,
   );
 }
 
@@ -124,6 +135,17 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+    view.physicalSize = const Size(390, 844);
+    view.devicePixelRatio = 1.0;
+  });
+
+  tearDown(() {
+    final view =
+        TestWidgetsFlutterBinding.instance.platformDispatcher.implicitView!;
+    view.resetPhysicalSize();
+    view.resetDevicePixelRatio();
   });
 
   testWidgets('signed-in shell shows four bottom destinations', (tester) async {
@@ -215,7 +237,7 @@ void main() {
     'bottom nav floats above the home indicator without painting sage edge-to-edge',
     (tester) async {
       const homeIndicator = 34.0;
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(390, 1600);
       tester.view.devicePixelRatio = 1.0;
       tester.view.padding = const FakeViewPadding(bottom: homeIndicator);
       tester.view.viewPadding = const FakeViewPadding(bottom: homeIndicator);
@@ -277,7 +299,7 @@ void main() {
   ) async {
     final strings = AppStrings('en');
     final store = LastOpenedChallengeStore();
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
@@ -296,7 +318,8 @@ void main() {
 
     expect(store.challengeId, 'open-1');
     expect(find.text('Visit any stop'), findsWidgets);
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byKey(const Key('challenge-back')), findsOneWidget);
     expect(find.byKey(const Key('app-bottom-nav')), findsOneWidget);
 
     await tester.pageBack();
@@ -528,7 +551,7 @@ void main() {
     tester,
   ) async {
     final strings = AppStrings('en');
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
@@ -613,7 +636,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('catalog-welcome-header')),
-        matching: find.byKey(const Key('catalog-length-chips')),
+        matching: find.byKey(const Key('catalog-filter-country-chips')),
       ),
       findsOneWidget,
     );
@@ -737,18 +760,26 @@ void main() {
     expect(chipsRect.top, greaterThan(searchRect.bottom));
     expect(chipsRect.bottom, lessThanOrEqualTo(headerRect.bottom + 0.5));
     expect(chipsRect.height, closeTo(CatalogFilterChipRow.areaHeight, 0.5));
-    final lengthRect = tester.getRect(
-      find.byKey(const Key('catalog-length-chips')),
+    final difficultyRect = tester.getRect(
+      find.byKey(const Key('catalog-difficulty-chips')),
     );
-    final regionRect = tester.getRect(
-      find.byKey(const Key('catalog-filter-region-CZ')),
+    final accessRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-mode-open')),
     );
-    expect(lengthRect.top, greaterThan(regionRect.bottom - 0.5));
-    expect(lengthRect.height, closeTo(CatalogFilterChip.height, 0.5));
+    final countryRect = tester.getRect(
+      find.byKey(const Key('catalog-filter-country-chips')),
+    );
+    expect(
+      (difficultyRect.center.dy - accessRect.center.dy).abs(),
+      lessThan(1.5),
+    );
+    expect(countryRect.top, greaterThan(difficultyRect.bottom - 0.5));
+    expect(countryRect.height, closeTo(CatalogFilterChip.height, 0.5));
     expect(
       headerRect.height,
       lessThanOrEqualTo(
-        screenSize.height * CatalogWelcomeHeader.maxViewportFraction,
+        CatalogWelcomeHeader.typicalPhoneViewportHeight *
+            CatalogWelcomeHeader.maxViewportFraction,
       ),
     );
     expect(
@@ -812,7 +843,7 @@ void main() {
     'catalog welcome header stays cream in the status bar and inset below it',
     (tester) async {
       const statusBar = 47.0;
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(390, 1600);
       tester.view.devicePixelRatio = 1.0;
       tester.view.padding = const FakeViewPadding(top: statusBar);
       tester.view.viewPadding = const FakeViewPadding(top: statusBar);
@@ -924,5 +955,24 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('expanded width uses a labeled navigation rail', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(wrapApp(buildServices()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('app-nav-rail')), findsOneWidget);
+    expect(find.byKey(const Key('app-bottom-nav')), findsNothing);
+    final rail = tester.widget<NavigationRail>(
+      find.byKey(const Key('app-nav-rail')),
+    );
+    expect(rail.backgroundColor, BrandColors.shellFill);
+    expect(rail.labelType, NavigationRailLabelType.all);
+    expect(find.text(AppStrings('en').navMap), findsOneWidget);
   });
 }

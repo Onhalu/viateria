@@ -81,6 +81,7 @@ class RouteSummary {
     required this.mode,
     required this.distanceKm,
     required this.elevationGainM,
+    this.elevationLossM,
     required this.estimatedTime,
     required this.difficulty,
     required this.osmUrl,
@@ -89,6 +90,7 @@ class RouteSummary {
   final TravelMode mode;
   final double distanceKm;
   final double? elevationGainM;
+  final double? elevationLossM;
   final Duration estimatedTime;
   final Difficulty difficulty;
   final String osmUrl;
@@ -115,6 +117,7 @@ class RoutePlanner {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     var distanceKm = 0.0;
     var elevationGainM = 0.0;
+    var elevationLossM = 0.0;
     for (var i = 1; i < ordered.length; i++) {
       distanceKm += _haversineKm(
         ordered[i - 1].lat,
@@ -123,13 +126,18 @@ class RoutePlanner {
         ordered[i].lng,
       );
       final delta = ordered[i].elevationM - ordered[i - 1].elevationM;
-      if (delta > 0) elevationGainM += delta;
+      if (delta > 0) {
+        elevationGainM += delta;
+      } else {
+        elevationLossM -= delta;
+      }
     }
 
     return summarize(
       mode: mode,
       distanceKm: distanceKm,
       elevationGainM: elevationGainM,
+      elevationLossM: elevationLossM,
       osmPoints: ordered,
     );
   }
@@ -138,12 +146,14 @@ class RoutePlanner {
     required TravelMode mode,
     required double distanceKm,
     required double? elevationGainM,
+    double? elevationLossM,
     required List<Waypoint> osmPoints,
   }) {
     return RouteSummary(
       mode: mode,
       distanceKm: distanceKm,
       elevationGainM: elevationGainM,
+      elevationLossM: elevationLossM,
       estimatedTime: estimateTime(
         mode: mode,
         distanceKm: distanceKm,
@@ -164,6 +174,15 @@ class RoutePlanner {
       if (delta > 0) gain += delta;
     }
     return gain;
+  }
+
+  double elevationLossAlong(List<double> elevations) {
+    var loss = 0.0;
+    for (var i = 1; i < elevations.length; i++) {
+      final delta = elevations[i] - elevations[i - 1];
+      if (delta < 0) loss -= delta;
+    }
+    return loss;
   }
 
   Difficulty classifyDifficulty({

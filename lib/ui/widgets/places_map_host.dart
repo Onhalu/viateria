@@ -12,7 +12,10 @@ import '../../map/map_icons.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
+import '../../map/poi_source_sync.dart';
+import '../../map/story_fog_icon.dart';
 import '../../models/models.dart';
+import '../../domain/story_fog.dart';
 
 typedef PlaceTapCallback = void Function(Place place);
 typedef ViewportCallback = void Function(GeoBounds bounds);
@@ -26,6 +29,8 @@ class ChallengeMapGeometry {
     this.hikeLine = const [],
     this.bikeLine = const [],
     this.navigating,
+    this.hiddenWaypointIds = const {},
+    this.fogPins = const [],
   });
 
   final List<Waypoint> waypoints;
@@ -35,6 +40,32 @@ class ChallengeMapGeometry {
   final List<ll.LatLng> bikeLine;
   final TravelMode? navigating;
 
+  /// Story stops whose true coordinates must not be drawn or fitted.
+  final Set<String> hiddenWaypointIds;
+
+  /// `?` markers. Empty in open mode.
+  final List<StoryFogPin> fogPins;
+
+  /// Stops that may show a category icon on their real place coordinate.
+  List<Waypoint> get revealedWaypoints => [
+    for (final waypoint in waypoints)
+      if (!hiddenWaypointIds.contains(waypoint.id)) waypoint,
+  ];
+
+  /// Catalog place ids to drop from search and from the basemap pins.
+  Set<String> get suppressedPlaceIds => {
+    for (final waypoint in waypoints)
+      if (hiddenWaypointIds.contains(waypoint.id))
+        if (waypoint.placeId != null) waypoint.placeId!,
+  };
+
+  /// Fit targets: revealed true coordinates and fog pins. Locked GPS is absent.
+  List<ll.LatLng> get overviewLatLngs => [
+    for (final waypoint in revealedWaypoints) waypoint.latLng,
+    for (final pin in fogPins)
+      ll.LatLng(pin.position.latitude, pin.position.longitude),
+  ];
+
   bool sameAs(ChallengeMapGeometry? other) {
     if (identical(this, other)) return true;
     if (other == null) return false;
@@ -43,12 +74,16 @@ class ChallengeMapGeometry {
         start == other.start &&
         hikeLine == other.hikeLine &&
         bikeLine == other.bikeLine &&
-        navigating == other.navigating;
+        navigating == other.navigating &&
+        setEquals(hiddenWaypointIds, other.hiddenWaypointIds) &&
+        sameStoryFog(fogPins, other.fogPins);
   }
 
   /// Stop linked to [place] by `waypoints.place_id`. Proximity is not a match.
+  ///
+  /// Locked story stops are not a match, so a tap cannot pan to their GPS.
   Waypoint? waypointMatching(Place place) {
-    for (final waypoint in waypoints) {
+    for (final waypoint in revealedWaypoints) {
       final placeId = waypoint.placeId;
       if (placeId != null && placeId == place.id) return waypoint;
     }
@@ -71,8 +106,11 @@ class PlacesMapHost extends StatefulWidget {
     this.myLocationEnabled = false,
     this.geometry,
     this.onWaypointTap,
+    this.onFogTap,
     this.selectedPlaceId,
     this.verifiedPlaceIds = const {},
+    this.catalogRoute = const [],
+    this.zoomGesturesEnabled = true,
   });
 
   final List<Place> places;
@@ -86,8 +124,17 @@ class PlacesMapHost extends StatefulWidget {
   final bool myLocationEnabled;
   final ChallengeMapGeometry? geometry;
   final ValueChanged<Waypoint>? onWaypointTap;
+
+  /// Tap on a locked story `?`. The host does not move the camera.
+  final ValueChanged<String>? onFogTap;
   final String? selectedPlaceId;
   final Set<String> verifiedPlaceIds;
+
+  /// Ordered stops for a session route on the main map. Empty hides the line.
+  final List<ll.LatLng> catalogRoute;
+
+  /// Wheel / pinch zoom. Challenge detail on web turns this off.
+  final bool zoomGesturesEnabled;
 
   @override
   State<PlacesMapHost> createState() => _PlacesMapHostState();
@@ -97,27 +144,30 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
   MapLibreMapController? _controller;
   var _layersReady = false;
   var _challengeLayersReady = false;
+  var _fogLayersReady = false;
   Timer? _moveEnd;
   Timer? _styleTimeout;
+  final _poiGate = PoiSourceGate();
 
   @override
   void didUpdateWidget(covariant PlacesMapHost oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.places != widget.places ||
-        oldWidget.selectedPlaceId != widget.selectedPlaceId ||
-        !_sameChallengeMembership(oldWidget.geometry, widget.geometry) ||
-        !setEquals(oldWidget.verifiedPlaceIds, widget.verifiedPlaceIds)) {
+    if (!_samePlaceMarkers(oldWidget)) {
       unawaited(_pushPlaces(widget.places));
     }
     if (widget.geometry != null &&
         !widget.geometry!.sameAs(oldWidget.geometry)) {
       unawaited(_syncChallengeSources());
+      unawaited(_syncFog());
     }
     if (!_challengeLayersReady &&
         widget.geometry != null &&
         _layersReady &&
         _controller != null) {
       unawaited(_ensureChallengeLayers(_controller!));
+    }
+    if (!listEquals(oldWidget.catalogRoute, widget.catalogRoute)) {
+      unawaited(_syncCatalogRoute());
     }
   }
 
@@ -136,6 +186,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       trackCameraPosition: true,
       compassEnabled: false,
       rotateGesturesEnabled: false,
+      zoomGesturesEnabled: widget.zoomGesturesEnabled,
       myLocationEnabled: widget.myLocationEnabled,
       myLocationTrackingMode: MyLocationTrackingMode.none,
       myLocationRenderMode: MyLocationRenderMode.normal,
@@ -173,9 +224,11 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         await _ensureChallengeLayers(controller);
       }
       _layersReady = true;
+      await _syncCatalogRoute();
       await _pushPlaces(widget.places);
       if (widget.geometry != null) {
         await _syncChallengeSources();
+        await _syncFog();
       }
       await _syncViewport(controller);
       widget.onLayersReady?.call(controller);
@@ -224,9 +277,37 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
         iconImage: [Expressions.get, 'icon'],
         iconSize: MapStyleConfig.markerSizeExpression,
         iconColor: MapStyleConfig.markerColorExpression,
+        iconOpacity: MapStyleConfig.symbolOpacityExpression,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
       ),
+    );
+
+    await controller.addSource(
+      MapStyleConfig.catalogRouteSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addLineLayer(
+      MapStyleConfig.catalogRouteSourceId,
+      MapStyleConfig.catalogRouteLayerId,
+      const LineLayerProperties(
+        lineColor: MapStyleConfig.forestHex,
+        lineWidth: 4,
+        lineOpacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round',
+      ),
+    );
+  }
+
+  Future<void> _syncCatalogRoute() async {
+    final controller = _controller;
+    if (controller == null || !_layersReady) return;
+    final line = widget.catalogRoute;
+    await _setSource(
+      controller,
+      MapStyleConfig.catalogRouteSourceId,
+      line.length > 1 ? _lineCollection(line) : _emptyCollection(),
     );
   }
 
@@ -268,16 +349,49 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     );
   }
 
+  bool _samePlaceMarkers(PlacesMapHost oldWidget) {
+    final previous = poiMarkerSignature(
+      places: oldWidget.places,
+      selectedId: oldWidget.selectedPlaceId,
+      challengePlaceIds: _challengeIdsFor(oldWidget),
+      verifiedPlaceIds: oldWidget.verifiedPlaceIds,
+    );
+    final next = poiMarkerSignature(
+      places: widget.places,
+      selectedId: widget.selectedPlaceId,
+      challengePlaceIds: _challengeIdsFor(widget),
+      verifiedPlaceIds: widget.verifiedPlaceIds,
+    );
+    return previous == next;
+  }
+
+  Set<String> _challengeIdsFor(PlacesMapHost host) {
+    final geometry = host.geometry;
+    if (geometry == null) return const {};
+    return placeIdsInChallenge(
+      host.places,
+      placeIds: geometry.revealedWaypoints.map((waypoint) => waypoint.placeId),
+    );
+  }
+
   Future<void> _pushPlaces(List<Place> places) async {
     final controller = _controller;
     if (controller == null || !_layersReady) return;
+    final challengePlaceIds = _challengePlaceIds(places);
+    final signature = poiMarkerSignature(
+      places: places,
+      selectedId: widget.selectedPlaceId,
+      challengePlaceIds: challengePlaceIds,
+      verifiedPlaceIds: widget.verifiedPlaceIds,
+    );
+    if (!_poiGate.shouldReplace(signature)) return;
     await _setSource(
       controller,
       MapStyleConfig.poiSourceId,
       featureCollectionOf(
         places,
         selectedId: widget.selectedPlaceId,
-        challengePlaceIds: _challengePlaceIds(places),
+        challengePlaceIds: challengePlaceIds,
         verifiedPlaceIds: widget.verifiedPlaceIds,
       ),
     );
@@ -288,17 +402,8 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     if (geometry == null) return const {};
     return placeIdsInChallenge(
       places,
-      placeIds: geometry.waypoints.map((waypoint) => waypoint.placeId),
+      placeIds: geometry.revealedWaypoints.map((waypoint) => waypoint.placeId),
     );
-  }
-
-  bool _sameChallengeMembership(
-    ChallengeMapGeometry? a,
-    ChallengeMapGeometry? b,
-  ) {
-    if (identical(a, b)) return true;
-    if (a == null || b == null) return a == b;
-    return a.waypoints == b.waypoints;
   }
 
   Future<void> _syncChallengeSources() async {
@@ -369,9 +474,76 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     }
   }
 
+  Future<void> _syncFog() async {
+    final controller = _controller;
+    final geometry = widget.geometry;
+    if (controller == null || !_layersReady || geometry == null) return;
+    if (geometry.fogPins.isEmpty && !_fogLayersReady) return;
+    if (!_fogLayersReady) {
+      await _installFogLayers(controller);
+      _fogLayersReady = true;
+    }
+    await _setSource(
+      controller,
+      MapStyleConfig.fogSourceId,
+      _fogCollection(geometry.fogPins),
+    );
+  }
+
+  Future<void> _installFogLayers(MapLibreMapController controller) async {
+    final png = await storyQuestionMarkPng();
+    await controller.addImage(MapStyleConfig.fogIconId, png);
+    await controller.addSource(
+      MapStyleConfig.fogSourceId,
+      GeojsonSourceProperties(data: _emptyCollection()),
+    );
+    await controller.addSymbolLayer(
+      MapStyleConfig.fogSourceId,
+      MapStyleConfig.fogLayerId,
+      const SymbolLayerProperties(
+        iconImage: MapStyleConfig.fogIconId,
+        iconSize: 0.36,
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+      ),
+    );
+  }
+
+  Map<String, dynamic> _fogCollection(List<StoryFogPin> pins) {
+    return {
+      'type': 'FeatureCollection',
+      'features': [
+        for (final pin in pins)
+          {
+            'type': 'Feature',
+            'geometry': {
+              'type': 'Point',
+              'coordinates': [pin.position.longitude, pin.position.latitude],
+            },
+            'properties': {'waypointId': pin.waypointId},
+          },
+      ],
+    };
+  }
+
   Future<void> _onTap(math.Point<double> point) async {
     final controller = _controller;
     if (controller == null) return;
+
+    if (_fogLayersReady) {
+      final fogHits = await controller.queryRenderedFeatures(point, [
+        MapStyleConfig.fogLayerId,
+      ], null);
+      if (fogHits.isNotEmpty) {
+        final feature = _asMap(fogHits.first);
+        final props = _asMap(feature['properties']);
+        final waypointId = props['waypointId']?.toString();
+        if (waypointId != null && waypointId.isNotEmpty) {
+          widget.onFogTap?.call(waypointId);
+        }
+        return;
+      }
+    }
 
     final poiHits = await controller.queryRenderedFeatures(point, [
       MapStyleConfig.symbolLayerId,

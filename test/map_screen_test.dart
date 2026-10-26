@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
+import 'package:viateria/data/route_services.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/data/verified_places.dart';
 import 'package:viateria/l10n/app_strings.dart';
@@ -15,6 +16,7 @@ import 'package:viateria/map/place.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
+import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/places_map_screen.dart';
 import 'package:viateria/ui/widgets/map_chrome.dart';
 import 'package:viateria/ui/widgets/places_map_host.dart';
@@ -24,7 +26,12 @@ import 'package:viateria/ui/widgets/places_map_surface.dart';
 import 'helpers/fakes.dart';
 import 'helpers/map_harness.dart';
 
-AppServices _services({VerifiedPlacesStore? verifiedPlaces}) {
+AppServices _services({
+  VerifiedPlacesStore? verifiedPlaces,
+  RoutingClient? routing,
+  ElevationLookup? elevation,
+  DeviceLocation? deviceLocation,
+}) {
   final open = sampleOpenChallenge();
   return AppServices(
     config: const AppConfig(
@@ -41,10 +48,17 @@ AppServices _services({VerifiedPlacesStore? verifiedPlaces}) {
     photos: MemoryPhotos(),
     photoCapture: MemoryCapture(),
     verifiedPlaces: verifiedPlaces,
+    routing: routing,
+    elevation: elevation,
+    deviceLocation: deviceLocation,
   );
 }
 
-Widget _mapApp({PlaceCatalog? catalog, VerifiedPlacesStore? verifiedPlaces}) {
+Widget _mapApp({
+  PlaceCatalog? catalog,
+  VerifiedPlacesStore? verifiedPlaces,
+  AppServices? services,
+}) {
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -76,7 +90,9 @@ Widget _mapApp({PlaceCatalog? catalog, VerifiedPlacesStore? verifiedPlaces}) {
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
       ChangeNotifierProvider(create: (_) => LastOpenedChallengeStore()),
-      Provider.value(value: _services(verifiedPlaces: verifiedPlaces)),
+      Provider.value(
+        value: services ?? _services(verifiedPlaces: verifiedPlaces),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -544,6 +560,238 @@ void main() {
       find.byKey(const Key('map-filter-challenge-only-empty')),
       findsNothing,
     );
+  });
+
+  testWidgets(
+    'a place offers the shared route planner and the map has no plan button',
+    (tester) async {
+      final strings = AppStrings('cs');
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        _mapApp(
+          services: _services(
+            routing: MemoryRoutingClient(),
+            elevation: MemoryElevationLookup(),
+            deviceLocation: MemoryDeviceLocation(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('map-plan-route')), findsNothing);
+      await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('map-search-karlstejn')));
+      await tester.pumpAndSettle();
+      expect(find.text(strings.planRoute), findsOneWidget);
+      expect(find.text(strings.addToRoute), findsNothing);
+      final plan = tester.widget<AppButton>(
+        find.byKey(const Key('map-poi-add-route')),
+      );
+      expect(plan.variant, AppButtonVariant.secondary);
+      expect(plan.size, AppButtonSize.m);
+      expect(plan.icon, Icons.route);
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: find.byKey(const Key('map-poi-add-route')),
+                matching: find.byIcon(Icons.route),
+              ),
+            )
+            .size,
+        18,
+      );
+      final verify = tester.widget<AppButton>(
+        find.byKey(const Key('map-poi-verify')),
+      );
+      expect(verify.variant, AppButtonVariant.primary);
+      final actionRow = find
+          .ancestor(
+            of: find.byKey(const Key('map-poi-verify')),
+            matching: find.byType(Row),
+          )
+          .first;
+      expect(
+        find.descendant(
+          of: actionRow,
+          matching: find.byKey(const Key('map-poi-add-route')),
+        ),
+        findsOneWidget,
+      );
+      final verifyRect = tester.getRect(
+        find.byKey(const Key('map-poi-verify')),
+      );
+      final planRect = tester.getRect(
+        find.byKey(const Key('map-poi-add-route')),
+      );
+      expect(verifyRect.right, lessThan(planRect.left));
+      expect((verifyRect.center.dy - planRect.center.dy).abs(), lessThan(1));
+      expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('map-poi-close'))),
+        const Size(48, 48),
+      );
+      expect(
+        find.descendant(
+          of: actionRow,
+          matching: find.byKey(const Key('map-poi-close')),
+        ),
+        findsNothing,
+      );
+      expect(find.text(strings.closeCta), findsNothing);
+      expect(find.text(strings.cancelRoute), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('map-poi-sheet')),
+          matching: find.byType(AppButton),
+        ),
+        findsNWidgets(2),
+      );
+
+      await tester.tap(find.byKey(const Key('map-poi-add-route')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+      expect(find.byKey(const Key('map-route-panel')), findsOneWidget);
+      expect(find.byKey(const Key('route-start-field')), findsOneWidget);
+      expect(find.byKey(const Key('map-route-destination')), findsOneWidget);
+      expect(find.text('Karlštejn'), findsOneWidget);
+      expect(find.byKey(const Key('route-mode-toggle')), findsOneWidget);
+      expect(find.text(strings.routeModeWalk), findsOneWidget);
+      expect(find.text(strings.routeModeBike), findsOneWidget);
+      expect(find.byKey(const Key('route-hike-stats')), findsOneWidget);
+      expect(find.text(strings.elevationGain), findsOneWidget);
+      expect(find.text(strings.elevationLoss), findsOneWidget);
+      expect(find.text(strings.distance), findsOneWidget);
+
+      await tester.tap(find.text(strings.routeModeBike));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('route-bike-stats')), findsOneWidget);
+      expect(find.byKey(const Key('route-hike-stats')), findsNothing);
+    },
+  );
+
+  testWidgets('the place sheet closes from the X, a drag, and back', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Future<void> openKarl() async {
+      await tester.enterText(find.byKey(const Key('map-search-field')), 'Karl');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('map-search-karlstejn')));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.pumpWidget(_mapApp());
+    await tester.pumpAndSettle();
+    await openKarl();
+    expect(find.byTooltip(AppStrings('cs').closeCta), findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    await tester.pump();
+    expect(find.bySemanticsLabel('Zavřít'), findsOneWidget);
+    semantics.dispose();
+    await tester.tap(find.byKey(const Key('map-poi-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+
+    await openKarl();
+    await tester.drag(
+      find.byKey(const Key('map-poi-sheet-name')),
+      const Offset(0, 160),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+
+    await openKarl();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('map-poi-sheet')), findsNothing);
+    expect(find.byKey(const Key('map-search-field')), findsOneWidget);
+  });
+
+  testWidgets('place sheet labels the close icon in each locale', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      for (final locale in ['cs', 'en', 'de']) {
+        final strings = AppStrings(locale);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.bottomCenter,
+                child: PlaceDetailSheet(
+                  place: samplePlaces().first,
+                  strings: strings,
+                  userLocation: null,
+                  onClose: () {},
+                  onVerify: () {},
+                  onAddToRoute: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(find.byIcon(Icons.close), findsOneWidget);
+        expect(find.byTooltip(strings.closeCta), findsOneWidget);
+        expect(find.bySemanticsLabel(strings.closeCta), findsOneWidget);
+        final icon = tester.widget<Icon>(find.byIcon(Icons.close));
+        expect(icon.color, const Color(0xFF35483C));
+        expect(icon.size, greaterThanOrEqualTo(24));
+        expect(
+          tester.getSize(find.byKey(const Key('map-poi-close'))),
+          const Size(48, 48),
+        );
+        final sheet = tester.getRect(find.byKey(const Key('map-poi-sheet')));
+        final close = tester.getRect(find.byKey(const Key('map-poi-close')));
+        expect(sheet.right - close.right, lessThanOrEqualTo(1));
+        expect(close.top - sheet.top, lessThanOrEqualTo(1));
+        expect(find.text(strings.cancelRoute), findsNothing);
+        expect(find.text(strings.closeCta), findsNothing);
+        expect(find.byType(AppButton), findsNWidgets(2));
+        expect(
+          tester
+              .widget<AppButton>(find.byKey(const Key('map-poi-verify')))
+              .variant,
+          AppButtonVariant.primary,
+        );
+        expect(
+          tester
+              .widget<AppButton>(find.byKey(const Key('map-poi-add-route')))
+              .variant,
+          AppButtonVariant.secondary,
+        );
+      }
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PlaceDetailSheet(
+              place: samplePlaces().first,
+              strings: AppStrings('en'),
+              userLocation: null,
+              onClose: () {},
+              onVerify: () {},
+              onAddToRoute: null,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(AppButton), findsOneWidget);
+      expect(find.byKey(const Key('map-poi-add-route')), findsNothing);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+    } finally {
+      semantics.dispose();
+    }
   });
 }
 

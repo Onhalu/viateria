@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../domain/fapi_offer.dart';
 import '../domain/leaderboard_score.dart';
 import '../domain/photo_verify.dart';
 import '../models/models.dart';
@@ -127,9 +128,13 @@ abstract class ProgressRepository {
 
   /// Completed runs for the signed-in user. Empty when signed out.
   ///
-  /// Reads `challenge_progress` with `user_id = auth.uid()` so existing
-  /// RLS (`own progress readable`) still applies — no extra policy.
+  /// Prefers `challenge_participations` (own-row RLS). Falls back to
+  /// `challenge_progress` when that table is absent or still empty.
   Future<List<ChallengeProgress>> fetchCompleted();
+
+  /// Issued diploma for the signed-in user, or null when the table or row
+  /// is absent. Templates (`user_id` null) are not returned.
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId);
 
   Future<ChallengeProgress> verifyWaypoint({
     required String challengeId,
@@ -151,6 +156,11 @@ abstract class PurchaseRepository {
     RewardVariant? rewardVariant,
   });
   Future<Purchase?> refreshPurchase(String challengeId);
+
+  /// Live diploma and medal prices plus terms from the `fapi-offer`
+  /// Edge function. Throws when that function is missing or fails so the
+  /// pay buttons can show a fallback instead of a CMS price.
+  Future<FapiOffer> fetchOffer(String challengeId, {String? locale});
 }
 
 /// Live leaderboard. Scores are not cached on device.

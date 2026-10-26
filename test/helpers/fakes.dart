@@ -5,8 +5,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/challenge_photos.dart';
+import 'package:viateria/domain/fapi_offer.dart';
 import 'package:viateria/domain/photo_verify.dart';
 import 'package:viateria/domain/route_planner.dart';
+import 'package:viateria/domain/story_feed.dart';
 import 'package:viateria/domain/unlock_rules.dart';
 import 'package:viateria/map/place_category.dart';
 import 'package:viateria/models/models.dart';
@@ -202,6 +204,7 @@ class MemoryCatalog implements CatalogRepository {
         return ChallengeDetail(
           challenge: challenge,
           waypoints: detail.waypoints,
+          storySteps: detail.storySteps,
         );
       }
     }
@@ -237,6 +240,7 @@ class MemoryProgress implements ProgressRepository {
   final Map<String, Set<String>> completed = {};
   final Map<String, ChallengeRunStatus> statuses = {};
   Object? fetchProgressError;
+  Object? verifyError;
   static const _rules = UnlockRules();
 
   @override
@@ -254,6 +258,9 @@ class MemoryProgress implements ProgressRepository {
           : null,
     );
   }
+
+  @override
+  Future<IssuedDiploma?> fetchIssuedDiploma(String challengeId) async => null;
 
   @override
   Future<List<ChallengeProgress>> fetchCompleted() async {
@@ -278,6 +285,8 @@ class MemoryProgress implements ProgressRepository {
     required String waypointId,
     required String photoPath,
   }) async {
+    final forced = verifyError;
+    if (forced != null) throw forced;
     if (photoPath.isEmpty) {
       throw StateError('photo required');
     }
@@ -302,7 +311,21 @@ class MemoryProgress implements ProgressRepository {
     } else {
       statuses[challengeId] = ChallengeRunStatus.inProgress;
     }
-    return (await fetchProgress(challengeId))!;
+    final progress = (await fetchProgress(challengeId))!;
+    final hints = storyStepIdsAfterVerify(
+      detail: detail,
+      verifiedWaypointId: waypointId,
+      completedIds: done,
+    );
+    return ChallengeProgress(
+      challengeId: progress.challengeId,
+      status: progress.status,
+      completedWaypointIds: progress.completedWaypointIds,
+      completedAt: progress.completedAt,
+      nextStoryStepId: hints.nextStoryStepId,
+      closingStoryStepId: hints.closingStoryStepId,
+      unlockedWaypointId: hints.unlockedWaypointId,
+    );
   }
 
   @override
@@ -333,6 +356,9 @@ class MemoryPurchases implements PurchaseRepository {
   MemoryPurchases({
     Map<String, Purchase>? purchases,
     this.completeOnRefresh = true,
+    this.offer = memoryFapiOffer,
+    this.offerFails = false,
+    this.offerGate,
   }) : purchases = purchases ?? {};
 
   final Map<String, Purchase> purchases;
@@ -341,6 +367,15 @@ class MemoryPurchases implements PurchaseRepository {
   /// Widget tests that need the pay CTAs to stay visible after a tap
   /// set this to false. Default true matches the previous auto-pay refresh.
   final bool completeOnRefresh;
+
+  /// Successful `fapi-offer` payload. CMS cents on the challenge are ignored.
+  FapiOffer offer;
+
+  /// The Edge function is missing or failed.
+  bool offerFails;
+
+  /// While set, [fetchOffer] waits so the pay buttons can show a loading price.
+  Completer<FapiOffer>? offerGate;
 
   @override
   Future<Purchase?> fetchPurchase(String challengeId) async =>
@@ -397,7 +432,40 @@ class MemoryPurchases implements PurchaseRepository {
     );
     return session;
   }
+
+  @override
+  Future<FapiOffer> fetchOffer(String challengeId, {String? locale}) {
+    final gate = offerGate;
+    if (gate != null) return gate.future;
+    if (offerFails) {
+      return Future<FapiOffer>.delayed(
+        Duration.zero,
+        () => throw StateError('fapi-offer unavailable'),
+      );
+    }
+    return Future.value(offer);
+  }
 }
+
+/// Default FAPI offer used by widget tests. Not a CMS price.
+const memoryFapiOffer = FapiOffer(
+  diploma: FapiOfferVariant(
+    priceCents: 499,
+    currency: 'eur',
+    termsUrl: 'https://form.fapi.cz/terms',
+    terms: [
+      FapiOfferTerm(
+        text: 'Obchodní podmínky',
+        url: 'https://form.fapi.cz/terms',
+      ),
+    ],
+  ),
+  medal: FapiOfferVariant(
+    priceCents: 900,
+    currency: 'eur',
+    termsUrl: 'https://form.fapi.cz/terms',
+  ),
+);
 
 /// Fake FAPI form URLs returned by [MemoryPurchases.startCheckout].
 String fapiCheckoutUrlFor(RewardVariant variant) => switch (variant) {
@@ -496,8 +564,8 @@ ChallengeDetail sampleOpenChallenge() {
   return ChallengeDetail(challenge: challenge, waypoints: waypoints);
 }
 
-ChallengeDetail sampleStoryChallenge() {
-  const challenge = Challenge(
+ChallengeDetail sampleStoryChallenge({String? coverImageUrl}) {
+  final challenge = Challenge(
     id: 'story-1',
     slug: 'story-trail',
     accessMode: AccessMode.story,
@@ -506,12 +574,11 @@ ChallengeDetail sampleStoryChallenge() {
     diplomaPriceCents: 499,
     medalPriceCents: 900,
     currency: 'eur',
-    stripePriceIdDiploma: 'price_diploma_test',
-    stripePriceIdMedal: 'price_medal_test',
     fapiFormUrlDiploma: 'https://form.fapi.cz/diploma-test',
     fapiFormUrlMedal: 'https://form.fapi.cz/medal-test',
     status: PublishStatus.published,
     countryCode: 'SK',
+    coverImageUrl: coverImageUrl,
     translations: [
       LocalizedText(
         locale: 'en',

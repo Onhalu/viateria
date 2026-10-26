@@ -5,13 +5,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/app_services.dart';
 import '../../domain/catalog_query.dart';
 import '../../domain/promo.dart';
+import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
+import '../layout/breakpoints.dart';
 import '../navigation.dart';
 import '../widgets/catalog_cards.dart';
 import '../widgets/catalog_filters.dart';
 import '../widgets/catalog_welcome_header.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/error_state.dart';
 import '../widgets/promo_widget.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -86,120 +89,136 @@ class _CatalogScreenState extends State<CatalogScreen> {
           Expanded(
             child: SafeArea(
               top: false,
-              bottom: false,
               child: FutureBuilder<_CatalogData>(
                 future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(strings.errorGeneric),
-                          TextButton(
-                            onPressed: _reload,
-                            child: Text(strings.retry),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  final data = snapshot.data!;
-                  final challenges = [
-                    for (final detail in data.details) detail.challenge,
-                  ];
-                  final routeStats = catalogRouteStatsByChallenge(data.details);
-                  final visible = filterCatalogChallenges(
-                    challenges,
-                    _filter,
-                    routeStats: routeStats,
-                  );
-                  final noMatches =
-                      challenges.isNotEmpty &&
-                      visible.isEmpty &&
-                      _filter.isActive;
-                  final cmsEmpty = challenges.isEmpty && data.promos.isEmpty;
-                  final now = DateTime.now();
-                  final promos = visiblePromos(
-                    !noMatches && _filter.showPromos
-                        ? data.promos
-                        : const <PromoStripe>[],
-                    now,
-                  );
-
-                  return RefreshIndicator(
-                    onRefresh: _reload,
-                    child: cmsEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(24),
-                            children: [
-                              const SizedBox(height: 80),
-                              Text(
-                                strings.catalogEmpty,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                strings.catalogEmptyHint,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          )
-                        : noMatches
-                        ? EmptyState(
-                            key: const Key('catalog-no-matches'),
-                            title: strings.catalogNoMatches,
-                            hint: strings.catalogNoMatchesHint,
-                            actionLabel: strings.catalogClearFilters,
-                            outlinedAction: true,
-                            onAction: () => _applyFilter(const CatalogFilter()),
-                          )
-                        : ListView(
-                            key: const Key('catalog-results'),
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                            children: [
-                              CatalogHeroCarousel(
-                                challenges: visible,
-                                routeStats: routeStats,
-                                onOpen: (challenge) =>
-                                    openChallenge(context, challenge.id),
-                              ),
-                              const SizedBox(height: 16),
-                              CatalogFeaturedSection(
-                                challenges: visible,
-                                routeStats: routeStats,
-                                onOpen: (challenge) =>
-                                    openChallenge(context, challenge.id),
-                              ),
-                              if (promos.isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                PromoWidget(
-                                  key: const Key('promo-widget'),
-                                  promos: promos,
-                                  now: now,
-                                  onOpen: _openPromo,
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              CatalogRegionsSection(
-                                filter: _filter,
-                                strings: strings,
-                                onChanged: _applyFilter,
-                              ),
-                            ],
-                          ),
-                  );
-                },
+                builder: (context, snapshot) =>
+                    _catalogBody(context, snapshot, strings),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _catalogBody(
+    BuildContext context,
+    AsyncSnapshot<_CatalogData> snapshot,
+    AppStrings strings,
+  ) {
+    if (snapshot.connectionState != ConnectionState.done) {
+      return const CatalogLoadingSkeleton();
+    }
+    if (snapshot.hasError) {
+      return ErrorState(
+        title: strings.errorGeneric,
+        hint: strings.errorOfflineHint,
+        retryLabel: strings.retry,
+        onRetry: _reload,
+      );
+    }
+    final data = snapshot.data!;
+    final challenges = [for (final detail in data.details) detail.challenge];
+    final routeStats = catalogRouteStatsByChallenge(data.details);
+    final visible = filterCatalogChallenges(challenges, _filter);
+    final noMatches =
+        challenges.isNotEmpty && visible.isEmpty && _filter.isActive;
+    final cmsEmpty = challenges.isEmpty && data.promos.isEmpty;
+    final now = DateTime.now();
+    final promos = visiblePromos(
+      !noMatches && _filter.showPromos ? data.promos : const <PromoStripe>[],
+      now,
+    );
+
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: cmsEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 80),
+                Text(
+                  strings.catalogEmpty,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(strings.catalogEmptyHint, textAlign: TextAlign.center),
+              ],
+            )
+          : noMatches
+          ? EmptyState(
+              key: const Key('catalog-no-matches'),
+              title: strings.catalogNoMatches,
+              hint: strings.catalogNoMatchesHint,
+              actionLabel: strings.catalogClearFilters,
+              outlinedAction: true,
+              onAction: () => _applyFilter(const CatalogFilter()),
+            )
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final content = width > Breakpoints.catalogMaxWidth
+                    ? Breakpoints.catalogMaxWidth
+                    : width;
+                final side = 16 + (width - content) / 2;
+                final columns = Breakpoints.catalogColumns(content - 32);
+                return CustomScrollView(
+                  key: const Key('catalog-results'),
+                  slivers: [
+                    SliverPadding(
+                      key: const Key('catalog-results-padding'),
+                      padding: EdgeInsets.fromLTRB(side, 8, side, 0),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          CatalogHeroCarousel(
+                            challenges: visible,
+                            routeStats: routeStats,
+                            onOpen: (challenge) =>
+                                openChallenge(context, challenge.id),
+                          ),
+                          const SizedBox(height: 16),
+                          CatalogFeaturedSection(
+                            challenges: visible,
+                            routeStats: routeStats,
+                            onOpen: (challenge) =>
+                                openChallenge(context, challenge.id),
+                          ),
+                          if (promos.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            PromoWidget(
+                              key: const Key('promo-widget'),
+                              promos: promos,
+                              now: now,
+                              onOpen: _openPromo,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          CatalogRegionsSection(
+                            filter: _filter,
+                            onChanged: _applyFilter,
+                          ),
+                          const SizedBox(height: 16),
+                        ]),
+                      ),
+                    ),
+                    if (visible.isNotEmpty)
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(side, 0, side, 16),
+                        sliver: SliverMainAxisGroup(
+                          slivers: CatalogCountryResults(
+                            challenges: visible,
+                            routeStats: routeStats,
+                            onOpen: (challenge) =>
+                                openChallenge(context, challenge.id),
+                          ).slivers(columns: columns, width: content - 32),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
     );
   }
 

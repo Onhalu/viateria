@@ -8,6 +8,7 @@ import '../../domain/leaderboard_score.dart';
 import '../../l10n/locale_controller.dart';
 import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
+import '../../theme/brand_typography.dart';
 
 /// Modal sheet metrics. Height is 82% of the viewport, clamped to 70–88%.
 abstract final class LeaderboardSheet {
@@ -224,11 +225,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     key: const Key('leaderboard-title'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Playfair Display',
+                    style: BrandTypography.display(
                       fontSize: 28,
-                      height: 1.15,
-                      fontWeight: FontWeight.w600,
                       color: BrandColors.forest,
                     ),
                   ),

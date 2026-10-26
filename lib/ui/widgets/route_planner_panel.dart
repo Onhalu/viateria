@@ -4,6 +4,7 @@ import '../../domain/route_planner.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import 'place_presentation.dart';
+import 'route_start_field.dart';
 
 class RoutePlannerPanel extends StatefulWidget {
   const RoutePlannerPanel({
@@ -173,31 +174,13 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
             ),
             if (widget.showCustomStartField) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('route-start-field'),
-                      controller: widget.startController,
-                      autofocus: true,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: strings.routeStartHint,
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onSubmitted: widget.onStartSubmitted,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    key: const Key('route-start-submit'),
-                    tooltip: strings.routeSearch,
-                    onPressed: () =>
-                        widget.onStartSubmitted(widget.startController.text),
-                    icon: const Icon(Icons.search),
-                  ),
-                ],
+              RouteStartField(
+                controller: widget.startController,
+                strings: strings,
+                onSubmitted: widget.onStartSubmitted,
+                onUseGps: widget.onUseGps,
+                autofocus: true,
+                showGps: false,
               ),
             ],
             const SizedBox(height: 16),
@@ -206,30 +189,43 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(widget.destination?.id ?? 'none'),
-                    initialValue: widget.destination?.id,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: strings.routeDestination,
-                      border: const OutlineInputBorder(),
-                      isDense: true,
+                  if (widget.waypoints.isEmpty)
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: strings.routeDestination,
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      child: Text(
+                        strings.storyLockedHint,
+                        key: const Key('route-destination-locked'),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(widget.destination?.id ?? 'none'),
+                      initialValue: widget.destination?.id,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: strings.routeDestination,
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: [
+                        for (final waypoint in widget.waypoints)
+                          DropdownMenuItem<String>(
+                            value: waypoint.id,
+                            child: Text(waypoint.copyFor(widget.locale).title),
+                          ),
+                      ],
+                      onChanged: (id) {
+                        if (id == null) return;
+                        final match = widget.waypoints.where((w) => w.id == id);
+                        if (match.isNotEmpty) {
+                          widget.onDestinationChanged(match.first);
+                        }
+                      },
                     ),
-                    items: [
-                      for (final waypoint in widget.waypoints)
-                        DropdownMenuItem<String>(
-                          value: waypoint.id,
-                          child: Text(waypoint.copyFor(widget.locale).title),
-                        ),
-                    ],
-                    onChanged: (id) {
-                      if (id == null) return;
-                      final match = widget.waypoints.where((w) => w.id == id);
-                      if (match.isNotEmpty) {
-                        widget.onDestinationChanged(match.first);
-                      }
-                    },
-                  ),
                   if (widget.destinationElevationM != null) ...[
                     const SizedBox(height: 8),
                     Align(
@@ -254,7 +250,7 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
               )
             else if (widget.hike != null || widget.bike != null) ...[
               if (widget.hike != null)
-                _RouteStatsCard(
+                RouteStatsCard(
                   key: const Key('route-hike-stats'),
                   title: strings.routeWalking,
                   icon: Icons.hiking,
@@ -267,7 +263,7 @@ class _RoutePlannerPanelState extends State<RoutePlannerPanel> {
               if (widget.hike != null && widget.bike != null)
                 const SizedBox(height: 8),
               if (widget.bike != null)
-                _RouteStatsCard(
+                RouteStatsCard(
                   key: const Key('route-bike-stats'),
                   title: strings.routeCycling,
                   icon: Icons.directions_bike,
@@ -370,8 +366,8 @@ class _RouteEmpty extends StatelessWidget {
   }
 }
 
-class _RouteStatsCard extends StatelessWidget {
-  const _RouteStatsCard({
+class RouteStatsCard extends StatelessWidget {
+  const RouteStatsCard({
     super.key,
     required this.title,
     required this.icon,
@@ -422,30 +418,39 @@ class _RouteStatsCard extends StatelessWidget {
               key: summary.elevationGainM == null
                   ? Key('route-elevation-missing-${summary.mode.name}')
                   : null,
-              label: strings.elevation,
+              label: strings.elevationGain,
               value: summary.elevationGainM == null
                   ? strings.routeElevationFailed
                   : '${summary.elevationGainM!.round()} m',
             ),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: double.infinity,
-              child: navigating == summary.mode
-                  ? FilledButton.tonalIcon(
-                      key: Key('route-end-navigation-${summary.mode.name}'),
-                      onPressed: onEndNavigation,
-                      icon: const Icon(Icons.close),
-                      label: Text(strings.routeEndNavigation),
-                    )
-                  : FilledButton.tonalIcon(
-                      key: Key('route-navigate-${summary.mode.name}'),
-                      onPressed: onStartNavigation == null
-                          ? null
-                          : () => onStartNavigation!(summary.mode),
-                      icon: const Icon(Icons.directions_outlined),
-                      label: Text(strings.routeNavigate),
-                    ),
+            _Stat(
+              key: summary.elevationLossM == null
+                  ? Key('route-elevation-loss-missing-${summary.mode.name}')
+                  : null,
+              label: strings.elevationLoss,
+              value: summary.elevationLossM == null
+                  ? strings.routeElevationFailed
+                  : '${summary.elevationLossM!.round()} m',
             ),
+            if (navigating != null || onStartNavigation != null) ...[
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                child: navigating == summary.mode
+                    ? FilledButton.tonalIcon(
+                        key: Key('route-end-navigation-${summary.mode.name}'),
+                        onPressed: onEndNavigation,
+                        icon: const Icon(Icons.close),
+                        label: Text(strings.routeEndNavigation),
+                      )
+                    : FilledButton.tonalIcon(
+                        key: Key('route-navigate-${summary.mode.name}'),
+                        onPressed: () => onStartNavigation!(summary.mode),
+                        icon: const Icon(Icons.directions_outlined),
+                        label: Text(strings.routeNavigate),
+                      ),
+              ),
+            ],
           ],
         ),
       ),

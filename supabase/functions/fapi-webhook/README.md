@@ -3,13 +3,43 @@
 Pay CTAs open a FAPI sales form (not Stripe Checkout). Stripe edge
 functions stay in the repo but are unused by the Flutter CTA path.
 
+## Offer (`fapi-offer`)
+
+Pay buttons on every challenge (free, paid, story, open) load price and
+terms from `fapi-offer`. That function is in this repo and is **not
+deployed** until:
+
+```bash
+supabase functions deploy fapi-offer
+```
+
+It does not use `FAPI_API_USERNAME` / `FAPI_API_KEY`. For each variant it
+resolves `challenge_sale_forms` (then the legacy form URL columns) and
+reads the public form resource FAPI embeds at
+`https://form.fapi.cz/script.php?id=<form path>` (`data-form-resource`):
+one_time price (an in-window special_one_time wins), currency,
+`terms_url`, and purpose links. `0` cents is a free price.
+
+`sync-fapi-prices` was only a SQL comment. Authenticated
+`GET /item-templates?form=` is still not implemented. `challenge_prices`
+is not the pay-button source.
+
+Redeploy `start-fapi-checkout` as well. It no longer rejects
+`pricing_type = free`, and the pending `amount_cents` uses the same form
+price when the public resource can be read.
+
+Apply `20261013143000_diploma_entitled_paid_only.sql` so
+`private.diploma_entitled` requires a paid purchase. A diploma price of 0
+no longer unlocks the file.
+
 ## Secrets
 
 ```bash
 supabase secrets set FAPI_API_USERNAME="<fapi login email>"
 supabase secrets set FAPI_API_KEY="<fapi API token>"
 
-# Optional extra gate: append ?token=... to the notification URL in FAPI.
+# Required. The function rejects every notification when this is unset
+# or the token does not match (401, no purchase update).
 supabase secrets set FAPI_WEBHOOK_SECURITY="<random string>"
 
 # Optional: numeric IDs of FAPI custom fields (Prodej → Vlastní pole)
@@ -43,9 +73,14 @@ Prefill uses [FAPI URL parameters](https://napoveda.fapi.cz/article/46-predvypln
 - `fapi-form-email` when the user has an email
 
 The webhook matches a purchase by custom-field name first, then by the
-`viateria:...` notes payload. Store the public **form page** URLs on
-`challenges.fapi_form_url_diploma` / `fapi_form_url_medal` (leave null
-until the forms exist — the matching CTA stays disabled).
+`viateria:...` notes payload. `start-fapi-checkout` reads the public
+**form page** URL from the active `challenge_sale_forms` row (variant +
+`profiles.locale`, fallback cs → en → de) and the displayed amount from
+the active `challenge_prices` row. Until those tables exist it still
+uses `challenges.fapi_form_url_diploma` / `fapi_form_url_medal` and the
+legacy price columns (leave a URL null until the form exists — that
+CTA stays disabled). A second purchase of a challenge that is already
+`paid` returns `already_purchased`.
 
 ## Notification URL
 
@@ -58,11 +93,11 @@ https://<project>.supabase.co/functions/v1/fapi-webhook?token=<FAPI_WEBHOOK_SECU
 
 FAPI POSTs `id` (or `invoice`), `time`, `security`. This function:
 
-1. Checks `token` when `FAPI_WEBHOOK_SECURITY` is set
+1. Requires `FAPI_WEBHOOK_SECURITY` and a matching `token` (timing-safe). Missing or wrong → 401, no invoice lookup and no purchase write
 2. `GET /invoices/{id}` with Basic auth
 3. Verifies `security === sha1(time + id + number + Σ md5(item.id + item.name))`
-   ([SecurityChecker](https://github.com/fapi-cz/fapi-client/blob/master/src/Fapi/FapiClient/Tools/SecurityChecker.php))
-4. If `paid`, upserts `purchases` (`status=paid`, `paid_at`, `reward_variant`)
+   ([SecurityChecker](https://github.com/fapi-cz/fapi-client/blob/master/src/Fapi/FapiClient/Tools/SecurityChecker.php)) with a timing-safe compare
+4. If `paid`, updates the existing pending `purchases` row: `status=paid`, `paid_at`, `reward_variant` from the invoice custom field or the pending row, `amount_cents` and `currency` from the invoice (`total` in major units → cents), `fapi_invoice_id`, `fapi_client_id`. A replay of the same `fapi_invoice_id` is a no-op (`UNIQUE`). Already `paid` returns `OK`. No pending row → 409, nothing is inserted. Also sets `profiles.fapi_client_id` when that column is still empty, and sets `challenge_participations.joined_at` (inserts `joined` only when no participation exists; does not change `in_progress` / `completed`). If `challenge_participations` is not migrated yet, that step is skipped and the purchase still completes.
 5. Returns 2xx (`OK` or `SKIPPED` for unpaid / missing metadata)
 
 Unpaid proforma notifications are acknowledged with 200 so FAPI does

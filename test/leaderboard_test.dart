@@ -282,7 +282,7 @@ void main() {
     final title = tester.widget<Text>(
       find.byKey(const Key('leaderboard-title')),
     );
-    expect(title.style?.fontFamily, 'Playfair Display');
+    expect(title.style?.fontFamily, 'Onest');
     expect(title.style?.color, BrandColors.forest);
     expect(find.text('ada@example.com'), findsNothing);
     expect(find.byIcon(Icons.emoji_events), findsNothing);
@@ -488,6 +488,10 @@ void main() {
         rank: 4,
       ),
     );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       wrapApp(
         buildServices(leaderboard: board),

@@ -12,5 +12,16 @@ verify_jwt = false
 [functions.start-fapi-checkout]
 verify_jwt = true
 
+[functions.fapi-offer]
+verify_jwt = true
+
 [functions.fapi-webhook]
 verify_jwt = false
+
+# Auth Send Email hook. Supabase signs the body; there is no user JWT.
+[functions.send-email]
+verify_jwt = false
+
+# User JWT. The function refuses the full PNG without entitlement.
+[functions.diploma]
+verify_jwt = true
