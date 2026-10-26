@@ -17,6 +17,7 @@ import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
+import 'package:viateria/ui/widgets/app_shell.dart';
 import 'package:viateria/ui/widgets/challenge_cta_panel.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 import 'package:viateria/ui/widgets/challenge_reward_section.dart';
@@ -554,8 +555,12 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
         expect(
-          tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
-          const Offset(0, 1),
+          tester
+              .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+              .sizeFactor
+              .value,
+          0,
+          reason: 'the in-page buttons stay on screen, so the card stays shut',
         );
       },
     );
@@ -1007,10 +1012,10 @@ void main() {
         floatingHeading.style?.height,
         ChallengeCtaPanel.headingLineHeight / ChallengeCtaPanel.headingSize,
       );
-      expect(floatingHeading.style?.color, BrandColors.forest);
+      expect(floatingHeading.style?.color, BrandColors.cream);
       expect(
-        tester.widget(find.byKey(const Key('challenge-payment-bar'))),
-        isA<Padding>(),
+        tester.widget(find.byKey(const Key('challenge-cta-panel'))),
+        isA<Column>(),
       );
       final diploma = tester.getRect(
         find.byKey(const Key('challenge-floating-pay-diploma')),
@@ -1036,11 +1041,24 @@ void main() {
         ChallengePaymentBarMetrics.visualHeight,
       );
       final bar = tester.getRect(
-        find.byKey(const Key('challenge-payment-bar')),
+        find.byKey(const Key('challenge-cta-panel')),
       );
       expect(bar.left, 0);
       expect(bar.right, 390);
-      expect(bar.height, ChallengePaymentBarMetrics.bodyHeight(390));
+      expect(
+        bar.height,
+        closeTo(
+          ChallengeCtaPanel.padTop +
+              tester
+                  .getSize(find.byKey(const Key('challenge-paybar-heading')))
+                  .height +
+              ChallengeCtaPanel.headingGap +
+              ChallengeCtaPanel.buttonHeight +
+              ChallengeCtaPanel.padAboveHairline +
+              ChallengeCtaPanel.hairlineThickness,
+          1,
+        ),
+      );
       expect(
         diploma.top - bar.top,
         closeTo(
@@ -1109,7 +1127,8 @@ void main() {
         tester
             .getSize(find.byKey(const Key('challenge-payment-spacer')))
             .height,
-        ChallengePaymentBarMetrics.occupiedHeight(390, 0),
+        0,
+        reason: 'a closed panel adds no bottom inset on this screen',
       );
     });
 
@@ -1190,16 +1209,12 @@ void main() {
       },
     );
 
-    test('the floating panel stacks under 360 and clears the nav', () {
-      expect(ChallengeCtaPanel.buttonsStack(359), isTrue);
-      expect(ChallengeCtaPanel.buttonsStack(360), isFalse);
-      expect(ChallengeCtaPanel.bottomMargin(390), ChallengeCtaPanel.aboveNav);
-      expect(
-        ChallengeCtaPanel.bottomMargin(600),
-        ChallengeCtaPanel.restingBottom,
-      );
-      expect(ChallengeCtaPanel.rowGap, 32);
-      expect(ChallengeCtaPanel.stackGap, 12);
+    test('the merged panel stacks below 340 and keeps a 12 dp row gap', () {
+      expect(ChallengeCtaPanel.buttonsStack(339), isTrue);
+      expect(ChallengeCtaPanel.buttonsStack(340), isFalse);
+      expect(ChallengeCtaPanel.rowGap, 12);
+      expect(ChallengeCtaPanel.stackGap, 8);
+      expect(ChallengeCtaPanel.padHorizontal, kNavSideInset);
     });
 
     test('payment bar labels scale from 15 down to 14 and stop', () {
@@ -1292,8 +1307,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
       expect(
-        tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
-        Offset.zero,
+        tester
+            .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+            .sizeFactor
+            .value,
+        1,
         reason: 'the floating panel has to be on screen for its semantics',
       );
 

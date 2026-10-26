@@ -128,6 +128,9 @@ ButtonStyle appButtonStyle({
   AppButtonSizes sizes = AppButtonSizes.standard,
   bool selected = false,
   bool loading = false,
+  Color? background,
+  Color? foreground,
+  BorderSide? side,
 }) {
   final metrics = sizes.resolve(size);
   final padH = variant == AppButtonVariant.tertiary ? 12.0 : metrics.padH;
@@ -153,22 +156,24 @@ ButtonStyle appButtonStyle({
         height: 1.1,
       ),
     ),
-    backgroundColor: WidgetStateProperty.resolveWith(
-      (states) => _background(
-        variant,
-        states,
-        selected: selected,
-        loading: loading,
-      ),
-    ),
-    foregroundColor: WidgetStateProperty.resolveWith(
-      (states) => _foreground(
-        variant,
-        states,
-        selected: selected,
-        loading: loading,
-      ),
-    ),
+    backgroundColor: WidgetStateProperty.resolveWith((states) {
+      if (background != null) {
+        final disabled = !loading && states.contains(WidgetState.disabled);
+        return disabled
+            ? background.withValues(alpha: background.a * 0.4)
+            : background;
+      }
+      return _background(variant, states, selected: selected, loading: loading);
+    }),
+    foregroundColor: WidgetStateProperty.resolveWith((states) {
+      if (foreground != null) {
+        final disabled = !loading && states.contains(WidgetState.disabled);
+        return disabled
+            ? foreground.withValues(alpha: foreground.a * 0.7)
+            : foreground;
+      }
+      return _foreground(variant, states, selected: selected, loading: loading);
+    }),
     overlayColor: WidgetStateProperty.resolveWith(
       (states) => _overlay(
         variant,
@@ -178,8 +183,15 @@ ButtonStyle appButtonStyle({
       ),
     ),
     side: WidgetStateProperty.resolveWith((states) {
-      if (variant != AppButtonVariant.secondary) return BorderSide.none;
       final disabled = !loading && states.contains(WidgetState.disabled);
+      if (side != null) {
+        if (!disabled) return side;
+        return BorderSide(
+          color: side.color.withValues(alpha: side.color.a * 0.4),
+          width: side.width,
+        );
+      }
+      if (variant != AppButtonVariant.secondary) return BorderSide.none;
       return BorderSide(
         color: BrandColors.forest.withValues(alpha: disabled ? 0.4 : 1),
         width: 1.5,
@@ -290,6 +302,9 @@ class AppButton extends StatefulWidget {
     this.selected = false,
     this.elevated = false,
     this.loadingLabel = 'Načítání',
+    this.background,
+    this.foreground,
+    this.side,
   });
 
   final String label;
@@ -303,6 +318,15 @@ class AppButton extends StatefulWidget {
   /// Floating pair: both variants get the lift shadow plus the contact shadow.
   final bool elevated;
   final String loadingLabel;
+
+  /// Replaces the variant fill when the panel sits on a non-default nav.
+  final Color? background;
+
+  /// Replaces the variant label colour.
+  final Color? foreground;
+
+  /// Replaces the variant outline. A [BorderSide.none] still draws nothing.
+  final BorderSide? side;
 
   @override
   State<AppButton> createState() => _AppButtonState();
@@ -356,6 +380,9 @@ class _AppButtonState extends State<AppButton> {
       sizes: sizes,
       selected: widget.selected,
       loading: widget.loading,
+      background: widget.background,
+      foreground: widget.foreground,
+      side: widget.side,
     );
     final enabled = widget.onPressed != null && !widget.loading;
     final spinnerColor = _foreground(

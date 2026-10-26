@@ -18,6 +18,7 @@ import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/challenge_screen.dart';
 import 'package:viateria/ui/widgets/catalog_cards.dart';
 import 'package:viateria/ui/widgets/challenge_cta_panel.dart';
+import 'package:viateria/ui/widgets/shell_bottom_surface.dart';
 import 'package:viateria/ui/widgets/challenge_map.dart';
 
 import 'auth_register_form_test.dart';
@@ -601,7 +602,7 @@ void main() {
     final open = sampleOpenChallenge();
     const photo = AssetImage('assets/challenges/beskydy-autumn.jpg');
 
-    Widget detailPage(String locale, {required bool nav}) {
+    Widget detailPage(String locale) {
       return MultiProvider(
         providers: [
           ChangeNotifierProvider(
@@ -622,10 +623,7 @@ void main() {
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
-          home: Scaffold(
-            body: ChallengeScreen(challengeId: story.challenge.id),
-            bottomNavigationBar: nav ? const _ShotBottomNav() : null,
-          ),
+          home: const ChallengeScreen(challengeId: 'story-1'),
         ),
       );
     }
@@ -648,7 +646,6 @@ void main() {
       required String locale,
       required Widget background,
       required String name,
-      bool nav = false,
     }) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = size;
@@ -659,29 +656,20 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           home: Scaffold(
-            body: Stack(
-              fit: StackFit.expand,
-              children: [
-                background,
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ChallengeCtaPanelMotion(
-                    shown: true,
-                    child: ChallengeCtaPanelBar(
-                      heading: strings.joinChallenge,
-                      diplomaLabel: strings.payDigitalDiploma,
-                      medalLabel: strings.payMedalAndDiploma,
-                      loadingLabel: strings.buttonLoading,
-                      onDiploma: () {},
-                      onMedal: () {},
-                    ),
-                  ),
-                ),
-              ],
+            extendBody: true,
+            body: background,
+            bottomNavigationBar: ShellBottomSurface(
+              shown: true,
+              panel: ChallengeCtaPanel(
+                heading: strings.joinChallenge,
+                diplomaLabel: strings.payDigitalDiploma,
+                medalLabel: strings.payMedalAndDiploma,
+                loadingLabel: strings.buttonLoading,
+                onDiploma: () {},
+                onMedal: () {},
+              ),
+              nav: const SizedBox(key: Key('app-bottom-nav'), height: 64),
             ),
-            bottomNavigationBar: nav ? const _ShotBottomNav() : null,
           ),
         ),
       );
@@ -704,19 +692,15 @@ void main() {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = const Size(390, 844);
         await resetTree();
-        await tester.pumpWidget(detailPage(locale, nav: true));
+        await tester.pumpWidget(detailPage(locale));
         await tester.pumpAndSettle();
         await revealFloatingPanel();
         expect(
           tester
-              .widget<AnimatedSlide>(
-                find.descendant(
-                  of: find.byKey(const Key('challenge-cta-motion')),
-                  matching: find.byType(AnimatedSlide),
-                ),
-              )
-              .offset,
-          Offset.zero,
+              .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+              .sizeFactor
+              .value,
+          1,
           reason: 'floating panel at 390 $locale',
         );
         await saveShot(tester, 'detail-cta-$locale-390.png');
@@ -747,7 +731,6 @@ void main() {
       await backdrop(
         size: const Size(390, 844),
         locale: 'de',
-        nav: true,
         background: const DecoratedBox(
           decoration: BoxDecoration(
             image: DecorationImage(image: photo, fit: BoxFit.cover),
@@ -758,7 +741,6 @@ void main() {
       await backdrop(
         size: const Size(390, 844),
         locale: 'cs',
-        nav: true,
         background: const ColoredBox(color: BrandColors.cream),
         name: 'detail-cta-over-light-cs-390.png',
       );
@@ -777,25 +759,6 @@ void main() {
       debugDisableShadows = true;
     }
   });
-}
-
-class _ShotBottomNav extends StatelessWidget {
-  const _ShotBottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Material(
-          color: BrandColors.shellFill,
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-          child: SizedBox(key: Key('app-bottom-nav'), height: 64),
-        ),
-      ),
-    );
-  }
 }
 
 /// Brings a challenge block on screen. Below the map it starts offstage, so

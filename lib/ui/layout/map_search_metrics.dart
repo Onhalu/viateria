@@ -18,15 +18,15 @@ double mapSearchFieldWidth({
   return math.min(slotWidth, cap);
 }
 
-/// Show the pay bar after half a viewport, with [hysteresis] dp of slack.
+/// Show the pay bar after half a viewport. Hide only once the offset falls
+/// below 0.4 × viewport, so a small reverse scroll does not flicker.
 bool paymentBarShouldShow({
   required bool currentlyVisible,
   required double offset,
   required double viewport,
-  double hysteresis = 40,
 }) {
   if (viewport <= 0) return currentlyVisible;
   final showAt = viewport * 0.5;
-  final hideAt = showAt - hysteresis;
+  final hideAt = viewport * 0.4;
   return currentlyVisible ? offset >= hideAt : offset >= showAt;
 }

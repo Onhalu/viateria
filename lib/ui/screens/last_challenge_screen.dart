@@ -16,7 +16,6 @@ class LastChallengeScreen extends StatelessWidget {
     final challengeId = context.watch<LastOpenedChallengeStore>().challengeId;
     if (challengeId == null || challengeId.isEmpty) {
       return SafeArea(
-        bottom: false,
         child: EmptyState(
           key: const Key('last-challenge-empty'),
           title: strings.lastChallengeEmpty,
