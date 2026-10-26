@@ -18,6 +18,6 @@ class LiveCameraPhotoCapture implements PhotoCapture {
     );
     if (file == null) return null;
     final bytes = await file.readAsBytes();
-    return LivePhoto(bytes: bytes, mimeType: 'image/jpeg');
+    return LivePhoto(bytes: bytes, mimeType: liveCameraPhotoMimeType);
   }
 }
