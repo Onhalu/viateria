@@ -42,8 +42,17 @@ void main() {
     expect(MapStyleConfig.diskStrokeWidth, 1.5);
     expect(MapStyleConfig.inChallengeDiskStrokeWidth, 2);
     expect(MapStyleConfig.verifiedDiskStrokeWidth, 1.5);
-    expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
-    expect(MapStyleConfig.outsideDiskFill, 'rgba(250, 248, 242, 0.90)');
+    expect(MapStyleConfig.diskFillColor, '#F3EFE5');
+    expect(MapStyleConfig.outsideDiskFill, '#FAF8F2');
+    expect(
+      MapStyleConfig.pinImageId('city', 'inChallenge'),
+      'pin-city-inChallenge',
+    );
+    expect(MapStyleConfig.pinImageId('historical', 'verified'), 'pin-verified');
+    expect(
+      MapStyleConfig.pinImageExpression,
+      contains(MapStyleConfig.verifiedPinImageId),
+    );
     expect(MapStyleConfig.diskLayerId, 'poi-disks');
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
@@ -139,13 +148,14 @@ void main() {
       expect(File(config).readAsStringSync().contains('labelLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('circleLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('labelLayerId'), isFalse);
-      expect(File(host).readAsStringSync().contains('diskLayerId'), isTrue);
+      expect(File(host).readAsStringSync().contains('addCircleLayer'), isFalse);
+      expect(File(host).readAsStringSync().contains('diskLayerId'), isFalse);
       expect(
         File(host).readAsStringSync().contains('selectedUnderlayLayerId'),
         isFalse,
       );
       expect(
-        File(host).readAsStringSync().contains('diskFillExpression'),
+        File(host).readAsStringSync().contains('pinImageExpression'),
         isTrue,
       );
       expect(
@@ -156,22 +166,14 @@ void main() {
       );
       expect(File(host).readAsStringSync().contains('_syncPaint'), isFalse);
       final hostSource = File(host).readAsStringSync();
-      expect(
-        hostSource.contains("iconImage: [Expressions.get, 'icon']"),
-        isTrue,
-      );
-      expect(hostSource.contains('addImage(name, bytes, false)'), isTrue);
+      expect(hostSource.contains('pinImageExpression'), isTrue);
+      expect(hostSource.contains('addImage(id, png, false)'), isTrue);
       expect(hostSource.contains('sdfSilhouettePng'), isFalse);
       expect(hostSource.contains('iconColor'), isFalse);
-      expect(hostSource.contains('symbolOpacityExpression'), isTrue);
-      expect(
-        File(host).readAsStringSync().contains('diskStrokeWidthExpression'),
-        isTrue,
-      );
-      expect(
-        File(host).readAsStringSync().contains('diskStrokeColorExpression'),
-        isTrue,
-      );
+      expect(hostSource.contains('symbolOpacityExpression'), isFalse);
+      expect(hostSource.contains('iconOpacity: 1'), isTrue);
+      expect(hostSource.contains('iconAllowOverlap: true'), isTrue);
+      expect(hostSource.contains("symbolZOrder: 'viewport-y'"), isTrue);
       expect(File(config).readAsStringSync().contains('verifiedHex'), isFalse);
       expect(File(host).readAsStringSync().contains('verifiedBadge'), isFalse);
       expect(

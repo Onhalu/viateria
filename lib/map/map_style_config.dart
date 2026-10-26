@@ -45,11 +45,12 @@ abstract final class MapStyleConfig {
   static const inChallengeDiskStrokeWidth = 2.0;
   static const verifiedDiskStrokeWidth = 1.5;
 
-  /// Cream `#F3EFE5` — in-challenge, not-yet-verified disks.
-  static const diskFillColor = 'rgba(243, 239, 229, 0.94)';
+  /// Opaque cream `#F3EFE5` for in-challenge disks. Full opacity so the pin
+  /// in front covers the disk and glyph of the pin behind it.
+  static const diskFillColor = '#F3EFE5';
 
-  /// Neutral `#FAF8F2` at 90% — places outside the open challenge.
-  static const outsideDiskFill = 'rgba(250, 248, 242, 0.90)';
+  /// Opaque neutral `#FAF8F2` for places outside the open challenge.
+  static const outsideDiskFill = '#FAF8F2';
 
   static const diskLayerId = 'poi-disks';
   static const forestHex = '#35483C';
@@ -141,7 +142,9 @@ abstract final class MapStyleConfig {
     sageHex,
   ];
 
-  /// Verified places keep the disk and drop the category glyph.
+  /// Verified places keep the disk and drop the category glyph. The baked
+  /// pin leaves the glyph out and the symbol stays fully opaque — applying
+  /// this match on the symbol would hide the disk as well.
   static const symbolOpacityExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -170,5 +173,33 @@ abstract final class MapStyleConfig {
     ],
     selectedMarkerIconSize,
     markerIconSize,
+  ];
+
+  /// Shared image for every verified pin (disk only, no category glyph).
+  static const verifiedPinImageId = 'pin-verified';
+
+  /// Image id for one baked pin. Verified ignores [icon] and shares one disk.
+  static String pinImageId(String icon, String placeState) {
+    if (placeState == placeStateVerified) return verifiedPinImageId;
+    return 'pin-$icon-$placeState';
+  }
+
+  /// Picks the baked pin. Disk and glyph are one image so MapLibre can
+  /// occlude a whole pin at a time.
+  static const pinImageExpression = [
+    Expressions.caseExpression,
+    [
+      Expressions.equal,
+      [Expressions.get, 'placeState'],
+      placeStateVerified,
+    ],
+    verifiedPinImageId,
+    [
+      Expressions.concat,
+      'pin-',
+      [Expressions.get, 'icon'],
+      '-',
+      [Expressions.get, 'placeState'],
+    ],
   ];
 }

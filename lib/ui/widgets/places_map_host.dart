@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../../map/map_style_config.dart';
+import '../../map/place_pin_icon.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
 import '../../map/poi_source_sync.dart';
@@ -238,14 +239,36 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
 
   Future<void> _registerIcons(MapLibreMapController controller) async {
     const names = ['city', 'nature', 'technical', 'historical'];
+    final glyphs = <String, Uint8List>{};
     for (final name in names) {
       final data = await rootBundle.load('assets/map/icons/$name@2x.png');
-      final bytes = data.buffer.asUint8List(
+      glyphs[name] = data.buffer.asUint8List(
         data.offsetInBytes,
         data.lengthInBytes,
       );
-      // Plastic bevels keep their olive facets. sdf: false, no icon-color.
-      await controller.addImage(name, bytes, false);
+    }
+
+    Future<void> addPin(String id, Uint8List png) {
+      // Plastic bevels stay in the baked pin. sdf: false, no icon-color.
+      return controller.addImage(id, png, false);
+    }
+
+    await addPin(
+      MapStyleConfig.verifiedPinImageId,
+      await placePinPng(spec: placePinSpec(MapStyleConfig.placeStateVerified)),
+    );
+    for (final name in names) {
+      for (final state in const [
+        MapStyleConfig.placeStateInChallenge,
+        MapStyleConfig.placeStateOutside,
+      ]) {
+        final id = MapStyleConfig.pinImageId(name, state);
+        final png = await placePinPng(
+          spec: placePinSpec(state),
+          glyphPng: glyphs[name],
+        );
+        await addPin(id, png);
+      }
     }
   }
 
@@ -258,30 +281,19 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       ),
     );
 
-    await controller.addCircleLayer(
-      MapStyleConfig.poiSourceId,
-      MapStyleConfig.diskLayerId,
-      const CircleLayerProperties(
-        circleRadius: MapStyleConfig.diskRadiusExpression,
-        circleColor: MapStyleConfig.diskFillExpression,
-        circleOpacity: 1,
-        circleStrokeWidth: MapStyleConfig.diskStrokeWidthExpression,
-        circleStrokeColor: MapStyleConfig.diskStrokeColorExpression,
-        circleStrokeOpacity: 1,
-        circlePitchAlignment: 'viewport',
-        circlePitchScale: 'viewport',
-      ),
-    );
-
+    // Each pin is one symbol: opaque disk, ring, and bevel. viewport-y draws
+    // the pin lower on the screen after the pin above it, so the front disk
+    // covers the pin behind.
     await controller.addSymbolLayer(
       MapStyleConfig.poiSourceId,
       MapStyleConfig.symbolLayerId,
       const SymbolLayerProperties(
-        iconImage: [Expressions.get, 'icon'],
+        iconImage: MapStyleConfig.pinImageExpression,
         iconSize: MapStyleConfig.markerSizeExpression,
-        iconOpacity: MapStyleConfig.symbolOpacityExpression,
+        iconOpacity: 1,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,
+        symbolZOrder: 'viewport-y',
       ),
     );
 
@@ -549,7 +561,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
 
     final poiHits = await controller.queryRenderedFeatures(point, [
       MapStyleConfig.symbolLayerId,
-      MapStyleConfig.diskLayerId,
     ], null);
     if (poiHits.isEmpty) {
       widget.onBackgroundTap?.call();

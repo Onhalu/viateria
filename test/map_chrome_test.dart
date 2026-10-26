@@ -32,7 +32,9 @@ void main() {
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
     expect(MapPalette.forestHex, '#35483C');
     expect(MapPalette.sageHex, '#9C9A7B');
-    expect(MapPalette.creamRgba94, MapStyleConfig.diskFillColor);
+    expect(MapPalette.creamRgba94, 'rgba(243, 239, 229, 0.94)');
+    expect(MapStyleConfig.diskFillColor, '#F3EFE5');
+    expect(MapStyleConfig.outsideDiskFill, '#FAF8F2');
     expect(MapPalette.verifiedDiskHex, '#A7B78C');
     expect(MapPalette.verifiedDiskHex, MapStyleConfig.verifiedDiskFill);
     expect(MapPalette.verified, const Color(0xFFA7B78C));
@@ -45,7 +47,7 @@ void main() {
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
-    expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
+    expect(MapStyleConfig.diskFillColor, '#F3EFE5');
   });
 
   test('full and compact chrome sizes', () {
