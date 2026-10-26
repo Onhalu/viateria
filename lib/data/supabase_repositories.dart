@@ -10,6 +10,7 @@ import '../config/auth_redirect.dart';
 import '../domain/challenge_photos.dart';
 import '../domain/fapi_offer.dart';
 import '../domain/photo_verify.dart';
+import '../l10n/locale_controller.dart';
 import '../models/models.dart';
 import 'auth_identity.dart';
 import 'challenge_mapping.dart';
