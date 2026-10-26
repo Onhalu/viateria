@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-import '../../map/map_icons.dart';
 import '../../map/map_style_config.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
@@ -241,8 +240,12 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     const names = ['city', 'nature', 'technical', 'historical'];
     for (final name in names) {
       final data = await rootBundle.load('assets/map/icons/$name@2x.png');
-      final sdf = await sdfSilhouettePng(data.buffer.asUint8List());
-      await controller.addImage(name, sdf, true);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      // Plastic bevels keep their olive facets. sdf: false, no icon-color.
+      await controller.addImage(name, bytes, false);
     }
   }
 
@@ -276,7 +279,6 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       const SymbolLayerProperties(
         iconImage: [Expressions.get, 'icon'],
         iconSize: MapStyleConfig.markerSizeExpression,
-        iconColor: MapStyleConfig.markerColorExpression,
         iconOpacity: MapStyleConfig.symbolOpacityExpression,
         iconAllowOverlap: true,
         iconIgnorePlacement: true,

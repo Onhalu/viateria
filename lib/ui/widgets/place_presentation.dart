@@ -27,7 +27,7 @@ abstract final class PlaceRowMetrics {
   );
 }
 
-/// Category silhouette in a fixed box so every type shares one optical size.
+/// Plastic category glyph in a fixed box so every type shares one optical size.
 class PlaceCategoryIcon extends StatelessWidget {
   const PlaceCategoryIcon({
     super.key,
@@ -46,23 +46,17 @@ class PlaceCategoryIcon extends StatelessWidget {
       width: PlaceRowMetrics.iconBox,
       height: PlaceRowMetrics.iconBox,
       child: Center(
-        child: ColorFiltered(
-          colorFilter: const ColorFilter.mode(
-            BrandColors.forest,
-            BlendMode.srcIn,
-          ),
-          child: Image.asset(
-            'assets/map/icons/$iconName@2x.png',
-            key: iconKey,
-            width: PlaceRowMetrics.iconGlyph,
-            height: PlaceRowMetrics.iconGlyph,
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.medium,
-            gaplessPlayback: true,
-            semanticLabel: semanticLabel,
-            excludeFromSemantics: semanticLabel == null,
-          ),
+        child: Image.asset(
+          'assets/map/icons/$iconName@2x.png',
+          key: iconKey,
+          width: PlaceRowMetrics.iconGlyph,
+          height: PlaceRowMetrics.iconGlyph,
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
+          filterQuality: FilterQuality.medium,
+          gaplessPlayback: true,
+          semanticLabel: semanticLabel,
+          excludeFromSemantics: semanticLabel == null,
         ),
       ),
     );

@@ -2,43 +2,37 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:viateria/map/map_icons.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('SDF silhouette keeps 88×88 and whites out RGB', () async {
-    final data = await rootBundle.load('assets/map/icons/city@2x.png');
-    final sdf = await sdfSilhouettePng(data.buffer.asUint8List());
-    final codec = await ui.instantiateImageCodec(sdf);
-    final frame = await codec.getNextFrame();
-    expect(frame.image.width, 88);
-    expect(frame.image.height, 88);
-    final raw = await frame.image.toByteData(
-      format: ui.ImageByteFormat.rawRgba,
-    );
-    expect(raw, isNotNull);
-    final pixels = raw!.buffer.asUint8List();
-    var opaque = 0;
-    for (var i = 0; i < pixels.length; i += 4) {
-      if (pixels[i + 3] == 255) {
-        opaque++;
-        expect(pixels[i], 255);
-        expect(pixels[i + 1], 255);
-        expect(pixels[i + 2], 255);
-      }
-    }
-    expect(opaque, greaterThan(100));
-    frame.image.dispose();
-  });
-
   test(
-    'category icons are 88×88 white silhouettes with 66 px optical size',
+    'category icons are 88×88 plastic bevels sized for the 32 dp disk',
     () async {
-      const names = ['city', 'nature', 'technical', 'historical'];
-      for (final name in names) {
+      // Official Kompas map_bevel set (optical scale 0.75). City is the
+      // widest glyph; markerIconSize 0.36 turns 56 px into a 20 dp bbox.
+      // city = houses, nature = tree, technical = gear on pedestal,
+      // historical = castle.
+      const expectedMaxSide = <String, int>{
+        'city': 56,
+        'nature': 53,
+        'technical': 53,
+        'historical': 51,
+      };
+      const facets = <int>[
+        0x374833, // base
+        0x5E7457, // light edge
+        0xA3B59D, // lightest edge
+        0x24301F, // shadow
+      ];
+      for (final entry in expectedMaxSide.entries) {
+        final name = entry.key;
         final data = await rootBundle.load('assets/map/icons/$name@2x.png');
-        final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+        final bytes = data.buffer.asUint8List(
+          data.offsetInBytes,
+          data.lengthInBytes,
+        );
+        final codec = await ui.instantiateImageCodec(bytes);
         final frame = await codec.getNextFrame();
         expect(frame.image.width, 88, reason: name);
         expect(frame.image.height, 88, reason: name);
@@ -49,63 +43,41 @@ void main() {
         final pixels = raw!.buffer.asUint8List();
         var minX = 88, minY = 88, maxX = -1, maxY = -1;
         var opaque = 0;
+        var nonWhite = 0;
+        final tones = <int>{};
         for (var y = 0; y < 88; y++) {
           for (var x = 0; x < 88; x++) {
             final i = (y * 88 + x) * 4;
-            final a = pixels[i + 3];
-            if (a == 0) continue;
-            expect(a, 255, reason: name);
-            expect(pixels[i], 255, reason: name);
-            expect(pixels[i + 1], 255, reason: name);
-            expect(pixels[i + 2], 255, reason: name);
+            if (pixels[i + 3] == 0) continue;
+            opaque++;
+            final rgb =
+                (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2];
+            if (rgb != 0xFFFFFF) nonWhite++;
+            tones.add(rgb);
             if (x < minX) minX = x;
             if (y < minY) minY = y;
             if (x > maxX) maxX = x;
             if (y > maxY) maxY = y;
-            opaque++;
           }
         }
         expect(maxX, greaterThanOrEqualTo(minX), reason: name);
         final contentW = maxX - minX + 1;
         final contentH = maxY - minY + 1;
         final maxSide = contentW >= contentH ? contentW : contentH;
-        expect(maxSide, 66, reason: name);
+        expect(maxSide, entry.value, reason: name);
+        expect(maxSide, inInclusiveRange(46, 58), reason: name);
         expect(opaque, greaterThan(100), reason: name);
+        expect(nonWhite, opaque, reason: name);
+        expect(tones.length, greaterThan(8), reason: name);
+        for (final facet in facets) {
+          expect(
+            tones.contains(facet),
+            isTrue,
+            reason: '$name #${facet.toRadixString(16)}',
+          );
+        }
         frame.image.dispose();
       }
     },
   );
-
-  test('category icon filenames match their silhouettes', () async {
-    // On-disk graphic contract. Category → filename stays 1:1 in code;
-    // these bytes are what each name must contain:
-    // city = houses, nature = tree, technical = gear on pedestal,
-    // historical = castle.
-    const expected = <String, (int, int)>{
-      'city': (486, 0xe30f36a1),
-      'nature': (497, 0x95fe27aa),
-      'technical': (587, 0xb91c64d9),
-      'historical': (420, 0x6cae2a35),
-    };
-    for (final entry in expected.entries) {
-      final data = await rootBundle.load(
-        'assets/map/icons/${entry.key}@2x.png',
-      );
-      final bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
-      expect(bytes.length, entry.value.$1, reason: entry.key);
-      expect(_fnv1a(bytes), entry.value.$2, reason: entry.key);
-    }
-  });
-}
-
-int _fnv1a(Uint8List bytes) {
-  var hash = 0x811c9dc5;
-  for (final byte in bytes) {
-    hash ^= byte;
-    hash = (hash * 0x01000193) & 0xFFFFFFFF;
-  }
-  return hash;
 }

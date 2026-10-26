@@ -22,8 +22,19 @@ void main() {
   );
 
   test('Batch B marker sizes without clustering', () {
-    expect(MapStyleConfig.markerIconSize, 0.45);
-    expect(MapStyleConfig.selectedMarkerIconSize, 0.55);
+    expect(MapStyleConfig.markerIconSize, 0.36);
+    expect(MapStyleConfig.selectedMarkerIconSize, 0.41);
+    // City content 56 px × 0.36 ≈ 20 dp inside the 32 dp disk.
+    expect(56 * MapStyleConfig.markerIconSize, closeTo(20, 0.5));
+    expect(
+      MapStyleConfig.selectedMarkerIconSize,
+      closeTo(
+        MapStyleConfig.markerIconSize *
+            MapStyleConfig.selectedDiskDiameter /
+            MapStyleConfig.diskDiameter,
+        0.01,
+      ),
+    );
     expect(MapStyleConfig.diskDiameter, 32);
     expect(MapStyleConfig.selectedDiskDiameter, 36.8);
     expect(MapStyleConfig.diskRadius, 16);
@@ -144,12 +155,15 @@ void main() {
         isTrue,
       );
       expect(File(host).readAsStringSync().contains('_syncPaint'), isFalse);
+      final hostSource = File(host).readAsStringSync();
       expect(
-        File(host)
-            .readAsStringSync()
-            .contains("iconImage: [Expressions.get, 'icon']"),
+        hostSource.contains("iconImage: [Expressions.get, 'icon']"),
         isTrue,
       );
+      expect(hostSource.contains('addImage(name, bytes, false)'), isTrue);
+      expect(hostSource.contains('sdfSilhouettePng'), isFalse);
+      expect(hostSource.contains('iconColor'), isFalse);
+      expect(hostSource.contains('symbolOpacityExpression'), isTrue);
       expect(
         File(host).readAsStringSync().contains('diskStrokeWidthExpression'),
         isTrue,

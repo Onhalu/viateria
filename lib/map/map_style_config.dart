@@ -27,8 +27,12 @@ abstract final class MapStyleConfig {
   static const prague = LatLng(50.0755, 14.4378);
   static const defaultZoom = 7.0;
 
-  static const markerIconSize = 0.45;
-  static const selectedMarkerIconSize = 0.55;
+  /// Scale for the 88 px plastic bevels. City content is 56 px, so 0.36
+  /// draws a 20 dp glyph inside the 32 dp disk (~6 dp of air).
+  static const markerIconSize = 0.36;
+
+  /// Selected disk is 36.8 dp. Same air ratio: 0.36 × 36.8 / 32.
+  static const selectedMarkerIconSize = 0.41;
 
   /// POI disk diameter in dp (MapLibre radius is half). Selected is 1.15×.
   static const diskDiameter = 32.0;
@@ -54,7 +58,8 @@ abstract final class MapStyleConfig {
   static const creamHex = '#F3EFE5';
   static const neutralHex = '#FAF8F2';
 
-  /// SDF `placeState`: verified > inChallenge > outside.
+  /// `placeState`: verified > inChallenge > outside. Disk fill and ring use it.
+  /// Category glyphs are not tinted.
   static const placeStateOutside = 'outside';
   static const placeStateInChallenge = 'inChallenge';
   static const placeStateVerified = 'verified';
@@ -91,7 +96,8 @@ abstract final class MapStyleConfig {
     zoom: defaultZoom,
   );
 
-  /// SDF icon-color: verified cream, in-challenge forest, outside bark.
+  /// Old SDF glyph tint. The symbol layer does not apply it; plastic bevels
+  /// keep their own facets, and place state stays on the disk.
   static const markerColorExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
