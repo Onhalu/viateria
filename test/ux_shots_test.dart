@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:viateria/data/diploma_client.dart';
+import 'package:viateria/domain/challenge_reward.dart';
 import 'package:viateria/data/last_opened_challenge.dart';
 import 'package:viateria/ui/diploma_share.dart';
 import 'package:viateria/ui/screens/diploma_screen.dart';
@@ -379,7 +380,12 @@ void main() {
         await shot('description-$tag');
         await _revealInChallenge(tester, const Key('challenge-pay-ctas'));
         await tester.pumpAndSettle();
-        expect(find.text(strings.payDigitalDiploma), findsWidgets);
+        expect(
+          find.text(
+            strings.payCtaAmount(formatChallengePrice(499, 'eur', locale)!),
+          ),
+          findsWidgets,
+        );
         expect(
           tester
               .widget<Text>(find.byKey(const Key('challenge-pay-heading')))

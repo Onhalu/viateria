@@ -483,8 +483,14 @@ void main() {
         expect(deadlineY, lessThan(rewardY));
         expect(find.byKey(const Key('challenge-unlock-cta')), findsNothing);
         expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-        expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
-        expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+        expect(
+          find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'en')!)),
+          findsNWidgets(2),
+        );
+        expect(
+          find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'en')!)),
+          findsNWidgets(2),
+        );
         final payY = tester
             .getTopLeft(find.byKey(const Key('challenge-pay-ctas')))
             .dy;
@@ -601,8 +607,14 @@ void main() {
         expect(find.text('Unlock in order'), findsOneWidget);
         expect(find.text(strings.challengeLockedPaid), findsNothing);
         expect(find.text(strings.waypoints), findsOneWidget);
-        expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
-        expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+        expect(
+          find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'en')!)),
+          findsNWidgets(2),
+        );
+        expect(
+          find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'en')!)),
+          findsNWidgets(2),
+        );
         expect(find.text('€4.99'), findsNothing);
         expect(find.text('€9.00'), findsNothing);
         expect(find.text(strings.unlockWithStripe), findsNothing);
@@ -674,13 +686,17 @@ void main() {
         final diplomaLabel = tester.widget<Text>(
           find.descendant(
             of: find.byKey(const Key('challenge-pay-diploma')),
-            matching: find.text(strings.payDigitalDiploma),
+            matching: find.text(
+              strings.payCtaAmount(formatChallengePrice(499, 'eur', 'en')!),
+            ),
           ),
         );
         final medalLabel = tester.widget<Text>(
           find.descendant(
             of: find.byKey(const Key('challenge-pay-medal')),
-            matching: find.text(strings.payMedalAndDiploma),
+            matching: find.text(
+              strings.payCtaAmount(formatChallengePrice(900, 'eur', 'en')!),
+            ),
           ),
         );
         expect(diplomaLabel.maxLines, 1);
@@ -757,8 +773,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Digitální diplom'), findsNWidgets(2));
-      expect(find.text('Medaile + diplom'), findsNWidgets(2));
+      final strings = AppStrings('cs');
+      expect(
+        find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'cs')!)),
+        findsNWidgets(2),
+      );
+      expect(
+        find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'cs')!)),
+        findsNWidgets(2),
+      );
       expect(find.text('Přijmi výzvu'), findsNWidgets(2));
       expect(find.text('4,99$priceThinSpace€'), findsNothing);
       expect(find.text('9,00$priceThinSpace€'), findsNothing);
@@ -805,8 +828,19 @@ void main() {
       );
       expect(find.text('399${priceThinSpace}Kč'), findsNothing);
       expect(find.text('0,01$priceThinSpace€'), findsNothing);
-      expect(find.text('Digitální diplom'), findsNWidgets(2));
-      expect(find.text('Medaile + diplom'), findsNWidgets(2));
+      final strings = AppStrings('cs');
+      expect(
+        find.text(
+          strings.payCtaAmount(formatChallengePrice(124900, 'czk', 'cs')!),
+        ),
+        findsNWidgets(2),
+      );
+      expect(
+        find.text(strings.payCtaAmount(formatChallengePrice(39900, 'czk', 'cs')!)),
+        findsNWidgets(2),
+      );
+      expect(find.text('Digitální diplom'), findsNothing);
+      expect(find.text('Medaile + diplom'), findsNothing);
     });
 
     testWidgets('a FAPI price of 0 is shown as free on both buttons', (
@@ -851,6 +885,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('challenge-pay-diploma')), findsOneWidget);
       expect(find.byKey(const Key('challenge-pay-medal')), findsOneWidget);
+      expect(find.text(strings.payCtaFree), findsNWidgets(4));
       expect(find.text(strings.payPriceFree), findsNothing);
       expect(find.text('199${priceThinSpace}Kč'), findsNothing);
       expect(find.text('399${priceThinSpace}Kč'), findsNothing);
@@ -979,8 +1014,15 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Digitales Diplom'), findsNWidgets(2));
-      expect(find.text('Medaille + Diplom'), findsNWidgets(2));
+      final strings = AppStrings('de');
+      expect(
+        find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'de')!)),
+        findsNWidgets(2),
+      );
+      expect(
+        find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'de')!)),
+        findsNWidgets(2),
+      );
       expect(find.text('Nimm die Herausforderung an'), findsNWidgets(2));
     });
 
@@ -1073,7 +1115,9 @@ void main() {
       final label = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const Key('challenge-floating-pay-diploma')),
-          matching: find.text('Digital diploma'),
+          matching: find.text(
+            AppStrings('en').payCtaAmount(formatChallengePrice(499, 'eur', 'en')!),
+          ),
         ),
       );
       expect(
@@ -1339,7 +1383,9 @@ void main() {
       final label = tester.widget<Text>(
         find.descendant(
           of: find.byKey(const Key('challenge-floating-pay-medal')),
-          matching: find.text('Medal + diploma'),
+          matching: find.text(
+            AppStrings('en').payCtaAmount(formatChallengePrice(900, 'eur', 'en')!),
+          ),
         ),
       );
       expect(label.style?.fontWeight, FontWeight.w600);
@@ -1565,7 +1611,12 @@ void main() {
     ) async {
       useTallView(tester);
       final strings = AppStrings('cs');
-      await tester.pumpWidget(wrapScreen(buildServices()));
+      final purchases = MemoryPurchases()
+        ..offer = const FapiOffer(
+          diploma: FapiOfferVariant(priceCents: 0, currency: 'czk'),
+          medal: FapiOfferVariant(priceCents: 0, currency: 'czk'),
+        );
+      await tester.pumpWidget(wrapScreen(buildServices(purchases: purchases)));
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(
@@ -1573,8 +1624,9 @@ void main() {
       );
       expect(find.text(strings.rewardTitle), findsOneWidget);
       expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-      expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
-      expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+      expect(find.text(strings.payCtaFree), findsNWidgets(4));
+      expect(find.byKey(const Key('challenge-pay-diploma')), findsOneWidget);
+      expect(find.byKey(const Key('challenge-pay-medal')), findsOneWidget);
       expect(find.byKey(const Key('challenge-reward-lock')), findsOneWidget);
       expect(
         find.byKey(const Key('challenge-reward-lock-overlay')),

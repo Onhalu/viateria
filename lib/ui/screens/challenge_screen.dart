@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/app_services.dart';
 import '../../data/last_opened_challenge.dart';
@@ -14,6 +15,8 @@ import '../../data/repositories.dart';
 import '../../data/route_services.dart';
 import '../../domain/challenge_photos.dart';
 import '../../domain/challenge_reward.dart';
+import '../../domain/fapi_offer.dart';
+import '../../domain/pay_cta.dart';
 import '../../domain/route_planner.dart';
 import '../../domain/story_feed.dart';
 import '../../domain/story_fog.dart';
@@ -41,15 +44,21 @@ import '../widgets/story_chapter_card.dart';
 import '../fapi_checkout_window.dart';
 import 'diploma_screen.dart';
 
+String _mintCheckoutKey() => const Uuid().v4();
+
 class ChallengeScreen extends StatefulWidget {
   const ChallengeScreen({
     super.key,
     required this.challengeId,
     this.embedded = false,
+    this.checkoutTimeout = kPayCheckoutStartTimeout,
   });
 
   final String challengeId;
   final bool embedded;
+
+  /// Bound for the `start-fapi-checkout` call. Tests use a shorter value.
+  final Duration checkoutTimeout;
 
   @override
   State<ChallengeScreen> createState() => _ChallengeScreenState();
@@ -96,6 +105,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     super.didChangeDependencies();
     _extension = BottomBarExtension.maybeOf(context);
     _future ??= _load();
+    _ensureOffer();
     context.read<LastOpenedChallengeStore>().remember(widget.challengeId);
   }
 
@@ -104,6 +114,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.challengeId == widget.challengeId) return;
     _future = _load();
+    _payLock = false;
+    _attempt.reset();
+    _offer = null;
+    _offerReady = false;
+    _offerLocale = null;
+    _ensureOffer();
   }
 
   void _onFeedOffset() {
@@ -134,6 +150,12 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   }
 
   var _payPaid = false;
+  final _attempt = PayCheckoutAttempt(mint: _mintCheckoutKey);
+  var _payLock = false;
+  FapiOffer? _offer;
+  var _offerReady = false;
+  String? _offerLocale;
+  var _offerToken = 0;
 
   double _inlinePayVisibleFraction() {
     if (!_feedScroll.hasClients) return 1;
@@ -265,61 +287,192 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _future;
   }
 
-  Future<void> _unlockPaid(RewardVariant variant) async {
-    final data = await _future;
-    if (!mounted) return;
-    final formUrl = data?.detail.challenge.fapiFormUrlFor(variant);
-    if (formUrl == null) return;
+  void _ensureOffer() {
+    final locale = context.read<LocaleController>().locale;
+    if (_offerLocale == locale) return;
+    _offerLocale = locale;
+    final token = ++_offerToken;
     final services = context.read<AppServices>();
-    final session = await services.purchases.startCheckout(
+    services.purchases
+        .fetchOffer(widget.challengeId, locale: locale)
+        .then(
+          (offer) {
+            if (!mounted || token != _offerToken) return;
+            setState(() {
+              _offer = offer;
+              _offerReady = true;
+            });
+          },
+          onError: (_, _) {
+            if (!mounted || token != _offerToken) return;
+            setState(() {
+              _offer = null;
+              _offerReady = true;
+            });
+          },
+        );
+  }
+
+  int? _offerCents(RewardVariant variant) {
+    final offer = _offer;
+    if (offer == null) return null;
+    return switch (variant) {
+      RewardVariant.diploma => offer.diploma.priceCents,
+      RewardVariant.medalAndDiploma => offer.medal.priceCents,
+    };
+  }
+
+  String _offerCurrency(RewardVariant variant, Challenge challenge) {
+    final offer = _offer;
+    final raw = switch (variant) {
+      RewardVariant.diploma => offer?.diploma.currency,
+      RewardVariant.medalAndDiploma => offer?.medal.currency,
+    };
+    if (raw != null && raw.isNotEmpty) return raw;
+    return challenge.currency;
+  }
+
+  int? _cartCents(RewardVariant variant) => payCtaPriceCents(
+    offerReady: _offerReady,
+    offerCents: _offerCents(variant),
+  );
+
+  String _ctaLabel(
+    AppStrings strings,
+    String locale,
+    Challenge challenge,
+    RewardVariant variant,
+  ) {
+    final product = switch (variant) {
+      RewardVariant.diploma => strings.payDigitalDiploma,
+      RewardVariant.medalAndDiploma => strings.payMedalAndDiploma,
+    };
+    final cents = _cartCents(variant);
+    final formatted = cents == null || cents <= 0
+        ? null
+        : formatChallengePrice(cents, _offerCurrency(variant, challenge), locale);
+    return payCtaLabel(
+      productLabel: product,
+      priceCents: cents,
+      amountLabel: formatted == null ? null : strings.payCtaAmount(formatted),
+      freeLabel: strings.payCtaFree,
+      showRetry: payCtaShowRetry(_attempt.phase) && _attempt.variant == variant,
+      retryLabel: strings.retry,
+    );
+  }
+
+  bool _variantLoading(RewardVariant variant) =>
+      _attempt.phase == PayCtaPhase.loading && _attempt.variant == variant;
+
+  VoidCallback? _payPressed(Challenge challenge, RewardVariant variant) {
+    if (_attempt.controlsLocked) return null;
+    if (challenge.fapiFormUrlFor(variant) == null) return null;
+    return () => _unlockPaid(variant);
+  }
+
+  Future<void> _unlockPaid(RewardVariant variant) async {
+    if (_payLock) return;
+    _payLock = true;
+    final data = await _future;
+    if (!mounted) {
+      _payLock = false;
+      return;
+    }
+    final formUrl = data?.detail.challenge.fapiFormUrlFor(variant);
+    if (formUrl == null) {
+      _payLock = false;
+      return;
+    }
+    final key = _attempt.begin(
+      variant: variant,
+      priceCents: _cartCents(variant),
+    );
+    setState(() {});
+    final services = context.read<AppServices>();
+    final started = services.purchases.startCheckout(
       widget.challengeId,
       rewardVariant: variant,
+      idempotencyKey: key,
     );
-    if (!mounted) return;
-    final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
-    _paySuppressed = true;
-    _publishPayBar();
     try {
-      await showInAppFapiCheckout(
-        context,
-        challengeId: widget.challengeId,
-        checkoutUrl: checkoutUrl,
-      );
-    } finally {
-      _paySuppressed = false;
+      final session = await started.timeout(widget.checkoutTimeout);
+      if (!mounted) return;
+      final checkoutUrl = httpUrlOrNull(session.url) ?? formUrl;
+      setState(() => _attempt.phase = PayCtaPhase.success);
+      _paySuppressed = true;
       _publishPayBar();
+      try {
+        await showInAppFapiCheckout(
+          context,
+          challengeId: widget.challengeId,
+          checkoutUrl: checkoutUrl,
+        );
+      } finally {
+        _paySuppressed = false;
+        if (mounted) _publishPayBar();
+      }
+      if (!mounted) return;
+      setState(() => _attempt.phase = PayCtaPhase.idle);
+      await _reload();
+    } on TimeoutException {
+      unawaited(started.then((_) {}, onError: (_, _) {}));
+      if (!mounted) return;
+      setState(() => _attempt.phase = PayCtaPhase.timeout);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _attempt.phase = PayCtaPhase.error);
+    } finally {
+      _payLock = false;
     }
-    if (!mounted) return;
-    await _reload();
   }
 
-  Widget _floatingPanel(Challenge challenge, AppStrings strings) {
+  Widget _floatingPanel(
+    Challenge challenge,
+    AppStrings strings,
+    String locale,
+  ) {
     return ChallengeCtaPanel(
       heading: strings.joinChallenge,
-      diplomaLabel: strings.payDigitalDiploma,
-      medalLabel: strings.payMedalAndDiploma,
+      diplomaLabel: _ctaLabel(
+        strings,
+        locale,
+        challenge,
+        RewardVariant.diploma,
+      ),
+      medalLabel: _ctaLabel(
+        strings,
+        locale,
+        challenge,
+        RewardVariant.medalAndDiploma,
+      ),
       loadingLabel: strings.buttonLoading,
-      onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
-          ? null
-          : () => _unlockPaid(RewardVariant.diploma),
-      onMedal: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
-          ? null
-          : () => _unlockPaid(RewardVariant.medalAndDiploma),
+      diplomaLoading: _variantLoading(RewardVariant.diploma),
+      medalLoading: _variantLoading(RewardVariant.medalAndDiploma),
+      onDiploma: _payPressed(challenge, RewardVariant.diploma),
+      onMedal: _payPressed(challenge, RewardVariant.medalAndDiploma),
     );
   }
 
-  Widget _stickyCard(Challenge challenge, AppStrings strings) {
+  Widget _stickyCard(Challenge challenge, AppStrings strings, String locale) {
     return ChallengeStickyCta(
       heading: strings.joinChallenge,
-      diplomaLabel: strings.payDigitalDiploma,
-      medalLabel: strings.payMedalAndDiploma,
+      diplomaLabel: _ctaLabel(
+        strings,
+        locale,
+        challenge,
+        RewardVariant.diploma,
+      ),
+      medalLabel: _ctaLabel(
+        strings,
+        locale,
+        challenge,
+        RewardVariant.medalAndDiploma,
+      ),
       loadingLabel: strings.buttonLoading,
-      onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
-          ? null
-          : () => _unlockPaid(RewardVariant.diploma),
-      onMedal: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
-          ? null
-          : () => _unlockPaid(RewardVariant.medalAndDiploma),
+      diplomaLoading: _variantLoading(RewardVariant.diploma),
+      medalLoading: _variantLoading(RewardVariant.medalAndDiploma),
+      onDiploma: _payPressed(challenge, RewardVariant.diploma),
+      onMedal: _payPressed(challenge, RewardVariant.medalAndDiploma),
     );
   }
 
@@ -348,11 +501,31 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     });
   }
 
-  Widget _payCtas(Challenge challenge, AppStrings strings, {String? note}) {
+  Widget _payCtas(
+    Challenge challenge,
+    AppStrings strings,
+    String locale, {
+    String? note,
+  }) {
     return _ChallengePayCtas(
       strings: strings,
-      challenge: challenge,
-      onPay: _unlockPaid,
+      phaseName: _attempt.phase.name,
+      diplomaLabel: _ctaLabel(
+        strings,
+        locale,
+        challenge,
+        RewardVariant.diploma,
+      ),
+      medalLabel: _ctaLabel(
+        strings,
+        locale,
+        challenge,
+        RewardVariant.medalAndDiploma,
+      ),
+      diplomaLoading: _variantLoading(RewardVariant.diploma),
+      medalLoading: _variantLoading(RewardVariant.medalAndDiploma),
+      onDiploma: _payPressed(challenge, RewardVariant.diploma),
+      onMedal: _payPressed(challenge, RewardVariant.medalAndDiploma),
       note: note,
     );
   }
@@ -813,6 +986,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       : _payCtas(
                           challenge,
                           strings,
+                          locale,
                           note: data.purchase?.status == PurchaseStatus.pending
                               ? strings.purchasePending
                               : null,
@@ -970,9 +1144,21 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 !Breakpoints.usesNavigationRail(windowWidth) && !purchasePaid;
             final sticky =
                 Breakpoints.challengeTwoColumn(windowWidth) && !purchasePaid;
+            final diplomaLabel = _ctaLabel(
+              strings,
+              locale,
+              challenge,
+              RewardVariant.diploma,
+            );
+            final medalLabel = _ctaLabel(
+              strings,
+              locale,
+              challenge,
+              RewardVariant.medalAndDiploma,
+            );
             final panel = purchasePaid
                 ? null
-                : _floatingPanel(challenge, strings);
+                : _floatingPanel(challenge, strings, locale);
             final routePath = _extension == null
                 ? null
                 : GoRouter.maybeOf(context)?.state.uri.path;
@@ -983,8 +1169,8 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               panel: panel,
               signature: purchasePaid
                   ? 'paid'
-                  : '${strings.joinChallenge}|${strings.payDigitalDiploma}|'
-                        '${strings.payMedalAndDiploma}|'
+                  : '${strings.joinChallenge}|$diplomaLabel|$medalLabel|'
+                        '${_attempt.phase.name}|${_attempt.variant?.name}|'
                         '${challenge.fapiFormUrlDiploma}|'
                         '${challenge.fapiFormUrlMedal}|$slideUp',
             );
@@ -1022,7 +1208,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                               child: child!,
                             );
                           },
-                          child: _stickyCard(challenge, strings),
+                          child: _stickyCard(challenge, strings, locale),
                         ),
                       ),
                     ],
@@ -1065,9 +1251,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
         );
       },
     );
-    return Scaffold(
-      extendBody: true,
-      body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
+    return PopScope(
+      key: const Key('challenge-pay-scope'),
+      canPop: !_attempt.controlsLocked,
+      child: AbsorbPointer(
+        key: const Key('challenge-pay-lock'),
+        absorbing: _attempt.controlsLocked,
+        child: Scaffold(
+          extendBody: true,
+          body: widget.embedded ? SafeArea(bottom: false, child: body) : body,
+        ),
+      ),
     );
   }
 }
@@ -1589,14 +1783,24 @@ double paymentBarLabelFontSize({
 class _ChallengePayCtas extends StatelessWidget {
   const _ChallengePayCtas({
     required this.strings,
-    required this.challenge,
-    required this.onPay,
+    required this.phaseName,
+    required this.diplomaLabel,
+    required this.medalLabel,
+    required this.onDiploma,
+    required this.onMedal,
+    this.diplomaLoading = false,
+    this.medalLoading = false,
     this.note,
   });
 
   final AppStrings strings;
-  final Challenge challenge;
-  final ValueChanged<RewardVariant> onPay;
+  final String phaseName;
+  final String diplomaLabel;
+  final String medalLabel;
+  final VoidCallback? onDiploma;
+  final VoidCallback? onMedal;
+  final bool diplomaLoading;
+  final bool medalLoading;
 
   /// Pending purchase line. Inline only, under the buttons.
   final String? note;
@@ -1610,25 +1814,26 @@ class _ChallengePayCtas extends StatelessWidget {
         AppButtonSizes.standard;
     final diploma = AppButton(
       key: _key('diploma'),
-      label: strings.payDigitalDiploma,
+      label: diplomaLabel,
       variant: AppButtonVariant.secondary,
       size: AppButtonSize.l,
+      loading: diplomaLoading,
+      haptic: true,
       loadingLabel: strings.buttonLoading,
-      onPressed: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
-          ? null
-          : () => onPay(RewardVariant.diploma),
+      onPressed: onDiploma,
     );
     final medal = AppButton(
       key: _key('medal'),
-      label: strings.payMedalAndDiploma,
+      label: medalLabel,
       variant: AppButtonVariant.primary,
       size: AppButtonSize.l,
+      loading: medalLoading,
+      haptic: true,
       loadingLabel: strings.buttonLoading,
-      onPressed: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
-          ? null
-          : () => onPay(RewardVariant.medalAndDiploma),
+      onPressed: onMedal,
     );
     return Align(
+      key: Key('challenge-pay-phase-$phaseName'),
       alignment: Alignment.center,
       child: ConstrainedBox(
         constraints: const BoxConstraints(

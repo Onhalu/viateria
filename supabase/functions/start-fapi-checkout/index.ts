@@ -7,6 +7,8 @@ import {
   appendFapiPrefill,
   callerCanReadChallenge,
   checkoutAmountCents,
+  checkoutDedupePlan,
+  readIdempotencyKey,
   fapiPrefillParams,
   httpUrlOrNull,
   isMissingSchemaObject,
@@ -28,6 +30,10 @@ import { fetchOfferForFormUrl } from "../_shared/fapi_offer.ts";
  * Upserts `purchases` as pending with the chosen reward_variant, then returns
  * the challenge's FAPI form URL with prefilled metadata so `fapi-webhook`
  * can match the paid invoice back to this user + challenge.
+ *
+ * `Idempotency-Key` (or body `idempotency_key` / `order_id`, uuid v4) is
+ * stored on the pending row. A retry of the same variant and amount returns
+ * the same URL and does not write the row again. 0 Kč enroll uses this path.
  *
  * Required form custom fields (create in FAPI → Prodej → Vlastní pole):
  *   user_id, challenge_id, reward_variant
@@ -59,6 +65,10 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json();
+  const idempotencyKey = readIdempotencyKey(
+    req.headers.get("Idempotency-Key"),
+    body && typeof body === "object" ? body as Record<string, unknown> : null,
+  );
   const challengeId = body.challenge_id as string | undefined;
   if (!challengeId) {
     return json({ error: "challenge_id required" }, 400);
@@ -108,12 +118,7 @@ Deno.serve(async (req) => {
     return json({ error: "fapi form url missing" }, 400);
   }
 
-  const { data: existing } = await admin
-    .from("purchases")
-    .select("status")
-    .eq("user_id", user.id)
-    .eq("challenge_id", challengeId)
-    .maybeSingle();
+  const existing = await loadExistingPurchase(admin, user.id, challengeId);
   if (existing?.status === "paid") {
     // One purchase per challenge. medal_and_diploma already includes the
     // diploma, so a second buy is rejected rather than upgraded.
@@ -151,25 +156,6 @@ Deno.serve(async (req) => {
     console.error("fapi offer price lookup failed", offerError);
   }
 
-  const { error: purchaseError } = await admin.from("purchases").upsert(
-    {
-      user_id: user.id,
-      challenge_id: challengeId,
-      status: "pending",
-      amount_cents: amountCents,
-      currency,
-      reward_variant: rewardVariant,
-    },
-    { onConflict: "user_id,challenge_id" },
-  );
-  if (purchaseError) {
-    console.error(
-      "start-fapi-checkout purchase upsert failed",
-      purchaseError.message,
-    );
-    return json({ error: "purchase upsert failed" }, 500);
-  }
-
   const url = appendFapiPrefill(
     formUrl,
     fapiPrefillParams({
@@ -183,8 +169,81 @@ Deno.serve(async (req) => {
     }),
   );
 
-  return json({ url });
+  const plan = checkoutDedupePlan(existing, {
+    idempotencyKey,
+    rewardVariant,
+    amountCents,
+  });
+  if (plan === "replay") {
+    return json({ url, order_id: idempotencyKey, deduped: true });
+  }
+
+  const row: Record<string, unknown> = {
+    user_id: user.id,
+    challenge_id: challengeId,
+    status: "pending",
+    amount_cents: amountCents,
+    currency,
+    reward_variant: rewardVariant,
+  };
+  if (idempotencyKey) row.idempotency_key = idempotencyKey;
+
+  let purchaseError = (await admin.from("purchases").upsert(
+    row,
+    { onConflict: "user_id,challenge_id" },
+  )).error;
+  if (purchaseError && idempotencyKey && isMissingSchemaObject(purchaseError)) {
+    delete row.idempotency_key;
+    purchaseError = (await admin.from("purchases").upsert(
+      row,
+      { onConflict: "user_id,challenge_id" },
+    )).error;
+  }
+  if (purchaseError) {
+    console.error(
+      "start-fapi-checkout purchase upsert failed",
+      purchaseError.message,
+    );
+    return json({ error: "purchase upsert failed" }, 500);
+  }
+
+  return json({ url, order_id: idempotencyKey });
 });
+
+type ExistingPurchase = {
+  status?: string | null;
+  idempotency_key?: string | null;
+  reward_variant?: string | null;
+  amount_cents?: number | null;
+};
+
+async function loadExistingPurchase(
+  admin: SupabaseClient,
+  userId: string,
+  challengeId: string,
+): Promise<ExistingPurchase | null> {
+  const full = await admin
+    .from("purchases")
+    .select("status, idempotency_key, reward_variant, amount_cents")
+    .eq("user_id", userId)
+    .eq("challenge_id", challengeId)
+    .maybeSingle();
+  if (!full.error) return (full.data as ExistingPurchase | null) ?? null;
+  if (!isMissingSchemaObject(full.error)) {
+    console.error("purchase lookup failed", full.error.message);
+  }
+  const basic = await admin
+    .from("purchases")
+    .select("status")
+    .eq("user_id", userId)
+    .eq("challenge_id", challengeId)
+    .maybeSingle();
+  if (basic.error) {
+    console.error("purchase lookup failed", basic.error.message);
+    return null;
+  }
+  return (basic.data as ExistingPurchase | null) ?? null;
+}
 
 async function profileLocale(
   admin: SupabaseClient,
@@ -352,7 +411,7 @@ function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
+      "authorization, x-client-info, apikey, content-type, idempotency-key",
   };
 }
 

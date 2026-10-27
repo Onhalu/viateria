@@ -126,6 +126,7 @@ class UnconfiguredPurchases implements PurchaseRepository {
   Future<CheckoutSession> startCheckout(
     String challengeId, {
     RewardVariant? rewardVariant,
+    String? idempotencyKey,
   }) {
     throw StateError('Checkout is not configured');
   }

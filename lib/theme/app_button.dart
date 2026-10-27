@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import 'brand_colors.dart';
 
@@ -298,6 +301,7 @@ class AppButton extends StatefulWidget {
     this.variant = AppButtonVariant.primary,
     this.size = AppButtonSize.m,
     this.loading = false,
+    this.haptic = false,
     this.icon,
     this.selected = false,
     this.elevated = false,
@@ -312,6 +316,9 @@ class AppButton extends StatefulWidget {
   final AppButtonVariant variant;
   final AppButtonSize size;
   final bool loading;
+
+  /// Light impact when the button accepts a press. Pay CTAs turn this on.
+  final bool haptic;
   final IconData? icon;
   final bool selected;
 
@@ -417,40 +424,69 @@ class _AppButtonState extends State<AppButton> {
               ],
             ),
     );
-    final Widget child = widget.loading
-        ? Stack(
-            alignment: Alignment.center,
-            children: [
+    final reduceMotion =
+        MediaQuery.disableAnimationsOf(context) ||
+        !TickerMode.valuesOf(context).enabled;
+    final Widget spinner = Semantics(
+      label: widget.loadingLabel,
+      child: SizedBox(
+        key: const Key('app-button-spinner'),
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: spinnerColor,
+        ),
+      ),
+    );
+    // The idle label stays in the stack while loading so the pill does not
+    // shrink to the spinner. Reduced motion snaps; there is no crossfade.
+    final Widget child = AnimatedSwitcher(
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            if (widget.loading)
               ExcludeSemantics(child: Opacity(opacity: 0, child: content)),
-              Semantics(
-                label: widget.loadingLabel,
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: spinnerColor,
-                  ),
-                ),
-              ),
-            ],
-          )
-        : content;
+            ...previousChildren,
+            ?currentChild,
+          ],
+        );
+      },
+      child: widget.loading
+          ? KeyedSubtree(key: const ValueKey('loading'), child: spinner)
+          : KeyedSubtree(key: const ValueKey('idle'), child: content),
+    );
+    void activate() {
+      if (widget.haptic) {
+        unawaited(
+          HapticFeedback.lightImpact().then<void>(
+            (_) {},
+            onError: (_, _) {},
+          ),
+        );
+      }
+      widget.onPressed?.call();
+    }
+
     final Widget button = switch (widget.variant) {
       AppButtonVariant.secondary => OutlinedButton(
-        onPressed: enabled ? widget.onPressed : null,
+        onPressed: enabled ? activate : null,
         style: style,
         statesController: _states,
         child: child,
       ),
       AppButtonVariant.tertiary => TextButton(
-        onPressed: enabled ? widget.onPressed : null,
+        onPressed: enabled ? activate : null,
         style: style,
         statesController: _states,
         child: child,
       ),
       AppButtonVariant.primary || AppButtonVariant.tonal => FilledButton(
-        onPressed: enabled ? widget.onPressed : null,
+        onPressed: enabled ? activate : null,
         style: style,
         statesController: _states,
         child: child,

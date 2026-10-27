@@ -12,7 +12,9 @@ import {
   isInvoiceSecurityValid,
   isWebhookTokenValid,
   parseNotification,
+  checkoutDedupePlan,
   parseViateriaNotes,
+  readIdempotencyKey,
   promoMatchesViewer,
   purchaseKeysFromInvoice,
   purchaseUnlockPlan,
@@ -31,6 +33,78 @@ Deno.test("httpUrlOrNull rejects blank and non-http values", () => {
   if (httpUrlOrNull("") !== null) throw new Error("empty");
   if (httpUrlOrNull("javascript:alert(1)") !== null) {
     throw new Error("javascript");
+  }
+});
+
+Deno.test("idempotency key prefers the header, then body fields", () => {
+  const header = "11111111-1111-4111-8111-111111111111";
+  const bodyKey = "22222222-2222-4222-8222-222222222222";
+  const orderId = "33333333-3333-4333-8333-333333333333";
+  if (
+    readIdempotencyKey(header, {
+      idempotency_key: bodyKey,
+      order_id: orderId,
+    }) !== header
+  ) {
+    throw new Error("header should win");
+  }
+  if (
+    readIdempotencyKey(null, { idempotency_key: bodyKey, order_id: orderId }) !==
+      bodyKey
+  ) {
+    throw new Error("body key should win over order_id");
+  }
+  if (readIdempotencyKey("  ", { order_id: orderId }) !== orderId) {
+    throw new Error("order_id is the last resort");
+  }
+  if (readIdempotencyKey("not-a-uuid", { order_id: "also-bad" }) !== null) {
+    throw new Error("non-uuid keys are ignored");
+  }
+});
+
+Deno.test("checkout dedupe replays the same cart and mints on change", () => {
+  const key = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const pending = {
+    status: "pending",
+    idempotency_key: key,
+    reward_variant: "diploma",
+    amount_cents: 0,
+  };
+  if (
+    checkoutDedupePlan(pending, {
+      idempotencyKey: key,
+      rewardVariant: "diploma",
+      amountCents: 0,
+    }) !== "replay"
+  ) {
+    throw new Error("same free cart should replay");
+  }
+  if (
+    checkoutDedupePlan(pending, {
+      idempotencyKey: key,
+      rewardVariant: "medal_and_diploma",
+      amountCents: 0,
+    }) !== "new_attempt"
+  ) {
+    throw new Error("variant change is a new attempt");
+  }
+  if (
+    checkoutDedupePlan(pending, {
+      idempotencyKey: key,
+      rewardVariant: "diploma",
+      amountCents: 19900,
+    }) !== "new_attempt"
+  ) {
+    throw new Error("price change is a new attempt");
+  }
+  if (
+    checkoutDedupePlan(null, {
+      idempotencyKey: key,
+      rewardVariant: "diploma",
+      amountCents: 0,
+    }) !== "new_attempt"
+  ) {
+    throw new Error("missing row is a new attempt");
   }
 });
 

@@ -363,6 +363,17 @@ class MemoryPurchases implements PurchaseRepository {
 
   final Map<String, Purchase> purchases;
   var refreshCalls = 0;
+  var startCalls = 0;
+
+  /// Keys passed to [startCheckout], in call order. Null when the caller
+  /// omitted one.
+  final idempotencyKeys = <String?>[];
+
+  /// When set, the next [startCheckout] waits on this future, then clears it.
+  Completer<CheckoutSession>? checkoutGate;
+
+  /// When set, the next [startCheckout] throws this and clears it.
+  Object? checkoutError;
 
   /// Widget tests that need the pay CTAs to stay visible after a tap
   /// set this to false. Default true matches the previous auto-pay refresh.
@@ -418,12 +429,28 @@ class MemoryPurchases implements PurchaseRepository {
   Future<CheckoutSession> startCheckout(
     String challengeId, {
     RewardVariant? rewardVariant,
+    String? idempotencyKey,
   }) async {
+    startCalls++;
+    idempotencyKeys.add(idempotencyKey);
+    final gate = checkoutGate;
+    if (gate != null) {
+      checkoutGate = null;
+      return gate.future;
+    }
+    final error = checkoutError;
+    if (error != null) {
+      checkoutError = null;
+      throw error;
+    }
     final variant =
         rewardVariant ??
         purchases[challengeId]?.rewardVariant ??
         RewardVariant.diploma;
-    final session = CheckoutSession(url: fapiCheckoutUrlFor(variant));
+    final session = CheckoutSession(
+      url: fapiCheckoutUrlFor(variant),
+      orderId: idempotencyKey,
+    );
     purchases[challengeId] = Purchase(
       challengeId: challengeId,
       status: PurchaseStatus.pending,

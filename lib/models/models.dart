@@ -546,7 +546,10 @@ class Profile {
 }
 
 class CheckoutSession {
-  const CheckoutSession({required this.url});
+  const CheckoutSession({required this.url, this.orderId});
 
   final String url;
+
+  /// Server echo of the checkout idempotency key, when the function returns it.
+  final String? orderId;
 }
