@@ -484,11 +484,21 @@ void main() {
         expect(find.byKey(const Key('challenge-unlock-cta')), findsNothing);
         expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
         expect(
-          find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'en')!)),
+          find.text(
+            strings.payCtaAmount(
+              strings.payDigitalDiploma,
+              formatChallengePrice(499, 'eur', 'en')!,
+            ),
+          ),
           findsNWidgets(2),
         );
         expect(
-          find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'en')!)),
+          find.text(
+            strings.payCtaAmount(
+              strings.payMedalAndDiploma,
+              formatChallengePrice(900, 'eur', 'en')!,
+            ),
+          ),
           findsNWidgets(2),
         );
         final payY = tester
@@ -562,7 +572,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
         expect(
           tester
-              .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+              .widget<SizeTransition>(
+                find.byKey(const Key('challenge-cta-size')),
+              )
               .sizeFactor
               .value,
           0,
@@ -608,11 +620,21 @@ void main() {
         expect(find.text(strings.challengeLockedPaid), findsNothing);
         expect(find.text(strings.waypoints), findsOneWidget);
         expect(
-          find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'en')!)),
+          find.text(
+            strings.payCtaAmount(
+              strings.payDigitalDiploma,
+              formatChallengePrice(499, 'eur', 'en')!,
+            ),
+          ),
           findsNWidgets(2),
         );
         expect(
-          find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'en')!)),
+          find.text(
+            strings.payCtaAmount(
+              strings.payMedalAndDiploma,
+              formatChallengePrice(900, 'eur', 'en')!,
+            ),
+          ),
           findsNWidgets(2),
         );
         expect(find.text('€4.99'), findsNothing);
@@ -687,7 +709,10 @@ void main() {
           find.descendant(
             of: find.byKey(const Key('challenge-pay-diploma')),
             matching: find.text(
-              strings.payCtaAmount(formatChallengePrice(499, 'eur', 'en')!),
+              strings.payCtaAmount(
+                strings.payDigitalDiploma,
+                formatChallengePrice(499, 'eur', 'en')!,
+              ),
             ),
           ),
         );
@@ -695,7 +720,10 @@ void main() {
           find.descendant(
             of: find.byKey(const Key('challenge-pay-medal')),
             matching: find.text(
-              strings.payCtaAmount(formatChallengePrice(900, 'eur', 'en')!),
+              strings.payCtaAmount(
+                strings.payMedalAndDiploma,
+                formatChallengePrice(900, 'eur', 'en')!,
+              ),
             ),
           ),
         );
@@ -775,11 +803,21 @@ void main() {
       await tester.pumpAndSettle();
       final strings = AppStrings('cs');
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'cs')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payDigitalDiploma,
+            formatChallengePrice(499, 'eur', 'cs')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'cs')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payMedalAndDiploma,
+            formatChallengePrice(900, 'eur', 'cs')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(find.text('Přijmi výzvu'), findsNWidgets(2));
@@ -831,12 +869,20 @@ void main() {
       final strings = AppStrings('cs');
       expect(
         find.text(
-          strings.payCtaAmount(formatChallengePrice(124900, 'czk', 'cs')!),
+          strings.payCtaAmount(
+            strings.payDigitalDiploma,
+            formatChallengePrice(124900, 'czk', 'cs')!,
+          ),
         ),
         findsNWidgets(2),
       );
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(39900, 'czk', 'cs')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payMedalAndDiploma,
+            formatChallengePrice(39900, 'czk', 'cs')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(find.text('Digitální diplom'), findsNothing);
@@ -1016,11 +1062,21 @@ void main() {
       await tester.pumpAndSettle();
       final strings = AppStrings('de');
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'de')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payDigitalDiploma,
+            formatChallengePrice(499, 'eur', 'de')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'de')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payMedalAndDiploma,
+            formatChallengePrice(900, 'eur', 'de')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(find.text('Nimm die Herausforderung an'), findsNWidgets(2));
@@ -1082,9 +1138,7 @@ void main() {
             .height,
         ChallengePaymentBarMetrics.visualHeight,
       );
-      final bar = tester.getRect(
-        find.byKey(const Key('challenge-cta-panel')),
-      );
+      final bar = tester.getRect(find.byKey(const Key('challenge-cta-panel')));
       expect(bar.left, 0);
       expect(bar.right, 390);
       expect(
@@ -1116,7 +1170,10 @@ void main() {
         find.descendant(
           of: find.byKey(const Key('challenge-floating-pay-diploma')),
           matching: find.text(
-            AppStrings('en').payCtaAmount(formatChallengePrice(499, 'eur', 'en')!),
+            AppStrings('en').payCtaAmount(
+              AppStrings('en').payDigitalDiploma,
+              formatChallengePrice(499, 'eur', 'en')!,
+            ),
           ),
         ),
       );
@@ -1384,7 +1441,10 @@ void main() {
         find.descendant(
           of: find.byKey(const Key('challenge-floating-pay-medal')),
           matching: find.text(
-            AppStrings('en').payCtaAmount(formatChallengePrice(900, 'eur', 'en')!),
+            AppStrings('en').payCtaAmount(
+              AppStrings('en').payMedalAndDiploma,
+              formatChallengePrice(900, 'eur', 'en')!,
+            ),
           ),
         ),
       );

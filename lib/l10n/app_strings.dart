@@ -500,9 +500,11 @@ class AppStrings {
   /// Free enroll (0 Kč). Verb plus outcome, shared by both reward CTAs.
   String get payCtaFree => t('payCtaFree');
 
-  /// Paid CTA. [price] is already localized (`1 249 Kč`, `€4.99`).
-  String payCtaAmount(String price) =>
-      t('payCtaAmount').replaceAll('{price}', price);
+  /// Paid CTA: localized product name plus price (`Digitální diplom 1 249 Kč`).
+  String payCtaAmount(String product, String price) =>
+      t('payCtaAmount')
+          .replaceAll('{product}', product)
+          .replaceAll('{price}', price);
   String get payPriceFree => t('payPriceFree');
   String get payPriceLoading => t('payPriceLoading');
   String get payPriceUnavailable => t('payPriceUnavailable');
@@ -910,7 +912,7 @@ class AppStrings {
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
       'payCtaFree': 'Join the challenge',
-      'payCtaAmount': 'Pay {price}',
+      'payCtaAmount': '{product} {price}',
       'payPriceFree': 'Free',
       'payPriceLoading': 'Loading price…',
       'payPriceUnavailable': 'Price unavailable',
@@ -1196,7 +1198,7 @@ class AppStrings {
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
       'payCtaFree': 'Přihlásit se do výzvy',
-      'payCtaAmount': 'Zaplatit {price}',
+      'payCtaAmount': '{product} {price}',
       'payPriceFree': 'Zdarma',
       'payPriceLoading': 'Načítám cenu…',
       'payPriceUnavailable': 'Cena není k dispozici',
@@ -1487,7 +1489,7 @@ class AppStrings {
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
       'payCtaFree': 'Zur Challenge anmelden',
-      'payCtaAmount': 'Zahle {price}',
+      'payCtaAmount': '{product} {price}',
       'payPriceFree': 'Kostenlos',
       'payPriceLoading': 'Preis wird geladen…',
       'payPriceUnavailable': 'Preis nicht verfügbar',

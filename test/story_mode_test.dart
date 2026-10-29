@@ -652,11 +652,21 @@ void main() {
 
       expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(499, 'eur', 'cs')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payDigitalDiploma,
+            formatChallengePrice(499, 'eur', 'cs')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(
-        find.text(strings.payCtaAmount(formatChallengePrice(900, 'eur', 'cs')!)),
+        find.text(
+          strings.payCtaAmount(
+            strings.payMedalAndDiploma,
+            formatChallengePrice(900, 'eur', 'cs')!,
+          ),
+        ),
         findsNWidgets(2),
       );
       expect(find.text(strings.challengeLockedPaid), findsNothing);

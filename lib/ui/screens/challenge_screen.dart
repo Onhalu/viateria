@@ -350,11 +350,17 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     final cents = _cartCents(variant);
     final formatted = cents == null || cents <= 0
         ? null
-        : formatChallengePrice(cents, _offerCurrency(variant, challenge), locale);
+        : formatChallengePrice(
+            cents,
+            _offerCurrency(variant, challenge),
+            locale,
+          );
     return payCtaLabel(
       productLabel: product,
       priceCents: cents,
-      amountLabel: formatted == null ? null : strings.payCtaAmount(formatted),
+      amountLabel: formatted == null
+          ? null
+          : strings.payCtaAmount(product, formatted),
       freeLabel: strings.payCtaFree,
       showRetry: payCtaShowRetry(_attempt.phase) && _attempt.variant == variant,
       retryLabel: strings.retry,

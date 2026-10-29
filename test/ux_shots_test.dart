@@ -382,7 +382,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.text(
-            strings.payCtaAmount(formatChallengePrice(499, 'eur', locale)!),
+            strings.payCtaAmount(
+              strings.payDigitalDiploma,
+              formatChallengePrice(499, 'eur', locale)!,
+            ),
           ),
           findsWidgets,
         );
@@ -703,7 +706,9 @@ void main() {
         await revealFloatingPanel();
         expect(
           tester
-              .widget<SizeTransition>(find.byKey(const Key('challenge-cta-size')))
+              .widget<SizeTransition>(
+                find.byKey(const Key('challenge-cta-size')),
+              )
               .sizeFactor
               .value,
           1,

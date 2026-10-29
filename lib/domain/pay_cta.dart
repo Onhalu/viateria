@@ -24,8 +24,9 @@ int? payCtaPriceCents({required bool offerReady, required int? offerCents}) {
   return offerCents;
 }
 
-/// Paid: „Zaplatit X Kč“ via [amountLabel]. Free: [freeLabel]. Unknown price:
-/// the existing product label. A failed attempt uses [retryLabel].
+/// Paid: product name plus price via [amountLabel]
+/// (`Digitální diplom 1 249 Kč`). Free: [freeLabel]. Unknown price: the
+/// product label alone. A failed attempt uses [retryLabel].
 String payCtaLabel({
   required String productLabel,
   required int? priceCents,
@@ -67,11 +68,11 @@ class PayCheckoutAttempt {
   /// displayed price arrived late. A different variant, or a later tap after
   /// the price actually changed, mints a new key.
   String begin({required RewardVariant variant, required int? priceCents}) {
-    final retrying =
-        phase == PayCtaPhase.error || phase == PayCtaPhase.timeout;
+    final retrying = phase == PayCtaPhase.error || phase == PayCtaPhase.timeout;
     final sameVariantRetry =
         retrying && this.variant == variant && idempotencyKey != null;
-    final sameCart = idempotencyKey != null &&
+    final sameCart =
+        idempotencyKey != null &&
         this.variant == variant &&
         this.priceCents == priceCents;
     if (!sameCart && !sameVariantRetry) {

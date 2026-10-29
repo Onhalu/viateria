@@ -60,10 +60,7 @@ void main() {
 
     test('retry after timeout keeps the key when the price arrives late', () {
       final pay = attempt();
-      final first = pay.begin(
-        variant: RewardVariant.diploma,
-        priceCents: null,
-      );
+      final first = pay.begin(variant: RewardVariant.diploma, priceCents: null);
       pay.phase = PayCtaPhase.timeout;
       final retry = pay.begin(
         variant: RewardVariant.diploma,
@@ -99,7 +96,7 @@ void main() {
     });
   });
 
-  test('pay labels use the verb in cs, en, and de', () {
+  test('paid labels keep the product name with the price', () {
     final cs = AppStrings('cs');
     final en = AppStrings('en');
     final de = AppStrings('de');
@@ -109,16 +106,29 @@ void main() {
     expect(cs.retry, 'Zkusit znovu');
 
     final paid = formatChallengePrice(124900, 'czk', 'cs')!;
+    final diploma = cs.payCtaAmount(cs.payDigitalDiploma, paid);
+    expect(diploma, '${cs.payDigitalDiploma} $paid');
+    expect(diploma.contains('Zaplatit'), isFalse);
+    final medalEur = formatChallengePrice(900, 'eur', 'en')!;
+    expect(
+      en.payCtaAmount(en.payMedalAndDiploma, medalEur),
+      '${en.payMedalAndDiploma} $medalEur',
+    );
+    final dePrice = formatChallengePrice(499, 'eur', 'de')!;
+    expect(
+      de.payCtaAmount(de.payDigitalDiploma, dePrice),
+      '${de.payDigitalDiploma} $dePrice',
+    );
     expect(
       payCtaLabel(
         productLabel: cs.payDigitalDiploma,
         priceCents: 124900,
-        amountLabel: cs.payCtaAmount(paid),
+        amountLabel: diploma,
         freeLabel: cs.payCtaFree,
         showRetry: false,
         retryLabel: cs.retry,
       ),
-      'Zaplatit $paid',
+      '${cs.payDigitalDiploma} $paid',
     );
     expect(
       payCtaLabel(
@@ -146,7 +156,7 @@ void main() {
       payCtaLabel(
         productLabel: cs.payDigitalDiploma,
         priceCents: 124900,
-        amountLabel: cs.payCtaAmount(paid),
+        amountLabel: cs.payCtaAmount(cs.payDigitalDiploma, paid),
         freeLabel: cs.payCtaFree,
         showRetry: true,
         retryLabel: cs.retry,
@@ -160,7 +170,7 @@ void main() {
   testWidgets('a loading pay button keeps its width and skips motion', (
     tester,
   ) async {
-    const label = 'Zaplatit 1 249 Kč';
+    const label = 'Digitální diplom 1 249 Kč';
     Future<void> pump({required bool loading, required bool reduce}) {
       return tester.pumpWidget(
         MaterialApp(
@@ -228,7 +238,9 @@ void main() {
 
     expect(purchases.startCalls, 1);
     expect(
-      tester.widget<PopScope>(find.byKey(const Key('challenge-pay-scope'))).canPop,
+      tester
+          .widget<PopScope>(find.byKey(const Key('challenge-pay-scope')))
+          .canPop,
       isFalse,
     );
     expect(
@@ -250,17 +262,26 @@ void main() {
 
     await tester.tap(diploma, warnIfMissed: false);
     await tester.pump();
-    expect(purchases.startCalls, 1, reason: 'the locked button ignores a second tap');
+    expect(
+      purchases.startCalls,
+      1,
+      reason: 'the locked button ignores a second tap',
+    );
 
     await tester.pump(const Duration(milliseconds: 40));
     await tester.pumpAndSettle();
     gate.completeError(StateError('late response'));
     await tester.pump();
 
-    expect(find.byKey(const Key('challenge-pay-phase-timeout')), findsOneWidget);
+    expect(
+      find.byKey(const Key('challenge-pay-phase-timeout')),
+      findsOneWidget,
+    );
     expect(find.text('Zkusit znovu'), findsWidgets);
     expect(
-      tester.widget<PopScope>(find.byKey(const Key('challenge-pay-scope'))).canPop,
+      tester
+          .widget<PopScope>(find.byKey(const Key('challenge-pay-scope')))
+          .canPop,
       isTrue,
     );
     final key = purchases.idempotencyKeys.single;
@@ -363,9 +384,7 @@ Widget _screen(
     enabled: false,
     child: MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => LocaleController(initial: 'cs'),
-        ),
+        ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
         ChangeNotifierProvider(
           create: (_) => LastOpenedChallengeStore(initialId: challengeId),
         ),
