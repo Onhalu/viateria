@@ -385,17 +385,11 @@ class _CategoryVisitCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ColorFiltered(
-              colorFilter: const ColorFilter.mode(
-                BrandColors.forest,
-                BlendMode.srcIn,
-              ),
-              child: Image.asset(
-                'assets/map/icons/${count.category.iconName}@2x.png',
-                width: _iconSize,
-                height: _iconSize,
-                filterQuality: FilterQuality.medium,
-              ),
+            Image.asset(
+              'assets/map/icons/${count.category.iconName}@2x.png',
+              width: _iconSize,
+              height: _iconSize,
+              filterQuality: FilterQuality.medium,
             ),
             const SizedBox(height: 8),
             Text(
