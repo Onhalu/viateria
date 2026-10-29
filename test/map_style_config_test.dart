@@ -174,6 +174,17 @@ void main() {
       expect(hostSource.contains('iconOpacity: 1'), isTrue);
       expect(hostSource.contains('iconAllowOverlap: true'), isTrue);
       expect(hostSource.contains("symbolZOrder: 'viewport-y'"), isTrue);
+      expect(hostSource.contains('selectedSymbolLayerId'), isTrue);
+      expect(hostSource.contains('backgroundPinFilter'), isTrue);
+      expect(hostSource.contains('foregroundPinFilter'), isTrue);
+      expect(
+        hostSource.indexOf('symbolLayerId,'),
+        lessThan(hostSource.indexOf('selectedSymbolLayerId,')),
+      );
+      expect(
+        hostSource.indexOf('backgroundPinFilter'),
+        lessThan(hostSource.indexOf('foregroundPinFilter')),
+      );
       expect(File(config).readAsStringSync().contains('verifiedHex'), isFalse);
       expect(File(host).readAsStringSync().contains('verifiedBadge'), isFalse);
       expect(

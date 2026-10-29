@@ -82,6 +82,25 @@ abstract final class MapStyleConfig {
   static const poiSourceId = 'pois';
   static const symbolLayerId = 'poi-symbols';
 
+  /// Tapped pin. Drawn after [symbolLayerId]. `symbol-z-order: viewport-y`
+  /// does not read `symbol-sort-key`, so this layer is what puts the
+  /// selection in front of overlapping pins.
+  static const selectedSymbolLayerId = 'poi-symbols-selected';
+
+  /// Every pin except the tapped one. Overlap stays viewport-y.
+  static const backgroundPinFilter = [
+    '!=',
+    [Expressions.get, 'foreground'],
+    1,
+  ];
+
+  /// The tapped place only. Neighbours within 200 m stay on the back layer.
+  static const foregroundPinFilter = [
+    Expressions.equal,
+    [Expressions.get, 'foreground'],
+    1,
+  ];
+
   static const hikeSourceId = 'challenge-hike';
   static const bikeSourceId = 'challenge-bike';
   static const hikeLayerId = 'challenge-hike-line';

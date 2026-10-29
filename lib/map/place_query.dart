@@ -263,10 +263,7 @@ Place? catalogPlaceAt(Iterable<Place> places, double lat, double lng) {
 }
 
 /// Feature ids that should read as selected, including neighbours within 200 m.
-Set<String> selectedFeatureIds(
-  Iterable<Place> places, {
-  String? selectedId,
-}) {
+Set<String> selectedFeatureIds(Iterable<Place> places, {String? selectedId}) {
   if (selectedId == null) return const {};
   Place? selected;
   for (final place in places) {
@@ -317,6 +314,7 @@ Map<String, dynamic> featureCollectionOf(
       for (final place in unique)
         place.toFeature(
           selected: isSelected(place),
+          foreground: selected != null && place.id == selected.id,
           inChallenge: challengePlaceIds.contains(place.id),
           verified: verifiedPlaceIds.contains(place.id),
         ),

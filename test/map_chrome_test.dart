@@ -102,15 +102,49 @@ void main() {
       (feature) => feature['id'] == 'karlstejn',
     );
     expect((selected['properties'] as Map)['selected'], 1);
+    expect((selected['properties'] as Map)['foreground'], 1);
     expect((selected['properties'] as Map)['inChallenge'], 1);
     expect((selected['properties'] as Map)['placeState'], 'inChallenge');
     final other = features.cast<Map<String, dynamic>>().firstWhere(
       (feature) => feature['id'] == 'staromestske',
     );
     expect((other['properties'] as Map)['selected'], 0);
+    expect((other['properties'] as Map)['foreground'], 0);
     expect((other['properties'] as Map)['inChallenge'], 0);
     expect((other['properties'] as Map)['verified'], 0);
     expect((other['properties'] as Map)['placeState'], 'outside');
+  });
+
+  test('only the tapped pin is foreground; clearing selection drops it', () {
+    // Outside the 200 m dedupe radius, so both pins stay on the map.
+    const separate = Place(
+      id: 'separate-karlstejn',
+      name: 'Pod hradem',
+      category: PlaceCategory.city,
+      location: GeoPoint(49.9424, 14.1880),
+    );
+    final selected = featureCollectionOf([
+      ...samplePlaces(),
+      separate,
+    ], selectedId: 'karlstejn');
+    final features = (selected['features'] as List)
+        .cast<Map<String, dynamic>>();
+    Map<String, dynamic> props(String id) =>
+        features.firstWhere((feature) => feature['id'] == id)['properties']
+            as Map<String, dynamic>;
+
+    expect(props('karlstejn')['foreground'], 1);
+    expect(props('karlstejn')['selected'], 1);
+    expect(props('separate-karlstejn')['foreground'], 0);
+    expect(props('separate-karlstejn')['selected'], 0);
+    expect(props('staromestske')['foreground'], 0);
+
+    final cleared = featureCollectionOf([...samplePlaces(), separate]);
+    for (final raw in cleared['features'] as List) {
+      final properties = (raw as Map)['properties'] as Map;
+      expect(properties['foreground'], 0);
+      expect(properties['selected'], 0);
+    }
   });
 
   test('feature collection keeps one marker when places overlap', () {

@@ -282,19 +282,27 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     );
 
     // Each pin is one symbol: opaque disk, ring, and bevel. viewport-y draws
-    // the pin lower on the screen after the pin above it, so the front disk
-    // covers the pin behind.
+    // the pin lower on the screen after the pin above it. That mode ignores
+    // symbol-sort-key, so the tapped pin is a second layer above this one.
+    const pinSymbols = SymbolLayerProperties(
+      iconImage: MapStyleConfig.pinImageExpression,
+      iconSize: MapStyleConfig.markerSizeExpression,
+      iconOpacity: 1,
+      iconAllowOverlap: true,
+      iconIgnorePlacement: true,
+      symbolZOrder: 'viewport-y',
+    );
     await controller.addSymbolLayer(
       MapStyleConfig.poiSourceId,
       MapStyleConfig.symbolLayerId,
-      const SymbolLayerProperties(
-        iconImage: MapStyleConfig.pinImageExpression,
-        iconSize: MapStyleConfig.markerSizeExpression,
-        iconOpacity: 1,
-        iconAllowOverlap: true,
-        iconIgnorePlacement: true,
-        symbolZOrder: 'viewport-y',
-      ),
+      pinSymbols,
+      filter: MapStyleConfig.backgroundPinFilter,
+    );
+    await controller.addSymbolLayer(
+      MapStyleConfig.poiSourceId,
+      MapStyleConfig.selectedSymbolLayerId,
+      pinSymbols,
+      filter: MapStyleConfig.foregroundPinFilter,
     );
 
     await controller.addSource(
@@ -560,6 +568,7 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
     }
 
     final poiHits = await controller.queryRenderedFeatures(point, [
+      MapStyleConfig.selectedSymbolLayerId,
       MapStyleConfig.symbolLayerId,
     ], null);
     if (poiHits.isEmpty) {
