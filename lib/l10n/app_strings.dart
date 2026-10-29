@@ -220,6 +220,8 @@ class AppStrings {
     'buttonLoading',
     'payDigitalDiploma',
     'payMedalAndDiploma',
+    'payCtaFree',
+    'payCtaAmount',
     'payPriceFree',
     'payPriceLoading',
     'payPriceUnavailable',
@@ -494,6 +496,15 @@ class AppStrings {
   String get buttonLoading => t('buttonLoading');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
+
+  /// Free enroll (0 Kč). Verb plus outcome, shared by both reward CTAs.
+  String get payCtaFree => t('payCtaFree');
+
+  /// Paid CTA: localized product name plus price (`Digitální diplom 1 249 Kč`).
+  String payCtaAmount(String product, String price) =>
+      t('payCtaAmount')
+          .replaceAll('{product}', product)
+          .replaceAll('{price}', price);
   String get payPriceFree => t('payPriceFree');
   String get payPriceLoading => t('payPriceLoading');
   String get payPriceUnavailable => t('payPriceUnavailable');
@@ -900,6 +911,8 @@ class AppStrings {
       'buttonLoading': 'Loading',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
+      'payCtaFree': 'Join the challenge',
+      'payCtaAmount': '{product} {price}',
       'payPriceFree': 'Free',
       'payPriceLoading': 'Loading price…',
       'payPriceUnavailable': 'Price unavailable',
@@ -1184,6 +1197,8 @@ class AppStrings {
       'buttonLoading': 'Načítání',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
+      'payCtaFree': 'Přihlásit se do výzvy',
+      'payCtaAmount': '{product} {price}',
       'payPriceFree': 'Zdarma',
       'payPriceLoading': 'Načítám cenu…',
       'payPriceUnavailable': 'Cena není k dispozici',
@@ -1473,6 +1488,8 @@ class AppStrings {
       'buttonLoading': 'Wird geladen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
+      'payCtaFree': 'Zur Challenge anmelden',
+      'payCtaAmount': '{product} {price}',
       'payPriceFree': 'Kostenlos',
       'payPriceLoading': 'Preis wird geladen…',
       'payPriceUnavailable': 'Preis nicht verfügbar',
