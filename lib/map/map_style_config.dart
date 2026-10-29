@@ -65,11 +65,11 @@ abstract final class MapStyleConfig {
   static const placeStateInChallenge = 'inChallenge';
   static const placeStateVerified = 'verified';
 
-  /// Verified disks draw no category icon (opacity 0).
+  /// Unused SDF tint. Category bevels are not recolored.
   static const verifiedIconHex = creamHex;
 
-  /// Verified disk fill `#A7B78C`, with a forest ring.
-  static const verifiedDiskFill = '#A7B78C';
+  /// Verified disk fill. Sage `#9C9A7B`, forest ring, category bevel on top.
+  static const verifiedDiskFill = sageHex;
 
   /// Session route on the main map. Separate from challenge hike/bike lines.
   static const catalogRouteSourceId = 'catalog-route';
@@ -128,7 +128,7 @@ abstract final class MapStyleConfig {
     barkHex,
   ];
 
-  /// Disk fill: verified sage-green, in-challenge cream, outside neutral @ 90%.
+  /// Disk fill: verified sage, in-challenge cream, outside neutral.
   static const diskFillExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -161,9 +161,8 @@ abstract final class MapStyleConfig {
     sageHex,
   ];
 
-  /// Verified places keep the disk and drop the category glyph. The baked
-  /// pin leaves the glyph out and the symbol stays fully opaque — applying
-  /// this match on the symbol would hide the disk as well.
+  /// Legacy opacity match. Pin symbols stay at full opacity so the verified
+  /// bevel remains visible on the sage disk.
   static const symbolOpacityExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -194,31 +193,19 @@ abstract final class MapStyleConfig {
     markerIconSize,
   ];
 
-  /// Shared image for every verified pin (disk only, no category glyph).
-  static const verifiedPinImageId = 'pin-verified';
-
-  /// Image id for one baked pin. Verified ignores [icon] and shares one disk.
+  /// Image id for one baked pin. Verified uses the same category bevel as
+  /// unvisited places, on the sage disk.
   static String pinImageId(String icon, String placeState) {
-    if (placeState == placeStateVerified) return verifiedPinImageId;
     return 'pin-$icon-$placeState';
   }
 
   /// Picks the baked pin. Disk and glyph are one image so MapLibre can
-  /// occlude a whole pin at a time.
+  /// occlude a whole pin at a time. Selection only changes [markerSizeExpression].
   static const pinImageExpression = [
-    Expressions.caseExpression,
-    [
-      Expressions.equal,
-      [Expressions.get, 'placeState'],
-      placeStateVerified,
-    ],
-    verifiedPinImageId,
-    [
-      Expressions.concat,
-      'pin-',
-      [Expressions.get, 'icon'],
-      '-',
-      [Expressions.get, 'placeState'],
-    ],
+    Expressions.concat,
+    'pin-',
+    [Expressions.get, 'icon'],
+    '-',
+    [Expressions.get, 'placeState'],
   ];
 }

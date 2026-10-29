@@ -48,10 +48,19 @@ void main() {
       MapStyleConfig.pinImageId('city', 'inChallenge'),
       'pin-city-inChallenge',
     );
-    expect(MapStyleConfig.pinImageId('historical', 'verified'), 'pin-verified');
     expect(
-      MapStyleConfig.pinImageExpression,
-      contains(MapStyleConfig.verifiedPinImageId),
+      MapStyleConfig.pinImageId('historical', 'verified'),
+      'pin-historical-verified',
+    );
+    expect(MapStyleConfig.pinImageId('city', 'verified'), 'pin-city-verified');
+    expect(MapStyleConfig.pinImageExpression.first, 'concat');
+    expect(
+      MapStyleConfig.markerSizeExpression,
+      contains(MapStyleConfig.markerIconSize),
+    );
+    expect(
+      MapStyleConfig.markerSizeExpression,
+      contains(MapStyleConfig.selectedMarkerIconSize),
     );
     expect(MapStyleConfig.diskLayerId, 'poi-disks');
     expect(MapStyleConfig.forestHex, '#35483C');
@@ -60,7 +69,8 @@ void main() {
     expect(MapStyleConfig.creamHex, '#F3EFE5');
     expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
     expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
-    expect(MapStyleConfig.verifiedDiskFill, '#A7B78C');
+    expect(MapStyleConfig.verifiedDiskFill, '#9C9A7B');
+    expect(MapStyleConfig.verifiedDiskFill, MapStyleConfig.sageHex);
     expect(MapStyleConfig.verifiedDiskFill, isNot(MapStyleConfig.forestHex));
     expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(

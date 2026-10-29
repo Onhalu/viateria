@@ -35,12 +35,13 @@ void main() {
     expect(MapPalette.creamRgba94, 'rgba(243, 239, 229, 0.94)');
     expect(MapStyleConfig.diskFillColor, '#F3EFE5');
     expect(MapStyleConfig.outsideDiskFill, '#FAF8F2');
-    expect(MapPalette.verifiedDiskHex, '#A7B78C');
+    expect(MapPalette.verifiedDiskHex, '#9C9A7B');
     expect(MapPalette.verifiedDiskHex, MapStyleConfig.verifiedDiskFill);
-    expect(MapPalette.verified, const Color(0xFFA7B78C));
+    expect(MapPalette.verifiedDiskHex, MapStyleConfig.sageHex);
+    expect(MapPalette.verified, const Color(0xFF9C9A7B));
     expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
     expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
-    expect(MapStyleConfig.verifiedDiskFill, '#A7B78C');
+    expect(MapStyleConfig.verifiedDiskFill, '#9C9A7B');
     expect(MapStyleConfig.verifiedDiskFill, isNot(MapStyleConfig.forestHex));
     expect(MapStyleConfig.verifiedDiskFill, isNot('#B8860B'));
     expect(MapStyleConfig.verifiedDiskFill, isNot('#D4A017'));

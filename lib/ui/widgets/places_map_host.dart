@@ -253,12 +253,9 @@ class _PlacesMapHostState extends State<PlacesMapHost> {
       return controller.addImage(id, png, false);
     }
 
-    await addPin(
-      MapStyleConfig.verifiedPinImageId,
-      await placePinPng(spec: placePinSpec(MapStyleConfig.placeStateVerified)),
-    );
     for (final name in names) {
       for (final state in const [
+        MapStyleConfig.placeStateVerified,
         MapStyleConfig.placeStateInChallenge,
         MapStyleConfig.placeStateOutside,
       ]) {

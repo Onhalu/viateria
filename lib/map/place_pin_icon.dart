@@ -89,7 +89,8 @@ Future<ui.Image> placePinImage({required PlacePinSpec spec, ui.Image? glyph}) {
   return picture.toImage(canvasSide, canvasSide);
 }
 
-/// PNG bytes for [placePinImage]. [glyphPng] is omitted for verified pins.
+/// PNG bytes for [placePinImage]. Every state, including verified, draws
+/// the category bevel when [glyphPng] is set.
 Future<Uint8List> placePinPng({
   required PlacePinSpec spec,
   Uint8List? glyphPng,

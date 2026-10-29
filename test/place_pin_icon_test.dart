@@ -38,17 +38,31 @@ void main() {
     }
     expect(bevel, greaterThan(20));
 
-    final verified = await _decode(
-      await placePinPng(spec: placePinSpec(MapStyleConfig.placeStateVerified)),
+    final verifiedGlyph = await rootBundle.load(
+      'assets/map/icons/historical@2x.png',
     );
-    final verifiedCenter = _at(
+    final verified = await _decode(
+      await placePinPng(
+        spec: placePinSpec(MapStyleConfig.placeStateVerified),
+        glyphPng: verifiedGlyph.buffer.asUint8List(),
+      ),
+    );
+    final verifiedPadding = _at(
       verified,
-      (verified.width / 2).round(),
+      (verified.width / 2).round() + 34,
       (verified.height / 2).round(),
     );
-    expect(verifiedCenter.a, 255);
-    expect(verifiedCenter.rgb, 0xA7B78C);
-    expect(verified.pixels.where((pixel) => pixel.rgb == 0x374833), isEmpty);
+    expect(verifiedPadding.a, 255);
+    expect(verifiedPadding.rgb, 0x9C9A7B);
+    expect(
+      placePinSpec(MapStyleConfig.placeStateVerified).stroke,
+      const ui.Color(0xFF35483C),
+    );
+    var verifiedBevel = 0;
+    for (final pixel in verified.pixels) {
+      if (pixel.rgb == 0x374833 && pixel.a == 255) verifiedBevel++;
+    }
+    expect(verifiedBevel, greaterThan(20));
   });
 
   test('the pin in front hides the glyph of the pin behind it', () async {
