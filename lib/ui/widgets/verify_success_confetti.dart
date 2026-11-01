@@ -105,7 +105,8 @@ List<VerifyConfettiPiece> buildVerifyConfettiPieces({int seed = 20261007}) {
   });
 }
 
-/// Full-screen paper burst after a successful place or waypoint verify.
+/// Full-screen paper burst for a verified place, or for a GPS pass
+/// before `verify_waypoint` confirms it.
 ///
 /// [IgnorePointer] so the success UI underneath (dismiss, diploma, map)
 /// stays tappable. Renders nothing when animations are disabled.

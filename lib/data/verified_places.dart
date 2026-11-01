@@ -7,21 +7,59 @@ import 'scoped_prefs.dart';
 ///
 /// Unscoped until [bindUser] runs. The first signed-in user adopts the
 /// legacy device set; each later user keeps a separate set.
+///
+/// GPS verify may [addOptimistic] a pin before `verify_waypoint` returns.
+/// Those ids are visible to the map but not written to disk until [confirm].
+/// [rollback] drops only that unconfirmed pin.
 class VerifiedPlacesStore extends ChangeNotifier {
   VerifiedPlacesStore({Set<String>? initial}) : _ids = {...?initial};
 
   static const prefsKey = 'viateria.verifiedPlaceIds';
 
   final Set<String> _ids;
+  final Set<String> _optimistic = {};
   String? _userId;
   var _generation = 0;
 
-  Set<String> get ids => Set<String>.unmodifiable(_ids);
+  Set<String> get ids {
+    if (_optimistic.isEmpty) return Set<String>.unmodifiable(_ids);
+    return Set<String>.unmodifiable({..._ids, ..._optimistic});
+  }
 
   /// Account whose prefs are loaded, or null when signed out.
   String? get boundUserId => _userId;
 
-  bool contains(String id) => _ids.contains(id);
+  bool contains(String id) => _ids.contains(id) || _optimistic.contains(id);
+
+  /// Shows [id] as verified immediately. Not persisted until [confirm].
+  ///
+  /// A second call, or a call for an id already confirmed, is a no-op.
+  void addOptimistic(String id) => addOptimisticAll([id]);
+
+  void addOptimisticAll(Iterable<String> ids) {
+    var changed = false;
+    for (final id in ids) {
+      if (id.isEmpty || _ids.contains(id)) continue;
+      if (_optimistic.add(id)) changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Persists an optimistic pin. Repeating it leaves a single stored id.
+  Future<void> confirm(String id) => confirmAll([id]);
+
+  Future<void> confirmAll(Iterable<String> ids) => addAll(ids);
+
+  /// Drops an unconfirmed pin. A pin already [confirm]ed stays.
+  void rollback(String id) => rollbackAll([id]);
+
+  void rollbackAll(Iterable<String> ids) {
+    var changed = false;
+    for (final id in ids) {
+      if (_optimistic.remove(id)) changed = true;
+    }
+    if (changed) notifyListeners();
+  }
 
   /// Loads the key for the current binding (legacy key when unbound).
   Future<void> load() async {
@@ -82,7 +120,9 @@ class VerifiedPlacesStore extends ChangeNotifier {
   Future<void> addAll(Iterable<String> ids) async {
     var changed = false;
     for (final id in ids) {
-      if (id.isNotEmpty && _ids.add(id)) changed = true;
+      if (id.isEmpty) continue;
+      if (_optimistic.remove(id)) changed = true;
+      if (_ids.add(id)) changed = true;
     }
     if (!changed) return;
     notifyListeners();

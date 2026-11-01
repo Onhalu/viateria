@@ -64,6 +64,7 @@ class Challenge {
     required this.status,
     required this.translations,
     this.coverImageUrl,
+    this.blurHash,
     this.heroFocalY,
     this.region,
     this.countryCode,
@@ -96,6 +97,10 @@ class Challenge {
   final PublishStatus status;
   final List<LocalizedText> translations;
   final String? coverImageUrl;
+
+  /// BlurHash of [coverImageUrl] (`challenges.blurhash`). Null until a cover
+  /// is hashed; the client shows a skeleton instead of an empty box.
+  final String? blurHash;
 
   /// Optional vertical focal point for the cover crop, in Alignment space
   /// (−1 top … 1 bottom). Read only when the row already has `hero_focal_y`.

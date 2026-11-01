@@ -81,6 +81,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
   LivePhoto? _photo;
   GeoPoint? _target;
   Place? _catalogPlace;
+  String? _waypointPlaceId;
 
   @override
   void initState() {
@@ -103,6 +104,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         if (waypoint.id == widget.waypointId) {
           final fallback = GeoPoint(waypoint.lat, waypoint.lng);
           final placeId = waypoint.placeId;
+          _waypointPlaceId = placeId;
           if (placeId == null || placeId.isEmpty) return fallback;
           try {
             final places = await (widget.places ?? services.places).fetchAll();
@@ -214,6 +216,14 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     await _complete(gps: false);
   }
 
+  Set<String> _gpsPinIds() {
+    return placeIdsPersistedForVerify(
+      placeId: widget.placeId,
+      shownPlaceId: widget.place?.id ?? _catalogPlace?.id,
+      waypointPlaceId: _waypointPlaceId,
+    );
+  }
+
   Future<void> _complete({required bool gps}) async {
     final services = context.read<AppServices>();
     final strings = context.read<LocaleController>().strings;
@@ -222,72 +232,13 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
       _error = null;
     });
     try {
+      if (widget.isChallengeStop && gps) {
+        // GPS path only. Photo verify waits for the RPC below.
+        await _completeGpsOptimistic(services, strings);
+        return;
+      }
       if (widget.isChallengeStop) {
-        final allowed = await _challengeAllowed(services, strings);
-        if (!allowed) return;
-        final user = services.auth.currentUser;
-        if (user == null) return;
-        var photoPath = VerifyProximity.gpsPhotoPath(
-          userId: user.id,
-          challengeId: widget.challengeId!,
-          waypointId: widget.waypointId!,
-        );
-        if (!gps) {
-          final photo = _photo;
-          if (photo == null) {
-            setState(() {
-              _busy = false;
-              _error = strings.photoRequired;
-            });
-            return;
-          }
-          if (!_policy.acceptsUpload(
-            request: const PhotoCaptureRequest(source: PhotoSource.liveCamera),
-            bytes: photo.bytes,
-            mimeType: photo.mimeType,
-          )) {
-            setState(() => _error = strings.errorGeneric);
-            return;
-          }
-          photoPath = await services.photos.uploadWaypointPhoto(
-            userId: user.id,
-            challengeId: widget.challengeId!,
-            waypointId: widget.waypointId!,
-            bytes: Uint8List.fromList(photo.bytes),
-            mimeType: photo.mimeType,
-          );
-        }
-        final detail = await services.catalog.fetchChallenge(
-          widget.challengeId!,
-        );
-        final updated = await services.progress.verifyWaypoint(
-          challengeId: widget.challengeId!,
-          waypointId: widget.waypointId!,
-          photoPath: photoPath,
-        );
-        await _persistPlaceIds(services);
-        if (!mounted) return;
-        final story = detail.challenge.accessMode == AccessMode.story;
-        if (updated.isCompleted && !story) {
-          final id = widget.challengeId!;
-          final nav = Navigator.of(context, rootNavigator: true);
-          _celebrateAndLeave(() {
-            if (nav.canPop()) nav.pop();
-            final host = nav.context;
-            if (host.mounted) showDiplomaWindow(host, id);
-          });
-          return;
-        }
-        final hints = storyStepIdsAfterVerify(
-          detail: detail,
-          verifiedWaypointId: widget.waypointId!,
-          completedIds: updated.completedWaypointIds,
-        );
-        final reveal =
-            updated.revealStoryStepId ??
-            hints.closingStoryStepId ??
-            hints.nextStoryStepId;
-        _celebrateAndLeave(() => context.pop(story ? reveal : null));
+        await _completePhoto(services, strings);
         return;
       }
       final ids = await _persistPlaceIds(services);
@@ -306,20 +257,165 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     }
   }
 
-  /// Plays the burst on the frame the success UI appears, then leaves.
-  ///
-  /// The overlay is [IgnorePointer], so dismiss and other CTAs stay usable.
-  /// Reduced motion and a missing overlay skip the burst. Failures never
-  /// call this.
-  void _celebrateAndLeave(VoidCallback leave) {
+  /// Client proximity already passed. Show the sage pin and confetti, then
+  /// call `verify_waypoint`. Story unlock, the diploma, and leaving the sheet
+  /// wait for that RPC. A failure rolls the pin back.
+  Future<void> _completeGpsOptimistic(
+    AppServices services,
+    AppStrings strings,
+  ) async {
+    final ids = _gpsPinIds();
+    services.verifiedPlaces.addOptimisticAll(ids);
+    _showConfetti();
+    try {
+      final allowed = await _challengeAllowed(services, strings);
+      if (!allowed) {
+        services.verifiedPlaces.rollbackAll(ids);
+        return;
+      }
+      final user = services.auth.currentUser;
+      if (user == null) {
+        services.verifiedPlaces.rollbackAll(ids);
+        return;
+      }
+      final photoPath = VerifyProximity.gpsPhotoPath(
+        userId: user.id,
+        challengeId: widget.challengeId!,
+        waypointId: widget.waypointId!,
+      );
+      final detail = await services.catalog.fetchChallenge(widget.challengeId!);
+      final updated = await services.progress.verifyWaypoint(
+        challengeId: widget.challengeId!,
+        waypointId: widget.waypointId!,
+        photoPath: photoPath,
+      );
+      await _persistPlaceIds(services);
+      await services.verifiedPlaces.confirmAll(ids);
+      if (!mounted) return;
+      _leaveAfterVerified(detail: detail, updated: updated, confetti: false);
+    } catch (_) {
+      services.verifiedPlaces.rollbackAll(ids);
+      if (!mounted) return;
+      setState(() {
+        _gpsChecking = false;
+        _error = strings.verifyFailed;
+      });
+      _showVerifyFailed(strings);
+    }
+  }
+
+  /// Photo verify waits for upload and `verify_waypoint` before the pin,
+  /// confetti, story step, or diploma.
+  Future<void> _completePhoto(AppServices services, AppStrings strings) async {
+    final allowed = await _challengeAllowed(services, strings);
+    if (!allowed) return;
+    final user = services.auth.currentUser;
+    if (user == null) return;
+    final photo = _photo;
+    if (photo == null) {
+      setState(() {
+        _busy = false;
+        _error = strings.photoRequired;
+      });
+      return;
+    }
+    if (!_policy.acceptsUpload(
+      request: const PhotoCaptureRequest(source: PhotoSource.liveCamera),
+      bytes: photo.bytes,
+      mimeType: photo.mimeType,
+    )) {
+      setState(() => _error = strings.errorGeneric);
+      return;
+    }
+    final photoPath = await services.photos.uploadWaypointPhoto(
+      userId: user.id,
+      challengeId: widget.challengeId!,
+      waypointId: widget.waypointId!,
+      bytes: Uint8List.fromList(photo.bytes),
+      mimeType: photo.mimeType,
+    );
+    final detail = await services.catalog.fetchChallenge(widget.challengeId!);
+    final updated = await services.progress.verifyWaypoint(
+      challengeId: widget.challengeId!,
+      waypointId: widget.waypointId!,
+      photoPath: photoPath,
+    );
+    await _persistPlaceIds(services);
+    if (!mounted) return;
+    _leaveAfterVerified(detail: detail, updated: updated, confetti: true);
+  }
+
+  /// Story reveal and the diploma run only after `verify_waypoint` succeeds.
+  void _leaveAfterVerified({
+    required ChallengeDetail detail,
+    required ChallengeProgress updated,
+    required bool confetti,
+  }) {
+    if (!mounted) return;
+    final story = detail.challenge.accessMode == AccessMode.story;
+    void go(VoidCallback leave) {
+      if (confetti) {
+        _celebrateAndLeave(leave);
+      } else {
+        leave();
+      }
+    }
+
+    if (updated.isCompleted && !story) {
+      final id = widget.challengeId!;
+      final nav = Navigator.of(context, rootNavigator: true);
+      go(() {
+        if (nav.canPop()) nav.pop();
+        final host = nav.context;
+        if (host.mounted) showDiplomaWindow(host, id);
+      });
+      return;
+    }
+    final hints = storyStepIdsAfterVerify(
+      detail: detail,
+      verifiedWaypointId: widget.waypointId!,
+      completedIds: updated.completedWaypointIds,
+    );
+    final reveal =
+        updated.revealStoryStepId ??
+        hints.closingStoryStepId ??
+        hints.nextStoryStepId;
+    go(() => context.pop(story ? reveal : null));
+  }
+
+  void _showVerifyFailed(AppStrings strings) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(strings.verifyFailed, key: const Key('verify-failed')),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: BrandColors.forest,
+        ),
+      );
+  }
+
+  /// Plays the existing burst. Reduced motion and a missing overlay skip it.
+  /// Photo failures never call this; GPS shows it on client PASS, before the RPC.
+  void _showConfetti() {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    leave();
     if (reduceMotion || overlay == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!overlay.mounted) return;
       VerifySuccessConfetti.insertInto(overlay);
     });
+  }
+
+  /// Plays the burst on the frame the success UI appears, then leaves.
+  ///
+  /// The overlay is [IgnorePointer], so dismiss and other CTAs stay usable.
+  /// Reduced motion and a missing overlay skip the burst.
+  void _celebrateAndLeave(VoidCallback leave) {
+    leave();
+    _showConfetti();
   }
 
   Future<bool> _challengeAllowed(

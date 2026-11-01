@@ -290,7 +290,9 @@ void main() {
     expect(find.byKey(VerifySuccessConfetti.overlayKey), findsNothing);
   });
 
-  testWidgets('a failed waypoint verify shows no confetti', (tester) async {
+  testWidgets('a failed GPS verify shows confetti then stays put', (
+    tester,
+  ) async {
     final strings = AppStrings('cs');
     final open = sampleOpenChallenge();
     final progress = MemoryProgress(details: [open])
@@ -307,11 +309,12 @@ void main() {
       ),
     );
 
+    // Client proximity passes first, so the burst plays before the RPC.
     final seen = await _sawConfetti(tester);
     await tester.pumpAndSettle();
-    expect(seen, isFalse);
+    expect(seen, isTrue);
     expect(find.byKey(VerifySuccessConfetti.overlayKey), findsNothing);
-    expect(find.text(strings.errorGeneric), findsOneWidget);
+    expect(find.text(strings.verifyFailed), findsWidgets);
     expect(find.byKey(const Key('home')), findsNothing);
     final stored = await progress.fetchProgress('open-1');
     expect(stored?.completedWaypointIds ?? const {}, isEmpty);

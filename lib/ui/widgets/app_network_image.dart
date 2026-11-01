@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 
 import '../../theme/brand_colors.dart';
+import 'error_state.dart';
 
 /// Decode width in physical pixels for [Image.cacheWidth].
 int? cachePixelsFor(double logicalWidth, double devicePixelRatio) {
@@ -58,25 +60,160 @@ class AppImagePlaceholder extends StatelessWidget {
   }
 }
 
-/// Network image with a decode cap, beige placeholder, and beige error.
+/// BlurHash alphabet. Same 83 characters the decoder accepts.
+const _blurHashAlphabet =
+    r'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';
+
+/// A BlurHash the decoder will accept, or null when [raw] is missing or
+/// malformed. Callers then keep the beige skeleton instead of an empty box.
+String? usableBlurHash(String? raw) {
+  final hash = raw?.trim() ?? '';
+  if (hash.length < 6) return null;
+  final digits = _blurHashAlphabet.codeUnits;
+  for (final code in hash.codeUnits) {
+    if (!digits.contains(code)) return null;
+  }
+  final sizeFlag = _decode83(hash[0]);
+  final numY = (sizeFlag / 9).floor() + 1;
+  final numX = (sizeFlag % 9) + 1;
+  if (hash.length != 4 + 2 * numX * numY) return null;
+  return hash;
+}
+
+int _decode83(String text) {
+  final digits = _blurHashAlphabet.codeUnits;
+  var value = 0;
+  for (final code in text.codeUnits) {
+    value = value * 83 + digits.indexOf(code);
+  }
+  return value;
+}
+
+/// What a cover shows until the photo's first frame: BlurHash when [blurHash]
+/// decodes, otherwise a beige skeleton with a landscape mark. Never an empty
+/// grey or cream rectangle.
+class AppCoverUnderlay extends StatelessWidget {
+  const AppCoverUnderlay({super.key, this.blurHash});
+
+  final String? blurHash;
+
+  @override
+  Widget build(BuildContext context) {
+    final hash = usableBlurHash(blurHash);
+    final shape = const _CoverShape();
+    if (hash == null) return shape;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        shape,
+        BlurHash(
+          hash: hash,
+          color: const Color(0x00000000),
+          imageFit: BoxFit.cover,
+        ),
+      ],
+    );
+  }
+}
+
+class _CoverShape extends StatelessWidget {
+  const _CoverShape();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      fit: StackFit.expand,
+      children: [
+        AppSkeleton(radius: 0),
+        Center(
+          child: Icon(Icons.landscape, size: 48, color: BrandColors.forest),
+        ),
+      ],
+    );
+  }
+}
+
+/// Photo with a BlurHash or skeleton underneath until the first frame.
+class AppCoverImage extends StatelessWidget {
+  const AppCoverImage({
+    super.key,
+    required this.image,
+    this.blurHash,
+    this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
+    this.semanticLabel,
+    this.imageKey,
+  });
+
+  final ImageProvider image;
+  final String? blurHash;
+  final BoxFit fit;
+  final Alignment alignment;
+  final String? semanticLabel;
+  final Key? imageKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AppCoverUnderlay(blurHash: blurHash),
+        Image(
+          key: imageKey,
+          image: image,
+          fit: fit,
+          alignment: alignment,
+          width: double.infinity,
+          height: double.infinity,
+          semanticLabel: semanticLabel,
+          gaplessPlayback: true,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) return child;
+            return const SizedBox.shrink();
+          },
+          errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Network image with a decode cap. A BlurHash sits under the photo when
+/// [blurHash] is set; otherwise a beige skeleton does. Errors keep a shape.
 class AppNetworkImage extends StatelessWidget {
   const AppNetworkImage({
     super.key,
     required this.url,
+    this.blurHash,
     this.logicalWidth,
     this.fit = BoxFit.cover,
     this.alignment = Alignment.center,
     this.semanticLabel,
+    this.image,
   });
 
   final String? url;
+  final String? blurHash;
   final double? logicalWidth;
   final BoxFit fit;
   final Alignment alignment;
   final String? semanticLabel;
 
+  /// Overrides [url] when tests supply a provider that must not hit the network.
+  final ImageProvider? image;
+
   @override
   Widget build(BuildContext context) {
+    final override = image;
+    if (override != null) {
+      return AppCoverImage(
+        image: override,
+        blurHash: blurHash,
+        fit: fit,
+        alignment: alignment,
+        semanticLabel: semanticLabel,
+      );
+    }
     final raw = url?.trim() ?? '';
     if (raw.isEmpty) return const AppImagePlaceholder();
     return LayoutBuilder(
@@ -87,18 +224,28 @@ class AppNetworkImage extends StatelessWidget {
         final cacheWidth = logical == null
             ? null
             : cachePixelsFor(logical, MediaQuery.devicePixelRatioOf(context));
-        return Image.network(
-          supabaseRenderUrl(raw, cacheWidth),
+        final rendered = supabaseRenderUrl(raw, cacheWidth);
+        final ImageProvider provider = cacheWidth == null
+            ? NetworkImage(rendered)
+            : ResizeImage(NetworkImage(rendered), width: cacheWidth);
+        final bounded =
+            constraints.maxWidth.isFinite && constraints.maxHeight.isFinite;
+        if (!bounded) {
+          return Image(
+            image: provider,
+            fit: fit,
+            alignment: alignment,
+            semanticLabel: semanticLabel,
+            gaplessPlayback: true,
+            errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+          );
+        }
+        return AppCoverImage(
+          image: provider,
+          blurHash: blurHash,
           fit: fit,
           alignment: alignment,
-          cacheWidth: cacheWidth,
           semanticLabel: semanticLabel,
-          gaplessPlayback: true,
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return const AppImagePlaceholder();
-          },
-          errorBuilder: (_, _, _) => const AppImagePlaceholder(),
         );
       },
     );

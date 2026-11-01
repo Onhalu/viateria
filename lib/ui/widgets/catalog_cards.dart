@@ -48,6 +48,7 @@ class ChallengeCard extends StatelessWidget {
                     )
                   : CatalogCoverImage(
                       url: challenge.coverImageUrl,
+                      blurHash: challenge.blurHash,
                       card: true,
                     ),
             ),
@@ -218,7 +219,10 @@ class _HeroSlide extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CatalogCoverImage(url: challenge.coverImageUrl),
+              CatalogCoverImage(
+                url: challenge.coverImageUrl,
+                blurHash: challenge.blurHash,
+              ),
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -668,6 +672,7 @@ class CatalogFeaturedCard extends StatelessWidget {
                 aspectRatio: catalogCardAspectRatio,
                 child: CatalogCoverImage(
                   url: challenge.coverImageUrl,
+                  blurHash: challenge.blurHash,
                   card: true,
                 ),
               ),
@@ -727,9 +732,15 @@ class CatalogFeaturedCard extends StatelessWidget {
 }
 
 class CatalogCoverImage extends StatelessWidget {
-  const CatalogCoverImage({super.key, required this.url, this.card = false});
+  const CatalogCoverImage({
+    super.key,
+    required this.url,
+    this.blurHash,
+    this.card = false,
+  });
 
   final String? url;
+  final String? blurHash;
 
   /// Card thumbnails pick cover or contain from the photo's own ratio.
   /// The home carousel stays a full-bleed cover.
@@ -743,7 +754,7 @@ class CatalogCoverImage extends StatelessWidget {
         child: Icon(Icons.landscape, size: 48, color: BrandColors.forest),
       );
     }
-    if (!card) return AppNetworkImage(url: url);
+    if (!card) return AppNetworkImage(url: url, blurHash: blurHash);
     return LayoutBuilder(
       builder: (context, constraints) {
         final logical = constraints.maxWidth.isFinite
@@ -752,7 +763,10 @@ class CatalogCoverImage extends StatelessWidget {
         final cache = logical == null
             ? null
             : cachePixelsFor(logical, MediaQuery.devicePixelRatioOf(context));
-        return _CardCover(provider: _cardProvider(url!, cache));
+        return _CardCover(
+          provider: _cardProvider(url!, cache),
+          blurHash: blurHash,
+        );
       },
     );
   }
@@ -770,9 +784,10 @@ ImageProvider _cardProvider(String url, int? cacheWidth) {
 /// Beige field. Photos near 4:3 crop from the center. Other ratios are
 /// shown whole, with no blur and no shadow.
 class _CardCover extends StatefulWidget {
-  const _CardCover({required this.provider});
+  const _CardCover({required this.provider, this.blurHash});
 
   final ImageProvider provider;
+  final String? blurHash;
 
   @override
   State<_CardCover> createState() => _CardCoverState();
@@ -842,15 +857,22 @@ class _CardCoverState extends State<_CardCover> {
         ? null
         : source.width / source.height;
     final crop = aspect != null && catalogCoverShouldCrop(aspect);
-    return ColoredBox(
-      color: BrandColors.beige,
-      child: Image(
-        image: widget.provider,
-        fit: crop ? BoxFit.cover : BoxFit.contain,
-        alignment: Alignment.center,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => const AppImagePlaceholder(),
-      ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AppCoverUnderlay(blurHash: widget.blurHash),
+        Image(
+          image: widget.provider,
+          fit: crop ? BoxFit.cover : BoxFit.contain,
+          alignment: Alignment.center,
+          gaplessPlayback: true,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) return child;
+            return const SizedBox.shrink();
+          },
+          errorBuilder: (_, _, _) => const AppImagePlaceholder(),
+        ),
+      ],
     );
   }
 }
