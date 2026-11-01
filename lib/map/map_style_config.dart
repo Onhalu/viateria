@@ -27,8 +27,12 @@ abstract final class MapStyleConfig {
   static const prague = LatLng(50.0755, 14.4378);
   static const defaultZoom = 7.0;
 
-  static const markerIconSize = 0.45;
-  static const selectedMarkerIconSize = 0.55;
+  /// Scale for the 88 px plastic bevels. City content is 56 px, so 0.36
+  /// draws a 20 dp glyph inside the 32 dp disk (~6 dp of air).
+  static const markerIconSize = 0.36;
+
+  /// Selected disk is 36.8 dp. Same air ratio: 0.36 × 36.8 / 32.
+  static const selectedMarkerIconSize = 0.41;
 
   /// POI disk diameter in dp (MapLibre radius is half). Selected is 1.15×.
   static const diskDiameter = 32.0;
@@ -41,11 +45,12 @@ abstract final class MapStyleConfig {
   static const inChallengeDiskStrokeWidth = 2.0;
   static const verifiedDiskStrokeWidth = 1.5;
 
-  /// Cream `#F3EFE5` — in-challenge, not-yet-verified disks.
-  static const diskFillColor = 'rgba(243, 239, 229, 0.94)';
+  /// Opaque cream `#F3EFE5` for in-challenge disks. Full opacity so the pin
+  /// in front covers the disk and glyph of the pin behind it.
+  static const diskFillColor = '#F3EFE5';
 
-  /// Neutral `#FAF8F2` at 90% — places outside the open challenge.
-  static const outsideDiskFill = 'rgba(250, 248, 242, 0.90)';
+  /// Opaque neutral `#FAF8F2` for places outside the open challenge.
+  static const outsideDiskFill = '#FAF8F2';
 
   static const diskLayerId = 'poi-disks';
   static const forestHex = '#35483C';
@@ -54,16 +59,17 @@ abstract final class MapStyleConfig {
   static const creamHex = '#F3EFE5';
   static const neutralHex = '#FAF8F2';
 
-  /// SDF `placeState`: verified > inChallenge > outside.
+  /// `placeState`: verified > inChallenge > outside. Disk fill and ring use it.
+  /// Category glyphs are not tinted.
   static const placeStateOutside = 'outside';
   static const placeStateInChallenge = 'inChallenge';
   static const placeStateVerified = 'verified';
 
-  /// Verified disks draw no category icon (opacity 0).
+  /// Unused SDF tint. Category bevels are not recolored.
   static const verifiedIconHex = creamHex;
 
-  /// Verified disk fill `#A7B78C`, with a forest ring.
-  static const verifiedDiskFill = '#A7B78C';
+  /// Verified disk fill. Sage `#9C9A7B`, forest ring, category bevel on top.
+  static const verifiedDiskFill = sageHex;
 
   /// Session route on the main map. Separate from challenge hike/bike lines.
   static const catalogRouteSourceId = 'catalog-route';
@@ -75,6 +81,25 @@ abstract final class MapStyleConfig {
 
   static const poiSourceId = 'pois';
   static const symbolLayerId = 'poi-symbols';
+
+  /// Tapped pin. Drawn after [symbolLayerId]. `symbol-z-order: viewport-y`
+  /// does not read `symbol-sort-key`, so this layer is what puts the
+  /// selection in front of overlapping pins.
+  static const selectedSymbolLayerId = 'poi-symbols-selected';
+
+  /// Every pin except the tapped one. Overlap stays viewport-y.
+  static const backgroundPinFilter = [
+    '!=',
+    [Expressions.get, 'foreground'],
+    1,
+  ];
+
+  /// The tapped place only. Neighbours within 200 m stay on the back layer.
+  static const foregroundPinFilter = [
+    Expressions.equal,
+    [Expressions.get, 'foreground'],
+    1,
+  ];
 
   static const hikeSourceId = 'challenge-hike';
   static const bikeSourceId = 'challenge-bike';
@@ -91,7 +116,8 @@ abstract final class MapStyleConfig {
     zoom: defaultZoom,
   );
 
-  /// SDF icon-color: verified cream, in-challenge forest, outside bark.
+  /// Old SDF glyph tint. The symbol layer does not apply it; plastic bevels
+  /// keep their own facets, and place state stays on the disk.
   static const markerColorExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -102,7 +128,7 @@ abstract final class MapStyleConfig {
     barkHex,
   ];
 
-  /// Disk fill: verified sage-green, in-challenge cream, outside neutral @ 90%.
+  /// Disk fill: verified sage, in-challenge cream, outside neutral.
   static const diskFillExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -135,7 +161,8 @@ abstract final class MapStyleConfig {
     sageHex,
   ];
 
-  /// Verified places keep the disk and drop the category glyph.
+  /// Legacy opacity match. Pin symbols stay at full opacity so the verified
+  /// bevel remains visible on the sage disk.
   static const symbolOpacityExpression = [
     Expressions.match,
     [Expressions.get, 'placeState'],
@@ -164,5 +191,21 @@ abstract final class MapStyleConfig {
     ],
     selectedMarkerIconSize,
     markerIconSize,
+  ];
+
+  /// Image id for one baked pin. Verified uses the same category bevel as
+  /// unvisited places, on the sage disk.
+  static String pinImageId(String icon, String placeState) {
+    return 'pin-$icon-$placeState';
+  }
+
+  /// Picks the baked pin. Disk and glyph are one image so MapLibre can
+  /// occlude a whole pin at a time. Selection only changes [markerSizeExpression].
+  static const pinImageExpression = [
+    Expressions.concat,
+    'pin-',
+    [Expressions.get, 'icon'],
+    '-',
+    [Expressions.get, 'placeState'],
   ];
 }

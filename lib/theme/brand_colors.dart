@@ -44,9 +44,9 @@ abstract final class BrandColors {
   static const barkHex = '#756653';
   static const creamHex = '#F3EFE5';
 
-  /// Verified disk fill. No category icon sits on this disk.
-  static const verifiedFill = Color(0xFFA7B78C);
-  static const verifiedDiskHex = '#A7B78C';
+  /// Verified map-pin disk. Sage, with the category bevel on top.
+  static const verifiedFill = sage;
+  static const verifiedDiskHex = sageHex;
   static const verified = verifiedFill;
 }
 

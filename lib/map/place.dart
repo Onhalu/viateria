@@ -62,6 +62,7 @@ class Place {
 
   Map<String, dynamic> toFeature({
     bool selected = false,
+    bool foreground = false,
     bool inChallenge = false,
     bool verified = false,
   }) {
@@ -78,6 +79,9 @@ class Place {
         'category': category.name,
         'icon': iconName,
         'selected': selected ? 1 : 0,
+        // The tapped place only. Nearby pins can share [selected] for size
+        // and still stay on the viewport-y layer.
+        'foreground': foreground ? 1 : 0,
         'inChallenge': inChallenge ? 1 : 0,
         'verified': verified ? 1 : 0,
         'placeState': placeStateOf(

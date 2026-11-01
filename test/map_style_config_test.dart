@@ -22,8 +22,19 @@ void main() {
   );
 
   test('Batch B marker sizes without clustering', () {
-    expect(MapStyleConfig.markerIconSize, 0.45);
-    expect(MapStyleConfig.selectedMarkerIconSize, 0.55);
+    expect(MapStyleConfig.markerIconSize, 0.36);
+    expect(MapStyleConfig.selectedMarkerIconSize, 0.41);
+    // City content 56 px × 0.36 ≈ 20 dp inside the 32 dp disk.
+    expect(56 * MapStyleConfig.markerIconSize, closeTo(20, 0.5));
+    expect(
+      MapStyleConfig.selectedMarkerIconSize,
+      closeTo(
+        MapStyleConfig.markerIconSize *
+            MapStyleConfig.selectedDiskDiameter /
+            MapStyleConfig.diskDiameter,
+        0.01,
+      ),
+    );
     expect(MapStyleConfig.diskDiameter, 32);
     expect(MapStyleConfig.selectedDiskDiameter, 36.8);
     expect(MapStyleConfig.diskRadius, 16);
@@ -31,8 +42,26 @@ void main() {
     expect(MapStyleConfig.diskStrokeWidth, 1.5);
     expect(MapStyleConfig.inChallengeDiskStrokeWidth, 2);
     expect(MapStyleConfig.verifiedDiskStrokeWidth, 1.5);
-    expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
-    expect(MapStyleConfig.outsideDiskFill, 'rgba(250, 248, 242, 0.90)');
+    expect(MapStyleConfig.diskFillColor, '#F3EFE5');
+    expect(MapStyleConfig.outsideDiskFill, '#FAF8F2');
+    expect(
+      MapStyleConfig.pinImageId('city', 'inChallenge'),
+      'pin-city-inChallenge',
+    );
+    expect(
+      MapStyleConfig.pinImageId('historical', 'verified'),
+      'pin-historical-verified',
+    );
+    expect(MapStyleConfig.pinImageId('city', 'verified'), 'pin-city-verified');
+    expect(MapStyleConfig.pinImageExpression.first, 'concat');
+    expect(
+      MapStyleConfig.markerSizeExpression,
+      contains(MapStyleConfig.markerIconSize),
+    );
+    expect(
+      MapStyleConfig.markerSizeExpression,
+      contains(MapStyleConfig.selectedMarkerIconSize),
+    );
     expect(MapStyleConfig.diskLayerId, 'poi-disks');
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
@@ -40,7 +69,8 @@ void main() {
     expect(MapStyleConfig.creamHex, '#F3EFE5');
     expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
     expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
-    expect(MapStyleConfig.verifiedDiskFill, '#A7B78C');
+    expect(MapStyleConfig.verifiedDiskFill, '#9C9A7B');
+    expect(MapStyleConfig.verifiedDiskFill, MapStyleConfig.sageHex);
     expect(MapStyleConfig.verifiedDiskFill, isNot(MapStyleConfig.forestHex));
     expect(MapStyleConfig.markerColorExpression.first, 'match');
     expect(
@@ -128,13 +158,14 @@ void main() {
       expect(File(config).readAsStringSync().contains('labelLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('circleLayerId'), isFalse);
       expect(File(host).readAsStringSync().contains('labelLayerId'), isFalse);
-      expect(File(host).readAsStringSync().contains('diskLayerId'), isTrue);
+      expect(File(host).readAsStringSync().contains('addCircleLayer'), isFalse);
+      expect(File(host).readAsStringSync().contains('diskLayerId'), isFalse);
       expect(
         File(host).readAsStringSync().contains('selectedUnderlayLayerId'),
         isFalse,
       );
       expect(
-        File(host).readAsStringSync().contains('diskFillExpression'),
+        File(host).readAsStringSync().contains('pinImageExpression'),
         isTrue,
       );
       expect(
@@ -144,19 +175,25 @@ void main() {
         isTrue,
       );
       expect(File(host).readAsStringSync().contains('_syncPaint'), isFalse);
+      final hostSource = File(host).readAsStringSync();
+      expect(hostSource.contains('pinImageExpression'), isTrue);
+      expect(hostSource.contains('addImage(id, png, false)'), isTrue);
+      expect(hostSource.contains('sdfSilhouettePng'), isFalse);
+      expect(hostSource.contains('iconColor'), isFalse);
+      expect(hostSource.contains('symbolOpacityExpression'), isFalse);
+      expect(hostSource.contains('iconOpacity: 1'), isTrue);
+      expect(hostSource.contains('iconAllowOverlap: true'), isTrue);
+      expect(hostSource.contains("symbolZOrder: 'viewport-y'"), isTrue);
+      expect(hostSource.contains('selectedSymbolLayerId'), isTrue);
+      expect(hostSource.contains('backgroundPinFilter'), isTrue);
+      expect(hostSource.contains('foregroundPinFilter'), isTrue);
       expect(
-        File(host)
-            .readAsStringSync()
-            .contains("iconImage: [Expressions.get, 'icon']"),
-        isTrue,
+        hostSource.indexOf('symbolLayerId,'),
+        lessThan(hostSource.indexOf('selectedSymbolLayerId,')),
       );
       expect(
-        File(host).readAsStringSync().contains('diskStrokeWidthExpression'),
-        isTrue,
-      );
-      expect(
-        File(host).readAsStringSync().contains('diskStrokeColorExpression'),
-        isTrue,
+        hostSource.indexOf('backgroundPinFilter'),
+        lessThan(hostSource.indexOf('foregroundPinFilter')),
       );
       expect(File(config).readAsStringSync().contains('verifiedHex'), isFalse);
       expect(File(host).readAsStringSync().contains('verifiedBadge'), isFalse);

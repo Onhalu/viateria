@@ -32,20 +32,23 @@ void main() {
     expect(MapOverlayColors.fill, isNot(const Color(0xE61A1A1A)));
     expect(MapPalette.forestHex, '#35483C');
     expect(MapPalette.sageHex, '#9C9A7B');
-    expect(MapPalette.creamRgba94, MapStyleConfig.diskFillColor);
-    expect(MapPalette.verifiedDiskHex, '#A7B78C');
+    expect(MapPalette.creamRgba94, 'rgba(243, 239, 229, 0.94)');
+    expect(MapStyleConfig.diskFillColor, '#F3EFE5');
+    expect(MapStyleConfig.outsideDiskFill, '#FAF8F2');
+    expect(MapPalette.verifiedDiskHex, '#9C9A7B');
     expect(MapPalette.verifiedDiskHex, MapStyleConfig.verifiedDiskFill);
-    expect(MapPalette.verified, const Color(0xFFA7B78C));
+    expect(MapPalette.verifiedDiskHex, MapStyleConfig.sageHex);
+    expect(MapPalette.verified, const Color(0xFF9C9A7B));
     expect(MapStyleConfig.verifiedIconHex, MapStyleConfig.creamHex);
     expect(MapStyleConfig.verifiedIconHex, isNot(MapStyleConfig.barkHex));
-    expect(MapStyleConfig.verifiedDiskFill, '#A7B78C');
+    expect(MapStyleConfig.verifiedDiskFill, '#9C9A7B');
     expect(MapStyleConfig.verifiedDiskFill, isNot(MapStyleConfig.forestHex));
     expect(MapStyleConfig.verifiedDiskFill, isNot('#B8860B'));
     expect(MapStyleConfig.verifiedDiskFill, isNot('#D4A017'));
     expect(MapStyleConfig.forestHex, '#35483C');
     expect(MapStyleConfig.sageHex, '#9C9A7B');
     expect(MapStyleConfig.barkHex, '#756653');
-    expect(MapStyleConfig.diskFillColor, 'rgba(243, 239, 229, 0.94)');
+    expect(MapStyleConfig.diskFillColor, '#F3EFE5');
   });
 
   test('full and compact chrome sizes', () {
@@ -100,15 +103,49 @@ void main() {
       (feature) => feature['id'] == 'karlstejn',
     );
     expect((selected['properties'] as Map)['selected'], 1);
+    expect((selected['properties'] as Map)['foreground'], 1);
     expect((selected['properties'] as Map)['inChallenge'], 1);
     expect((selected['properties'] as Map)['placeState'], 'inChallenge');
     final other = features.cast<Map<String, dynamic>>().firstWhere(
       (feature) => feature['id'] == 'staromestske',
     );
     expect((other['properties'] as Map)['selected'], 0);
+    expect((other['properties'] as Map)['foreground'], 0);
     expect((other['properties'] as Map)['inChallenge'], 0);
     expect((other['properties'] as Map)['verified'], 0);
     expect((other['properties'] as Map)['placeState'], 'outside');
+  });
+
+  test('only the tapped pin is foreground; clearing selection drops it', () {
+    // Outside the 200 m dedupe radius, so both pins stay on the map.
+    const separate = Place(
+      id: 'separate-karlstejn',
+      name: 'Pod hradem',
+      category: PlaceCategory.city,
+      location: GeoPoint(49.9424, 14.1880),
+    );
+    final selected = featureCollectionOf([
+      ...samplePlaces(),
+      separate,
+    ], selectedId: 'karlstejn');
+    final features = (selected['features'] as List)
+        .cast<Map<String, dynamic>>();
+    Map<String, dynamic> props(String id) =>
+        features.firstWhere((feature) => feature['id'] == id)['properties']
+            as Map<String, dynamic>;
+
+    expect(props('karlstejn')['foreground'], 1);
+    expect(props('karlstejn')['selected'], 1);
+    expect(props('separate-karlstejn')['foreground'], 0);
+    expect(props('separate-karlstejn')['selected'], 0);
+    expect(props('staromestske')['foreground'], 0);
+
+    final cleared = featureCollectionOf([...samplePlaces(), separate]);
+    for (final raw in cleared['features'] as List) {
+      final properties = (raw as Map)['properties'] as Map;
+      expect(properties['foreground'], 0);
+      expect(properties['selected'], 0);
+    }
   });
 
   test('feature collection keeps one marker when places overlap', () {

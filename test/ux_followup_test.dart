@@ -651,19 +651,11 @@ void main() {
       isFalse,
     );
     expect(
-      paymentBarShouldShow(
-        currentlyVisible: true,
-        offset: 399,
-        viewport: 1000,
-      ),
+      paymentBarShouldShow(currentlyVisible: true, offset: 399, viewport: 1000),
       isFalse,
     );
     expect(
-      paymentBarShouldShow(
-        currentlyVisible: true,
-        offset: 400,
-        viewport: 1000,
-      ),
+      paymentBarShouldShow(currentlyVisible: true, offset: 400, viewport: 1000),
       isTrue,
     );
     expect(
@@ -684,8 +676,8 @@ void main() {
     );
   });
 
-  test('verified disk is sage-green with a forest ring and no badge file', () {
-    expect(BrandColors.verifiedDiskHex, '#A7B78C');
+  test('verified disk is sage with a forest ring and no badge file', () {
+    expect(BrandColors.verifiedDiskHex, '#9C9A7B');
     expect(File('lib/map/verified_badge_icon.dart').existsSync(), isFalse);
     expect(
       File('lib/ui/widgets/places_map_host.dart').readAsStringSync(),
