@@ -48,6 +48,7 @@ class AppStrings {
     'photoRequired',
     'uploading',
     'verified',
+    'verifyFailed',
     'routePlanner',
     'hike',
     'bike',
@@ -322,6 +323,7 @@ class AppStrings {
   String get photoRequired => t('photoRequired');
   String get uploading => t('uploading');
   String get verified => t('verified');
+  String get verifyFailed => t('verifyFailed');
   String get routePlanner => t('routePlanner');
   String get hike => t('hike');
   String get bike => t('bike');
@@ -717,6 +719,7 @@ class AppStrings {
       'photoRequired': 'A live camera photo is required to verify.',
       'uploading': 'Uploading…',
       'verified': 'Verified',
+      'verifyFailed': 'Verification failed. Please try again.',
       'routePlanner': 'Route planner',
       'hike': 'Hike',
       'bike': 'Bike',
@@ -1003,6 +1006,7 @@ class AppStrings {
       'photoRequired': 'K ověření je nutná živá fotka z fotoaparátu.',
       'uploading': 'Nahrávám…',
       'verified': 'Ověřeno',
+      'verifyFailed': 'Ověření se nepovedlo. Zkuste to znovu.',
       'routePlanner': 'Plánovač trasy',
       'hike': 'Pěšky',
       'bike': 'Kolo',
@@ -1287,6 +1291,8 @@ class AppStrings {
       'photoRequired': 'Zur Prüfung ist ein Live-Kamerafoto erforderlich.',
       'uploading': 'Wird hochgeladen…',
       'verified': 'Geprüft',
+      'verifyFailed':
+          'Die Überprüfung ist fehlgeschlagen. Bitte erneut versuchen.',
       'routePlanner': 'Routenplaner',
       'hike': 'Wandern',
       'bike': 'Rad',

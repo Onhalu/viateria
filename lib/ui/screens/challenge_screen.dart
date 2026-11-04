@@ -680,7 +680,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const ChallengeDetailSkeleton();
         }
         if (snapshot.hasError || snapshot.data == null) {
           if (widget.embedded && snapshot.error is ChallengeMissing) {
@@ -828,6 +828,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 if (hasCover)
                   ChallengeCollapsingHero(
                     url: cover,
+                    blurHash: challenge.blurHash,
                     title: copy.title,
                     location: challengeLocationLine(challenge, locale),
                     layoutWidth: twoColumn

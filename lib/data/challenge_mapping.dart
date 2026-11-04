@@ -122,6 +122,7 @@ Challenge challengeFromRow(Map<String, dynamic> row) {
     currency: row['currency'] as String? ?? 'eur',
     status: publishStatusFromWire(row['status'] as String? ?? 'draft'),
     coverImageUrl: row['cover_image_url'] as String?,
+    blurHash: _nonEmpty(row['blurhash']),
     heroFocalY: row['hero_focal_y'] is num
         ? (row['hero_focal_y'] as num).toDouble()
         : null,

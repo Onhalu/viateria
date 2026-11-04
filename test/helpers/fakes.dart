@@ -241,6 +241,11 @@ class MemoryProgress implements ProgressRepository {
   final Map<String, ChallengeRunStatus> statuses = {};
   Object? fetchProgressError;
   Object? verifyError;
+
+  /// When set, [verifyWaypoint] waits before applying [verifyError] or the
+  /// success path. Tests hold this open to observe optimistic GPS pins.
+  Future<void>? verifyBarrier;
+
   static const _rules = UnlockRules();
 
   @override
@@ -285,6 +290,8 @@ class MemoryProgress implements ProgressRepository {
     required String waypointId,
     required String photoPath,
   }) async {
+    final barrier = verifyBarrier;
+    if (barrier != null) await barrier;
     final forced = verifyError;
     if (forced != null) throw forced;
     if (photoPath.isEmpty) {
@@ -517,8 +524,8 @@ class MemoryCapture implements PhotoCapture {
   Future<LivePhoto?> captureLivePhoto() async => photo;
 }
 
-ChallengeDetail sampleOpenChallenge() {
-  const challenge = Challenge(
+ChallengeDetail sampleOpenChallenge({String? coverImageUrl, String? blurHash}) {
+  final challenge = Challenge(
     id: 'open-1',
     slug: 'open-trail',
     accessMode: AccessMode.open,
@@ -529,6 +536,8 @@ ChallengeDetail sampleOpenChallenge() {
     currency: 'eur',
     status: PublishStatus.published,
     countryCode: 'CZ',
+    coverImageUrl: coverImageUrl,
+    blurHash: blurHash,
     translations: [
       LocalizedText(
         locale: 'en',

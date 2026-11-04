@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../layout/breakpoints.dart';
 import 'app_network_image.dart';
+import 'error_state.dart';
 
 /// Full-bleed landscape crop. Under 600 dp the frame is 3:2 and at most
 /// 300 dp tall. From 600 dp it is 16:9, and never wider than 2:1: the old
@@ -16,6 +17,7 @@ class ChallengeHero extends StatelessWidget {
     required this.url,
     required this.title,
     this.image,
+    this.blurHash,
     this.focalY,
     this.onBack,
     this.backLabel = 'Zpět',
@@ -26,6 +28,9 @@ class ChallengeHero extends StatelessWidget {
 
   /// Overrides [url] when tests supply a decoded photo.
   final ImageProvider? image;
+
+  /// BlurHash shown under the cover until the photo's first frame.
+  final String? blurHash;
 
   /// Alignment y. Null centres the photo. A stored `hero_focal_y` may override it.
   final double? focalY;
@@ -47,6 +52,7 @@ class ChallengeHero extends StatelessWidget {
           height: height,
           child: CroppedCover(
             provider: image ?? challengeCoverProvider(context, url),
+            blurHash: blurHash,
             title: title,
             wide: window >= Breakpoints.mediumMax,
             focalY: focalY,
@@ -115,6 +121,7 @@ class ChallengeCollapsingHero extends StatelessWidget {
     required this.title,
     required this.location,
     this.image,
+    this.blurHash,
     this.focalY,
     this.layoutWidth,
     this.onBack,
@@ -127,6 +134,7 @@ class ChallengeCollapsingHero extends StatelessWidget {
   final String title;
   final String location;
   final ImageProvider? image;
+  final String? blurHash;
   final double? focalY;
 
   /// Width the cover is actually laid out at. The screen passes the column
@@ -141,14 +149,16 @@ class ChallengeCollapsingHero extends StatelessWidget {
     final top = MediaQuery.paddingOf(context).top;
     final window = MediaQuery.sizeOf(context).width;
     final width = layoutWidth ?? window;
-    final expanded = math.max(
-      challengeHeroExtent(layoutWidth: width, windowWidth: window),
-      collapsedBody + top + 1,
+    final expanded = challengeCollapsingHeroMaxExtent(
+      layoutWidth: width,
+      windowWidth: window,
+      topPadding: top,
     );
     return SliverPersistentHeader(
       pinned: true,
       delegate: _ChallengeHeroDelegate(
         provider: image ?? challengeCoverProvider(context, url),
+        blurHash: blurHash,
         focalY: focalY,
         title: title,
         location: location,
@@ -240,6 +250,19 @@ double challengeHeroAspect(double windowWidth) =>
 double challengeHeroMaxHeight(double windowWidth) =>
     windowWidth >= 600 ? 960 : 300;
 
+/// Expanded height of [ChallengeCollapsingHero], including the status-bar
+/// floor. The detail skeleton uses the same value so the hero does not jump.
+double challengeCollapsingHeroMaxExtent({
+  required double layoutWidth,
+  required double windowWidth,
+  required double topPadding,
+}) {
+  return math.max(
+    challengeHeroExtent(layoutWidth: layoutWidth, windowWidth: windowWidth),
+    ChallengeCollapsingHero.collapsedBody + topPadding + 1,
+  );
+}
+
 /// Full-bleed height. The wide cap never makes the frame wider than 2:1.
 double challengeHeroExtent({
   required double layoutWidth,
@@ -283,12 +306,14 @@ class CroppedCover extends StatelessWidget {
     required this.provider,
     required this.title,
     required this.wide,
+    this.blurHash,
     this.focalY,
     this.back,
     this.backTop = 12,
   });
 
   final ImageProvider provider;
+  final String? blurHash;
   final String title;
   final bool wide;
   final double? focalY;
@@ -302,15 +327,12 @@ class CroppedCover extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         const ColoredBox(color: BrandColors.forest),
-        Image(
-          key: const Key('challenge-hero-photo'),
+        AppCoverImage(
+          imageKey: const Key('challenge-hero-photo'),
           image: provider,
+          blurHash: blurHash,
           fit: BoxFit.cover,
           alignment: challengeHeroAlignment(focalY),
-          width: double.infinity,
-          height: double.infinity,
-          gaplessPlayback: true,
-          errorBuilder: (_, _, _) => const AppImagePlaceholder(),
         ),
         const _HeroScrim(),
         Positioned(
@@ -366,6 +388,7 @@ class _HeroScrim extends StatelessWidget {
 class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
   _ChallengeHeroDelegate({
     required this.provider,
+    required this.blurHash,
     required this.focalY,
     required this.title,
     required this.location,
@@ -378,6 +401,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
   });
 
   final ImageProvider provider;
+  final String? blurHash;
   final double? focalY;
   final String title;
   final String location;
@@ -419,6 +443,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
               opacity: expandedFade,
               child: CroppedCover(
                 provider: provider,
+                blurHash: blurHash,
                 title: title,
                 wide: wide,
                 focalY: focalY,
@@ -489,6 +514,7 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _ChallengeHeroDelegate oldDelegate) {
     return provider != oldDelegate.provider ||
+        blurHash != oldDelegate.blurHash ||
         focalY != oldDelegate.focalY ||
         title != oldDelegate.title ||
         location != oldDelegate.location ||
@@ -498,5 +524,80 @@ class _ChallengeHeroDelegate extends SliverPersistentHeaderDelegate {
         maxExtent != oldDelegate.maxExtent ||
         minExtent != oldDelegate.minExtent ||
         reduceMotion != oldDelegate.reduceMotion;
+  }
+}
+
+/// Cold-load stand-in for challenge detail. Hero height matches
+/// [challengeCollapsingHeroMaxExtent] and the title bar sits on the same
+/// inset as [CroppedCover], so the loaded hero and title move by about 0 dp.
+class ChallengeDetailSkeleton extends StatelessWidget {
+  const ChallengeDetailSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final window = MediaQuery.sizeOf(context).width;
+        final twoColumn = Breakpoints.challengeTwoColumn(constraints.maxWidth);
+        final layoutWidth = twoColumn
+            ? constraints.maxWidth / 2
+            : constraints.maxWidth;
+        final hero = challengeCollapsingHeroMaxExtent(
+          layoutWidth: layoutWidth,
+          windowWidth: window,
+          topPadding: MediaQuery.paddingOf(context).top,
+        );
+        final wide = window >= Breakpoints.mediumMax;
+        final titleHeight =
+            (wide ? 28.0 : 24.0) * BrandTypography.minLineHeight;
+        return ListView(
+          key: const Key('challenge-detail-skeleton'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(
+              key: const Key('challenge-detail-hero-skeleton'),
+              height: hero,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const AppSkeleton(radius: 0),
+                  Positioned(
+                    left: wide ? 24 : 16,
+                    right: wide ? 24 : 16,
+                    bottom: wide ? 16 : 12,
+                    child: AppSkeleton(
+                      key: const Key('challenge-detail-title-skeleton'),
+                      height: titleHeight,
+                      radius: 8,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSkeleton(height: 14, width: 140),
+                  SizedBox(height: 8),
+                  AppSkeleton(height: 8, radius: 99),
+                  SizedBox(height: 16),
+                  AppSkeleton(height: 48, radius: 24),
+                  SizedBox(height: 16),
+                  AppSkeleton(height: 72),
+                  SizedBox(height: 12),
+                  AppSkeleton(height: 72),
+                  SizedBox(height: 12),
+                  AppSkeleton(height: 72),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
