@@ -140,6 +140,7 @@ class ChallengeCtaPanel extends StatelessWidget {
     required this.medalLabel,
     required this.onDiploma,
     required this.onMedal,
+    this.haveCode = false,
     this.loadingLabel = 'Načítání',
     this.navFill = BrandColors.shellFill,
   });
@@ -149,6 +150,11 @@ class ChallengeCtaPanel extends StatelessWidget {
   final String medalLabel;
   final VoidCallback? onDiploma;
   final VoidCallback? onMedal;
+
+  /// Open + paid, not yet unlocked. [medalLabel] is the „Mám kód“ label and
+  /// [onMedal] opens the redeem dialog. The diploma button is unchanged.
+  final bool haveCode;
+
   final String loadingLabel;
   final Color navFill;
 
@@ -161,6 +167,10 @@ class ChallengeCtaPanel extends StatelessWidget {
   static const headingLineHeight = 26.0;
   static const rowGap = 12.0;
   static const stackGap = 8.0;
+
+  /// „Mám kód“ beside the diploma button. Stacked windows use [codeStackGap].
+  static const codeRowGap = 32.0;
+  static const codeStackGap = 12.0;
   static const stackBelow = 340.0;
   static const contentMaxWidth = 560.0;
   static const buttonHeight = 48.0;
@@ -179,16 +189,28 @@ class ChallengeCtaPanel extends StatelessWidget {
 
   static bool buttonsStack(double windowWidth) => windowWidth < stackBelow;
 
-  static double _buttonsHeight(double windowWidth) => buttonsStack(windowWidth)
-      ? buttonHeight + stackGap + buttonHeight
-      : buttonHeight;
+  /// Medal path uses [buttonHeight] (48) for both slots.
+  /// The have-code path uses [HaveCodeButton.height] (52) for both slots, so
+  /// the panel does not mix 48 and 52 and jump by 4 dp.
+  static double _buttonsHeight(double windowWidth, {bool haveCode = false}) {
+    final slot = haveCode ? HaveCodeButton.height : buttonHeight;
+    if (!buttonsStack(windowWidth)) return slot;
+    final gap = haveCode ? codeStackGap : stackGap;
+    return slot + gap + slot;
+  }
 
   /// Laid-out height of the panel body, including the hairline.
-  static double bodyHeight(double windowWidth, {int headingLines = 1}) =>
+  ///
+  /// [haveCode] sizes the whole button band to 52. The medal path stays 48.
+  static double bodyHeight(
+    double windowWidth, {
+    int headingLines = 1,
+    bool haveCode = false,
+  }) =>
       padTop +
       headingLineHeight * headingLines +
       headingGap +
-      _buttonsHeight(windowWidth) +
+      _buttonsHeight(windowWidth, haveCode: haveCode) +
       padAboveHairline +
       hairlineThickness;
 
@@ -201,39 +223,49 @@ class ChallengeCtaPanel extends StatelessWidget {
       key: const Key('challenge-floating-pay-diploma'),
       label: diplomaLabel,
       variant: AppButtonVariant.secondary,
-      size: AppButtonSize.m,
+      size: haveCode ? AppButtonSize.l : AppButtonSize.m,
       loadingLabel: loadingLabel,
       onPressed: onDiploma,
       background: chrome.diplomaFill,
       foreground: chrome.diplomaLabel,
       side: chrome.diplomaSide,
     );
-    final medal = AppButton(
-      key: const Key('challenge-floating-pay-medal'),
-      label: medalLabel,
-      variant: AppButtonVariant.primary,
-      size: AppButtonSize.m,
-      loadingLabel: loadingLabel,
-      onPressed: onMedal,
-      background: chrome.medalFill,
-      foreground: chrome.medalLabel,
-      side: chrome.medalSide,
-    );
+    final medal = haveCode
+        ? HaveCodeButton(
+            key: const Key('challenge-floating-pay-code'),
+            label: medalLabel,
+            loadingLabel: loadingLabel,
+            onPressed: onMedal,
+          )
+        : AppButton(
+            key: const Key('challenge-floating-pay-medal'),
+            label: medalLabel,
+            variant: AppButtonVariant.primary,
+            size: AppButtonSize.m,
+            loadingLabel: loadingLabel,
+            onPressed: onMedal,
+            background: chrome.medalFill,
+            foreground: chrome.medalLabel,
+            side: chrome.medalSide,
+          );
+    final between = haveCode ? codeRowGap : rowGap;
+    final stackedGap = haveCode ? codeStackGap : stackGap;
     final buttons = stack
         ? Column(
             key: const Key('challenge-floating-pay-ctas'),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               diploma,
-              const SizedBox(height: stackGap),
+              SizedBox(height: stackedGap),
               medal,
             ],
           )
         : Row(
             key: const Key('challenge-floating-pay-ctas'),
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(child: diploma),
-              const SizedBox(width: rowGap),
+              SizedBox(width: between),
               Expanded(child: medal),
             ],
           );
@@ -282,7 +314,10 @@ class ChallengeCtaPanel extends StatelessWidget {
           child: ColoredBox(
             key: const Key('challenge-cta-hairline'),
             color: chrome.hairline,
-            child: const SizedBox(height: hairlineThickness, width: double.infinity),
+            child: const SizedBox(
+              height: hairlineThickness,
+              width: double.infinity,
+            ),
           ),
         ),
       ],
@@ -299,6 +334,7 @@ class ChallengeStickyCta extends StatelessWidget {
     required this.medalLabel,
     required this.onDiploma,
     required this.onMedal,
+    this.haveCode = false,
     this.loadingLabel = 'Načítání',
   });
 
@@ -307,6 +343,7 @@ class ChallengeStickyCta extends StatelessWidget {
   final String medalLabel;
   final VoidCallback? onDiploma;
   final VoidCallback? onMedal;
+  final bool haveCode;
   final String loadingLabel;
 
   static const width = 340.0;
@@ -341,15 +378,24 @@ class ChallengeStickyCta extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            AppButton(
-              key: const Key('challenge-sticky-pay-medal'),
-              label: medalLabel,
-              variant: AppButtonVariant.primary,
-              size: AppButtonSize.l,
-              loadingLabel: loadingLabel,
-              onPressed: onMedal,
+            haveCode
+                ? HaveCodeButton(
+                    key: const Key('challenge-sticky-pay-code'),
+                    label: medalLabel,
+                    loadingLabel: loadingLabel,
+                    onPressed: onMedal,
+                  )
+                : AppButton(
+                    key: const Key('challenge-sticky-pay-medal'),
+                    label: medalLabel,
+                    variant: AppButtonVariant.primary,
+                    size: AppButtonSize.l,
+                    loadingLabel: loadingLabel,
+                    onPressed: onMedal,
+                  ),
+            SizedBox(
+              height: haveCode ? ChallengeCtaPanel.codeStackGap : buttonGap,
             ),
-            const SizedBox(height: buttonGap),
             AppButton(
               key: const Key('challenge-sticky-pay-diploma'),
               label: diplomaLabel,
@@ -361,6 +407,36 @@ class ChallengeStickyCta extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Forest fill, cream label, 52 dp pill. Replaces the medal slot only.
+class HaveCodeButton extends StatelessWidget {
+  const HaveCodeButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.loadingLabel = 'Načítání',
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final String loadingLabel;
+
+  static const height = 52.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppButton(
+      label: label,
+      variant: AppButtonVariant.primary,
+      size: AppButtonSize.l,
+      loadingLabel: loadingLabel,
+      onPressed: onPressed,
+      background: BrandColors.forest,
+      foreground: BrandColors.cream,
+      side: BorderSide.none,
     );
   }
 }
@@ -384,7 +460,8 @@ class ChallengeCtaPanelMotion extends StatefulWidget {
   final ValueChanged<double>? onExtent;
 
   @override
-  State<ChallengeCtaPanelMotion> createState() => _ChallengeCtaPanelMotionState();
+  State<ChallengeCtaPanelMotion> createState() =>
+      _ChallengeCtaPanelMotionState();
 }
 
 class _ChallengeCtaPanelMotionState extends State<ChallengeCtaPanelMotion>

@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../domain/redemption_code.dart';
 import 'local_dates.dart';
 
 /// Custom i18n (cs / en / de) — no generated ARB catalog.
@@ -221,6 +222,19 @@ class AppStrings {
     'buttonLoading',
     'payDigitalDiploma',
     'payMedalAndDiploma',
+    'haveCode',
+    'redeemCodeTitle',
+    'redeemCodeHelper',
+    'redeemCodeHint',
+    'redeemCodeUnlock',
+    'redeemCodeCancel',
+    'redeemCodeSuccess',
+    'redeemCodeInvalid',
+    'redeemCodeExpired',
+    'redeemCodeEmailMismatch',
+    'redeemCodeAlreadyUnlocked',
+    'redeemCodeRateLimited',
+    'redeemCodeNetwork',
     'payPriceFree',
     'payPriceLoading',
     'payPriceUnavailable',
@@ -496,6 +510,32 @@ class AppStrings {
   String get buttonLoading => t('buttonLoading');
   String get payDigitalDiploma => t('payDigitalDiploma');
   String get payMedalAndDiploma => t('payMedalAndDiploma');
+  String get haveCode => t('haveCode');
+  String get redeemCodeTitle => t('redeemCodeTitle');
+  String get redeemCodeHelper => t('redeemCodeHelper');
+  String get redeemCodeHint => t('redeemCodeHint');
+  String get redeemCodeUnlock => t('redeemCodeUnlock');
+  String get redeemCodeCancel => t('redeemCodeCancel');
+  String get redeemCodeSuccess => t('redeemCodeSuccess');
+  String get redeemCodeInvalid => t('redeemCodeInvalid');
+  String get redeemCodeExpired => t('redeemCodeExpired');
+  String get redeemCodeEmailMismatch => t('redeemCodeEmailMismatch');
+  String get redeemCodeAlreadyUnlocked => t('redeemCodeAlreadyUnlocked');
+  String get redeemCodeRateLimited => t('redeemCodeRateLimited');
+  String get redeemCodeNetwork => t('redeemCodeNetwork');
+
+  /// Friendly copy. Invalid, already used, and the wrong challenge share one
+  /// sentence so the dialog does not reveal which case it was.
+  String redeemCodeError(RedeemCodeError error) => switch (error) {
+    RedeemCodeError.invalidCode ||
+    RedeemCodeError.alreadyRedeemed ||
+    RedeemCodeError.challengeMismatch => redeemCodeInvalid,
+    RedeemCodeError.expired => redeemCodeExpired,
+    RedeemCodeError.emailMismatch => redeemCodeEmailMismatch,
+    RedeemCodeError.alreadyUnlocked => redeemCodeAlreadyUnlocked,
+    RedeemCodeError.rateLimited => redeemCodeRateLimited,
+    RedeemCodeError.network => redeemCodeNetwork,
+  };
   String get payPriceFree => t('payPriceFree');
   String get payPriceLoading => t('payPriceLoading');
   String get payPriceUnavailable => t('payPriceUnavailable');
@@ -903,6 +943,20 @@ class AppStrings {
       'buttonLoading': 'Loading',
       'payDigitalDiploma': 'Digital diploma',
       'payMedalAndDiploma': 'Medal + diploma',
+      'haveCode': 'I have a code',
+      'redeemCodeTitle': 'Enter your code',
+      'redeemCodeHelper': 'Code from your vyšlápni.cz purchase…',
+      'redeemCodeHint': 'e.g. AB12CD34',
+      'redeemCodeUnlock': 'Unlock',
+      'redeemCodeCancel': 'Cancel',
+      'redeemCodeSuccess': 'Challenge unlocked',
+      'redeemCodeInvalid': "That code doesn't work…",
+      'redeemCodeExpired': 'This code has expired.',
+      'redeemCodeEmailMismatch': 'This code belongs to a different email than the one you’re signed in with.',
+      'redeemCodeAlreadyUnlocked': 'This challenge is already unlocked.',
+      'redeemCodeRateLimited':
+          'Too many attempts. Try again in a little while.',
+      'redeemCodeNetwork': 'Could not connect. Try again.',
       'payPriceFree': 'Free',
       'payPriceLoading': 'Loading price…',
       'payPriceUnavailable': 'Price unavailable',
@@ -1188,6 +1242,20 @@ class AppStrings {
       'buttonLoading': 'Načítání',
       'payDigitalDiploma': 'Digitální diplom',
       'payMedalAndDiploma': 'Medaile + diplom',
+      'haveCode': 'Mám kód',
+      'redeemCodeTitle': 'Zadej kód',
+      'redeemCodeHelper': 'Kód z nákupu na vyšlápni.cz…',
+      'redeemCodeHint': 'např. AB12CD34',
+      'redeemCodeUnlock': 'Odemknout',
+      'redeemCodeCancel': 'Zrušit',
+      'redeemCodeSuccess': 'Výzva odemčená',
+      'redeemCodeInvalid': 'Kód neplatí…',
+      'redeemCodeExpired': 'Tenhle kód už vypršel.',
+      'redeemCodeEmailMismatch':
+          'Tento kód patří k jinému e-mailu, než se kterým jsi přihlášený.',
+      'redeemCodeAlreadyUnlocked': 'Tahle výzva je už odemčená.',
+      'redeemCodeRateLimited': 'Moc pokusů. Zkus to znovu za chvíli.',
+      'redeemCodeNetwork': 'Nepovedlo se spojit. Zkus to znovu.',
       'payPriceFree': 'Zdarma',
       'payPriceLoading': 'Načítám cenu…',
       'payPriceUnavailable': 'Cena není k dispozici',
@@ -1479,6 +1547,20 @@ class AppStrings {
       'buttonLoading': 'Wird geladen',
       'payDigitalDiploma': 'Digitales Diplom',
       'payMedalAndDiploma': 'Medaille + Diplom',
+      'haveCode': 'Ich habe einen Code',
+      'redeemCodeTitle': 'Code eingeben',
+      'redeemCodeHelper': 'Code aus deinem Kauf…',
+      'redeemCodeHint': 'z. B. AB12CD34',
+      'redeemCodeUnlock': 'Freischalten',
+      'redeemCodeCancel': 'Abbrechen',
+      'redeemCodeSuccess': 'Herausforderung freigeschaltet',
+      'redeemCodeInvalid': 'Dieser Code funktioniert nicht…',
+      'redeemCodeExpired': 'Dieser Code ist abgelaufen.',
+      'redeemCodeEmailMismatch': 'Dieser Code gehört zu einer anderen E-Mail als der, mit der du angemeldet bist.',
+      'redeemCodeAlreadyUnlocked':
+          'Diese Herausforderung ist bereits freigeschaltet.',
+      'redeemCodeRateLimited': 'Zu viele Versuche. Versuche es später erneut.',
+      'redeemCodeNetwork': 'Verbindung fehlgeschlagen. Versuche es erneut.',
       'payPriceFree': 'Kostenlos',
       'payPriceLoading': 'Preis wird geladen…',
       'payPriceUnavailable': 'Preis nicht verfügbar',

@@ -25,3 +25,7 @@ verify_jwt = false
 # User JWT. The function refuses the full PNG without entitlement.
 [functions.diploma]
 verify_jwt = true
+
+# User JWT. Service role stays inside the function.
+[functions.redeem-challenge-code]
+verify_jwt = true
