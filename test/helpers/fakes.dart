@@ -6,6 +6,7 @@ import 'package:viateria/data/repositories.dart';
 import 'package:viateria/data/route_services.dart';
 import 'package:viateria/domain/challenge_photos.dart';
 import 'package:viateria/domain/fapi_offer.dart';
+import 'package:viateria/domain/redemption_code.dart';
 import 'package:viateria/domain/photo_verify.dart';
 import 'package:viateria/domain/route_planner.dart';
 import 'package:viateria/domain/story_feed.dart';
@@ -384,6 +385,15 @@ class MemoryPurchases implements PurchaseRepository {
   /// While set, [fetchOffer] waits so the pay buttons can show a loading price.
   Completer<FapiOffer>? offerGate;
 
+  /// Normalized codes passed to [redeemChallengeCode], in order.
+  final redeemCalls = <({String challengeId, String? normalized})>[];
+
+  /// When set, redeem returns this failure instead of unlocking.
+  RedeemCodeError? scriptedRedeemError;
+
+  /// When set, redeem waits so the dialog can show its spinner.
+  Completer<void>? redeemDelay;
+
   @override
   Future<Purchase?> fetchPurchase(String challengeId) async =>
       purchases[challengeId];
@@ -451,6 +461,33 @@ class MemoryPurchases implements PurchaseRepository {
       );
     }
     return Future.value(offer);
+  }
+
+  @override
+  Future<RedeemCodeResult> redeemChallengeCode({
+    required String challengeId,
+    required String rawCode,
+  }) async {
+    final normalized = normalizeRedemptionCode(rawCode);
+    redeemCalls.add((challengeId: challengeId, normalized: normalized));
+    final delay = redeemDelay;
+    if (delay != null) await delay.future;
+    if (normalized == null) {
+      return const RedeemCodeResult.failure(RedeemCodeError.invalidCode);
+    }
+    final scripted = scriptedRedeemError;
+    if (scripted != null) {
+      if (scripted == RedeemCodeError.alreadyUnlocked) {
+        return const RedeemCodeResult.alreadyUnlocked();
+      }
+      return RedeemCodeResult.failure(scripted);
+    }
+    final current = purchases[challengeId];
+    if (current != null && current.isPaid) {
+      return const RedeemCodeResult.alreadyUnlocked();
+    }
+    pay(challengeId, rewardVariant: RewardVariant.medalAndDiploma);
+    return const RedeemCodeResult.unlocked();
   }
 }
 

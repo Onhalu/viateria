@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../domain/fapi_offer.dart';
 import '../domain/leaderboard_score.dart';
 import '../domain/photo_verify.dart';
+import '../domain/redemption_code.dart';
 import '../models/models.dart';
 
 /// Auth API failure with a message safe to show in the UI.
@@ -161,6 +162,15 @@ abstract class PurchaseRepository {
   /// Edge function. Throws when that function is missing or fails so the
   /// pay buttons can show a fallback instead of a CMS price.
   Future<FapiOffer> fetchOffer(String challengeId, {String? locale});
+
+  /// Redeem a vyšlápni.cz code via the `redeem-challenge-code` Edge function.
+  ///
+  /// The client sends the normalized code. It does not hash, and it does not
+  /// hold a service-role key. Business failures come back as [RedeemCodeResult].
+  Future<RedeemCodeResult> redeemChallengeCode({
+    required String challengeId,
+    required String rawCode,
+  });
 }
 
 /// Live leaderboard. Scores are not cached on device.

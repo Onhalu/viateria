@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import '../config/auth_redirect.dart';
 import '../domain/challenge_photos.dart';
 import '../domain/fapi_offer.dart';
 import '../domain/photo_verify.dart';
+import '../domain/redemption_code.dart';
 import '../l10n/locale_controller.dart';
 import '../models/models.dart';
 import 'auth_identity.dart';
@@ -839,6 +841,73 @@ class SupabasePurchaseRepository implements PurchaseRepository {
     }
     return FapiOffer.fromJson(Map<String, dynamic>.from(data));
   }
+
+  @override
+  Future<RedeemCodeResult> redeemChallengeCode({
+    required String challengeId,
+    required String rawCode,
+  }) async {
+    final normalized = normalizeRedemptionCode(rawCode);
+    if (normalized == null) {
+      return const RedeemCodeResult.failure(RedeemCodeError.invalidCode);
+    }
+    try {
+      final response = await _client.functions.invoke(
+        'redeem-challenge-code',
+        body: {'challenge_id': challengeId, 'code': normalized},
+      );
+      return _redeemFromBody(response.data);
+    } on FunctionException catch (error) {
+      final mapped = redeemCodeErrorFromWire(_redeemErrorCode(error));
+      if (mapped == null) {
+        return const RedeemCodeResult.failure(RedeemCodeError.network);
+      }
+      if (mapped == RedeemCodeError.alreadyUnlocked) {
+        return const RedeemCodeResult.alreadyUnlocked();
+      }
+      return RedeemCodeResult.failure(mapped);
+    } catch (_) {
+      return const RedeemCodeResult.failure(RedeemCodeError.network);
+    }
+  }
+
+  RedeemCodeResult _redeemFromBody(Object? data) {
+    if (data is! Map) {
+      return const RedeemCodeResult.failure(RedeemCodeError.network);
+    }
+    final body = Map<String, dynamic>.from(data);
+    if (body['ok'] == true) {
+      if (body['already_unlocked'] == true) {
+        return const RedeemCodeResult.alreadyUnlocked();
+      }
+      return const RedeemCodeResult.unlocked();
+    }
+    final mapped = redeemCodeErrorFromWire(body['error'] as String?);
+    if (mapped == RedeemCodeError.alreadyUnlocked) {
+      return const RedeemCodeResult.alreadyUnlocked();
+    }
+    return RedeemCodeResult.failure(mapped ?? RedeemCodeError.network);
+  }
+}
+
+String? _redeemErrorCode(FunctionException error) {
+  final details = error.details;
+  if (details is Map && details['error'] is String) {
+    return details['error'] as String;
+  }
+  if (details is String && details.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(details);
+      if (decoded is Map && decoded['error'] is String) {
+        return decoded['error'] as String;
+      }
+    } on FormatException {
+      return null;
+    }
+  }
+  if (error.status == 429) return 'rate_limited';
+  if (error.status == 403) return 'email_mismatch';
+  return null;
 }
 
 class SupabasePhotoStorage implements PhotoStorage {

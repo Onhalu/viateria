@@ -19,6 +19,7 @@ import '../../domain/story_feed.dart';
 import '../../domain/story_fog.dart';
 import '../../map/place.dart';
 import '../../map/place_query.dart';
+import '../../domain/redemption_code.dart';
 import '../../domain/unlock_rules.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
@@ -34,6 +35,7 @@ import '../widgets/challenge_map.dart';
 import '../widgets/error_state.dart';
 import '../widgets/challenge_photos_section.dart';
 import '../widgets/challenge_reward_section.dart';
+import '../widgets/redeem_code_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/place_presentation.dart';
 import '../widgets/route_planner_panel.dart';
@@ -293,33 +295,86 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     await _reload();
   }
 
-  Widget _floatingPanel(Challenge challenge, AppStrings strings) {
-    return ChallengeCtaPanel(
-      heading: strings.joinChallenge,
-      diplomaLabel: strings.payDigitalDiploma,
-      medalLabel: strings.payMedalAndDiploma,
-      loadingLabel: strings.buttonLoading,
-      onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
-          ? null
-          : () => _unlockPaid(RewardVariant.diploma),
-      onMedal: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
-          ? null
-          : () => _unlockPaid(RewardVariant.medalAndDiploma),
+  bool _haveCode(Challenge challenge, bool purchasePaid) {
+    return showsHaveCodeCta(
+      accessMode: challenge.accessMode,
+      pricingType: challenge.pricingType,
+      hasPaidUnlock: purchasePaid,
     );
   }
 
-  Widget _stickyCard(Challenge challenge, AppStrings strings) {
-    return ChallengeStickyCta(
+  VoidCallback? _medalOrCode(Challenge challenge, {required bool haveCode}) {
+    if (haveCode) return () => unawaited(_openRedeemCode());
+    if (challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null) {
+      return null;
+    }
+    return () => _unlockPaid(RewardVariant.medalAndDiploma);
+  }
+
+  Future<void> _openRedeemCode() async {
+    final strings = context.read<LocaleController>().strings;
+    final services = context.read<AppServices>();
+    final result = await showRedeemCodeDialog(
+      context: context,
+      strings: strings,
+      purchases: services.purchases,
+      challengeId: widget.challengeId,
+      onAlreadyUnlocked: () {
+        if (mounted) unawaited(_reload());
+      },
+    );
+    if (!mounted || result != RedeemCodeDialogResult.unlocked) return;
+    await _reload();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            strings.redeemCodeSuccess,
+            key: const Key('redeem-code-success'),
+            style: const TextStyle(color: BrandColors.cream),
+          ),
+          backgroundColor: BrandColors.forest,
+          duration: const Duration(milliseconds: 2500),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  Widget _floatingPanel(
+    Challenge challenge,
+    AppStrings strings, {
+    required bool haveCode,
+  }) {
+    return ChallengeCtaPanel(
       heading: strings.joinChallenge,
       diplomaLabel: strings.payDigitalDiploma,
-      medalLabel: strings.payMedalAndDiploma,
+      medalLabel: haveCode ? strings.haveCode : strings.payMedalAndDiploma,
+      haveCode: haveCode,
       loadingLabel: strings.buttonLoading,
       onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
           ? null
           : () => _unlockPaid(RewardVariant.diploma),
-      onMedal: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
+      onMedal: _medalOrCode(challenge, haveCode: haveCode),
+    );
+  }
+
+  Widget _stickyCard(
+    Challenge challenge,
+    AppStrings strings, {
+    required bool haveCode,
+  }) {
+    return ChallengeStickyCta(
+      heading: strings.joinChallenge,
+      diplomaLabel: strings.payDigitalDiploma,
+      medalLabel: haveCode ? strings.haveCode : strings.payMedalAndDiploma,
+      haveCode: haveCode,
+      loadingLabel: strings.buttonLoading,
+      onDiploma: challenge.fapiFormUrlFor(RewardVariant.diploma) == null
           ? null
-          : () => _unlockPaid(RewardVariant.medalAndDiploma),
+          : () => _unlockPaid(RewardVariant.diploma),
+      onMedal: _medalOrCode(challenge, haveCode: haveCode),
     );
   }
 
@@ -348,11 +403,18 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
     });
   }
 
-  Widget _payCtas(Challenge challenge, AppStrings strings, {String? note}) {
+  Widget _payCtas(
+    Challenge challenge,
+    AppStrings strings, {
+    required bool haveCode,
+    String? note,
+  }) {
     return _ChallengePayCtas(
       strings: strings,
       challenge: challenge,
+      haveCode: haveCode,
       onPay: _unlockPaid,
+      onHaveCode: haveCode ? () => unawaited(_openRedeemCode()) : null,
       note: note,
     );
   }
@@ -813,6 +875,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       : _payCtas(
                           challenge,
                           strings,
+                          haveCode: _haveCode(challenge, purchasePaid),
                           note: data.purchase?.status == PurchaseStatus.pending
                               ? strings.purchasePending
                               : null,
@@ -971,9 +1034,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                 !Breakpoints.usesNavigationRail(windowWidth) && !purchasePaid;
             final sticky =
                 Breakpoints.challengeTwoColumn(windowWidth) && !purchasePaid;
+            final haveCode = _haveCode(challenge, purchasePaid);
             final panel = purchasePaid
                 ? null
-                : _floatingPanel(challenge, strings);
+                : _floatingPanel(challenge, strings, haveCode: haveCode);
             final routePath = _extension == null
                 ? null
                 : GoRouter.maybeOf(context)?.state.uri.path;
@@ -985,9 +1049,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
               signature: purchasePaid
                   ? 'paid'
                   : '${strings.joinChallenge}|${strings.payDigitalDiploma}|'
-                        '${strings.payMedalAndDiploma}|'
+                        '${haveCode ? strings.haveCode : strings.payMedalAndDiploma}|'
                         '${challenge.fapiFormUrlDiploma}|'
-                        '${challenge.fapiFormUrlMedal}|$slideUp',
+                        '${haveCode ? 'code' : challenge.fapiFormUrlMedal}|'
+                        '$slideUp',
             );
             final split = Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1023,7 +1088,11 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                               child: child!,
                             );
                           },
-                          child: _stickyCard(challenge, strings),
+                          child: _stickyCard(
+                            challenge,
+                            strings,
+                            haveCode: haveCode,
+                          ),
                         ),
                       ),
                     ],
@@ -1592,12 +1661,16 @@ class _ChallengePayCtas extends StatelessWidget {
     required this.strings,
     required this.challenge,
     required this.onPay,
+    required this.haveCode,
+    this.onHaveCode,
     this.note,
   });
 
   final AppStrings strings;
   final Challenge challenge;
   final ValueChanged<RewardVariant> onPay;
+  final bool haveCode;
+  final VoidCallback? onHaveCode;
 
   /// Pending purchase line. Inline only, under the buttons.
   final String? note;
@@ -1619,16 +1692,28 @@ class _ChallengePayCtas extends StatelessWidget {
           ? null
           : () => onPay(RewardVariant.diploma),
     );
-    final medal = AppButton(
-      key: _key('medal'),
-      label: strings.payMedalAndDiploma,
-      variant: AppButtonVariant.primary,
-      size: AppButtonSize.l,
-      loadingLabel: strings.buttonLoading,
-      onPressed: challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
-          ? null
-          : () => onPay(RewardVariant.medalAndDiploma),
-    );
+    final medal = haveCode
+        ? HaveCodeButton(
+            key: _key('code'),
+            label: strings.haveCode,
+            loadingLabel: strings.buttonLoading,
+            onPressed: onHaveCode,
+          )
+        : AppButton(
+            key: _key('medal'),
+            label: strings.payMedalAndDiploma,
+            variant: AppButtonVariant.primary,
+            size: AppButtonSize.l,
+            loadingLabel: strings.buttonLoading,
+            onPressed:
+                challenge.fapiFormUrlFor(RewardVariant.medalAndDiploma) == null
+                ? null
+                : () => onPay(RewardVariant.medalAndDiploma),
+          );
+    final rowGap = haveCode ? ChallengeCtaPanel.codeRowGap : sizes.gapPair;
+    final stackGap = haveCode
+        ? ChallengeCtaPanel.codeStackGap
+        : ChallengePaymentBarMetrics.inlineNarrowGap;
     return Align(
       alignment: Alignment.center,
       child: ConstrainedBox(
@@ -1659,16 +1744,15 @@ class _ChallengePayCtas extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       medal,
-                      const SizedBox(
-                        height: ChallengePaymentBarMetrics.inlineNarrowGap,
-                      ),
+                      SizedBox(height: stackGap),
                       diploma,
                     ],
                   )
                 : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(child: diploma),
-                      SizedBox(width: sizes.gapPair),
+                      SizedBox(width: rowGap),
                       Expanded(child: medal),
                     ],
                   );
