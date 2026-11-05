@@ -140,9 +140,7 @@ ButtonStyle appButtonStyle({
     minimumSize: WidgetStatePropertyAll(Size(64, metrics.height)),
     tapTargetSize: MaterialTapTargetSize.padded,
     visualDensity: VisualDensity.standard,
-    padding: WidgetStatePropertyAll(
-      EdgeInsets.symmetric(horizontal: padH),
-    ),
+    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: padH)),
     elevation: const WidgetStatePropertyAll(0),
     shadowColor: const WidgetStatePropertyAll(Colors.transparent),
     surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -175,12 +173,8 @@ ButtonStyle appButtonStyle({
       return _foreground(variant, states, selected: selected, loading: loading);
     }),
     overlayColor: WidgetStateProperty.resolveWith(
-      (states) => _overlay(
-        variant,
-        states,
-        loading: loading,
-        selected: selected,
-      ),
+      (states) =>
+          _overlay(variant, states, loading: loading, selected: selected),
     ),
     side: WidgetStateProperty.resolveWith((states) {
       final disabled = !loading && states.contains(WidgetState.disabled);
@@ -371,7 +365,8 @@ class _AppButtonState extends State<AppButton> {
   @override
   Widget build(BuildContext context) {
     final sizes =
-        Theme.of(context).extension<AppButtonSizes>() ?? AppButtonSizes.standard;
+        Theme.of(context).extension<AppButtonSizes>() ??
+        AppButtonSizes.standard;
     final metrics = sizes.resolve(widget.size);
     final labelSize = metrics.label < 14 ? 14.0 : metrics.label;
     final style = appButtonStyle(
@@ -398,6 +393,7 @@ class _AppButtonState extends State<AppButton> {
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
       style: TextStyle(
+        fontFamily: 'Roboto',
         fontSize: labelSize,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
@@ -477,10 +473,7 @@ class _AppButtonState extends State<AppButton> {
       current = _FocusRing(child: current);
     }
     if (pressed && enabled && widget.variant == AppButtonVariant.primary) {
-      current = Transform.translate(
-        offset: const Offset(0, 1),
-        child: current,
-      );
+      current = Transform.translate(offset: const Offset(0, 1), child: current);
     }
     return current;
   }

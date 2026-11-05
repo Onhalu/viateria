@@ -189,22 +189,19 @@ class ChallengeCtaPanel extends StatelessWidget {
 
   static bool buttonsStack(double windowWidth) => windowWidth < stackBelow;
 
-  /// Medal slot is [buttonHeight] (48). „Mám kód“ is [HaveCodeButton.height]
-  /// (52). Side by side, the row is the taller of the two. Stacked, the
-  /// diploma keeps 48 and the code button adds 52 plus [codeStackGap].
+  /// Medal path uses [buttonHeight] (48) for both slots.
+  /// The have-code path uses [HaveCodeButton.height] (52) for both slots, so
+  /// the panel does not mix 48 and 52 and jump by 4 dp.
   static double _buttonsHeight(double windowWidth, {bool haveCode = false}) {
-    final codeHeight = haveCode ? HaveCodeButton.height : buttonHeight;
-    if (!buttonsStack(windowWidth)) {
-      return codeHeight > buttonHeight ? codeHeight : buttonHeight;
-    }
+    final slot = haveCode ? HaveCodeButton.height : buttonHeight;
+    if (!buttonsStack(windowWidth)) return slot;
     final gap = haveCode ? codeStackGap : stackGap;
-    return buttonHeight + gap + codeHeight;
+    return slot + gap + slot;
   }
 
   /// Laid-out height of the panel body, including the hairline.
   ///
-  /// [haveCode] reserves 52 for the code button so the panel is not sized
-  /// for the 48 dp medal slot.
+  /// [haveCode] sizes the whole button band to 52. The medal path stays 48.
   static double bodyHeight(
     double windowWidth, {
     int headingLines = 1,
@@ -226,7 +223,7 @@ class ChallengeCtaPanel extends StatelessWidget {
       key: const Key('challenge-floating-pay-diploma'),
       label: diplomaLabel,
       variant: AppButtonVariant.secondary,
-      size: AppButtonSize.m,
+      size: haveCode ? AppButtonSize.l : AppButtonSize.m,
       loadingLabel: loadingLabel,
       onPressed: onDiploma,
       background: chrome.diplomaFill,

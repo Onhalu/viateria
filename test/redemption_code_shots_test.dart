@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:viateria/domain/redemption_code.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/widgets/challenge_cta_panel.dart';
@@ -16,8 +14,8 @@ import 'helpers/fakes.dart';
 ///
 /// `CAPTURE_REDEEM=1 flutter test test/redemption_code_shots_test.dart`
 ///
-/// Czech is the full set (CTA, idle, focus, loading, error, success) at
-/// 390 and 1280. English is the CTA at 390. German is the idle dialog at 1280.
+/// Writes six Czech frames: CTA and success at 390 and 1280, plus the
+/// idle and focused dialog at 390.
 void main() {
   if (Platform.environment['CAPTURE_REDEEM'] != '1') return;
 
@@ -34,78 +32,59 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     try {
-      for (final width in const [390.0, 1280.0]) {
-        await _captureLocale(tester, width: width, locale: 'cs', full: true);
+      final dir = Directory('/opt/cursor/artifacts');
+      if (dir.existsSync()) {
+        for (final entity in dir.listSync()) {
+          if (entity is File &&
+              entity.uri.pathSegments.last.startsWith('redeem-pixel-')) {
+            entity.deleteSync();
+          }
+        }
       }
-      await _captureLocale(tester, width: 390, locale: 'en', full: false);
-      await _captureLocale(
-        tester,
-        width: 1280,
-        locale: 'de',
-        full: false,
-        dialogOnly: true,
-      );
+      await _captureCzech(tester, 390);
+      await _captureCzech(tester, 1280);
     } finally {
       debugDisableShadows = true;
     }
   });
 }
 
-Future<void> _captureLocale(
-  WidgetTester tester, {
-  required double width,
-  required String locale,
-  required bool full,
-  bool dialogOnly = false,
-}) async {
+Future<void> _captureCzech(WidgetTester tester, double width) async {
   final wide = width >= 840;
   final purchases = MemoryPurchases(completeOnRefresh: false);
-  await _pumpHost(tester, width: width, locale: locale, purchases: purchases);
-  final tag = '$locale-${width.toInt()}';
-
-  if (!dialogOnly) {
-    await _save(tester, 'redeem-pixel-cta-$tag.png');
-  }
-  if (!full && !dialogOnly) return;
-
-  await _openDialog(tester, wide: wide);
-  await _save(tester, 'redeem-pixel-dialog-idle-$tag.png');
-  if (!full) {
-    await _closeDialog(tester);
+  await _pumpHost(tester, width: width, locale: 'cs', purchases: purchases);
+  final tag = 'cs-${width.toInt()}';
+  await _save(tester, 'redeem-pixel-cta-$tag.png');
+  if (width != 390) {
+    await _finishSuccess(tester, wide: wide, purchases: purchases, tag: tag);
     return;
   }
 
+  await _openDialog(tester, wide: wide);
+  await _save(tester, 'redeem-pixel-dialog-idle-$tag.png');
   await tester.tap(find.byKey(const Key('redeem-code-field')));
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
   await _save(tester, 'redeem-pixel-dialog-focus-$tag.png');
   await _closeDialog(tester);
+  await _finishSuccess(tester, wide: wide, purchases: purchases, tag: tag);
+}
 
-  purchases.scriptedRedeemError = RedeemCodeError.invalidCode;
+Future<void> _finishSuccess(
+  WidgetTester tester, {
+  required bool wide,
+  required MemoryPurchases purchases,
+  required String tag,
+}) async {
   await _openDialog(tester, wide: wide);
   await tester.enterText(
     find.byKey(const Key('redeem-code-field')),
     'AB12CD34',
   );
   await tester.tap(find.byKey(const Key('redeem-code-submit')));
-  await tester.pumpAndSettle();
-  await _save(tester, 'redeem-pixel-dialog-error-$tag.png');
-  await _closeDialog(tester);
-
-  purchases.scriptedRedeemError = null;
-  final gate = Completer<void>();
-  purchases.redeemDelay = gate;
-  await _openDialog(tester, wide: wide);
-  await tester.enterText(
-    find.byKey(const Key('redeem-code-field')),
-    'AB12CD34',
-  );
-  await tester.tap(find.byKey(const Key('redeem-code-submit')));
-  await tester.pump();
-  await _save(tester, 'redeem-pixel-dialog-loading-$tag.png');
-  gate.complete();
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
-  expect(find.text(AppStrings(locale).redeemCodeSuccess), findsOneWidget);
+  expect(find.text(AppStrings('cs').redeemCodeSuccess), findsOneWidget);
   await _save(tester, 'redeem-pixel-success-$tag.png');
   await tester.pump(const Duration(milliseconds: 2600));
   await tester.pumpAndSettle();
@@ -121,9 +100,12 @@ Future<void> _pumpHost(
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, height);
   await tester.pumpWidget(const SizedBox.shrink());
+  final theme = AppTheme.light();
   await tester.pumpWidget(
     MaterialApp(
-      theme: AppTheme.light(),
+      theme: theme.copyWith(
+        textTheme: theme.textTheme.apply(fontFamily: 'Roboto'),
+      ),
       home: RedeemPixelHost(
         strings: AppStrings(locale),
         purchases: purchases,
@@ -236,7 +218,12 @@ class _RedeemPixelHostState extends State<RedeemPixelHost> {
         SnackBar(
           content: Text(
             widget.strings.redeemCodeSuccess,
-            style: const TextStyle(color: BrandColors.cream),
+            style: const TextStyle(
+              color: BrandColors.cream,
+              fontFamily: 'Roboto',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           backgroundColor: BrandColors.forest,
           duration: const Duration(milliseconds: 2500),

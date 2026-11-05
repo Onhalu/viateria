@@ -155,10 +155,10 @@ class _RedeemCodeDialogState extends State<RedeemCodeDialog> {
                     horizontal: 16,
                     vertical: 14,
                   ),
-                  enabledBorder: _fieldBorder(BrandColors.beige, 1),
-                  disabledBorder: _fieldBorder(BrandColors.beige, 1),
+                  enabledBorder: _fieldBorder(BrandColors.sage, 1),
+                  disabledBorder: _fieldBorder(BrandColors.sage, 1),
                   focusedBorder: _fieldBorder(BrandColors.forest, 1.5),
-                  border: _fieldBorder(BrandColors.beige, 1),
+                  border: _fieldBorder(BrandColors.sage, 1),
                 ),
               ),
               if (error != null) ...[
@@ -200,6 +200,7 @@ class _RedeemCodeDialogState extends State<RedeemCodeDialog> {
                           tapTargetSize: MaterialTapTargetSize.padded,
                           shape: const StadiumBorder(),
                           textStyle: const TextStyle(
+                            fontFamily: 'Roboto',
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.1,
@@ -219,10 +220,29 @@ class _RedeemCodeDialogState extends State<RedeemCodeDialog> {
                               .pop(RedeemCodeDialogResult.dismissed),
                 style: TextButton.styleFrom(
                   foregroundColor: BrandColors.forest,
+                  backgroundColor: Colors.transparent,
+                  disabledForegroundColor: BrandColors.forest.withValues(
+                    alpha: 0.4,
+                  ),
                   minimumSize: const Size(44, 44),
                   tapTargetSize: MaterialTapTargetSize.padded,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: const RoundedRectangleBorder(),
+                  side: BorderSide.none,
+                  textStyle: const TextStyle(
+                    fontFamily: 'Roboto',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
                 ),
-                child: Text(strings.redeemCodeCancel),
+                child: Text(
+                  strings.redeemCodeCancel,
+                  style: const TextStyle(color: BrandColors.forest),
+                ),
               ),
             ],
           ),

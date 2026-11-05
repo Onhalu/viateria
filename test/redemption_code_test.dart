@@ -144,6 +144,7 @@ void main() {
     expect(find.text('Digital diploma'), findsOneWidget);
     expect(code.left - diploma.right, ChallengeCtaPanel.codeRowGap);
     expect(code.height, HaveCodeButton.height);
+    expect(diploma.height, HaveCodeButton.height);
     expect(code.height, greaterThanOrEqualTo(44));
     expect(
       tester
@@ -183,6 +184,7 @@ void main() {
       find.byKey(const Key('challenge-floating-pay-ctas')),
     );
     expect(stackedCode.height, HaveCodeButton.height);
+    expect(stackedDiploma.height, HaveCodeButton.height);
     expect(
       stackedButtons.height,
       closeTo(
@@ -217,9 +219,18 @@ void main() {
       ChallengeCtaPanel.padTop +
           ChallengeCtaPanel.headingLineHeight +
           ChallengeCtaPanel.headingGap +
-          ChallengeCtaPanel.buttonHeight +
+          HaveCodeButton.height +
           ChallengeCtaPanel.codeStackGap +
           HaveCodeButton.height +
+          ChallengeCtaPanel.padAboveHairline +
+          ChallengeCtaPanel.hairlineThickness,
+    );
+    expect(
+      ChallengeCtaPanel.bodyHeight(row),
+      ChallengeCtaPanel.padTop +
+          ChallengeCtaPanel.headingLineHeight +
+          ChallengeCtaPanel.headingGap +
+          ChallengeCtaPanel.buttonHeight +
           ChallengeCtaPanel.padAboveHairline +
           ChallengeCtaPanel.hairlineThickness,
     );
@@ -288,6 +299,29 @@ void main() {
     expect(find.text(strings.redeemCodeHelper), findsOneWidget);
     expect(find.text(strings.redeemCodeUnlock), findsOneWidget);
     expect(find.text(strings.redeemCodeCancel), findsOneWidget);
+    final cancel = tester.widget<TextButton>(
+      find.byKey(const Key('redeem-code-cancel')),
+    );
+    expect(cancel.style?.shape?.resolve({}), isA<RoundedRectangleBorder>());
+    expect(cancel.style?.side?.resolve({}), BorderSide.none);
+    expect(cancel.style?.foregroundColor?.resolve({}), BrandColors.forest);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('redeem-code-dialog')),
+        matching: find.byType(OutlinedButton),
+      ),
+      findsNothing,
+    );
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('redeem-code-field')),
+    );
+    final idle = field.decoration!.enabledBorder! as OutlineInputBorder;
+    final focus = field.decoration!.focusedBorder! as OutlineInputBorder;
+    expect(idle.borderSide.color, BrandColors.sage);
+    expect(idle.borderSide.width, 1);
+    expect(focus.borderSide.color, BrandColors.forest);
+    expect(focus.borderSide.width, 1.5);
+    expect(idle.borderSide.color, isNot(focus.borderSide.color));
 
     await tester.enterText(find.byKey(const Key('redeem-code-field')), 'abc');
     await tester.tap(find.byKey(const Key('redeem-code-submit')));
