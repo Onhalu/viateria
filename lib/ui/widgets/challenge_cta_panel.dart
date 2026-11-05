@@ -189,16 +189,31 @@ class ChallengeCtaPanel extends StatelessWidget {
 
   static bool buttonsStack(double windowWidth) => windowWidth < stackBelow;
 
-  static double _buttonsHeight(double windowWidth) => buttonsStack(windowWidth)
-      ? buttonHeight + stackGap + buttonHeight
-      : buttonHeight;
+  /// Medal slot is [buttonHeight] (48). „Mám kód“ is [HaveCodeButton.height]
+  /// (52). Side by side, the row is the taller of the two. Stacked, the
+  /// diploma keeps 48 and the code button adds 52 plus [codeStackGap].
+  static double _buttonsHeight(double windowWidth, {bool haveCode = false}) {
+    final codeHeight = haveCode ? HaveCodeButton.height : buttonHeight;
+    if (!buttonsStack(windowWidth)) {
+      return codeHeight > buttonHeight ? codeHeight : buttonHeight;
+    }
+    final gap = haveCode ? codeStackGap : stackGap;
+    return buttonHeight + gap + codeHeight;
+  }
 
   /// Laid-out height of the panel body, including the hairline.
-  static double bodyHeight(double windowWidth, {int headingLines = 1}) =>
+  ///
+  /// [haveCode] reserves 52 for the code button so the panel is not sized
+  /// for the 48 dp medal slot.
+  static double bodyHeight(
+    double windowWidth, {
+    int headingLines = 1,
+    bool haveCode = false,
+  }) =>
       padTop +
       headingLineHeight * headingLines +
       headingGap +
-      _buttonsHeight(windowWidth) +
+      _buttonsHeight(windowWidth, haveCode: haveCode) +
       padAboveHairline +
       hairlineThickness;
 

@@ -1628,8 +1628,15 @@ abstract final class ChallengePaymentBarMetrics {
   static const inlineNarrowGap = 8.0;
   static const spinner = 18.0;
 
-  static double bodyHeight(double width, {int headingLines = 1}) =>
-      ChallengeCtaPanel.bodyHeight(width, headingLines: headingLines);
+  static double bodyHeight(
+    double width, {
+    int headingLines = 1,
+    bool haveCode = false,
+  }) => ChallengeCtaPanel.bodyHeight(
+    width,
+    headingLines: headingLines,
+    haveCode: haveCode,
+  );
 }
 
 class _BottomClearance extends StatelessWidget {

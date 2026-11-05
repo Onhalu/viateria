@@ -145,6 +145,18 @@ void main() {
     expect(code.left - diploma.right, ChallengeCtaPanel.codeRowGap);
     expect(code.height, HaveCodeButton.height);
     expect(code.height, greaterThanOrEqualTo(44));
+    expect(
+      tester
+          .getSize(find.byKey(const Key('challenge-floating-pay-ctas')))
+          .height,
+      HaveCodeButton.height,
+    );
+    expect(
+      code.bottom,
+      lessThanOrEqualTo(
+        tester.getRect(find.byKey(const Key('challenge-cta-panel'))).bottom,
+      ),
+    );
     final filled = tester.widget<FilledButton>(
       find.descendant(
         of: find.byKey(const Key('challenge-floating-pay-code')),
@@ -166,6 +178,63 @@ void main() {
     expect(
       stackedCode.top - stackedDiploma.bottom,
       ChallengeCtaPanel.codeStackGap,
+    );
+    final stackedButtons = tester.getSize(
+      find.byKey(const Key('challenge-floating-pay-ctas')),
+    );
+    expect(stackedCode.height, HaveCodeButton.height);
+    expect(
+      stackedButtons.height,
+      closeTo(
+        stackedDiploma.height +
+            ChallengeCtaPanel.codeStackGap +
+            HaveCodeButton.height,
+        0.5,
+      ),
+    );
+    expect(
+      stackedCode.bottom,
+      lessThanOrEqualTo(
+        tester.getRect(find.byKey(const Key('challenge-cta-panel'))).bottom,
+      ),
+    );
+  });
+
+  test('have-code bodyHeight reserves 52, not the 48 medal slot', () {
+    const row = 400.0;
+    const stack = 320.0;
+    expect(
+      ChallengeCtaPanel.bodyHeight(row, haveCode: true),
+      ChallengeCtaPanel.padTop +
+          ChallengeCtaPanel.headingLineHeight +
+          ChallengeCtaPanel.headingGap +
+          HaveCodeButton.height +
+          ChallengeCtaPanel.padAboveHairline +
+          ChallengeCtaPanel.hairlineThickness,
+    );
+    expect(
+      ChallengeCtaPanel.bodyHeight(stack, haveCode: true),
+      ChallengeCtaPanel.padTop +
+          ChallengeCtaPanel.headingLineHeight +
+          ChallengeCtaPanel.headingGap +
+          ChallengeCtaPanel.buttonHeight +
+          ChallengeCtaPanel.codeStackGap +
+          HaveCodeButton.height +
+          ChallengeCtaPanel.padAboveHairline +
+          ChallengeCtaPanel.hairlineThickness,
+    );
+    expect(
+      ChallengeCtaPanel.bodyHeight(row, haveCode: true),
+      ChallengeCtaPanel.bodyHeight(row) +
+          (HaveCodeButton.height - ChallengeCtaPanel.buttonHeight),
+    );
+    expect(
+      ChallengePaymentBarMetrics.bodyHeight(row, haveCode: true),
+      ChallengeCtaPanel.bodyHeight(row, haveCode: true),
+    );
+    expect(
+      ChallengeCtaPanel.bodyHeight(row),
+      isNot(ChallengeCtaPanel.bodyHeight(row, haveCode: true)),
     );
   });
 

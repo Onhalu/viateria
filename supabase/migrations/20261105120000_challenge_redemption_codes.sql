@@ -8,13 +8,18 @@
 
 create table if not exists public.challenge_redemption_codes (
   id uuid primary key default gen_random_uuid(),
-  challenge_id uuid not null references public.challenges (id),
+  -- RESTRICT: deleting a challenge must not cascade-wipe issued codes.
+  challenge_id uuid not null references public.challenges (id) on delete restrict,
   code_hash text not null,
   code_hint text,
   buyer_email text not null,
   expires_at timestamptz,
   redeemed_at timestamptz,
-  redeemed_by uuid references public.profiles (id),
+  -- SET NULL: dropping a profile keeps the code row. The redeemed check
+  -- below still requires redeemed_by while redeemed_at is set, so deleting
+  -- a profile that has redeemed a code fails closed instead of erasing
+  -- the audit link.
+  redeemed_by uuid references public.profiles (id) on delete set null,
   purchase_id uuid references public.purchases (id) on delete set null,
   source text not null default 'vyslapni_cz',
   created_at timestamptz not null default now(),
