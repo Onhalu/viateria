@@ -651,8 +651,24 @@ void main() {
       await _pumpDetail(tester, _paidStory(), purchases: purchases);
 
       expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-      expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
-      expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+      expect(
+        find.text(
+          strings.payCtaAmount(
+            strings.payDigitalDiploma,
+            formatChallengePrice(499, 'eur', 'cs')!,
+          ),
+        ),
+        findsNWidgets(2),
+      );
+      expect(
+        find.text(
+          strings.payCtaAmount(
+            strings.payMedalAndDiploma,
+            formatChallengePrice(900, 'eur', 'cs')!,
+          ),
+        ),
+        findsNWidgets(2),
+      );
       expect(find.text(strings.challengeLockedPaid), findsNothing);
       expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
       expect(find.text('Úvod výzvy'), findsOneWidget);
@@ -983,8 +999,9 @@ void main() {
 
     expect(find.byKey(const Key('story-chapter-s-open')), findsOneWidget);
     expect(find.byKey(const Key('challenge-pay-ctas')), findsOneWidget);
-    expect(find.text(strings.payDigitalDiploma), findsNWidgets(2));
-    expect(find.text(strings.payMedalAndDiploma), findsNWidgets(2));
+    expect(find.text(strings.payCtaFree), findsNWidgets(4));
+    expect(find.text(strings.payDigitalDiploma), findsNothing);
+    expect(find.text(strings.payMedalAndDiploma), findsNothing);
     expect(find.text(strings.payPriceFree), findsNothing);
     expect(find.text('999${priceThinSpace}Kč'), findsNothing);
     expect(find.text(strings.challengeLockedPaid), findsNothing);

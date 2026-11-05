@@ -807,12 +807,19 @@ class SupabasePurchaseRepository implements PurchaseRepository {
   Future<CheckoutSession> startCheckout(
     String challengeId, {
     RewardVariant? rewardVariant,
+    String? idempotencyKey,
   }) async {
+    final key = idempotencyKey?.trim();
     final response = await _client.functions.invoke(
       'start-fapi-checkout',
+      headers: {
+        if (key != null && key.isNotEmpty) 'Idempotency-Key': key,
+      },
       body: {
         'challenge_id': challengeId,
         if (rewardVariant != null) 'reward_variant': rewardVariant.wire,
+        if (key != null && key.isNotEmpty) 'idempotency_key': key,
+        if (key != null && key.isNotEmpty) 'order_id': key,
       },
     );
     final data = Map<String, dynamic>.from(response.data as Map);
@@ -820,7 +827,11 @@ class SupabasePurchaseRepository implements PurchaseRepository {
     if (url == null || url.isEmpty) {
       throw StateError('Checkout session did not return a URL');
     }
-    return CheckoutSession(url: url);
+    final orderId = data['order_id'] as String?;
+    return CheckoutSession(
+      url: url,
+      orderId: orderId == null || orderId.isEmpty ? key : orderId,
+    );
   }
 
   @override

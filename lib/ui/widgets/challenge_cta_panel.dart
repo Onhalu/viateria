@@ -140,6 +140,8 @@ class ChallengeCtaPanel extends StatelessWidget {
     required this.medalLabel,
     required this.onDiploma,
     required this.onMedal,
+    this.diplomaLoading = false,
+    this.medalLoading = false,
     this.loadingLabel = 'Načítání',
     this.navFill = BrandColors.shellFill,
   });
@@ -149,6 +151,8 @@ class ChallengeCtaPanel extends StatelessWidget {
   final String medalLabel;
   final VoidCallback? onDiploma;
   final VoidCallback? onMedal;
+  final bool diplomaLoading;
+  final bool medalLoading;
   final String loadingLabel;
   final Color navFill;
 
@@ -202,6 +206,8 @@ class ChallengeCtaPanel extends StatelessWidget {
       label: diplomaLabel,
       variant: AppButtonVariant.secondary,
       size: AppButtonSize.m,
+      loading: diplomaLoading,
+      haptic: true,
       loadingLabel: loadingLabel,
       onPressed: onDiploma,
       background: chrome.diplomaFill,
@@ -213,6 +219,8 @@ class ChallengeCtaPanel extends StatelessWidget {
       label: medalLabel,
       variant: AppButtonVariant.primary,
       size: AppButtonSize.m,
+      loading: medalLoading,
+      haptic: true,
       loadingLabel: loadingLabel,
       onPressed: onMedal,
       background: chrome.medalFill,
@@ -299,6 +307,8 @@ class ChallengeStickyCta extends StatelessWidget {
     required this.medalLabel,
     required this.onDiploma,
     required this.onMedal,
+    this.diplomaLoading = false,
+    this.medalLoading = false,
     this.loadingLabel = 'Načítání',
   });
 
@@ -307,6 +317,8 @@ class ChallengeStickyCta extends StatelessWidget {
   final String medalLabel;
   final VoidCallback? onDiploma;
   final VoidCallback? onMedal;
+  final bool diplomaLoading;
+  final bool medalLoading;
   final String loadingLabel;
 
   static const width = 340.0;
@@ -346,6 +358,8 @@ class ChallengeStickyCta extends StatelessWidget {
               label: medalLabel,
               variant: AppButtonVariant.primary,
               size: AppButtonSize.l,
+              loading: medalLoading,
+              haptic: true,
               loadingLabel: loadingLabel,
               onPressed: onMedal,
             ),
@@ -355,6 +369,8 @@ class ChallengeStickyCta extends StatelessWidget {
               label: diplomaLabel,
               variant: AppButtonVariant.secondary,
               size: AppButtonSize.l,
+              loading: diplomaLoading,
+              haptic: true,
               loadingLabel: loadingLabel,
               onPressed: onDiploma,
             ),

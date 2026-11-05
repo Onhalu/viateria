@@ -43,6 +43,55 @@ export type FapiInvoice = {
   items?: FapiInvoiceItem[] | null;
 };
 
+const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Checkout attempt id. Header wins, then `idempotency_key`, then `order_id`.
+ * Anything that is not a uuid v4 is ignored so a bad client cannot store junk.
+ */
+export function readIdempotencyKey(
+  headerValue: string | null | undefined,
+  body: Record<string, unknown> | null | undefined,
+): string | null {
+  const candidates = [headerValue, body?.idempotency_key, body?.order_id];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const trimmed = candidate.trim();
+    if (UUID_V4.test(trimmed)) return trimmed.toLowerCase();
+  }
+  return null;
+}
+
+export type CheckoutDedupePlan = "replay" | "new_attempt";
+
+/**
+ * Same pending cart (key + variant + amount) is a replay: do not write the
+ * row again. A new variant, a new price, or a missing key is a new attempt.
+ * Paid rows are rejected by the caller before this plan.
+ */
+export function checkoutDedupePlan(
+  existing: {
+    status?: string | null;
+    idempotency_key?: string | null;
+    reward_variant?: string | null;
+    amount_cents?: number | null;
+  } | null | undefined,
+  next: {
+    idempotencyKey: string | null;
+    rewardVariant: string;
+    amountCents: number;
+  },
+): CheckoutDedupePlan {
+  if (!existing || existing.status !== "pending") return "new_attempt";
+  if (!next.idempotencyKey) return "new_attempt";
+  const stored = (existing.idempotency_key ?? "").toLowerCase();
+  if (stored !== next.idempotencyKey) return "new_attempt";
+  if (existing.reward_variant !== next.rewardVariant) return "new_attempt";
+  if (existing.amount_cents !== next.amountCents) return "new_attempt";
+  return "replay";
+}
+
 export function parseRewardVariant(raw: unknown): RewardVariant {
   return raw === "medal_and_diploma" || raw === "medalAndDiploma"
     ? "medal_and_diploma"
