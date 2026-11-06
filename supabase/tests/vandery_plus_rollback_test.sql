@@ -42,7 +42,7 @@ select throws_ok(
 -- Plain psql -f: no GUC, no --single-transaction, no ON_ERROR_STOP.
 -- A separate session, so the file's begin/commit cannot see this transaction.
 \! psql -f fixtures/20261106113000_vandery_plus_membership.rollback
-\! psql -f fixtures/20261106114000_vandery_plus_diplomas.rollback.sql
+\! psql -f fixtures/20261106114000_vandery_plus_diplomas.rollback
 
 select ok(
   to_regclass('public.vandery_plus_memberships') is not null,
