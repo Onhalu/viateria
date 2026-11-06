@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(80);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -948,6 +948,219 @@ select ok(
     where id = '10000000-0000-4000-8000-000000000011'
   ),
   'P2a lapsed renew uses greatest(expires_at, now()) plus one month'
+);
+
+-- Refunds. inv-y3 is the current-period renew. inv-y1 is an older renew.
+update public.vandery_plus_memberships
+set
+  fapi_invoice_id = 'inv-y3',
+  amount_cents = 59900,
+  currency = 'czk',
+  status = 'active'
+where id = '10000000-0000-4000-8000-000000000011';
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-none',
+      '{"status":"revoked"}'::jsonb
+    ) ->> 'alert'
+  ),
+  'vandery_plus_refund_unmatched',
+  'refund without a parent is unmatched'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'refund without a parent does not change the membership'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-none',
+      '{"status":"revoked"}'::jsonb
+    ) ->> 'idempotent'
+  ),
+  'true',
+  'replaying a refund without a parent is idempotent'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'replay of a refund without a parent still leaves the membership'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-foreign',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-foreign',
+        'refund_cents', 59900
+      )
+    ) ->> 'alert'
+  ),
+  'vandery_plus_refund_unmatched',
+  'refund with a foreign parent is unmatched'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'refund with a foreign parent does not change the membership'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-old',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y1',
+        'refund_cents', 59900
+      )
+    ) ->> 'alert'
+  ),
+  'vandery_plus_refund_unmatched',
+  'refund of an older invoice is unmatched'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'refund of an older invoice does not change the membership'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-part',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y3',
+        'refund_cents', 10000
+      )
+    ) ->> 'alert'
+  ),
+  'vandery_plus_refund_partial',
+  'partial refund of the current invoice only alerts'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'partial refund does not change the membership'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-full',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y3',
+        'refund_cents', 59900
+      )
+    ) ->> 'membership_status'
+  ),
+  'revoked',
+  'full refund of the current-period invoice revokes'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-full',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y3',
+        'refund_cents', 59900
+      )
+    ) ->> 'idempotent'
+  ),
+  'true',
+  'replaying a full refund is idempotent'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'revoked',
+  'full refund replay leaves the membership revoked'
+);
+
+-- TODO(Ondřej): decide whether a renew after refund should stay revoked.
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'renew',
+      'inv-after-refund',
+      jsonb_build_object(
+        'status', 'active',
+        'expires_at', '2099-01-01T00:00:00Z'
+      )
+    ) ->> 'membership_status'
+  ),
+  'active',
+  'TODO Ondřej: renew after refund currently returns the membership to active'
 );
 
 -- T8: own diploma rows only, no client insert, catalog starts empty.
