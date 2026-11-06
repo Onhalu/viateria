@@ -13,7 +13,7 @@ import {
   invoiceFormId,
   isMembershipActive,
   isMembershipRefundInvoice,
-  amountsMatchNetOrGross,
+  amountsMatchGross,
   invoiceAbsoluteTotalCents,
   invoiceParentId,
   membershipAmountAlert,
@@ -506,8 +506,8 @@ Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () =>
   const couponOutcome = membershipInvoiceOutcome(coupon, config);
   assert(couponOutcome.kind === "amount_mismatch", JSON.stringify(couponOutcome));
   const net = Math.round(59900 / 1.21);
-  assert(!amountsMatchNetOrGross(net, 59900), "net of the gross price is not accepted");
-  assert(amountsMatchNetOrGross(59850, 59900), "within 1 CZK of the gross price");
+  assert(!amountsMatchGross(net, 59900), "net of the gross price is not accepted");
+  assert(amountsMatchGross(59850, 59900), "within 1 CZK of the gross price");
   assert(
     membershipInvoiceOutcome({ ...real, total: 598.5 }, config).kind === "ok",
     "gross total 50 cents low still matches",

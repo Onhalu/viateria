@@ -585,7 +585,7 @@ function withinCents(left: number, right: number): boolean {
  * Catalog price check. `FAPI_VANDERY_PLUS_AMOUNT_CENTS` is gross.
  * A match is that gross total, within 1 CZK. A net total is not a match.
  */
-export function amountsMatchNetOrGross(actual: number, expected: number): boolean {
+export function amountsMatchGross(actual: number, expected: number): boolean {
   return withinCents(actual, expected);
 }
 
@@ -639,7 +639,7 @@ export function membershipInvoiceOutcome(
     return { kind: "skip" };
   }
   const amount = invoiceTotalCents(invoice);
-  if (amount == null || !amountsMatchNetOrGross(amount, config.amountCents)) {
+  if (amount == null || !amountsMatchGross(amount, config.amountCents)) {
     return {
       kind: "amount_mismatch",
       expectedCents: config.amountCents,
