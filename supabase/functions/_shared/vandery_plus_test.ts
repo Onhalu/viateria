@@ -271,7 +271,7 @@ Deno.test("ED-09 payment_failed does not activate or extend", async () => {
     pending,
     event({ kind: "payment_failed", invoiceId: "inv-fail" }),
   );
-  assert(pending.rows.get("mem-1")!.status === "failed", "pending becomes failed");
+  assert(pending.rows.get("mem-1")!.status === "pending", "unpaid notice leaves pending");
 
   const active = new MemoryStore([
     row({
@@ -460,6 +460,28 @@ Deno.test("renew after expiry starts from now", async () => {
   assert(store.rows.get("mem-1")!.status === "active", "active again");
 });
 
+Deno.test("cancel after paid on the same invoice is not lost", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+    }),
+  ]);
+  await deliverVanderyPlus(
+    store,
+    event({ kind: "paid_first", invoiceId: "inv-same" }),
+  );
+  const cancelled = await deliverVanderyPlus(
+    store,
+    event({ kind: "cancel", invoiceId: "inv-same" }),
+  );
+  assert(cancelled.body.idempotent === false, JSON.stringify(cancelled.body));
+  assert(store.rows.get("mem-1")!.status === "active", "still active");
+  assert(store.rows.get("mem-1")!.cancelAtPeriodEnd === true, "cancel kept");
+});
+
 Deno.test("DB-21 payment_failed then paid_first on the same invoice activates", async () => {
   const store = new MemoryStore([
     row({ id: "mem-1", userId: "user-a", status: "pending" }),
@@ -468,7 +490,7 @@ Deno.test("DB-21 payment_failed then paid_first on the same invoice activates", 
     store,
     event({ kind: "payment_failed", invoiceId: "inv-x" }),
   );
-  assert(store.rows.get("mem-1")!.status === "failed", "failed first");
+  assert(store.rows.get("mem-1")!.status === "pending", "unpaid leaves pending");
   const paid = await deliverVanderyPlus(
     store,
     event({ kind: "paid_first", invoiceId: "inv-x" }),
@@ -575,5 +597,5 @@ Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live 
     fresh,
     event({ kind: "payment_failed", membershipId: "mem-2", invoiceId: "e2e-cancel-checkout" }),
   );
-  assert(fresh.rows.get("mem-2")!.status === "failed", "E2E-06 no active row");
+  assert(fresh.rows.get("mem-2")!.status === "pending", "E2E-06 unpaid does not activate");
 });

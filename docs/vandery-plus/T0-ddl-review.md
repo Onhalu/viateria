@@ -69,7 +69,7 @@ A non-member may sync device visits only when they already have at least one `pl
 | `renew` | Same row, `expires_at + 1 month` once per invoice id, `cancel_at_period_end` cleared. |
 | `cancel` | `cancel_at_period_end = true`, status stays `active` until `expires_at`. |
 | `refund` | `status = revoked` immediately. |
-| `payment_failed` | No activation and no extension. A `pending` row becomes `failed`. An `active` row is left until `expires_at` (no grace — Legal §14.4 is still `[rozhodnout]`). |
+| `payment_failed` | No activation and no extension. A `pending` row stays `pending`. An `active` row is left until `expires_at` (no grace — Legal §14.4 is still `[rozhodnout]`). |
 
 Challenge invoices stay on `purchases`. This commit function never writes that table.
 

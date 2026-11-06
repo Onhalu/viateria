@@ -186,7 +186,8 @@ export function nextMembershipPatch(
     case "refund":
       return { status: "revoked", cancel_at_period_end: false };
     case "payment_failed":
-      if (row.status === "pending") return { status: "failed" };
+      // An unpaid notice must not burn the pending checkout. A later paid
+      // event for the same invoice still has to activate.
       return {};
   }
 }

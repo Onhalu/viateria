@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(62);
+select plan(64);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -800,11 +800,11 @@ select is(
       'ignored',
       'payment_failed',
       'inv-x',
-      '{"status":"failed"}'::jsonb
+      '{}'::jsonb
     ) ->> 'membership_status'
   ),
-  'failed',
-  'DB-21 payment_failed leaves the checkout failed'
+  'pending',
+  'DB-21 unpaid notice leaves the checkout pending'
 );
 
 select throws_ok(
@@ -837,6 +837,31 @@ select is(
   ),
   'active',
   'DB-21 paid_first after payment_failed on the same invoice activates'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'cancel',
+      'inv-x',
+      '{"cancel_at_period_end":true}'::jsonb
+    ) ->> 'idempotent'
+  ),
+  'false',
+  'cancel on a paid invoice is not dropped as a duplicate payment'
+);
+
+select is(
+  (
+    select cancel_at_period_end
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  true,
+  'cancel on a paid invoice sets cancel_at_period_end'
 );
 
 select is(
