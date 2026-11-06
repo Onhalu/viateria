@@ -107,7 +107,24 @@ void main() {
       _profile(member: true),
     );
     expect(find.byKey(const Key('vandery-plus-badge')), findsOneWidget);
-    expect(find.text('Členství aktivní.'), findsOneWidget);
+    expect(find.text('Aktivní do 6. 12. 2026'), findsOneWidget);
+    expect(find.text('Přidej se VANDERY+'), findsNothing);
+    await _shot(
+      tester,
+      const Size(390, 844),
+      'vandery-plus-member-cancelled-390',
+      _profile(member: true, cancelled: true),
+    );
+    await _shot(
+      tester,
+      const Size(1280, 800),
+      'vandery-plus-member-cancelled-1280',
+      _profile(member: true, cancelled: true),
+    );
+    expect(
+      find.text('Aktivní do 6. 12. 2026 · zrušeno, neobnoví se'),
+      findsOneWidget,
+    );
     expect(find.text('Přidej se VANDERY+'), findsNothing);
     await _shot(
       tester,
@@ -208,10 +225,15 @@ ThemeData _shotTheme() {
   );
 }
 
-Widget _profile({bool member = false, String locale = 'cs'}) {
+Widget _profile({
+  bool member = false,
+  bool cancelled = false,
+  String locale = 'cs',
+}) {
   final active = VanderyPlusMembership(
     status: 'active',
-    expiresAt: DateTime.now().toUtc().add(const Duration(days: 20)),
+    expiresAt: DateTime.utc(2026, 12, 6),
+    cancelAtPeriodEnd: cancelled,
   );
   final session = VanderyPlusSession(
     repository: MemoryMembershipRepository(initial: member ? active : null),
@@ -248,7 +270,7 @@ Widget _profile({bool member = false, String locale = 'cs'}) {
       ),
     ],
     child: MaterialApp(
-      key: ValueKey('profile-$member-$locale'),
+      key: ValueKey('profile-$member-$cancelled-$locale'),
       debugShowCheckedModeBanner: false,
       theme: _shotTheme(),
       home: Scaffold(body: ProfileScreen(places: MemoryPlaceCatalog(const []))),

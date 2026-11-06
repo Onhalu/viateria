@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../data/app_services.dart';
 import '../../data/vandery_plus_session.dart';
 import '../../domain/profile_stats.dart';
+import '../../domain/vandery_plus.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../map/place.dart';
@@ -160,7 +161,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     completed: _completed,
                     completedAt: _completedAt,
                     score: _score,
-                    membershipActive: services.vanderyPlus.isActive,
+                    membership: services.vanderyPlus.membership,
+                    now: services.vanderyPlus.now,
                     onJoinVanderyPlus: () => showVanderyPlusPaywall(context),
                   );
                 },
@@ -225,7 +227,8 @@ class _ProfileStatsBody extends StatelessWidget {
     required this.completed,
     required this.completedAt,
     required this.score,
-    required this.membershipActive,
+    required this.membership,
+    required this.now,
     required this.onJoinVanderyPlus,
   });
 
@@ -235,7 +238,8 @@ class _ProfileStatsBody extends StatelessWidget {
   final List<Challenge> completed;
   final Map<String, DateTime> completedAt;
   final LeaderboardEntry? score;
-  final bool membershipActive;
+  final VanderyPlusMembership membership;
+  final DateTime now;
   final VoidCallback onJoinVanderyPlus;
 
   static const _gridGap = 12.0;
@@ -248,18 +252,20 @@ class _ProfileStatsBody extends StatelessWidget {
     // 1280 web: leaderboard and the CTA sit above the fold. The CTA stays
     // directly under the leaderboard card.
     final wide = MediaQuery.sizeOf(context).width >= 1200;
-    final membership = <Widget>[
+    final aboveTheFold = <Widget>[
       _LeaderboardCard(strings: strings, score: score),
       VanderyPlusProfileSlot(
         strings: strings,
-        active: membershipActive,
+        membership: membership,
+        now: now,
+        locale: locale,
         onJoin: onJoinVanderyPlus,
       ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (wide) ...membership,
+        if (wide) ...aboveTheFold,
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: KeyedSubtree(
@@ -347,7 +353,7 @@ class _ProfileStatsBody extends StatelessWidget {
         ),
         if (!wide) ...[
           const SizedBox(height: 12),
-          ...membership,
+          ...aboveTheFold,
         ],
       ],
     );

@@ -8,12 +8,14 @@ class MemoryMembershipRepository implements MembershipRepository {
 
   VanderyPlusMembership current;
   int checkoutCalls = 0;
+  int fetchCalls = 0;
   Uri checkoutUrl = Uri.parse('https://sandbox.fapi.example/vandery-plus');
   Object? checkoutError;
   Object? readError;
 
   @override
   Future<VanderyPlusMembership> fetchMine() async {
+    fetchCalls += 1;
     final failure = readError;
     if (failure != null) throw failure;
     return current;

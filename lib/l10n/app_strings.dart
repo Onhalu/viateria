@@ -286,6 +286,9 @@ class AppStrings {
     'vanderyPlusJoinCta',
     'vanderyPlusBadge',
     'vanderyPlusActiveLine',
+    'vanderyPlusActiveUntil',
+    'vanderyPlusCanceledUntil',
+    'vanderyPlusCancelNote',
     'vanderyPlusTitle',
     'vanderyPlusSubtitle',
     'vanderyPlusMonthly',
@@ -577,6 +580,13 @@ class AppStrings {
   String get vanderyPlusJoinCta => t('vanderyPlusJoinCta');
   String get vanderyPlusBadge => t('vanderyPlusBadge');
   String get vanderyPlusActiveLine => t('vanderyPlusActiveLine');
+  String vanderyPlusActiveUntil(String date) =>
+      t('vanderyPlusActiveUntil').replaceAll('{date}', date);
+  String vanderyPlusCanceledUntil(String date) =>
+      t('vanderyPlusCanceledUntil').replaceAll('{date}', date);
+
+  /// Legal PASS draft, VOP publish Ask first. Not a lawyer sign-off.
+  String get vanderyPlusCancelNote => t('vanderyPlusCancelNote');
   String get vanderyPlusTitle => t('vanderyPlusTitle');
   String get vanderyPlusSubtitle => t('vanderyPlusSubtitle');
   String get vanderyPlusMonthly => t('vanderyPlusMonthly');
@@ -1039,6 +1049,10 @@ class AppStrings {
       'vanderyPlusJoinCta': 'Join VANDERY+',
       'vanderyPlusBadge': 'VANDERY+',
       'vanderyPlusActiveLine': 'Membership active.',
+      'vanderyPlusActiveUntil': 'Active until {date}',
+      'vanderyPlusCanceledUntil': "Active until {date} · cancelled, won't renew",
+      'vanderyPlusCancelNote':
+          'Cancel anytime. Membership stays active until the end of the paid period.',
       'vanderyPlusTitle': 'VANDERY+',
       'vanderyPlusSubtitle': 'Membership for verifying places and rewards.',
       'vanderyPlusMonthly': 'Monthly membership',
@@ -1356,6 +1370,10 @@ class AppStrings {
       'vanderyPlusJoinCta': 'Přidej se VANDERY+',
       'vanderyPlusBadge': 'VANDERY+',
       'vanderyPlusActiveLine': 'Členství aktivní.',
+      'vanderyPlusActiveUntil': 'Aktivní do {date}',
+      'vanderyPlusCanceledUntil': 'Aktivní do {date} · zrušeno, neobnoví se',
+      'vanderyPlusCancelNote':
+          'Zrušit můžeš kdykoli. Členství pak platí do konce zaplaceného období.',
       'vanderyPlusTitle': 'VANDERY+',
       'vanderyPlusSubtitle': 'Členství pro ověřování míst a odměny.',
       'vanderyPlusMonthly': 'Měsíční členství',
@@ -1678,6 +1696,11 @@ class AppStrings {
       'vanderyPlusJoinCta': 'VANDERY+ beitreten',
       'vanderyPlusBadge': 'VANDERY+',
       'vanderyPlusActiveLine': 'Mitgliedschaft aktiv.',
+      'vanderyPlusActiveUntil': 'Aktiv bis {date}',
+      'vanderyPlusCanceledUntil':
+          'Aktiv bis {date} · gekündigt, keine Verlängerung',
+      'vanderyPlusCancelNote':
+          'Jederzeit kündbar. Die Mitgliedschaft bleibt bis zum Ende des bezahlten Zeitraums aktiv.',
       'vanderyPlusTitle': 'VANDERY+',
       'vanderyPlusSubtitle': 'Mitgliedschaft zum Bestätigen von Orten und für Belohnungen.',
       'vanderyPlusMonthly': 'Monatliche Mitgliedschaft',

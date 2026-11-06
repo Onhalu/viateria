@@ -20,6 +20,15 @@ If `FAPI_VANDERY_PLUS_ITEM_ID` is set and `FAPI_VANDERY_PLUS_PRODUCT_ID` is empt
 
 Set both ids together before enabling the FAPI membership webhook.
 
+## FAPI form
+
+- FAPI form: slevové kódy vypnuté (Q6).
+- `FAPI_VANDERY_PLUS_RETURN_URL` is the form's thank-you page setting, not a prefill parameter. Set it to `com.viateria.viateria://vandery-plus?vandery_plus=return`. `vanderyPlusPrefillUrl` does not add a return URL.
+
+## Account deletion (prod blocker, Ask first)
+
+Deleting an account anonymizes the membership row and ends access immediately. The FAPI subscription must be stopped at the same time, or FAPI keeps charging. That stop is not implemented. Do not turn on production payments until Ondřej signs it off.
+
 ## Drift migrations (local and preview only)
 
 `20261006185900_w0c_drift_challenge_covers_bucket.sql` and `20261006190000_w0b_drift_challenge_windows_changelog.sql` recreate prod history that was never committed. They are for a local or preview database whose chain starts from this repo.

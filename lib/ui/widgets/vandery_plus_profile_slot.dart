@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/vandery_plus.dart';
 import '../../l10n/app_strings.dart';
+import '../../l10n/local_dates.dart';
 import '../../theme/brand_colors.dart';
 
 /// LOCK A: directly under `profile-leaderboard`.
@@ -8,20 +10,29 @@ class VanderyPlusProfileSlot extends StatelessWidget {
   const VanderyPlusProfileSlot({
     super.key,
     required this.strings,
-    required this.active,
+    required this.membership,
+    required this.now,
+    required this.locale,
     required this.onJoin,
   });
 
   final AppStrings strings;
-  final bool active;
+  final VanderyPlusMembership membership;
+  final DateTime now;
+  final String locale;
   final VoidCallback onJoin;
 
   @override
   Widget build(BuildContext context) {
+    final active = membership.isActiveAt(now);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: active
-          ? _MemberBadge(strings: strings)
+          ? _MemberBadge(
+              strings: strings,
+              membership: membership,
+              locale: locale,
+            )
           : _JoinButton(label: strings.vanderyPlusJoinCta, onPressed: onJoin),
     );
   }
@@ -92,12 +103,27 @@ class _JoinButton extends StatelessWidget {
 }
 
 class _MemberBadge extends StatelessWidget {
-  const _MemberBadge({required this.strings});
+  const _MemberBadge({
+    required this.strings,
+    required this.membership,
+    required this.locale,
+  });
 
   final AppStrings strings;
+  final VanderyPlusMembership membership;
+  final String locale;
 
   @override
   Widget build(BuildContext context) {
+    final expires = membership.expiresAt;
+    final dated = expires == null
+        ? null
+        : formatLocaleDate(expires, locale);
+    final line = dated == null
+        ? strings.vanderyPlusActiveLine
+        : membership.cancelAtPeriodEnd
+        ? strings.vanderyPlusCanceledUntil(dated)
+        : strings.vanderyPlusActiveUntil(dated);
     return IgnorePointer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,8 +155,12 @@ class _MemberBadge extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            strings.vanderyPlusActiveLine,
-            key: const Key('vandery-plus-active-line'),
+            line,
+            key: Key(
+              dated == null
+                  ? 'vandery-plus-active-line'
+                  : 'vandery-plus-active-until',
+            ),
             style: const TextStyle(color: BrandColors.bark, fontSize: 13),
           ),
         ],

@@ -41,8 +41,10 @@ select throws_ok(
 
 -- Plain psql -f: no GUC, no --single-transaction, no ON_ERROR_STOP.
 -- A separate session, so the file's begin/commit cannot see this transaction.
-\! psql -f fixtures/20261106113000_vandery_plus_membership.rollback
-\! psql -f fixtures/20261106114000_vandery_plus_diplomas.rollback
+-- Prefer IPv6 when `db` has a v6 address. On the v6-only docker network the
+-- v4 address is a blackhole and a plain `psql` hangs in SYN_SENT.
+\! sh -c 'h=$(getent ahostsv6 "$PGHOST" | cut -d" " -f1 | head -n1); psql -h "${h:-$PGHOST}" -f fixtures/20261106113000_vandery_plus_membership.rollback'
+\! sh -c 'h=$(getent ahostsv6 "$PGHOST" | cut -d" " -f1 | head -n1); psql -h "${h:-$PGHOST}" -f fixtures/20261106114000_vandery_plus_diplomas.rollback'
 
 select ok(
   to_regclass('public.vandery_plus_memberships') is not null,

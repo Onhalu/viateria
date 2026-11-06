@@ -454,13 +454,22 @@ class _VanderyPlusPaywallContentState extends State<VanderyPlusPaywallContent> {
                     if (session.message == VanderyPlusMessage.stillInactive)
                       TextButton(
                         key: const Key('vandery-plus-retry'),
-                        onPressed: () => widget.session.onReturn(
-                          VanderyPlusReturnKind.success,
-                        ),
+                        onPressed: () => widget.session.verifyAgain(),
                         child: Text(strings.vanderyPlusRetryVerify),
                       ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              strings.vanderyPlusCancelNote,
+              key: const Key('vandery-plus-cancel-note'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: BrandColors.bark,
+                fontSize: 12,
+                height: 16 / 12,
               ),
             ),
             const SizedBox(height: 8),

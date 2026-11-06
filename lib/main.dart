@@ -16,6 +16,7 @@ import 'data/place_visit_hydrate.dart';
 import 'data/supabase_leaderboard.dart';
 import 'data/supabase_membership.dart';
 import 'data/vandery_plus_session.dart';
+import 'domain/vandery_plus.dart';
 import 'data/supabase_place_catalog.dart';
 import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
@@ -28,9 +29,14 @@ Future<void> listenForVanderyPlusLinks(VanderyPlusSession session) async {
   try {
     final links = AppLinks();
     final initial = await links.getInitialLink();
-    if (initial != null) await session.consumeReturnUri(initial);
+    if (initial != null && isVanderyPlusAppLink(initial)) {
+      await session.consumeReturnUri(initial);
+    }
     links.uriLinkStream.listen(
-      (uri) => unawaited(session.consumeReturnUri(uri)),
+      (uri) {
+        if (!isVanderyPlusAppLink(uri)) return;
+        unawaited(session.consumeReturnUri(uri));
+      },
       onError: (_) {},
     );
   } catch (_) {}

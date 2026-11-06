@@ -1,49 +1,20 @@
-Connecting to local database...
-psql:vandery_plus_membership_test.sql:6: NOTICE:  extension "pgtap" already exists, skipping
+# pgTAP after 20261106120900 (cancel flag only)
+
+Runner: pg_prove 3.36 on network supabase_net_v6 with PGHOST=fd00:1::2.
+`supabase test db` reaches the database over IPv6, then its nested `psql`
+uses the IPv4 address of host `db`, which does not complete a handshake on
+this network and stays in SYN_SENT. The rollback test therefore calls psql
+via the IPv6 address when `getent ahostsv6` returns one.
+
 ./vandery_plus_membership_test.sql .. ok
-psql:vandery_plus_rollback_test.sql:7: NOTICE:  extension "pgtap" already exists, skipping
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:36: ERROR:  viateria.allow_destructive_rollback must be on before dropping memberships and webhook tombstones
-CONTEXT:  PL/pgSQL function inline_code_block line 5 at RAISE
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:38: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:39: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:43: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:46: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:47: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:48: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:49: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:50: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:51: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:53: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:54: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:55: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:56: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:57: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:58: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:86: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:114: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:116: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:117: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:118: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:119: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:122: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:123: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:129: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:131: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:132: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106114000_vandery_plus_diplomas.rollback:35: ERROR:  viateria.allow_destructive_rollback must be on before dropping vandery_plus_user_diplomas
-CONTEXT:  PL/pgSQL function inline_code_block line 5 at RAISE
-psql:fixtures/20261106114000_vandery_plus_diplomas.rollback:38: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106114000_vandery_plus_diplomas.rollback:40: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106114000_vandery_plus_diplomas.rollback:42: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106114000_vandery_plus_diplomas.rollback:43: ERROR:  current transaction is aborted, commands ignored until end of transaction block
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:26: WARNING:  there is already a transaction in progress
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:49: NOTICE:  function public.anonymize_vandery_plus_before_profile_delete() does not exist, skipping
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:50: NOTICE:  function public.anonymize_vandery_plus_membership(uuid) does not exist, skipping
-psql:fixtures/20261106113000_vandery_plus_membership.rollback:51: NOTICE:  function public.touch_vandery_plus_membership() does not exist, skipping
 ./vandery_plus_rollback_test.sql .... ok
 All tests successful.
-Files=2, Tests=105, 540 wallclock secs ( 0.02 usr  0.01 sys +  0.03 cusr  0.01 csys =  0.07 CPU)
-Result: PASS
-A new version of Supabase CLI is available: v3.0.0 (currently installed v2.40.7)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
-EXIT:0
+Files=2, Tests=119, Result: PASS
+
+Membership plan(103). Rollback plan(16).
+
+Plain `sh supabase/tests/vandery_plus_rollback_psql_f.sh` (no GUC) printed
+ROLLBACK after each guard error and exited 0. Memberships, webhook events,
+private.commit_vandery_plus_event, user diplomas, and the diploma catalog
+were still present. The four 120000–120300 files are included and also
+abort without the guard.

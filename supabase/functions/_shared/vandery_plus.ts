@@ -594,6 +594,7 @@ function withinCents(left: number, right: number): boolean {
 /**
  * Catalog price check. `FAPI_VANDERY_PLUS_AMOUNT_CENTS` is gross.
  * A match is that gross total, within 1 CZK. A net total is not a match.
+ * Q6 2026-11-06: the VANDERY+ form has no coupons, so no lower band.
  */
 export function amountsMatchGross(actual: number, expected: number): boolean {
   return withinCents(actual, expected);

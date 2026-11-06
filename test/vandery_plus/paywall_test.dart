@@ -61,7 +61,78 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('vandery-plus-cta')), findsNothing);
     expect(find.text('VANDERY+'), findsWidgets);
-    expect(find.text('Členství aktivní.'), findsOneWidget);
+    expect(find.text('Aktivní do 6. 12. 2026'), findsOneWidget);
+  });
+
+  testWidgets('FW-15 active membership shows the paid-through date', (tester) async {
+    final repo = MemoryMembershipRepository(
+      initial: membershipFromRow({
+        'status': 'active',
+        'expires_at': '2026-12-06T00:00:00.000Z',
+      }),
+    );
+    await tester.pumpWidget(_profile(locale: 'cs', repo: repo));
+    await tester.pumpAndSettle();
+    expect(find.text('Aktivní do 6. 12. 2026'), findsOneWidget);
+    expect(find.byKey(const Key('vandery-plus-cta')), findsNothing);
+
+    await tester.pumpWidget(_profile(locale: 'en', repo: repo));
+    await tester.pumpAndSettle();
+    expect(find.text('Active until Dec 6, 2026'), findsOneWidget);
+
+    await tester.pumpWidget(_profile(locale: 'de', repo: repo));
+    await tester.pumpAndSettle();
+    expect(find.text('Aktiv bis 6. Dez. 2026'), findsOneWidget);
+  });
+
+  testWidgets('FW-16 soft-cancel stays on the profile without a join CTA', (
+    tester,
+  ) async {
+    final repo = MemoryMembershipRepository(
+      initial: membershipFromRow({
+        'status': 'active',
+        'expires_at': '2026-12-06T00:00:00.000Z',
+        'cancel_at_period_end': true,
+      }),
+    );
+    await tester.pumpWidget(_profile(locale: 'cs', repo: repo));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Aktivní do 6. 12. 2026 · zrušeno, neobnoví se'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('vandery-plus-cta')), findsNothing);
+  });
+
+  testWidgets('FW-17 the join CTA returns after expires_at', (tester) async {
+    final repo = MemoryMembershipRepository(
+      initial: membershipFromRow({
+        'status': 'active',
+        'expires_at': '2026-11-05T00:00:00.000Z',
+        'cancel_at_period_end': true,
+      }),
+    );
+    await tester.pumpWidget(_profile(locale: 'cs', repo: repo));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('vandery-plus-cta')), findsOneWidget);
+    expect(find.byKey(const Key('vandery-plus-badge')), findsNothing);
+  });
+
+  testWidgets('paywall states the paid period continues after cancel', (
+    tester,
+  ) async {
+    _size(tester, const Size(390, 800));
+    await tester.pumpWidget(
+      _paywallApp(repo: MemoryMembershipRepository(), locale: 'cs'),
+    );
+    await tester.tap(find.text('open-paywall'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Zrušit můžeš kdykoli. Členství pak platí do konce zaplaceného období.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('FW-03 mobile sheet is about 82% with handle and close', (

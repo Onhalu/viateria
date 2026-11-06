@@ -20,6 +20,7 @@ import {
   membershipCommitFailure,
   parseRefundCents,
   membershipInvoiceOutcome,
+  nextMembershipPatch,
   membershipProductMatches,
   membershipRefundProductMatches,
   planMembershipRefund,
@@ -936,6 +937,7 @@ Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live 
     refundCents: 59900,
   }));
   assert(store.rows.get("mem-1")!.status === "revoked", "E2E-05");
+  assert(store.rows.get("mem-1")!.cancelAtPeriodEnd === false, "refund clears cancel");
   const fresh = new MemoryStore([
     row({ id: "mem-2", userId: "user-a", status: "pending" }),
   ]);
@@ -944,4 +946,147 @@ Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live 
     event({ kind: "payment_failed", membershipId: "mem-2", invoiceId: "e2e-cancel-checkout" }),
   );
   assert(fresh.rows.get("mem-2")!.status === "pending", "E2E-06 unpaid does not activate");
+});
+
+Deno.test("ED-13 paid and cancelled is cancel, not a refund", () => {
+  assert(
+    classifyFapiMembershipEvent(
+      { paid: true, cancelled: true, total: 599, type: "invoice" },
+      "active",
+    ) === "cancel",
+    "storno of a paid recurring invoice",
+  );
+});
+
+Deno.test("ED-14 cancel patch is only cancel_at_period_end", () => {
+  const patch = nextMembershipPatch(
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+    }),
+    event({ kind: "cancel" }),
+  );
+  const keys = Object.keys(patch);
+  assert(keys.length === 1 && keys[0] === "cancel_at_period_end", keys.join(","));
+  assert(patch.cancel_at_period_end === true, "flag");
+});
+
+Deno.test("ED-15 cancel then refund revokes and clears the flag", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-c1",
+      amountCents: 59900,
+    }),
+  ]);
+  const cancelled = await deliverVanderyPlus(
+    store,
+    event({ kind: "cancel", invoiceId: "inv-c1-cancel" }),
+  );
+  assert(cancelled.status === 200, JSON.stringify(cancelled.body));
+  assert(store.rows.get("mem-1")!.status === "active", "still active");
+  assert(store.rows.get("mem-1")!.cancelAtPeriodEnd === true, "flagged");
+  assert(
+    store.rows.get("mem-1")!.expiresAt === "2026-12-06T00:00:00.000Z",
+    "expires unchanged",
+  );
+  const refunded = await deliverVanderyPlus(
+    store,
+    event({
+      kind: "refund",
+      invoiceId: "cn-c1",
+      parentInvoiceId: "inv-c1",
+      paidInvoiceIds: ["inv-c1"],
+      refundCents: 59900,
+    }),
+  );
+  assert(refunded.status === 200, JSON.stringify(refunded.body));
+  assert(store.rows.get("mem-1")!.status === "revoked", "revoked");
+  assert(store.rows.get("mem-1")!.cancelAtPeriodEnd === false, "flag cleared");
+});
+
+Deno.test("ED-16 soft-cancel before expiry is already_active", async () => {
+  let marked = 0;
+  const result = await startVanderyPlusCheckout({
+    formUrl: "https://sandbox.fapi.example/vandery-plus",
+    userId: "user-a",
+    now: "2026-11-06T00:00:00.000Z",
+    loadByUser: () =>
+      Promise.resolve(row({
+        id: "mem-1",
+        userId: "user-a",
+        status: "active",
+        expiresAt: "2026-12-06T00:00:00.000Z",
+        cancelAtPeriodEnd: true,
+      })),
+    insertPending: () => Promise.reject(new Error("insert")),
+    markPending: (current) => {
+      marked += 1;
+      return Promise.resolve(current);
+    },
+  });
+  assert(result.status === 409, JSON.stringify(result));
+  assert(result.body.error === "already_active", JSON.stringify(result.body));
+  assert(marked === 0, "markPending not called");
+});
+
+Deno.test("ED-17 checkout after expiry marks pending", async () => {
+  let marked = 0;
+  const result = await startVanderyPlusCheckout({
+    formUrl: "https://sandbox.fapi.example/vandery-plus",
+    userId: "user-a",
+    now: "2026-11-06T00:00:00.000Z",
+    loadByUser: () =>
+      Promise.resolve(row({
+        id: "mem-1",
+        userId: "user-a",
+        status: "active",
+        expiresAt: "2026-11-05T00:00:00.000Z",
+        cancelAtPeriodEnd: true,
+      })),
+    insertPending: () => Promise.reject(new Error("insert")),
+    markPending: (current) => {
+      marked += 1;
+      return Promise.resolve({ ...current, status: "pending" });
+    },
+  });
+  assert(result.status === 200, JSON.stringify(result));
+  assert(marked === 1, "markPending called");
+});
+
+Deno.test("ED-18 prefill does not add a return URL", () => {
+  const url = vanderyPlusPrefillUrl({
+    formUrl: "https://sandbox.fapi.example/vandery-plus",
+    userId: "user-a",
+    membershipId: "mem-1",
+  });
+  const parsed = new URL(url);
+  assert(!parsed.searchParams.has("vandery_plus"), url);
+  assert(!url.includes("com.viateria.viateria"), url);
+  assert(!parsed.searchParams.has("challenge_id"), url);
+});
+
+Deno.test("ED-19 a 10 percent discount is an amount mismatch", () => {
+  const config = vanderyPlusProductConfigFromEnv((name) => {
+    if (name === "FAPI_VANDERY_PLUS_AMOUNT_CENTS") return "59900";
+    if (name === "FAPI_VANDERY_PLUS_ITEM_ID") return "77";
+    if (name === "FAPI_VANDERY_PLUS_FORM_ID") return "55";
+    if (name === "FAPI_VANDERY_PLUS_PRODUCT_ID") return "vandery-plus";
+    return undefined;
+  });
+  const outcome = membershipInvoiceOutcome(
+    {
+      paid: true,
+      total: 539.1,
+      form: 55,
+      items: [{ id: 77, name: "VANDERY+", code: "vandery-plus" }],
+    },
+    config,
+  );
+  assert(outcome.kind === "amount_mismatch", JSON.stringify(outcome));
 });

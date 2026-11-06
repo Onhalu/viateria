@@ -28,7 +28,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.viateria.viateria.login</string>
+			<string>com.viateria.viateria</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.viateria.viateria</string>

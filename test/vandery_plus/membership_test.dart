@@ -109,15 +109,18 @@ void main() {
 
   test('return verifies from the server and cancel does not unlock', () async {
     final repo = MemoryMembershipRepository();
+    var linkNow = DateTime.utc(2026, 11, 6);
     final session = VanderyPlusSession(
       repository: repo,
       clock: () => DateTime.utc(2026, 11, 6),
+      linkClock: () => linkNow,
     );
     await session.onReturn(VanderyPlusReturnKind.success);
     expect(session.phase, VanderyPlusPhase.error);
     expect(session.message, VanderyPlusMessage.stillInactive);
     expect(session.isActive, isFalse);
 
+    linkNow = linkNow.add(const Duration(seconds: 3));
     repo.current = membershipFromRow({
       'status': 'active',
       'expires_at': '2026-12-06T00:00:00.000Z',
@@ -127,16 +130,20 @@ void main() {
     expect(session.message, VanderyPlusMessage.active);
     expect(session.isActive, isTrue);
 
+    linkNow = linkNow.add(const Duration(seconds: 3));
     await session.onReturn(VanderyPlusReturnKind.cancel);
-    expect(session.message, VanderyPlusMessage.cancelled);
+    expect(session.message, isNot(VanderyPlusMessage.cancelled));
+    expect(session.isActive, isTrue);
     expect(playsUnlockAnimation(UnlockTrigger.checkoutCancel), isFalse);
   });
 
-  testWidgets('FW-15 return URL and resume poll the server', (tester) async {
+  testWidgets('return URL and resume poll the server', (tester) async {
     final repo = MemoryMembershipRepository();
+    var linkNow = DateTime.utc(2026, 11, 6);
     final session = VanderyPlusSession(
       repository: repo,
       clock: () => DateTime.utc(2026, 11, 6),
+      linkClock: () => linkNow,
     );
     await session.pay();
     expect(session.phase, VanderyPlusPhase.submitting);
@@ -161,11 +168,13 @@ void main() {
       'status': 'active',
       'expires_at': '2026-12-06T00:00:00.000Z',
     });
+    linkNow = linkNow.add(const Duration(seconds: 3));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(session.phase, VanderyPlusPhase.active);
     expect(session.isActive, isTrue);
 
+    linkNow = linkNow.add(const Duration(seconds: 3));
     await tester.pumpWidget(
       VanderyPlusReturnBinding(
         key: const ValueKey('cancel'),
@@ -175,7 +184,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(session.message, VanderyPlusMessage.cancelled);
+    expect(session.message, isNot(VanderyPlusMessage.cancelled));
     expect(session.isActive, isTrue);
   });
 
@@ -187,7 +196,99 @@ void main() {
     );
     expect(VanderyPlusLegal.fapiConsentChecklist.length, 3);
     expect(VanderyPlusLegal.fapiConsentChecklist[1], contains('1837'));
-    expect(VanderyPlusLegal.fapiConsentChecklist[2], contains('opakovan'));
+    expect(
+      VanderyPlusLegal.fapiConsentChecklist[2],
+      'Souhlasím s opakovaným strháváním měsíční platby, dokud předplatné nezruším e-mailem na ahoj@vyslapni.cz. Po zrušení zůstává členství aktivní do konce zaplaceného období a další platba se už nestrhne.',
+    );
     expect(VanderyPlusLegal.iosIapNote, contains('3.1'));
+  });
+
+  test('FW-19 return link polls the server and does not unlock by itself', () async {
+    final repo = MemoryMembershipRepository();
+    var linkNow = DateTime.utc(2026, 11, 6);
+    final session = VanderyPlusSession(
+      repository: repo,
+      clock: () => DateTime.utc(2026, 11, 6),
+      linkClock: () => linkNow,
+    );
+    await session.consumeReturnUri(
+      Uri.parse('com.viateria.viateria://vandery-plus?vandery_plus=return'),
+    );
+    expect(repo.fetchCalls, 1);
+    expect(session.isActive, isFalse);
+    expect(playsUnlockAnimation(UnlockTrigger.checkoutCancel), isFalse);
+
+    linkNow = linkNow.add(const Duration(seconds: 3));
+    repo.current = membershipFromRow({
+      'status': 'active',
+      'expires_at': '2026-12-06T00:00:00.000Z',
+    });
+    await session.consumeReturnUri(
+      Uri.parse('com.viateria.viateria://vandery-plus?vandery_plus=return'),
+    );
+    expect(repo.fetchCalls, 2);
+    expect(session.isActive, isTrue);
+  });
+
+  test('FW-20 a forged host or extra query does not unlock', () async {
+    expect(
+      parseVanderyPlusReturn(
+        Uri.parse('com.viateria.viateria://evil?vandery_plus=return'),
+      ),
+      VanderyPlusReturnKind.none,
+    );
+    expect(isVanderyPlusAppLink(Uri.parse('com.viateria.viateria://evil')), isFalse);
+    expect(
+      isVanderyPlusAppLink(
+        Uri.parse('com.viateria.viateria://vandery-plus?vandery_plus=return'),
+      ),
+      isTrue,
+    );
+    expect(
+      parseVanderyPlusReturn(
+        Uri.parse(
+          'com.viateria.viateria://vandery-plus?vandery_plus=return&status=active&membership=forged',
+        ),
+      ),
+      VanderyPlusReturnKind.success,
+    );
+    final repo = MemoryMembershipRepository();
+    final session = VanderyPlusSession(
+      repository: repo,
+      clock: () => DateTime.utc(2026, 11, 6),
+    );
+    await session.consumeReturnUri(
+      Uri.parse(
+        'com.viateria.viateria://evil?vandery_plus=return&status=active',
+      ),
+    );
+    expect(repo.fetchCalls, 0);
+    expect(session.isActive, isFalse);
+    expect(playsUnlockAnimation(UnlockTrigger.checkoutCancel), isFalse);
+    await session.consumeReturnUri(
+      Uri.parse(
+        'https://app.test/back?vandery_plus=return&status=active&membership=forged',
+      ),
+    );
+    expect(repo.fetchCalls, 1);
+    expect(session.isActive, isFalse);
+  });
+
+  test('FW-21 cancel link keeps a server-active membership', () async {
+    final repo = MemoryMembershipRepository(
+      initial: membershipFromRow({
+        'status': 'active',
+        'expires_at': '2026-12-06T00:00:00.000Z',
+        'cancel_at_period_end': true,
+      }),
+    );
+    final session = VanderyPlusSession(
+      repository: repo,
+      clock: () => DateTime.utc(2026, 11, 6),
+    );
+    await session.onReturn(VanderyPlusReturnKind.cancel);
+    expect(session.isActive, isTrue);
+    expect(session.message, isNot(VanderyPlusMessage.cancelled));
+    expect(session.phase, VanderyPlusPhase.active);
   });
 }

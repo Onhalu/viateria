@@ -3,12 +3,13 @@
 -- the trigger functions had before this file.
 --
 -- Rollback apply order, newest first:
+--   20261106120900 (cancel flag only),
 --   20261106120800 (refund_cents beyond int4),
 --   20261106120700 (refund key only when applied),
 --   20261106120600 (non-numeric refund_cents),
 --   20261106120500 (gross-only full refund),
 --   20261106120400 (refund parent gate),
---   20261106120300 (drops private.commit, including 120400 through 120800),
+--   20261106120300 (drops private.commit, including 120400 through 120900),
 --   20261106120200,
 --   20261106120100,
 --   20261106120000,
@@ -20,6 +21,21 @@
 -- Apply this file after 20261106120300 is rolled back, so the public trigger
 -- functions exist again.
 
+-- The transaction starts first. A guard error aborts it, and the final
+-- commit rolls that aborted transaction back even when psql continues.
+
+begin;
+
+do $guard$
+begin
+  if coalesce(current_setting('viateria.allow_destructive_rollback', true), '')
+     is distinct from 'on' then
+    raise exception 'viateria.allow_destructive_rollback must be on before applying this rollback'
+      using errcode = '42501';
+  end if;
+end
+$guard$;
+
 drop policy if exists vandery_plus_memberships_select_own
   on public.vandery_plus_memberships;
 create policy vandery_plus_memberships_select_own
@@ -30,3 +46,10 @@ create policy vandery_plus_memberships_select_own
 
 grant execute on function public.touch_vandery_plus_membership() to public;
 grant execute on function public.anonymize_vandery_plus_before_profile_delete() to public;
+
+-- Plain psql -f commits. The pgTAP include sets vandery_rollback_test so
+-- this transaction stays open and the test can roll it back.
+\if :{?vandery_rollback_test}
+\else
+commit;
+\endif

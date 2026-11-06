@@ -9,14 +9,22 @@ export PGUSER="${PGUSER:-postgres}"
 export PGDATABASE="${PGDATABASE:-postgres}"
 export PGPASSWORD="${PGPASSWORD:-postgres}"
 
+docker_cmd() {
+  if docker info >/dev/null 2>&1; then
+    docker "$@"
+  else
+    sudo docker "$@"
+  fi
+}
+
 run_file() {
   if command -v psql >/dev/null 2>&1; then
     psql -f "$1"
     return
   fi
-  sudo docker exec -i supabase_db_viateria \
+  docker_cmd exec -i supabase_db_viateria \
     sh -c 'cat > /tmp/vandery-rollback.sql' < "$1"
-  sudo docker exec -e PGPASSWORD="$PGPASSWORD" supabase_db_viateria \
+  docker_cmd exec -e PGPASSWORD="$PGPASSWORD" supabase_db_viateria \
     psql -U "$PGUSER" -d "$PGDATABASE" -f /tmp/vandery-rollback.sql
 }
 
@@ -25,7 +33,7 @@ psql_at() {
     psql -Atc "$1"
     return
   fi
-  sudo docker exec -e PGPASSWORD="$PGPASSWORD" supabase_db_viateria \
+  docker_cmd exec -e PGPASSWORD="$PGPASSWORD" supabase_db_viateria \
     psql -U "$PGUSER" -d "$PGDATABASE" -Atc "$1"
 }
 
@@ -44,6 +52,10 @@ cmp -s \
 
 run_file "$root/supabase/rollbacks/20261106113000_vandery_plus_membership.rollback.sql"
 run_file "$root/supabase/rollbacks/20261106114000_vandery_plus_diplomas.rollback.sql"
+run_file "$root/supabase/rollbacks/20261106120300_vandery_plus_dba_p2.rollback.sql"
+run_file "$root/supabase/rollbacks/20261106120200_vandery_plus_dba_p1_p2.rollback.sql"
+run_file "$root/supabase/rollbacks/20261106120100_vandery_plus_invoice_idempotency.rollback.sql"
+run_file "$root/supabase/rollbacks/20261106120000_record_place_visit_source_guard.rollback.sql"
 
 assert_kept vandery_plus_memberships \
   "select to_regclass('public.vandery_plus_memberships') is not null"

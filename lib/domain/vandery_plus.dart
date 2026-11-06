@@ -55,8 +55,13 @@ enum VanderyPlusMessage { none, payFailed, cancelled, stillInactive, active }
 
 enum VanderyPlusReturnKind { none, success, cancel }
 
-/// FAPI return / deep link. `cancel` is not a success.
+/// FAPI return / deep link. Only `vandery_plus` is read.
+/// Other query parameters are ignored. A custom-scheme link with any host
+/// other than `vandery-plus` is ignored. HTTPS page URLs still parse.
 VanderyPlusReturnKind parseVanderyPlusReturn(Uri uri) {
+  if (uri.scheme == 'com.viateria.viateria' && uri.host != 'vandery-plus') {
+    return VanderyPlusReturnKind.none;
+  }
   switch (uri.queryParameters['vandery_plus']) {
     case 'return':
     case 'success':
@@ -68,6 +73,11 @@ VanderyPlusReturnKind parseVanderyPlusReturn(Uri uri) {
   }
 }
 
+/// Mobile app link. Login-callback uses the same scheme and a different host.
+bool isVanderyPlusAppLink(Uri uri) {
+  return uri.scheme == 'com.viateria.viateria' && uri.host == 'vandery-plus';
+}
+
 /// Draft VOP links (vyslapni-obchodni-podminky-draft). Not a published legal gate.
 abstract final class VanderyPlusLegal {
   static final terms = Uri.parse('https://vyslapni.cz/obchodni-podminky/');
@@ -75,12 +85,14 @@ abstract final class VanderyPlusLegal {
     'https://vyslapni.cz/ochrana-osobnich-udaju/',
   );
 
-  /// FAPI form checkboxes (draft appendix 2). The form itself is configured
-  /// in FAPI sandbox, not rendered by the app.
+  /// FAPI form checkboxes. Legal PASS draft, VOP publish Ask first.
+  /// Not a lawyer sign-off and not published. VOP is čl. X (X.5) and
+  /// Příloha 2 checkbox 3. The form itself is configured in FAPI sandbox,
+  /// not rendered by the app.
   static const fapiConsentChecklist = <String>[
     'Souhlasím s Obchodními podmínkami a Zásadami ochrany osobních údajů.',
     'Žádám o okamžité zahájení poskytování digitální služby VANDERY+ a beru na vědomí, že tím ztrácím právo odstoupit od smlouvy podle § 1837 občanského zákoníku.',
-    'Souhlasím s opakovaným strháváním měsíční platby, dokud předplatné nezruším e-mailem na ahoj@vyslapni.cz.',
+    'Souhlasím s opakovaným strháváním měsíční platby, dokud předplatné nezruším e-mailem na ahoj@vyslapni.cz. Po zrušení zůstává členství aktivní do konce zaplaceného období a další platba se už nestrhne.',
   ];
 
   /// LG-06. Ask first. This build does not implement IAP.

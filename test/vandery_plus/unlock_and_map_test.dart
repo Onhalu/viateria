@@ -179,6 +179,24 @@ void main() {
     expect(find.byKey(const Key('map-poi-verify')), findsOneWidget);
   });
 
+  testWidgets('FW-18 soft-cancel still offers verify on the map', (tester) async {
+    final repo = MemoryMembershipRepository(
+      initial: membershipFromRow({
+        'status': 'active',
+        'expires_at': '2026-12-06T00:00:00.000Z',
+        'cancel_at_period_end': true,
+      }),
+    );
+    final session = _session(repo);
+    await tester.pumpWidget(
+      _gate(session: session, onLockedTap: () {}, onVerify: () {}),
+    );
+    await session.refresh();
+    await tester.pump();
+    expect(find.byKey(const Key('map-place-lock')), findsNothing);
+    expect(find.byKey(const Key('map-poi-verify')), findsOneWidget);
+  });
+
   testWidgets('challenge sheet is not wrapped by the map lock', (tester) async {
     // The gate is only built for map-only pins. A direct verify button stays.
     expect(find.byKey(const Key('map-place-lock')), findsNothing);

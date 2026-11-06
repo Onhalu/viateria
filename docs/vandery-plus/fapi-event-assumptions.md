@@ -7,12 +7,14 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 | Invoice | Kind | Effect |
 | --- | --- | --- |
 | `type` is `credit_note` or `dobropis`, or `total` is negative | `refund` | Default pending Ondřej. Product ids are still required. A full refund of the current-period invoice revokes. A partial refund or a refund of an older invoice only logs and leaves the row alone |
-| `cancelled` is true | `cancel` | `cancel_at_period_end = true`. Access lasts until `expires_at` |
+| `cancelled` is true | `cancel` | `cancel_at_period_end = true`; `status` and `expires_at` stay unchanged (Ondřej 2026-11-06: cancellation lasts until the end of the paid period). FAPI also sends a cancellation for the 2nd and later recurring invoices (FAPI help, Actions → cancel the order). Stopping recurring billing as its own event is not documented → verify in sandbox E2E-04 |
 | not paid, checkout still `pending` or `active` | `payment_failed` | No status change. A `pending` row stays `pending` so a later payment can activate. An `active` row is not extended and is not revoked |
 | paid, and `parent` is set, or the row is already `active` or `expired` | `renew` | same row, one month from `greatest(expires_at, now())`. TODO Ondřej: a renew after a refund currently sets `status` back to `active`. Behaviour is unchanged until that decision |
 | paid, no parent, row is `pending` | `paid_first` | `status = active`, `expires_at = now + 1 month` |
 
 `parent` is the previous invoice id FAPI sets on a later periodic charge. A retry of the same invoice id is idempotent and does not add a month, even if this table would call it `renew`.
+
+Cancel, then a full refund of the current invoice, still revokes immediately. A new checkout before `expires_at` returns 409 `already_active`, including a soft-cancel that has not reached the end of the paid period.
 
 Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`. A credit note is not exempt from that check: its product id must be `FAPI_VANDERY_PLUS_PRODUCT_ID`, and `invoice.parent` must still be the current paid invoice. Its negative total is the refund amount, so it is not compared to the catalog price and it is not an amount-mismatch skip.
 
@@ -33,4 +35,4 @@ Replaying an applied credit note is idempotent and does not revoke twice. A refu
 - `FAPI_VANDERY_PLUS_AMOUNT_CENTS` is the **gross** price in cents (what the customer pays, VAT included).
 - `invoice.total` is major units of that same gross total.
 - A match is exact or within **100 cents** (1 CZK). There is no separate net/gross band.
-- A net total, a coupon, or any larger gap is **not** `SKIPPED`. The webhook logs one JSON line `{ "alert": "vandery_plus_amount_mismatch", "tolerance": "gross_1_czk", ... }` and responds `409` with `status: "AMOUNT_MISMATCH"`. Membership is not activated.
+- The form has no coupons (Ondřej, 2026-11-06). Any amount outside gross ±1 CZK is AMOUNT_MISMATCH. The webhook logs one JSON line `{ "alert": "vandery_plus_amount_mismatch", "tolerance": "gross_1_czk", ... }` and responds `409` with `status: "AMOUNT_MISMATCH"`. Membership is not activated.

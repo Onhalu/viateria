@@ -11,12 +11,17 @@ class VanderyPlusSession extends ChangeNotifier {
     this.priceLabel = '',
     DateTime Function()? clock,
     this.openUrl,
+    this.linkClock,
   }) : _clock = clock ?? DateTime.now;
 
   final MembershipRepository repository;
   final String priceLabel;
   final DateTime Function() _clock;
   final Future<void> Function(Uri url)? openUrl;
+
+  /// Wall clock for the return-link debounce. Tests pass a fixed clock.
+  final DateTime Function()? linkClock;
+  DateTime? _linkRefreshAt;
 
   VanderyPlusMembership membership = VanderyPlusMembership.none;
   VanderyPlusPhase phase = VanderyPlusPhase.idle;
@@ -88,6 +93,7 @@ class VanderyPlusSession extends ChangeNotifier {
   }
 
   /// Deep link or web return URL. `none` does nothing.
+  /// URL never unlocks. Active state comes only from [refresh].
   Future<void> consumeReturnUri(Uri uri) {
     return onReturn(parseVanderyPlusReturn(uri));
   }
@@ -99,17 +105,34 @@ class VanderyPlusSession extends ChangeNotifier {
     return onReturn(VanderyPlusReturnKind.success);
   }
 
-  Future<void> onReturn(VanderyPlusReturnKind kind) async {
-    if (kind == VanderyPlusReturnKind.cancel) {
-      phase = VanderyPlusPhase.error;
-      message = VanderyPlusMessage.cancelled;
-      notifyListeners();
-      return;
-    }
-    if (kind != VanderyPlusReturnKind.success) return;
+  /// Explicit retry. Not debounced: the buyer asked for another poll.
+  Future<void> verifyAgain() async {
     phase = VanderyPlusPhase.verifying;
     message = VanderyPlusMessage.none;
     notifyListeners();
     await refresh();
+  }
+
+  /// URL never unlocks. A return link only asks the server.
+  /// At most one of those polls runs per 2 seconds.
+  Future<void> onReturn(VanderyPlusReturnKind kind) async {
+    if (kind == VanderyPlusReturnKind.none) return;
+    final linkNow = (linkClock ?? DateTime.now)();
+    final recent = _linkRefreshAt != null &&
+        linkNow.difference(_linkRefreshAt!) < const Duration(seconds: 2);
+    if (!recent) {
+      _linkRefreshAt = linkNow;
+      if (kind == VanderyPlusReturnKind.success) {
+        phase = VanderyPlusPhase.verifying;
+        message = VanderyPlusMessage.none;
+        notifyListeners();
+      }
+      await refresh();
+    }
+    if (kind == VanderyPlusReturnKind.cancel && !isActive) {
+      phase = VanderyPlusPhase.error;
+      message = VanderyPlusMessage.cancelled;
+      notifyListeners();
+    }
   }
 }

@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(89);
+select plan(103);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1399,6 +1399,226 @@ select throws_ok(
   NULL,
   'unlock_rule is not granted to authenticated'
 );
+
+
+-- ---------------------------------------------------------------------------
+-- D-CANCEL DB-17 / DB-18 / DB-19 / DB-20 / DB-21 / DB-22
+-- ---------------------------------------------------------------------------
+
+reset role;
+
+update public.vandery_plus_memberships
+set user_id = null,
+    anonymized_at = now()
+where id = '10000000-0000-4000-8000-000000000005';
+
+insert into public.vandery_plus_memberships (
+  id, user_id, status, starts_at, expires_at, cancel_at_period_end,
+  fapi_subscription_id, fapi_invoice_id, amount_cents, currency
+) values (
+  '10000000-0000-4000-8000-000000000012',
+  '00000000-0000-4000-8000-000000000005',
+  'active', now(), now() + interval '10 days', false,
+  'sub-c1', 'inv-c1', 59900, 'CZK'
+);
+
+insert into public.vandery_plus_webhook_events (
+  idempotency_key, event_kind, user_id, fapi_invoice_id
+) values (
+  'paid:inv-c1',
+  'paid_first',
+  '00000000-0000-4000-8000-000000000005',
+  'inv-c1'
+);
+
+create temporary table vandery_cancel_expiry on commit drop as
+select expires_at as before_expires
+from public.vandery_plus_memberships
+where id = '10000000-0000-4000-8000-000000000012';
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000012',
+      '00000000-0000-4000-8000-000000000005',
+      'ignored',
+      'cancel',
+      'inv-c1-cancel',
+      '{"cancel_at_period_end":true}'::jsonb
+    ) ->> 'idempotent'
+  ),
+  'false',
+  'DB-17a cancel is applied'
+);
+
+select is(
+  (
+    select expires_at
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  (select before_expires from vandery_cancel_expiry),
+  'DB-17b cancel leaves expires_at'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  'active',
+  'DB-17c cancel leaves status active'
+);
+
+select is(
+  (
+    select cancel_at_period_end
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  true,
+  'DB-17d cancel sets cancel_at_period_end'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000012',
+      '00000000-0000-4000-8000-000000000005',
+      'ignored',
+      'cancel',
+      'inv-c1-force',
+      '{"status":"revoked","expires_at":"2000-01-01T00:00:00Z","cancel_at_period_end":true}'::jsonb
+    ) ->> 'membership_status'
+  ),
+  'active',
+  'DB-20 cancel patch cannot change status'
+);
+
+select is(
+  (
+    select expires_at
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  (select before_expires from vandery_cancel_expiry),
+  'DB-20 cancel patch cannot change expires_at'
+);
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000005', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.has_active_vandery_plus(),
+  true,
+  'DB-18 soft-cancel is still active'
+);
+
+select lives_ok(
+  $$select public.record_place_visit(
+      '20000000-0000-4000-8000-000000000001', 'map')$$,
+  'DB-18 map visit works during the paid period'
+);
+
+reset role;
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000012',
+      '00000000-0000-4000-8000-000000000005',
+      'ignored',
+      'cancel',
+      'inv-c1-cancel',
+      '{"cancel_at_period_end":true}'::jsonb
+    ) ->> 'idempotent'
+  ),
+  'true',
+  'DB-22 cancel replay is idempotent'
+);
+
+select is(
+  (
+    select expires_at
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  (select before_expires from vandery_cancel_expiry),
+  'DB-22 cancel replay leaves expires_at'
+);
+
+update public.vandery_plus_memberships
+set expires_at = now() - interval '1 minute'
+where id = '10000000-0000-4000-8000-000000000012';
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000005', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.has_active_vandery_plus(),
+  false,
+  'DB-19 expired soft-cancel is not active'
+);
+
+select throws_ok(
+  $$select public.record_place_visit(
+      '20000000-0000-4000-8000-000000000001', 'map')$$,
+  'P0001',
+  NULL,
+  'DB-19 map visit after the paid period'
+);
+
+reset role;
+
+update public.vandery_plus_memberships
+set expires_at = now() + interval '10 days'
+where id = '10000000-0000-4000-8000-000000000012';
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000012',
+      '00000000-0000-4000-8000-000000000005',
+      'ignored',
+      'refund',
+      'cn-c1',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-c1',
+        'refund_cents', 59900
+      )
+    ) ->> 'membership_status'
+  ),
+  'revoked',
+  'DB-21 full refund revokes immediately'
+);
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000005', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000005","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select is(
+  public.has_active_vandery_plus(),
+  false,
+  'DB-21 revoked membership is not active'
+);
+
+reset role;
 
 select * from finish();
 

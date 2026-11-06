@@ -2,12 +2,13 @@
 -- Drops the catalog added by 114000.
 --
 -- Rollback apply order, newest first:
+--   20261106120900 (cancel flag only),
 --   20261106120800 (refund_cents beyond int4),
 --   20261106120700 (refund key only when applied),
 --   20261106120600 (non-numeric refund_cents),
 --   20261106120500 (gross-only full refund),
 --   20261106120400 (refund parent gate),
---   20261106120300 (drops private.commit, including 120400 through 120800),
+--   20261106120300 (drops private.commit, including 120400 through 120900),
 --   20261106120200,
 --   20261106120100,
 --   20261106120000,
