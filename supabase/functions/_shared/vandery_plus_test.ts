@@ -9,7 +9,10 @@ import {
   eventKey,
   fapiProductRoute,
   inferKind,
+  invoiceFormId,
   isMembershipActive,
+  membershipProductMatches,
+  vanderyPlusProductConfigFromEnv,
   parseVanderyPlusNotes,
   planVanderyPlusForm,
   sandboxAllowed,
@@ -315,6 +318,45 @@ Deno.test("ED-11 challenge notes stay on purchases", () => {
   const route = source.indexOf("fapiProductRoute(invoiceNotes)");
   const purchaseWrite = source.indexOf('from("purchases")');
   assert(route >= 0 && purchaseWrite > route, "membership branch returns before purchases");
+});
+
+Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () => {
+  const config = vanderyPlusProductConfigFromEnv((key) => {
+    const values: Record<string, string> = {
+      FAPI_VANDERY_PLUS_AMOUNT_CENTS: "59900",
+      FAPI_VANDERY_PLUS_ITEM_ID: "77",
+      FAPI_VANDERY_PLUS_FORM_ID: "55",
+      FAPI_VANDERY_PLUS_PRODUCT_ID: "vandery-plus",
+    };
+    return values[key];
+  });
+  const cheap = {
+    paid: true,
+    total: 49,
+    form: 100,
+    notes: "viateria-plus:user-a:mem-1",
+    items: [{ id: 9, name: "Cheap challenge", code: "challenge-diploma" }],
+  };
+  assert(fapiProductRoute(cheap.notes) === "membership", "notes would route");
+  assert(!membershipProductMatches(cheap, config), "cheap form is not VANDERY+");
+  const real = {
+    paid: true,
+    total: 599,
+    form: 55,
+    items: [{ id: 77, name: "VANDERY+", code: "vandery-plus" }],
+  };
+  assert(membershipProductMatches(real, config), "configured product matches");
+  assert(invoiceFormId(real) === "55", "form id");
+  assert(
+    !membershipProductMatches(real, vanderyPlusProductConfigFromEnv(() => undefined)),
+    "missing config fails closed",
+  );
+  const source = Deno.readTextFileSync(
+    new URL("../fapi-webhook/index.ts", import.meta.url),
+  );
+  const gate = source.indexOf("membershipProductMatches(invoice, product)");
+  const deliver = source.indexOf("deliverMembershipInvoice");
+  assert(gate >= 0 && deliver > gate, "product gate runs before activation");
 });
 
 Deno.test("ED-12 client body user is not the write target", async () => {

@@ -6,7 +6,12 @@
  * Fail closed: a missing form URL never falls back to a challenge form.
  */
 
-import { httpUrlOrNull, isWebhookTokenValid } from "./fapi.ts";
+import {
+  httpUrlOrNull,
+  invoiceTotalCents,
+  isWebhookTokenValid,
+  type FapiInvoice,
+} from "./fapi.ts";
 
 export const VANDERY_PLUS_PRODUCT = "vandery_plus";
 
@@ -395,6 +400,98 @@ export function parseSandboxEvent(body: string): PlusEvent | null {
     currency: typeof json.currency === "string" ? json.currency : null,
     now: typeof json.now === "string" ? json.now : new Date().toISOString(),
   };
+}
+
+export type VanderyPlusProductConfig = {
+  amountCents: number | null;
+  itemIds: string[];
+  formIds: string[];
+  productIds: string[];
+};
+
+function splitIds(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+function parseCents(raw: string | null | undefined): number | null {
+  if (!raw || !raw.trim()) return null;
+  const value = Number(raw.trim());
+  if (!Number.isInteger(value) || value < 0) return null;
+  return value;
+}
+
+export function vanderyPlusProductConfigFromEnv(
+  read: (key: string) => string | undefined,
+): VanderyPlusProductConfig {
+  return {
+    amountCents: parseCents(read("FAPI_VANDERY_PLUS_AMOUNT_CENTS")),
+    itemIds: splitIds(read("FAPI_VANDERY_PLUS_ITEM_ID")),
+    formIds: splitIds(read("FAPI_VANDERY_PLUS_FORM_ID")),
+    productIds: splitIds(read("FAPI_VANDERY_PLUS_PRODUCT_ID")),
+  };
+}
+
+function idList(value: unknown): string[] {
+  if (typeof value === "number" && Number.isFinite(value)) return [String(value)];
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  if (value && typeof value === "object" && "id" in value) {
+    return idList((value as { id?: unknown }).id);
+  }
+  return [];
+}
+
+export function invoiceItemIds(invoice: FapiInvoice): string[] {
+  const ids: string[] = [];
+  for (const item of invoice.items ?? []) ids.push(...idList(item.id));
+  return ids;
+}
+
+export function invoiceProductIds(invoice: FapiInvoice): string[] {
+  const ids: string[] = [];
+  for (const item of invoice.items ?? []) ids.push(...idList(item.code));
+  return ids;
+}
+
+export function invoiceFormId(invoice: FapiInvoice): string | null {
+  const ids = idList(invoice.form);
+  return ids[0] ?? null;
+}
+
+/**
+ * Notes are not proof of a VANDERY+ purchase. Amount and every configured
+ * product id (item, form, product code) must match. Missing config fails closed.
+ */
+export function membershipProductMatches(
+  invoice: FapiInvoice,
+  config: VanderyPlusProductConfig,
+): boolean {
+  if (config.amountCents == null) return false;
+  const amount = invoiceTotalCents(invoice);
+  if (amount == null || amount !== config.amountCents) return false;
+  const configured = config.itemIds.length + config.formIds.length +
+    config.productIds.length;
+  if (configured === 0) return false;
+  if (
+    config.itemIds.length > 0 &&
+    !invoiceItemIds(invoice).some((id) => config.itemIds.includes(id))
+  ) {
+    return false;
+  }
+  if (config.formIds.length > 0) {
+    const formId = invoiceFormId(invoice);
+    if (!formId || !config.formIds.includes(formId)) return false;
+  }
+  if (
+    config.productIds.length > 0 &&
+    !invoiceProductIds(invoice).some((id) => config.productIds.includes(id))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function invoiceCustomField(

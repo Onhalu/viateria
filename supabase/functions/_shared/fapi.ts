@@ -19,6 +19,8 @@ export type RewardVariant = "diploma" | "medal_and_diploma";
 export type FapiInvoiceItem = {
   id?: unknown;
   name?: unknown;
+  /** Product code on the FAPI item, when the form sets one. */
+  code?: unknown;
 };
 
 export type FapiCustomField = {
@@ -41,6 +43,11 @@ export type FapiInvoice = {
   currency?: unknown;
   custom_fields?: FapiCustomField[] | null;
   items?: FapiInvoiceItem[] | null;
+  /** Sales form id. A number, or `{ id }` on some invoice payloads. */
+  form?: unknown;
+  /** Parent invoice id for a later periodic charge. */
+  parent?: unknown;
+  cancelled?: unknown;
 };
 
 export function parseRewardVariant(raw: unknown): RewardVariant {

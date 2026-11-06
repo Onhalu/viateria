@@ -25,10 +25,12 @@ import {
   fapiProductRoute,
   inferKind,
   invoiceCustomField,
+  membershipProductMatches,
   parseSandboxEvent,
   parseVanderyPlusNotes,
   plusRowFromDb,
   sandboxAllowed,
+  vanderyPlusProductConfigFromEnv,
   type PlusRow,
   type PlusStore,
 } from "../_shared/vandery_plus.ts";
@@ -112,6 +114,15 @@ Deno.serve(async (req) => {
 
   const invoiceNotes = firstInvoiceNotes(invoice);
   if (fapiProductRoute(invoiceNotes) === "membership") {
+    // Notes are user-controlled. A cheap challenge form that copies
+    // viateria-plus notes must not activate membership.
+    const product = vanderyPlusProductConfigFromEnv((key) => Deno.env.get(key));
+    if (!membershipProductMatches(invoice, product)) {
+      return json({
+        status: "SKIPPED",
+        message: "not the VANDERY+ product",
+      });
+    }
     const admin = serviceClient();
     const result = await deliverMembershipInvoice(admin, invoice, invoiceNotes);
     return json(result.body, result.status);
