@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(43);
+select plan(47);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -282,8 +282,25 @@ select throws_ok(
       'map'
     )$$,
   '42501',
-  'row-level security',
+  'permission denied',
   'DB-06 direct map insert is denied'
+);
+
+select throws_ok(
+  $$select public.record_place_visit(
+      '20000000-0000-4000-8000-000000000001', 'verify')$$,
+  'P0001',
+  'invalid source',
+  'client RPC rejects source=verify'
+);
+
+select throws_ok(
+  $$select public.record_place_visits_batch(
+      array['20000000-0000-4000-8000-000000000001']::uuid[],
+      'prefs_sync')$$,
+  'P0001',
+  'membership_required',
+  'prefs_sync for a non-member with no visits stays denied'
 );
 
 -- ---------------------------------------------------------------------------
@@ -369,6 +386,21 @@ select is(
   (select total_points from public.get_my_score()),
   1,
   'DB-11 points +1 not +2'
+);
+
+select throws_ok(
+  $$select public.record_place_visit(
+      '20000000-0000-4000-8000-000000000001', 'verify')$$,
+  'P0001',
+  'invalid source',
+  'member client RPC still rejects source=verify'
+);
+
+select lives_ok(
+  $$select public.record_place_visits_batch(
+      array['20000000-0000-4000-8000-000000000001']::uuid[],
+      'prefs_sync')$$,
+  'prefs_sync for a member is unchanged'
 );
 
 -- ---------------------------------------------------------------------------

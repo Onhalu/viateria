@@ -39,9 +39,15 @@ The same predicate is in `place_visits` INSERT policy via `can_record_place_visi
 
 A non-member may sync device visits only when they already have at least one `place_visits` row (challenge verifies already on the server). A brand-new non-member cannot seed the board through `prefs_sync`. A member can sync. This is the default in the SPEC; change it only with an explicit Ask.
 
-### Residual risk (not closed here)
+### Map-gate guard (revertible, owner decision still open)
 
-`record_place_visit(..., 'verify')` from a client is still accepted, because SPEC §6 says not to block `source = 'verify'`. `verify_waypoint` does not use that RPC; it inserts the row itself. A client who calls the RPC with `source = 'verify'` can write a visit without a membership. Closing that would be an Ask. It is not a bonus-points change and it does not lock `verify_waypoint`.
+`20261106120000_vandery_plus_map_gate_guard.sql` is variant A and is meant to be dropped if the owner chooses otherwise:
+
+- `source = verify` is inserted only by `verify_waypoint`.
+- `INSERT` on `place_visits` is revoked from `authenticated`.
+- `record_place_visit` accepts only `source = map`, and only with an active membership.
+
+`prefs_sync` is unchanged: a non-member can sync only when they already have a visit, and a member can sync.
 
 ## Webhook lifecycle (owned by the Edge reducer, committed here)
 
