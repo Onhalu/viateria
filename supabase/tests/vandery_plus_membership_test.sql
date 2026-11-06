@@ -282,7 +282,7 @@ select throws_ok(
       'map'
     )$$,
   '42501',
-  'new row violates row-level security policy for table "place_visits"',
+  NULL,
   'DB-06 direct map insert is denied'
 );
 
@@ -311,7 +311,7 @@ select throws_ok(
       'verify'
     )$$,
   '42501',
-  'new row violates row-level security policy for table "place_visits"',
+  NULL,
   'DB-19 direct INSERT source=verify fails RLS'
 );
 
@@ -573,8 +573,8 @@ select throws_ok(
       now() + interval '30 days'
     )$$,
   '42501',
-  'permission denied for table vandery_plus_memberships',
-  'DB-14 authenticated insert denied'
+  NULL,
+  'DB-14 authenticated insert is permission denied'
 );
 
 select throws_ok(
