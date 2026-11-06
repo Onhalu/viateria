@@ -12,6 +12,7 @@ import {
   inferKind,
   invoiceFormId,
   isMembershipActive,
+  isMembershipRefundInvoice,
   amountsMatchNetOrGross,
   membershipAmountAlert,
   membershipInvoiceOutcome,
@@ -324,6 +325,30 @@ Deno.test("ED-11 challenge notes stay on purchases", () => {
   assert(route >= 0 && purchaseWrite > route, "membership branch returns before purchases");
 });
 
+Deno.test("negative credit note is a refund and is not skipped", () => {
+  const credit = {
+    paid: false,
+    total: -599,
+    type: "credit_note",
+    notes: "viateria-plus:user-a:mem-1",
+  };
+  assert(isMembershipRefundInvoice(credit), "negative credit note");
+  assert(
+    isMembershipRefundInvoice({ paid: false, total: -10 }),
+    "negative total without a type",
+  );
+  assert(
+    classifyFapiMembershipEvent(credit, "active") === "refund",
+    "classified refund",
+  );
+  const source = Deno.readTextFileSync(
+    new URL("../fapi-webhook/index.ts", import.meta.url),
+  );
+  const refund = source.indexOf("isMembershipRefundInvoice(invoice)");
+  const skip = source.indexOf("membershipInvoiceOutcome(invoice, product)");
+  assert(refund >= 0 && skip > refund, "refund is handled before the amount gate");
+});
+
 Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () => {
   const config = vanderyPlusProductConfigFromEnv((key) => {
     const values: Record<string, string> = {
@@ -360,7 +385,7 @@ Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () =>
   );
   const gate = source.indexOf("membershipInvoiceOutcome(invoice, product)");
   const alert = source.indexOf("membershipAmountAlert({");
-  const deliver = source.indexOf("deliverMembershipInvoice");
+  const deliver = source.lastIndexOf("deliverMembershipInvoice");
   assert(gate >= 0 && alert > gate && deliver > alert, "mismatch is logged before activation");
   const coupon = {
     ...real,

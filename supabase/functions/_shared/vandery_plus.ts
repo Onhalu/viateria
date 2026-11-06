@@ -381,10 +381,25 @@ export async function startVanderyPlusCheckout(
  * Real FAPI invoice shapes. See docs/vandery-plus/fapi-event-assumptions.md.
  * The invented `vandery_plus_event` custom field is ignored.
  */
+export function isMembershipRefundInvoice(invoice: FapiInvoice): boolean {
+  const type = String(invoice.type ?? "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("-", "_");
+  if (type === "credit_note" || type === "dobropis") return true;
+  const major = typeof invoice.total === "number"
+    ? invoice.total
+    : typeof invoice.total === "string" && invoice.total.trim()
+    ? Number(invoice.total)
+    : null;
+  return major != null && Number.isFinite(major) && major < 0;
+}
+
 export function classifyFapiMembershipEvent(
   invoice: FapiInvoice,
   status: PlusStatus,
 ): PlusKind | null {
+  if (isMembershipRefundInvoice(invoice)) return "refund";
   const type = String(invoice.type ?? "")
     .trim()
     .toLowerCase()

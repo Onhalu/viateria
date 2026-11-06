@@ -6,7 +6,7 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 
 | Invoice | Kind | Effect |
 | --- | --- | --- |
-| `type` is `credit_note` or `dobropis` | `refund` | `status = revoked` immediately |
+| `type` is `credit_note` or `dobropis`, or `total` is negative | `refund` | `status = revoked` immediately. A negative total is not an amount skip |
 | `cancelled` is true | `cancel` | `cancel_at_period_end = true`. Access lasts until `expires_at` |
 | not paid, checkout still `pending` or `active` | `payment_failed` | No status change. A `pending` row stays `pending` so a later payment can activate. An `active` row is not extended and is not revoked |
 | paid, and `parent` is set, or the row is already `active` or `expired` | `renew` | same row, one month from `greatest(expires_at, now())` |

@@ -25,6 +25,7 @@ import {
   fapiProductRoute,
   classifyFapiMembershipEvent,
   invoiceCustomField,
+  isMembershipRefundInvoice,
   membershipAmountAlert,
   membershipInvoiceOutcome,
   parseSandboxEvent,
@@ -123,6 +124,12 @@ Deno.serve(async (req) => {
     // Notes are user-controlled. A cheap challenge form that copies
     // viateria-plus notes must not activate membership.
     const product = vanderyPlusProductConfigFromEnv((key) => Deno.env.get(key));
+    // A credit note can carry a negative total. That must not be an amount skip.
+    if (isMembershipRefundInvoice(invoice)) {
+      const admin = serviceClient();
+      const result = await deliverMembershipInvoice(admin, invoice, invoiceNotes);
+      return json(result.body, result.status);
+    }
     const outcome = membershipInvoiceOutcome(invoice, product);
     if (outcome.kind === "amount_mismatch") {
       const alert = membershipAmountAlert({
