@@ -46,15 +46,20 @@ The same predicate is in `place_visits` INSERT policy via `can_record_place_visi
 
 A non-member may sync device visits only when they already have at least one `place_visits` row (challenge verifies already on the server). A brand-new non-member cannot seed the board through `prefs_sync`. A member can sync. This is the default in the SPEC; change it only with an explicit Ask.
 
-### Map-gate guard (revertible, owner decision still open)
+### Map-gate guard
 
-`20261106120000_vandery_plus_map_gate_guard.sql` is variant A and is meant to be dropped if the owner chooses otherwise:
+`20261106120000_record_place_visit_source_guard.sql` (rollback in `supabase/rollbacks/`, not applied):
 
-- `source = verify` is inserted only by `verify_waypoint`.
-- `INSERT` on `place_visits` is revoked from `authenticated`.
-- `record_place_visit` accepts only `source = map`, and only with an active membership.
+- `can_record_place_visit('verify')` returns false.
+- `record_place_visit` and `record_place_visits_batch` reject any source other than `map` and `prefs_sync` with `22023`.
+- A direct INSERT of `source = verify` fails the INSERT policy.
+- `verify_waypoint` still inserts `source = verify` itself.
 
-`prefs_sync` is unchanged: a non-member can sync only when they already have a visit, and a member can sync.
+`prefs_sync` is unchanged.
+
+### Not changed
+
+`ON DELETE CASCADE` on `purchases` and `challenge_diplomas` is a separate decision. This review does not change it.
 
 ## Webhook lifecycle (owned by the Edge reducer, committed here)
 

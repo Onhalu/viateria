@@ -1,16 +1,6 @@
--- Revertible map-gate guard. Drop this file to restore the previous gate.
--- Final shape is still the owner's decision (variant A).
---
--- Variant A, as applied here:
---   * source=verify is written only by verify_waypoint (security definer).
---   * authenticated INSERT on place_visits is revoked.
---   * record_place_visit accepts only source=map, and only with an active
---     membership.
--- prefs_sync rules are unchanged (pending a separate decision).
-
-revoke insert on table public.place_visits from anon, authenticated;
-
-drop policy if exists place_visits_insert_own on public.place_visits;
+-- Rollback of 20261106120000_record_place_visit_source_guard.sql
+-- Restores the exact PR #52 (20261106113000) definitions, comment and grants.
+-- WARNING: re-opens the source='verify' map-gate bypass.
 
 create or replace function public.can_record_place_visit(p_source text)
 returns boolean
@@ -26,14 +16,15 @@ begin
     return false;
   end if;
   if p_source = 'verify' then
-    -- Only verify_waypoint may insert this source. It does not call this RPC.
-    return false;
+    -- Challenge verify_waypoint inserts directly. SPEC §6 does not block
+    -- source = verify. See T0 residual risk for the client RPC.
+    return true;
   end if;
   if p_source = 'map' then
     return public.has_active_vandery_plus(uid);
   end if;
   if p_source = 'prefs_sync' then
-    -- Unchanged. Historical sync only, or a member.
+    -- DBA default (SPEC §6 Ask): historical sync only, or a member.
     return public.has_active_vandery_plus(uid)
       or exists (
         select 1
@@ -44,10 +35,6 @@ begin
   return false;
 end;
 $$;
-
-revoke all on function public.can_record_place_visit(text) from public, anon;
-grant execute on function public.can_record_place_visit(text)
-  to authenticated, service_role;
 
 create or replace function public.record_place_visit(
   p_place_id uuid,
@@ -64,15 +51,15 @@ begin
   if uid is null then
     raise exception 'not authenticated';
   end if;
-  if p_source is distinct from 'map' then
-    raise exception 'invalid source' using errcode = 'P0001';
+  if p_source is null or p_source not in ('map', 'verify', 'prefs_sync') then
+    raise exception 'invalid source';
   end if;
-  if not public.can_record_place_visit('map') then
+  if not public.can_record_place_visit(p_source) then
     raise exception 'membership_required' using errcode = 'P0001';
   end if;
 
   insert into public.place_visits (user_id, place_id, source)
-  select uid, p.id, 'map'
+  select uid, p.id, p_source
   from public.places p
   where p.id = p_place_id
   on conflict (user_id, place_id) do nothing;
@@ -94,8 +81,8 @@ begin
   if uid is null then
     raise exception 'not authenticated';
   end if;
-  if p_source is null or p_source not in ('map', 'prefs_sync') then
-    raise exception 'invalid source' using errcode = 'P0001';
+  if p_source is null or p_source not in ('map', 'verify', 'prefs_sync') then
+    raise exception 'invalid source';
   end if;
   if not public.can_record_place_visit(p_source) then
     raise exception 'membership_required' using errcode = 'P0001';
@@ -110,10 +97,12 @@ begin
 end;
 $$;
 
+revoke all on function public.can_record_place_visit(text) from public, anon;
+grant execute on function public.can_record_place_visit(text) to authenticated, service_role;
 revoke all on function public.record_place_visit(uuid, text) from public, anon;
 revoke all on function public.record_place_visits_batch(uuid[], text) from public, anon;
-grant execute on function public.record_place_visit(uuid, text) to authenticated;
-grant execute on function public.record_place_visits_batch(uuid[], text) to authenticated;
+grant execute on function public.record_place_visit(uuid, text) to authenticated, service_role;
+grant execute on function public.record_place_visits_batch(uuid[], text) to authenticated, service_role;
 
 comment on function public.record_place_visit(uuid, text) is
-  'Map visit only. Requires an active VANDERY+ membership. source=verify is verify_waypoint, not this RPC.';
+  'Records one place visit. source=map requires an active VANDERY+ membership. verify_waypoint is a separate function and is not gated.';

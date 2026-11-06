@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(49);
+select plan(51);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -282,23 +282,37 @@ select throws_ok(
       'map'
     )$$,
   '42501',
-  'permission denied',
+  'row-level security',
   'DB-06 direct map insert is denied'
 );
 
 select throws_ok(
   $$select public.record_place_visit(
       '20000000-0000-4000-8000-000000000001', 'verify')$$,
-  'P0001',
+  '22023',
   'invalid source',
-  'client RPC rejects source=verify'
+  'DB-17 verify via record_place_visit is invalid_parameter_value'
 );
 
 select throws_ok(
-  $$select public.can_record_place_visit('map')$$,
+  $$select public.record_place_visits_batch(
+      array['20000000-0000-4000-8000-000000000001']::uuid[],
+      'verify')$$,
+  '22023',
+  'invalid source',
+  'DB-18 verify via record_place_visits_batch is invalid_parameter_value'
+);
+
+select throws_ok(
+  $$insert into public.place_visits (user_id, place_id, source)
+    values (
+      '00000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001',
+      'verify'
+    )$$,
   '42501',
-  'permission denied',
-  'P1 clients cannot execute can_record_place_visit'
+  'row-level security',
+  'DB-19 direct INSERT source=verify fails RLS'
 );
 
 select throws_ok(
@@ -398,9 +412,9 @@ select is(
 select throws_ok(
   $$select public.record_place_visit(
       '20000000-0000-4000-8000-000000000001', 'verify')$$,
-  'P0001',
+  '22023',
   'invalid source',
-  'member client RPC still rejects source=verify'
+  'DB-17 member record_place_visit source=verify is still 22023'
 );
 
 select lives_ok(
@@ -751,7 +765,21 @@ select is(
     ) ->> 'idempotent'
   ),
   'true',
-  'same invoice id is idempotent when the kind prefix changes'
+  'DB-20 same invoice id does not extend when the kind prefix changes'
+);
+
+insert into public.vandery_plus_webhook_events (
+  idempotency_key, event_kind, fapi_invoice_id
+)
+values ('paid_first:inv-db20', 'paid_first', 'inv-db20');
+
+select throws_ok(
+  $$insert into public.vandery_plus_webhook_events (
+      idempotency_key, event_kind, fapi_invoice_id
+    )
+    values ('renew:inv-db20', 'renew', 'inv-db20')$$,
+  '23505',
+  'DB-20 partial unique index blocks a second paid invoice id'
 );
 
 -- T8: own diploma rows only, no client insert, catalog starts empty.

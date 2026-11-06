@@ -1,12 +1,6 @@
--- DBA follow-ups. Not the revertible map-gate guard.
---
--- P1 least privilege: clients do not execute the visit predicate or the
--- trigger functions. The security-definer RPCs still call the predicate
--- as the function owner.
--- P2 RLS initplan: auth.uid() is evaluated once per statement.
-
-revoke all on function public.can_record_place_visit(text)
-  from public, anon, authenticated;
+-- Trigger-function execute and the membership select initplan.
+-- can_record_place_visit stays executable by authenticated: the INSERT
+-- policy calls it. The predicate body moves to private in the next migration.
 
 revoke all on function public.touch_vandery_plus_membership()
   from public, anon, authenticated;

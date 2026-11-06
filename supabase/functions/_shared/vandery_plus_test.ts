@@ -460,7 +460,7 @@ Deno.test("renew after expiry starts from now", async () => {
   assert(store.rows.get("mem-1")!.status === "active", "active again");
 });
 
-Deno.test("ED-14 retry of the first invoice does not add a month", async () => {
+Deno.test("ED-14 / DB-20 paid_first then renew with the same invoice does not move expires_at", async () => {
   assert(eventKey("inv-1") === "inv-1", "invoice id only");
   const store = new MemoryStore([
     row({ id: "mem-1", userId: "user-a", status: "pending" }),
