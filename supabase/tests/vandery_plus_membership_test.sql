@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(64);
+select plan(65);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -454,6 +454,15 @@ select is(
   ),
   1,
   'DB-09 place_visits source=verify written'
+);
+
+-- Current behaviour, not a fix. Ondřej Q1/Q2 still decide whether a
+-- non-member who already has one visit may prefs_sync more places.
+select lives_ok(
+  $$select public.record_place_visits_batch(
+      array['20000000-0000-4000-8000-000000000001']::uuid[],
+      'prefs_sync')$$,
+  'prefs_sync loophole: a non-member with one visit can still sync another place'
 );
 
 -- ---------------------------------------------------------------------------
