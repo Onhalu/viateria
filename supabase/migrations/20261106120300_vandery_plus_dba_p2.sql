@@ -100,6 +100,10 @@ revoke all on function private.can_record_place_visit(text) from public, anon;
 grant execute on function private.can_record_place_visit(text)
   to authenticated, service_role;
 
+-- Drop the policy before the function it depends on.
+-- DROP FUNCTION while the policy exists fails with 2BP01. No CASCADE.
+drop policy if exists place_visits_insert_own on public.place_visits;
+
 drop function if exists public.can_record_place_visit(text);
 create function public.can_record_place_visit(p_source text)
 returns boolean
@@ -115,7 +119,6 @@ revoke all on function public.can_record_place_visit(text) from public, anon;
 grant execute on function public.can_record_place_visit(text)
   to authenticated, service_role;
 
-drop policy if exists place_visits_insert_own on public.place_visits;
 create policy place_visits_insert_own
   on public.place_visits
   for insert
