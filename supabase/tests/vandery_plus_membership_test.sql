@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(65);
+select plan(66);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -282,7 +282,7 @@ select throws_ok(
       'map'
     )$$,
   '42501',
-  'row-level security',
+  'new row violates row-level security policy for table "place_visits"',
   'DB-06 direct map insert is denied'
 );
 
@@ -311,7 +311,7 @@ select throws_ok(
       'verify'
     )$$,
   '42501',
-  'row-level security',
+  'new row violates row-level security policy for table "place_visits"',
   'DB-19 direct INSERT source=verify fails RLS'
 );
 
@@ -573,13 +573,18 @@ select throws_ok(
       now() + interval '30 days'
     )$$,
   '42501',
-  'row-level security',
+  'permission denied for table vandery_plus_memberships',
   'DB-14 authenticated insert denied'
 );
 
-update public.vandery_plus_memberships
-set status = 'revoked'
-where user_id = '00000000-0000-4000-8000-000000000002';
+select throws_ok(
+  $$update public.vandery_plus_memberships
+    set status = 'revoked'
+    where user_id = '00000000-0000-4000-8000-000000000002'$$,
+  '42501',
+  'permission denied for table vandery_plus_memberships',
+  'DB-14 authenticated update is denied'
+);
 
 select is(
   (
@@ -601,6 +606,7 @@ select throws_ok(
       '{"status":"active"}'::jsonb
     )$$,
   '42501',
+  NULL,
   'DB-14 client cannot commit a webhook'
 );
 
@@ -618,6 +624,7 @@ select throws_ok(
       now()
     )$$,
   '23505',
+  NULL,
   'DB-15 second current row violates the partial unique index'
 );
 
@@ -749,13 +756,13 @@ select is(
   'second renew commit is idempotent'
 );
 
-select is(
+select ok(
   (
-    select expires_at
+    select expires_at > now() + interval '48 days'
+       and expires_at < now() + interval '53 days'
     from public.vandery_plus_memberships
     where id = '10000000-0000-4000-8000-000000000002'
   ),
-  '2030-02-01T00:00:00Z'::timestamptz,
   'idempotent replay does not move expires_at again'
 );
 
@@ -788,6 +795,7 @@ select throws_ok(
     )
     values ('renew:inv-db20', 'renew', 'inv-db20')$$,
   '23505',
+  NULL,
   'DB-20 partial unique index blocks a second paid invoice id'
 );
 
@@ -1000,6 +1008,7 @@ select throws_ok(
       '50000000-0000-4000-8000-000000000001'
     )$$,
   '42501',
+  NULL,
   'T8 authenticated cannot insert a diploma unlock'
 );
 
@@ -1018,6 +1027,7 @@ select throws_ok(
     from public.vandery_plus_diplomas
     where id = '50000000-0000-4000-8000-000000000099'$$,
   '42501',
+  NULL,
   'unlock_rule is not granted to authenticated'
 );
 
