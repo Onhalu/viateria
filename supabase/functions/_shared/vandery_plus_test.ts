@@ -571,6 +571,33 @@ Deno.test("FAPI invoice shapes map without vandery_plus_event", () => {
   );
 });
 
+Deno.test("renew after a refund currently returns the membership to active", async () => {
+  // TODO(Ondřej): decide whether a renew after refund should stay revoked.
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-period",
+      amountCents: 59900,
+    }),
+  ]);
+  await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-full",
+    parentInvoiceId: "inv-period",
+    paidInvoiceIds: ["inv-period"],
+    refundCents: 59900,
+  }));
+  assert(store.rows.get("mem-1")!.status === "revoked", "refund revoked");
+  const renewed = await deliverVanderyPlus(store, event({
+    kind: "renew",
+    invoiceId: "inv-after-refund",
+  }));
+  assert(store.rows.get("mem-1")!.status === "active", renewed.body.membership_status as string);
+});
+
 Deno.test("renew after expiry starts from now", async () => {
   const store = new MemoryStore([
     row({

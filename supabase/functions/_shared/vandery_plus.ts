@@ -169,6 +169,9 @@ export function nextMembershipPatch(
         currency,
       };
     case "renew": {
+      // TODO(Ondřej): a renew after a refund currently sets status back to
+      // active. Leave that until Ondřej decides whether a refunded period
+      // can be renewed. Do not change this branch before that decision.
       // The locked SQL function overwrites expires_at with
       // greatest(expires_at, now()) + interval '1 month'. This value is only
       // the in-memory preview.

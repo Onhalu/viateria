@@ -9,7 +9,7 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 | `type` is `credit_note` or `dobropis`, or `total` is negative | `refund` | Default pending Ondřej. Product ids are still required. A full refund of the current-period invoice revokes. A partial refund or a refund of an older invoice only logs and leaves the row alone |
 | `cancelled` is true | `cancel` | `cancel_at_period_end = true`. Access lasts until `expires_at` |
 | not paid, checkout still `pending` or `active` | `payment_failed` | No status change. A `pending` row stays `pending` so a later payment can activate. An `active` row is not extended and is not revoked |
-| paid, and `parent` is set, or the row is already `active` or `expired` | `renew` | same row, one month from `greatest(expires_at, now())` |
+| paid, and `parent` is set, or the row is already `active` or `expired` | `renew` | same row, one month from `greatest(expires_at, now())`. TODO Ondřej: a renew after a refund currently sets `status` back to `active`. Behaviour is unchanged until that decision |
 | paid, no parent, row is `pending` | `paid_first` | `status = active`, `expires_at = now + 1 month` |
 
 `parent` is the previous invoice id FAPI sets on a later periodic charge. A retry of the same invoice id is idempotent and does not add a month, even if this table would call it `renew`.
