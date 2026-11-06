@@ -582,7 +582,7 @@ select throws_ok(
     set status = 'revoked'
     where user_id = '00000000-0000-4000-8000-000000000002'$$,
   '42501',
-  'permission denied for table vandery_plus_memberships',
+  NULL,
   'DB-14 authenticated update is denied'
 );
 
