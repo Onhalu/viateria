@@ -152,6 +152,9 @@ begin
      or p_kind not in ('paid_first', 'renew', 'cancel', 'refund', 'payment_failed') then
     raise exception 'invalid event';
   end if;
+  if p_idempotency_key is not null and char_length(p_idempotency_key) > 200 then
+    raise exception 'idempotency key too long' using errcode = '22023';
+  end if;
   if p_invoice_id is null or length(trim(p_invoice_id)) = 0 then
     raise exception 'invoice required';
   end if;

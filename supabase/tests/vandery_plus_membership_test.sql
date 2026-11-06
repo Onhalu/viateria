@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(61);
+select plan(62);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -805,6 +805,20 @@ select is(
   ),
   'failed',
   'DB-21 payment_failed leaves the checkout failed'
+);
+
+select throws_ok(
+  $$select public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      repeat('k', 201),
+      'payment_failed',
+      'inv-long',
+      '{}'::jsonb
+    )$$,
+  '22023',
+  'idempotency key too long',
+  'P2c idempotency key longer than 200 is rejected'
 );
 
 select is(
