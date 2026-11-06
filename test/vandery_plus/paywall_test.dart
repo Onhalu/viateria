@@ -102,7 +102,8 @@ void main() {
     await tester.pumpWidget(_paywallApp(repo: MemoryMembershipRepository(), locale: 'cs'));
     await tester.tap(find.text('open-paywall'));
     await tester.pumpAndSettle();
-    expect(find.text('Ověřuj místa na mapě'), findsOneWidget);
+    expect(find.text('Odemkni ověřování míst přímo z mapy.'), findsOneWidget);
+    expect(find.textContaining('bodu výzvy'), findsNothing);
     expect(tester.getSize(find.byKey(const Key('vandery-plus-pages'))).height, 240);
     final cardPadding = tester.widget<Padding>(
       find
