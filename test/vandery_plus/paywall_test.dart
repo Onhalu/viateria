@@ -29,7 +29,9 @@ void main() {
     unlockReplayMemory.reset();
   });
 
-  testWidgets('FW-01 non-member CTA sits under the leaderboard', (tester) async {
+  testWidgets('FW-01 non-member CTA sits under the leaderboard', (
+    tester,
+  ) async {
     await tester.pumpWidget(_profile(locale: 'cs'));
     await tester.pumpAndSettle();
     expect(find.text('Přidej se VANDERY+'), findsOneWidget);
@@ -62,7 +64,9 @@ void main() {
     expect(find.text('Členství aktivní.'), findsOneWidget);
   });
 
-  testWidgets('FW-03 mobile sheet is about 82% with handle and close', (tester) async {
+  testWidgets('FW-03 mobile sheet is about 82% with handle and close', (
+    tester,
+  ) async {
     _size(tester, const Size(390, 800));
     final repo = MemoryMembershipRepository();
     await tester.pumpWidget(_paywallApp(repo: repo, locale: 'cs'));
@@ -80,7 +84,9 @@ void main() {
     expect(find.byKey(const Key('vandery-plus-sheet')), findsNothing);
   });
 
-  testWidgets('FW-04 web dialog is at most 480 and Escape closes it', (tester) async {
+  testWidgets('FW-04 web dialog is at most 480 and Escape closes it', (
+    tester,
+  ) async {
     const web = Size(1280, 800);
     _size(tester, web);
     await tester.pumpWidget(
@@ -97,14 +103,21 @@ void main() {
     expect(find.byKey(const Key('vandery-plus-dialog')), findsNothing);
   });
 
-  testWidgets('FW-05 carousel has four slides, nav, and no autoplay', (tester) async {
+  testWidgets('FW-05 carousel has four slides, nav, and no autoplay', (
+    tester,
+  ) async {
     _size(tester, const Size(390, 800));
-    await tester.pumpWidget(_paywallApp(repo: MemoryMembershipRepository(), locale: 'cs'));
+    await tester.pumpWidget(
+      _paywallApp(repo: MemoryMembershipRepository(), locale: 'cs'),
+    );
     await tester.tap(find.text('open-paywall'));
     await tester.pumpAndSettle();
     expect(find.text('Odemkni ověřování míst přímo z mapy.'), findsOneWidget);
     expect(find.textContaining('bodu výzvy'), findsNothing);
-    expect(tester.getSize(find.byKey(const Key('vandery-plus-pages'))).height, 240);
+    expect(
+      tester.getSize(find.byKey(const Key('vandery-plus-pages'))).height,
+      240,
+    );
     final cardPadding = tester.widget<Padding>(
       find
           .descendant(
@@ -125,7 +138,9 @@ void main() {
       tester.getSize(find.byKey(const Key('vandery-plus-dot-0'))).shortestSide,
       greaterThanOrEqualTo(44),
     );
-    final page = tester.widget<PageView>(find.byKey(const Key('vandery-plus-pages')));
+    final page = tester.widget<PageView>(
+      find.byKey(const Key('vandery-plus-pages')),
+    );
     final before = page.controller!.page;
     await tester.pump(const Duration(seconds: 10));
     expect(page.controller!.page, before);
@@ -134,9 +149,13 @@ void main() {
     expect(find.text('Odměny za ověřená místa'), findsOneWidget);
   });
 
-  testWidgets('FW-06 focus order is close, content, nav, dots, then pay', (tester) async {
+  testWidgets('FW-06 focus order is close, content, nav, dots, then pay', (
+    tester,
+  ) async {
     _size(tester, const Size(390, 800));
-    await tester.pumpWidget(_paywallApp(repo: MemoryMembershipRepository(), locale: 'cs'));
+    await tester.pumpWidget(
+      _paywallApp(repo: MemoryMembershipRepository(), locale: 'cs'),
+    );
     await tester.tap(find.text('open-paywall'));
     await tester.pumpAndSettle();
     final orders = tester
@@ -178,7 +197,9 @@ void main() {
     );
     await tester.tap(find.text('open-paywall'));
     await tester.pumpAndSettle();
-    final terms = tester.getTopLeft(find.byKey(const Key('vandery-plus-terms')));
+    final terms = tester.getTopLeft(
+      find.byKey(const Key('vandery-plus-terms')),
+    );
     final pay = tester.getTopLeft(find.byKey(const Key('vandery-plus-pay')));
     expect(terms.dy, lessThan(pay.dy));
     expect(find.text('Obchodní podmínky'), findsOneWidget);
@@ -218,7 +239,9 @@ void main() {
     expect(find.byType(PadlockUnlock), findsNothing);
   });
 
-  testWidgets('FW-11 verifying then server active shows the toast', (tester) async {
+  testWidgets('FW-11 verifying then server active shows the toast', (
+    tester,
+  ) async {
     _size(tester, const Size(390, 800));
     final repo = _HoldRead();
     await tester.pumpWidget(_paywallApp(repo: repo, locale: 'cs'));
@@ -246,7 +269,9 @@ void main() {
     expect(find.text('VANDERY+ aktivní'), findsOneWidget);
   });
 
-  testWidgets('FW-12 and FW-13 inactive return and cancel are not success', (tester) async {
+  testWidgets('FW-12 and FW-13 inactive return and cancel are not success', (
+    tester,
+  ) async {
     _size(tester, const Size(390, 800));
     final repo = MemoryMembershipRepository();
     await tester.pumpWidget(_paywallApp(repo: repo, locale: 'cs'));
@@ -261,6 +286,35 @@ void main() {
     expect(find.text('Platba byla zrušena.'), findsOneWidget);
     expect(find.text('VANDERY+ aktivní'), findsNothing);
     expect(session.isActive, isFalse);
+  });
+
+  testWidgets('pay CTA stays in view on the 390 sheet', (tester) async {
+    const size = Size(390, 800);
+    _size(tester, size);
+    await tester.pumpWidget(
+      _paywallApp(repo: MemoryMembershipRepository(), locale: 'cs', size: size),
+    );
+    await tester.tap(find.text('open-paywall'));
+    await tester.pumpAndSettle();
+    final pay = tester.getRect(find.byKey(const Key('vandery-plus-pay')));
+    expect(pay.bottom, lessThanOrEqualTo(size.height));
+    expect(pay.top, greaterThan(0));
+    expect(pay.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('pay CTA stays in view in the 1280 dialog', (tester) async {
+    const size = Size(1280, 800);
+    _size(tester, size);
+    await tester.pumpWidget(
+      _paywallApp(repo: MemoryMembershipRepository(), locale: 'cs', size: size),
+    );
+    await tester.tap(find.text('open-paywall'));
+    await tester.pumpAndSettle();
+    final pay = tester.getRect(find.byKey(const Key('vandery-plus-pay')));
+    final dialog = tester.getRect(find.byKey(const Key('vandery-plus-dialog')));
+    expect(pay.bottom, lessThanOrEqualTo(dialog.bottom));
+    expect(pay.top, greaterThanOrEqualTo(dialog.top));
+    expect(pay.height, greaterThanOrEqualTo(48));
   });
 }
 
@@ -316,21 +370,18 @@ Widget _paywallApp({
         );
       },
       home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => showVanderyPlusPaywall(context),
-              child: const Text('open-paywall'),
-            ),
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showVanderyPlusPaywall(context),
+            child: const Text('open-paywall'),
           ),
         ),
       ),
+    ),
   );
 }
 
-Widget _profile({
-  required String locale,
-  MemoryMembershipRepository? repo,
-}) {
+Widget _profile({required String locale, MemoryMembershipRepository? repo}) {
   final session = VanderyPlusSession(
     repository: repo ?? MemoryMembershipRepository(),
     clock: () => DateTime.utc(2026, 11, 6),
@@ -372,4 +423,3 @@ AppServices _services(
     vanderyPlus: session,
   );
 }
-
