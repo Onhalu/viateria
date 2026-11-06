@@ -973,6 +973,29 @@ Deno.test("ED-14 cancel patch is only cancel_at_period_end", () => {
   assert(patch.cancel_at_period_end === true, "flag");
 });
 
+Deno.test("cancel of an older invoice flags the current period", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-current",
+      amountCents: 59900,
+    }),
+  ]);
+  const cancelled = await deliverVanderyPlus(
+    store,
+    event({ kind: "cancel", invoiceId: "inv-old" }),
+  );
+  assert(cancelled.status === 200, JSON.stringify(cancelled.body));
+  const current = store.rows.get("mem-1")!;
+  assert(current.status === "active", "current period stays active");
+  assert(current.cancelAtPeriodEnd === true, "current period is flagged");
+  assert(current.fapiInvoiceId === "inv-current", "current invoice stays");
+  assert(current.expiresAt === "2026-12-06T00:00:00.000Z", "expires unchanged");
+});
+
 Deno.test("ED-15 cancel then refund revokes and clears the flag", async () => {
   const store = new MemoryStore([
     row({

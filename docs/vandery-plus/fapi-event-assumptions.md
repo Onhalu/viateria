@@ -16,6 +16,8 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 
 Cancel, then a full refund of the current invoice, still revokes immediately. A new checkout before `expires_at` returns 409 `already_active`, including a soft-cancel that has not reached the end of the paid period.
 
+A cancel is applied to the current membership row. It does not check that the invoice id is the current `fapi_invoice_id`. Cancelling an older invoice therefore sets `cancel_at_period_end` on the current period and leaves `fapi_invoice_id` as the current invoice. Confirm that against a real FAPI storno in sandbox E2E-04.
+
 Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`. A credit note is not exempt from that check: its product id must be `FAPI_VANDERY_PLUS_PRODUCT_ID`, and `invoice.parent` must still be the current paid invoice. Its negative total is the refund amount, so it is not compared to the catalog price and it is not an amount-mismatch skip.
 
 ## Refunds

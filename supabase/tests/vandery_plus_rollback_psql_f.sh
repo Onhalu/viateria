@@ -46,9 +46,37 @@ assert_kept() {
   echo "kept $1"
 }
 
-cmp -s \
-  "$root/supabase/rollbacks/20261106113000_vandery_plus_membership.rollback.sql" \
-  "$root/supabase/tests/fixtures/20261106113000_vandery_plus_membership.rollback"
+for rollback in "$root"/supabase/rollbacks/*.sql; do
+  if ! grep -q "raise exception 'viateria.allow_destructive_rollback" "$rollback"; then
+    echo "missing guard: $rollback" >&2
+    exit 1
+  fi
+  echo "guard present $(basename "$rollback")"
+done
+
+cmp_fixture() {
+  if [ ! -f "$1" ] || [ ! -f "$2" ]; then
+    echo "fixture mismatch: missing $1 or $2" >&2
+    exit 1
+  fi
+  if ! cmp -s "$1" "$2"; then
+    echo "fixture mismatch: $1 and $2" >&2
+    exit 1
+  fi
+  echo "fixture matches $(basename "$2")"
+}
+
+found_fixture=0
+for fixture in "$root"/supabase/tests/fixtures/*; do
+  [ -f "$fixture" ] || continue
+  found_fixture=1
+  base=$(basename "$fixture")
+  cmp_fixture "$root/supabase/rollbacks/${base}.sql" "$fixture"
+done
+if [ "$found_fixture" -eq 0 ]; then
+  echo "fixture mismatch: no fixtures to compare" >&2
+  exit 1
+fi
 
 run_file "$root/supabase/rollbacks/20261106113000_vandery_plus_membership.rollback.sql"
 run_file "$root/supabase/rollbacks/20261106114000_vandery_plus_diplomas.rollback.sql"
@@ -67,3 +95,14 @@ assert_kept vandery_plus_user_diplomas \
   "select to_regclass('public.vandery_plus_user_diplomas') is not null"
 assert_kept vandery_plus_diplomas \
   "select to_regclass('public.vandery_plus_diplomas') is not null"
+assert_kept can_record_place_visit \
+  "select to_regprocedure('public.can_record_place_visit(text)') is not null"
+assert_kept place_visits_insert_own \
+  "select exists (
+     select 1
+     from pg_policies
+     where schemaname = 'public'
+       and tablename = 'place_visits'
+       and policyname = 'place_visits_insert_own'
+       and with_check ilike '%can_record_place_visit%'
+   )"

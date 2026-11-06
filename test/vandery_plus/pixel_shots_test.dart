@@ -1,3 +1,6 @@
+@Tags(['pixel'])
+library;
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -413,30 +416,42 @@ Widget _lock() {
   );
 }
 
+Directory _materialFontDir() {
+  // flutter test runs the SDK dart at bin/cache/dart-sdk/bin/dart.
+  final cache = File(Platform.resolvedExecutable).parent.parent.parent;
+  return Directory('${cache.path}/artifacts/material_fonts');
+}
+
+Future<void> _loadFontFile(FontLoader loader, File file) async {
+  final bytes = await file.readAsBytes();
+  loader.addFont(Future.value(ByteData.sublistView(bytes)));
+}
+
 Future<void> _loadFonts() async {
-  const fontDir = '/tmp/flutter-sdk/flutter/bin/cache/artifacts/material_fonts';
+  final fontDir = _materialFontDir();
   final roboto = FontLoader('Roboto');
   for (final name in [
     'Roboto-Regular.ttf',
     'Roboto-Medium.ttf',
     'Roboto-Bold.ttf',
   ]) {
-    final bytes = await File('$fontDir/$name').readAsBytes();
-    roboto.addFont(
-      Future.value(ByteData.sublistView(Uint8List.fromList(bytes))),
-    );
+    await _loadFontFile(roboto, File('${fontDir.path}/$name'));
   }
   await roboto.load();
   final icons = FontLoader('MaterialIcons');
-  final iconBytes = await File('$fontDir/MaterialIcons-Regular.otf')
-      .readAsBytes();
-  icons.addFont(
-    Future.value(ByteData.sublistView(Uint8List.fromList(iconBytes))),
-  );
+  await _loadFontFile(icons, File('${fontDir.path}/MaterialIcons-Regular.otf'));
   await icons.load();
   final onest = FontLoader('Onest');
   onest.addFont(rootBundle.load('assets/fonts/Onest[wght].ttf'));
   await onest.load();
+}
+
+Future<void> _writeShot(String name, Uint8List bytes) async {
+  final root = Platform.environment['PIXEL_ARTIFACT_DIR'];
+  if (root == null || root.isEmpty) return;
+  final file = File('$root/$name.png');
+  await file.parent.create(recursive: true);
+  await file.writeAsBytes(bytes, flush: true);
 }
 
 Future<void> _shot(
@@ -459,9 +474,7 @@ Future<void> _shot(
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 1);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    final file = File('/opt/cursor/artifacts/$name.png');
-    await file.parent.create(recursive: true);
-    await file.writeAsBytes(data!.buffer.asUint8List(), flush: true);
+    await _writeShot(name, data!.buffer.asUint8List());
   });
   tester.view.resetPhysicalSize();
   tester.view.resetDevicePixelRatio();
@@ -510,9 +523,7 @@ Future<List<int>> _shotSlide(
     final image = await boundary.toImage(pixelRatio: 1);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
     bytes = data!.buffer.asUint8List().toList();
-    final file = File('/opt/cursor/artifacts/$name.png');
-    await file.parent.create(recursive: true);
-    await file.writeAsBytes(bytes, flush: true);
+    await _writeShot(name, data.buffer.asUint8List());
   });
   tester.view.resetPhysicalSize();
   tester.view.resetDevicePixelRatio();

@@ -1,4 +1,4 @@
-# pgTAP after 20261106120900 (cancel flag only)
+# pgTAP after the cancel-order nits
 
 Runner: pg_prove 3.36 on network supabase_net_v6 with PGHOST=fd00:1::2.
 `supabase test db` reaches the database over IPv6, then its nested `psql`
@@ -9,12 +9,12 @@ via the IPv6 address when `getent ahostsv6` returns one.
 ./vandery_plus_membership_test.sql .. ok
 ./vandery_plus_rollback_test.sql .... ok
 All tests successful.
-Files=2, Tests=119, Result: PASS
+Files=2, Tests=124, Result: PASS
 
-Membership plan(103). Rollback plan(16).
+Membership plan(108). Rollback plan(16).
 
-Plain `sh supabase/tests/vandery_plus_rollback_psql_f.sh` (no GUC) printed
-ROLLBACK after each guard error and exited 0. Memberships, webhook events,
-private.commit_vandery_plus_event, user diplomas, and the diploma catalog
-were still present. The four 120000–120300 files are included and also
-abort without the guard.
+Plain `sh supabase/tests/vandery_plus_rollback_psql_f.sh` (no GUC, no
+--single-transaction) exited 0. It checks every rollback for the guard,
+compares every fixture, and still finds memberships, webhook events,
+private.commit, diplomas, public.can_record_place_visit, and
+place_visits_insert_own.

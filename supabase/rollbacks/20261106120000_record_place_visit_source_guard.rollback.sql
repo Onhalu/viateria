@@ -36,6 +36,19 @@ begin
 end
 $guard$;
 
+-- Out of order until 120300 has dropped private.commit. The raise aborts
+-- this transaction, and the final commit then rolls it back.
+do $order$
+begin
+  if to_regprocedure(
+       'private.commit_vandery_plus_event(uuid,uuid,text,text,text,jsonb)'
+     ) is not null then
+    raise exception 'roll back 20261106120300 before this file; private.commit_vandery_plus_event still exists'
+      using errcode = '55000';
+  end if;
+end
+$order$;
+
 create or replace function public.can_record_place_visit(p_source text)
 returns boolean
 language plpgsql

@@ -15,3 +15,7 @@ FAPI receives HTTP **200** with `status: "OK"` and the `alert` field. FAPI treat
 After the paid invoice is recorded, replay the credit note. That second delivery can revoke. Replaying an already applied refund is idempotent and does not revoke twice.
 
 Sandbox coverage is the Deno case `E2E sandbox unapplied refund returns 200 and leaves no trace` in `supabase/functions/_shared/vandery_plus_test.ts`. It does not call live FAPI.
+
+## Rollbacks
+
+Run a rollback with plain `psql -f`. Rollback pouštět bez `--single-transaction`. The file opens its own transaction. A guard error aborts that transaction, and the trailing `commit` then rolls it back. `--single-transaction` wraps the file again and changes that.

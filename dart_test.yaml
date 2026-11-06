@@ -1,0 +1,5 @@
+# Pixel frames are opt-in. Default `flutter test` skips the pixel tag.
+# Run them with: flutter test --tags pixel --run-skipped
+tags:
+  pixel:
+    skip: "Opt-in pixel shots. flutter test --tags pixel --run-skipped"

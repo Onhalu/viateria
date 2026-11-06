@@ -1,5 +1,6 @@
 -- Cancel only sets cancel_at_period_end. Status and expires_at stay as they are.
 -- Replaces the 20261106120800 private commit body.
+-- Nemá vlastní rollback; fakticky ho vrací znovuspuštění 20261106120800 (diff 0).
 
 create or replace function private.commit_vandery_plus_event(
   p_membership_id uuid,

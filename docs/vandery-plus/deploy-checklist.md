@@ -20,6 +20,10 @@ If `FAPI_VANDERY_PLUS_ITEM_ID` is set and `FAPI_VANDERY_PLUS_PRODUCT_ID` is empt
 
 Set both ids together before enabling the FAPI membership webhook.
 
+## E2E-04 cancel of an older invoice
+
+Sandbox only, not run yet. A cancel of an older invoice flags the current period (`cancel_at_period_end`) and does not replace `fapi_invoice_id`. Confirm that on the FAPI sandbox before production.
+
 ## FAPI form
 
 - FAPI form: slevové kódy vypnuté (Q6).

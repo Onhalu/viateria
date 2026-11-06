@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(103);
+select plan(108);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1435,6 +1435,72 @@ create temporary table vandery_cancel_expiry on commit drop as
 select expires_at as before_expires
 from public.vandery_plus_memberships
 where id = '10000000-0000-4000-8000-000000000012';
+
+-- Current behaviour, not a new rule. A cancel does not compare the invoice
+-- to fapi_invoice_id, so an older invoice flags the current period.
+insert into public.vandery_plus_webhook_events (
+  idempotency_key, event_kind, user_id, fapi_invoice_id
+) values (
+  'paid:inv-old',
+  'paid_first',
+  '00000000-0000-4000-8000-000000000005',
+  'inv-old'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000012',
+      '00000000-0000-4000-8000-000000000005',
+      'ignored',
+      'cancel',
+      'inv-old',
+      '{"cancel_at_period_end":true}'::jsonb
+    ) ->> 'idempotent'
+  ),
+  'false',
+  'cancel of an older invoice is applied to the current period'
+);
+
+select is(
+  (
+    select cancel_at_period_end
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  true,
+  'cancel of an older invoice sets cancel_at_period_end on the current period'
+);
+
+select is(
+  (
+    select fapi_invoice_id
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  'inv-c1',
+  'cancel of an older invoice leaves the current invoice id'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  'active',
+  'cancel of an older invoice leaves the current period active'
+);
+
+select is(
+  (
+    select expires_at
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000012'
+  ),
+  (select before_expires from vandery_cancel_expiry),
+  'cancel of an older invoice leaves expires_at'
+);
 
 select is(
   (
