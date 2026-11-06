@@ -10,6 +10,17 @@ class VanderyPlusBenefitIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (index == 3) {
+      return const SizedBox(
+        width: 56,
+        height: 56,
+        child: Icon(
+          Icons.explore_outlined,
+          size: 32,
+          color: BrandColors.forest,
+        ),
+      );
+    }
     return SizedBox(
       width: 56,
       height: 56,
@@ -83,8 +94,6 @@ class _BenefitPainter extends CustomPainter {
         canvas.drawCircle(const Offset(18, 34), 2, Paint()..color = BrandColors.forest);
       default:
         canvas.drawCircle(c, 16, paint);
-        canvas.drawLine(c, Offset(c.dx, c.dy - 10), paint);
-        canvas.drawLine(c, Offset(c.dx + 8, c.dy + 2), paint);
     }
   }
 
