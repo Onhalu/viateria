@@ -41,7 +41,9 @@ select throws_ok(
 
 select set_config('viateria.allow_destructive_rollback', 'on', true);
 
-\ir ../rollbacks/20261106113000_vandery_plus_membership.rollback.sql
+-- supabase test db mounts only supabase/tests. The same bytes are
+-- supabase/rollbacks/20261106113000_vandery_plus_membership.rollback.sql.
+\ir fixtures/20261106113000_vandery_plus_membership.rollback
 
 select ok(
   to_regclass('public.vandery_plus_memberships') is null,
