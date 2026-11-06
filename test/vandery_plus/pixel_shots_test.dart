@@ -106,6 +106,9 @@ void main() {
       'vandery-plus-member-1280',
       _profile(member: true),
     );
+    expect(find.byKey(const Key('vandery-plus-badge')), findsOneWidget);
+    expect(find.text('Členství aktivní.'), findsOneWidget);
+    expect(find.text('Přidej se VANDERY+'), findsNothing);
     await _shot(
       tester,
       const Size(390, 240),
@@ -156,16 +159,19 @@ ThemeData _shotTheme() {
 }
 
 Widget _profile({bool member = false, String locale = 'cs'}) {
-  final session = VanderyPlusSession(
-    repository: MemoryMembershipRepository(
-      initial: member
-          ? VanderyPlusMembership(
-              status: 'active',
-              expiresAt: DateTime.now().toUtc().add(const Duration(days: 20)),
-            )
-          : null,
-    ),
+  final active = VanderyPlusMembership(
+    status: 'active',
+    expiresAt: DateTime.now().toUtc().add(const Duration(days: 20)),
   );
+  final session = VanderyPlusSession(
+    repository: MemoryMembershipRepository(initial: member ? active : null),
+  );
+  // The profile loads membership once. A later pump reuses that state, so the
+  // active row has to already be on the session or the wide frame keeps the CTA.
+  if (member) {
+    session.membership = active;
+    session.resolved = true;
+  }
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(
@@ -192,6 +198,7 @@ Widget _profile({bool member = false, String locale = 'cs'}) {
       ),
     ],
     child: MaterialApp(
+      key: ValueKey('profile-$member-$locale'),
       debugShowCheckedModeBanner: false,
       theme: _shotTheme(),
       home: Scaffold(body: ProfileScreen(places: MemoryPlaceCatalog(const []))),
