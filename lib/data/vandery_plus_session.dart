@@ -82,6 +82,18 @@ class VanderyPlusSession extends ChangeNotifier {
     }
   }
 
+  /// Deep link or web return URL. `none` does nothing.
+  Future<void> consumeReturnUri(Uri uri) {
+    return onReturn(parseVanderyPlusReturn(uri));
+  }
+
+  /// The app came back from the FAPI form without a new URL.
+  /// Only a checkout that is still [VanderyPlusPhase.submitting] is polled.
+  Future<void> onAppResumed() {
+    if (phase != VanderyPlusPhase.submitting) return Future.value();
+    return onReturn(VanderyPlusReturnKind.success);
+  }
+
   Future<void> onReturn(VanderyPlusReturnKind kind) async {
     if (kind == VanderyPlusReturnKind.cancel) {
       phase = VanderyPlusPhase.error;

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +22,19 @@ import 'data/unconfigured.dart';
 import 'data/verified_places.dart';
 import 'l10n/locale_controller.dart';
 import 'theme/brand_typography.dart';
+
+/// Mobile return from the FAPI form. Failures stay on the submitting poll.
+Future<void> listenForVanderyPlusLinks(VanderyPlusSession session) async {
+  try {
+    final links = AppLinks();
+    final initial = await links.getInitialLink();
+    if (initial != null) await session.consumeReturnUri(initial);
+    links.uriLinkStream.listen(
+      (uri) => unawaited(session.consumeReturnUri(uri)),
+      onError: (_) {},
+    );
+  } catch (_) {}
+}
 
 Future<void> syncLocaleFromProfile(
   LocaleController controller,
@@ -89,6 +104,9 @@ Future<void> main() async {
       diplomas: SupabaseDiplomaClient(client),
       vanderyPlus: vanderyPlus,
     );
+    if (!kIsWeb) {
+      unawaited(listenForVanderyPlusLinks(vanderyPlus));
+    }
     if (userId != null && userId.isNotEmpty) {
       await refreshVerifiedPlacesOnLogin(
         userId: userId,

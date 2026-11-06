@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,7 @@ import 'ui/screens/leaderboard_screen.dart';
 import 'ui/screens/missing_config_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/verify_waypoint_screen.dart';
+import 'ui/vandery_plus_return_binding.dart';
 import 'ui/widgets/app_shell.dart';
 
 class ViateriaApp extends StatefulWidget {
@@ -164,14 +166,18 @@ class _ViateriaAppState extends State<ViateriaApp> {
   Widget build(BuildContext context) {
     final locale = context.watch<LocaleController>().locale;
     final strings = context.watch<LocaleController>().strings;
-    return MaterialApp.router(
-      title: strings.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      locale: Locale(locale),
-      supportedLocales: AppStringsLocales.supported,
-      localizationsDelegates: appLocalizationsDelegates,
-      routerConfig: _router,
+    return VanderyPlusReturnBinding(
+      session: context.read<AppServices>().vanderyPlus,
+      initialUri: kIsWeb ? Uri.base : null,
+      child: MaterialApp.router(
+        title: strings.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        locale: Locale(locale),
+        supportedLocales: AppStringsLocales.supported,
+        localizationsDelegates: appLocalizationsDelegates,
+        routerConfig: _router,
+      ),
     );
   }
 }
