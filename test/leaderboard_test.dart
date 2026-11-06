@@ -637,7 +637,7 @@ void main() {
     expect(fixture.visits, isEmpty);
   });
 
-  testWidgets('a failed map score call still closes the visit sheet', (
+  testWidgets('a rejected map score rolls the pin back and stays on the sheet', (
     tester,
   ) async {
     const placeId = '11111111-1111-4111-8111-111111111111';
@@ -664,8 +664,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('home')), findsOneWidget);
-    expect(verified.contains(placeId), isTrue);
+    expect(find.byKey(const Key('home')), findsNothing);
+    expect(verified.contains(placeId), isFalse);
+    expect(find.text('Něco se pokazilo. Zkuste to znovu.'), findsOneWidget);
   });
 }
 
