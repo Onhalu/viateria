@@ -12,6 +12,9 @@ import {
   inferKind,
   invoiceFormId,
   isMembershipActive,
+  amountsMatchNetOrGross,
+  membershipAmountAlert,
+  membershipInvoiceOutcome,
   membershipProductMatches,
   vanderyPlusProductConfigFromEnv,
   parseVanderyPlusNotes,
@@ -355,9 +358,24 @@ Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () =>
   const source = Deno.readTextFileSync(
     new URL("../fapi-webhook/index.ts", import.meta.url),
   );
-  const gate = source.indexOf("membershipProductMatches(invoice, product)");
+  const gate = source.indexOf("membershipInvoiceOutcome(invoice, product)");
+  const alert = source.indexOf("membershipAmountAlert({");
   const deliver = source.indexOf("deliverMembershipInvoice");
-  assert(gate >= 0 && deliver > gate, "product gate runs before activation");
+  assert(gate >= 0 && alert > gate && deliver > alert, "mismatch is logged before activation");
+  const coupon = {
+    ...real,
+    total: 199,
+  };
+  const couponOutcome = membershipInvoiceOutcome(coupon, config);
+  assert(couponOutcome.kind === "amount_mismatch", JSON.stringify(couponOutcome));
+  const net = Math.round(59900 / 1.21);
+  assert(amountsMatchNetOrGross(net, 59900), "net of the gross price is accepted");
+  const logged = membershipAmountAlert({
+    invoiceId: "inv-coupon",
+    expectedCents: 59900,
+    actualCents: 19900,
+  });
+  assert(logged.alert === "vandery_plus_amount_mismatch", "structured alert");
 });
 
 Deno.test("ED-12 client body user is not the write target", async () => {

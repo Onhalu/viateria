@@ -517,37 +517,100 @@ export function invoiceFormId(invoice: FapiInvoice): string | null {
   return ids[0] ?? null;
 }
 
+/** Czech standard VAT. Assumption: configured price is gross, invoice.total may be net. */
+export const VANDERY_PLUS_VAT_RATE = 0.21;
+
+/** 1 CZK. Covers rounding between net and gross. */
+export const VANDERY_PLUS_AMOUNT_TOLERANCE_CENTS = 100;
+
+function withinCents(left: number, right: number): boolean {
+  return Math.abs(left - right) <= VANDERY_PLUS_AMOUNT_TOLERANCE_CENTS;
+}
+
+/** True for an exact price, a 1 CZK rounding gap, or a 21% net/gross pair. */
+export function amountsMatchNetOrGross(actual: number, expected: number): boolean {
+  if (withinCents(actual, expected)) return true;
+  const gross = (net: number) => Math.round(net * (1 + VANDERY_PLUS_VAT_RATE));
+  const net = (grossAmount: number) =>
+    Math.round(grossAmount / (1 + VANDERY_PLUS_VAT_RATE));
+  return withinCents(actual, gross(expected)) ||
+    withinCents(actual, net(expected)) ||
+    withinCents(expected, gross(actual)) ||
+    withinCents(expected, net(actual));
+}
+
+export type MembershipInvoiceOutcome =
+  | { kind: "ok" }
+  | { kind: "skip" }
+  | {
+    kind: "amount_mismatch";
+    expectedCents: number | null;
+    actualCents: number | null;
+  };
+
 /**
- * Notes are not proof of a VANDERY+ purchase. Amount and every configured
- * product id (item, form, product code) must match. Missing config fails closed.
+ * Notes are not proof of a VANDERY+ purchase. Ids must match.
+ * Amount may differ by VAT net/gross or 1 CZK. A larger gap is amount_mismatch,
+ * not a silent skip.
  */
-export function membershipProductMatches(
+export function membershipInvoiceOutcome(
   invoice: FapiInvoice,
   config: VanderyPlusProductConfig,
-): boolean {
-  if (config.amountCents == null) return false;
-  const amount = invoiceTotalCents(invoice);
-  if (amount == null || amount !== config.amountCents) return false;
+): MembershipInvoiceOutcome {
   const configured = config.itemIds.length + config.formIds.length +
     config.productIds.length;
-  if (configured === 0) return false;
+  if (config.amountCents == null || configured === 0) return { kind: "skip" };
   if (
     config.itemIds.length > 0 &&
     !invoiceItemIds(invoice).some((id) => config.itemIds.includes(id))
   ) {
-    return false;
+    return { kind: "skip" };
   }
   if (config.formIds.length > 0) {
     const formId = invoiceFormId(invoice);
-    if (!formId || !config.formIds.includes(formId)) return false;
+    if (!formId || !config.formIds.includes(formId)) return { kind: "skip" };
   }
   if (
     config.productIds.length > 0 &&
     !invoiceProductIds(invoice).some((id) => config.productIds.includes(id))
   ) {
-    return false;
+    return { kind: "skip" };
   }
-  return true;
+  const amount = invoiceTotalCents(invoice);
+  if (amount == null || !amountsMatchNetOrGross(amount, config.amountCents)) {
+    return {
+      kind: "amount_mismatch",
+      expectedCents: config.amountCents,
+      actualCents: amount,
+    };
+  }
+  return { kind: "ok" };
+}
+
+export function membershipAmountAlert(input: {
+  invoiceId: string | null;
+  expectedCents: number | null;
+  actualCents: number | null;
+}): Record<string, unknown> {
+  return {
+    alert: "vandery_plus_amount_mismatch",
+    invoiceId: input.invoiceId,
+    expectedCents: input.expectedCents,
+    actualCents: input.actualCents,
+    tolerance: "vat_21_or_1_czk",
+  };
+}
+
+/**
+ * Notes are not proof of a VANDERY+ purchase. Amount and every configured
+ * product id (item, form, product code) must match, with the net/gross tolerance.
+ * Missing config fails closed.
+ */
+export function membershipProductMatches(
+  invoice: FapiInvoice,
+  config: VanderyPlusProductConfig,
+): boolean {
+  return membershipInvoiceOutcome(invoice, config).kind === "ok";
 }
 
 export function invoiceCustomField(

@@ -14,4 +14,13 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 
 `parent` is the previous invoice id FAPI sets on a later periodic charge. A retry of the same invoice id is idempotent and does not add a month, even if this table would call it `renew`.
 
-Notes (`viateria-plus:`) only find the checkout row. The item id, form id, product code, and amount still have to match `FAPI_VANDERY_PLUS_*`.
+Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`.
+
+## Amount: net, gross, and coupons
+
+Assumption, until FAPI confirms which field is the charged total:
+
+- `FAPI_VANDERY_PLUS_AMOUNT_CENTS` is the **gross** price in cents (what the customer pays, VAT included).
+- `invoice.total` is major units. It may be that gross total, or the **net** base when the form stores VAT separately. Czech standard VAT used for the check is **21%**.
+- A match is exact, within **100 cents** (1 CZK) of rounding, or a 21% net/gross pair of those two numbers.
+- A coupon or any larger gap is **not** `SKIPPED`. The webhook logs one JSON line `{ "alert": "vandery_plus_amount_mismatch", ... }` and responds `409` with `status: "AMOUNT_MISMATCH"`. Membership is not activated.

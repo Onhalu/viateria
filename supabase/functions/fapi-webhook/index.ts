@@ -25,7 +25,8 @@ import {
   fapiProductRoute,
   classifyFapiMembershipEvent,
   invoiceCustomField,
-  membershipProductMatches,
+  membershipAmountAlert,
+  membershipInvoiceOutcome,
   parseSandboxEvent,
   parseVanderyPlusNotes,
   plusRowFromDb,
@@ -122,7 +123,17 @@ Deno.serve(async (req) => {
     // Notes are user-controlled. A cheap challenge form that copies
     // viateria-plus notes must not activate membership.
     const product = vanderyPlusProductConfigFromEnv((key) => Deno.env.get(key));
-    if (!membershipProductMatches(invoice, product)) {
+    const outcome = membershipInvoiceOutcome(invoice, product);
+    if (outcome.kind === "amount_mismatch") {
+      const alert = membershipAmountAlert({
+        invoiceId: fapiInvoiceId(invoice),
+        expectedCents: outcome.expectedCents,
+        actualCents: outcome.actualCents,
+      });
+      console.error(JSON.stringify(alert));
+      return json({ status: "AMOUNT_MISMATCH", ...alert }, 409);
+    }
+    if (outcome.kind !== "ok") {
       return json({
         status: "SKIPPED",
         message: "not the VANDERY+ product",
