@@ -236,221 +236,231 @@ class _VanderyPlusPaywallContentState extends State<VanderyPlusPaywallContent> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.showHandle)
-              const Center(
-                child: SizedBox(
-                  key: Key('vandery-plus-handle'),
-                  width: 36,
-                  height: 4,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: BrandColors.beige,
-                      borderRadius: BorderRadius.all(Radius.circular(2)),
-                    ),
-                  ),
-                ),
-              ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FocusTraversalOrder(
-                order: const NumericFocusOrder(1),
-                child: Semantics(
-                  button: true,
-                  label: strings.vanderyPlusClose,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.showHandle)
+                const Center(
                   child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: IconButton(
-                      key: const Key('vandery-plus-close'),
-                      onPressed: session.lockDismiss ? null : widget.onClose,
-                      icon: const Icon(Icons.close, color: BrandColors.forest),
-                      tooltip: strings.vanderyPlusClose,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Text(
-              strings.vanderyPlusTitle,
-              style: BrandTypography.display(
-                fontSize: 28,
-                color: BrandColors.forest,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              strings.vanderyPlusSubtitle,
-              style: const TextStyle(
-                color: BrandColors.bark,
-                fontSize: 15,
-                height: 22 / 15,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(2),
-              child: _reduce
-                  ? _BenefitList(strings: strings)
-                  : SizedBox(
-                      height: 240,
-                      child: PageView.builder(
-                        key: const Key('vandery-plus-pages'),
-                        controller: _pages,
-                        itemCount: 4,
-                        onPageChanged: (value) => setState(() => _index = value),
-                        itemBuilder: (context, index) {
-                          return _BenefitCard(
-                            index: index,
-                            strings: strings,
-                          );
-                        },
+                    key: Key('vandery-plus-handle'),
+                    width: 36,
+                    height: 4,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: BrandColors.beige,
+                        borderRadius: BorderRadius.all(Radius.circular(2)),
                       ),
                     ),
-            ),
-            if (!_reduce) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _NavButton(
-                    key: const Key('vandery-plus-prev'),
-                    order: 3,
-                    tooltip: strings.vanderyPlusPrev,
-                    icon: Icons.chevron_left,
-                    onPressed: _index == 0 ? null : () => _go(_index - 1),
                   ),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (var i = 0; i < 4; i++)
-                          _Dot(
-                            index: i,
-                            selected: i == _index,
-                            strings: strings,
-                            onPressed: () => _go(i),
-                          ),
-                      ],
+                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FocusTraversalOrder(
+                  order: const NumericFocusOrder(1),
+                  child: Semantics(
+                    button: true,
+                    label: strings.vanderyPlusClose,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: IconButton(
+                        key: const Key('vandery-plus-close'),
+                        onPressed: session.lockDismiss ? null : widget.onClose,
+                        icon: const Icon(
+                          Icons.close,
+                          color: BrandColors.forest,
+                        ),
+                        tooltip: strings.vanderyPlusClose,
+                      ),
                     ),
                   ),
-                  _NavButton(
-                    key: const Key('vandery-plus-next'),
-                    order: 4,
-                    tooltip: strings.vanderyPlusNext,
-                    icon: Icons.chevron_right,
-                    onPressed: _index == 3 ? null : () => _go(_index + 1),
+                ),
+              ),
+              Text(
+                strings.vanderyPlusTitle,
+                style: BrandTypography.display(
+                  fontSize: 28,
+                  color: BrandColors.forest,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                strings.vanderyPlusSubtitle,
+                style: const TextStyle(
+                  color: BrandColors.bark,
+                  fontSize: 15,
+                  height: 22 / 15,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: _reduce
+                    ? _BenefitList(strings: strings)
+                    : SizedBox(
+                        height: 240,
+                        child: PageView.builder(
+                          key: const Key('vandery-plus-pages'),
+                          controller: _pages,
+                          itemCount: 4,
+                          onPageChanged: (value) =>
+                              setState(() => _index = value),
+                          itemBuilder: (context, index) {
+                            return _BenefitCard(index: index, strings: strings);
+                          },
+                        ),
+                      ),
+              ),
+              if (!_reduce) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _NavButton(
+                      key: const Key('vandery-plus-prev'),
+                      order: 3,
+                      tooltip: strings.vanderyPlusPrev,
+                      icon: Icons.chevron_left,
+                      onPressed: _index == 0 ? null : () => _go(_index - 1),
+                    ),
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (var i = 0; i < 4; i++)
+                            _Dot(
+                              index: i,
+                              selected: i == _index,
+                              strings: strings,
+                              onPressed: () => _go(i),
+                            ),
+                        ],
+                      ),
+                    ),
+                    _NavButton(
+                      key: const Key('vandery-plus-next'),
+                      order: 4,
+                      tooltip: strings.vanderyPlusNext,
+                      icon: Icons.chevron_right,
+                      onPressed: _index == 3 ? null : () => _go(_index + 1),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              Text(
+                session.displayPrice,
+                key: const Key('vandery-plus-price'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: BrandColors.forest,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                strings.vanderyPlusMonthly,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: BrandColors.bark, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                strings.vanderyPlusDraftNote,
+                key: const Key('vandery-plus-draft'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: BrandColors.bark,
+                  fontSize: 12,
+                  height: 16 / 12,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(16),
+                    child: TextButton(
+                      key: const Key('vandery-plus-terms'),
+                      onPressed: () => widget.openUrl(VanderyPlusLegal.terms),
+                      child: Text(strings.vanderyPlusTerms),
+                    ),
+                  ),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(17),
+                    child: TextButton(
+                      key: const Key('vandery-plus-privacy'),
+                      onPressed: () => widget.openUrl(VanderyPlusLegal.privacy),
+                      child: Text(strings.vanderyPlusPrivacy),
+                    ),
                   ),
                 ],
               ),
+              Text(
+                strings.vanderyPlusLegalGate,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: BrandColors.bark,
+                  fontSize: 12,
+                  height: 16 / 12,
+                ),
+              ),
+              if (session.phase == VanderyPlusPhase.verifying)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    strings.vanderyPlusVerifying,
+                    key: const Key('vandery-plus-verifying'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: BrandColors.forest),
+                  ),
+                ),
+              if (session.message == VanderyPlusMessage.stillInactive ||
+                  session.message == VanderyPlusMessage.payFailed ||
+                  session.message == VanderyPlusMessage.cancelled)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    session.message == VanderyPlusMessage.stillInactive
+                        ? strings.vanderyPlusRetryHint
+                        : session.message == VanderyPlusMessage.cancelled
+                        ? strings.vanderyPlusCancelled
+                        : strings.vanderyPlusPayFailed,
+                    key: const Key('vandery-plus-error'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: BrandColors.error),
+                  ),
+                ),
+              if (session.message == VanderyPlusMessage.stillInactive)
+                TextButton(
+                  key: const Key('vandery-plus-retry'),
+                  onPressed: () =>
+                      widget.session.onReturn(VanderyPlusReturnKind.success),
+                  child: Text(strings.vanderyPlusRetryVerify),
+                ),
+              const SizedBox(height: 8),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(20),
+                child: SizedBox(
+                  key: const Key('vandery-plus-pay-slot'),
+                  width: double.infinity,
+                  height: 52,
+                  child: AbsorbPointer(
+                    absorbing: session.lockDismiss,
+                    child: AppButton(
+                      key: const Key('vandery-plus-pay'),
+                      label: strings.vanderyPlusPayCta(session.displayPrice),
+                      size: AppButtonSize.l,
+                      loading: session.phase == VanderyPlusPhase.submitting,
+                      onPressed: session.lockDismiss
+                          ? null
+                          : () => session.pay(),
+                    ),
+                  ),
+                ),
+              ),
             ],
-            const SizedBox(height: 16),
-            Text(
-              session.displayPrice,
-              key: const Key('vandery-plus-price'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: BrandColors.forest,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              strings.vanderyPlusMonthly,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: BrandColors.bark, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              strings.vanderyPlusDraftNote,
-              key: const Key('vandery-plus-draft'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: BrandColors.bark, fontSize: 12, height: 16 / 12),
-            ),
-            const SizedBox(height: 4),
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(16),
-                  child: TextButton(
-                    key: const Key('vandery-plus-terms'),
-                    onPressed: () => widget.openUrl(VanderyPlusLegal.terms),
-                    child: Text(strings.vanderyPlusTerms),
-                  ),
-                ),
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(17),
-                  child: TextButton(
-                    key: const Key('vandery-plus-privacy'),
-                    onPressed: () => widget.openUrl(VanderyPlusLegal.privacy),
-                    child: Text(strings.vanderyPlusPrivacy),
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              strings.vanderyPlusLegalGate,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: BrandColors.bark, fontSize: 12, height: 16 / 12),
-            ),
-            if (session.phase == VanderyPlusPhase.verifying)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  strings.vanderyPlusVerifying,
-                  key: const Key('vandery-plus-verifying'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BrandColors.forest),
-                ),
-              ),
-            if (session.message == VanderyPlusMessage.stillInactive ||
-                session.message == VanderyPlusMessage.payFailed ||
-                session.message == VanderyPlusMessage.cancelled)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  session.message == VanderyPlusMessage.stillInactive
-                      ? strings.vanderyPlusRetryHint
-                      : session.message == VanderyPlusMessage.cancelled
-                      ? strings.vanderyPlusCancelled
-                      : strings.vanderyPlusPayFailed,
-                  key: const Key('vandery-plus-error'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BrandColors.error),
-                ),
-              ),
-            if (session.message == VanderyPlusMessage.stillInactive)
-              TextButton(
-                key: const Key('vandery-plus-retry'),
-                onPressed: () => widget.session.onReturn(
-                  VanderyPlusReturnKind.success,
-                ),
-                child: Text(strings.vanderyPlusRetryVerify),
-              ),
-            const SizedBox(height: 8),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(20),
-              child: SizedBox(
-                key: const Key('vandery-plus-pay-slot'),
-                width: double.infinity,
-                height: 52,
-                child: AbsorbPointer(
-                  absorbing: session.lockDismiss,
-                  child: AppButton(
-                    key: const Key('vandery-plus-pay'),
-                    label: strings.vanderyPlusPayCta(session.displayPrice),
-                    size: AppButtonSize.l,
-                    loading: session.phase == VanderyPlusPhase.submitting,
-                    onPressed: session.lockDismiss ? null : () => session.pay(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
         ),
       ),
     );
@@ -506,41 +516,44 @@ class _BenefitCard extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  VanderyPlusBenefitIcon(index: index),
-                  if (index == 1) ...[
-                    const SizedBox(width: 12),
-                    const HiddenDiplomaSilhouette(),
-                    const SizedBox(width: 12),
-                    const HiddenDiplomaSilhouette(),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    VanderyPlusBenefitIcon(index: index),
+                    if (index == 1) ...[
+                      const SizedBox(width: 12),
+                      const HiddenDiplomaSilhouette(),
+                      const SizedBox(width: 12),
+                      const HiddenDiplomaSilhouette(),
+                    ],
                   ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: BrandColors.forest,
-                  fontSize: 18,
-                  height: 24 / 18,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                body,
-                maxLines: 3,
-                style: const TextStyle(
-                  color: BrandColors.bark,
-                  fontSize: 14,
-                  height: 20 / 14,
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: BrandColors.forest,
+                    fontSize: 18,
+                    height: 24 / 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  body,
+                  maxLines: 3,
+                  style: const TextStyle(
+                    color: BrandColors.bark,
+                    fontSize: 14,
+                    height: 20 / 14,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

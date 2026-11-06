@@ -47,6 +47,19 @@ void main() {
     await _shot(
       tester,
       const Size(390, 844),
+      'vandery-plus-profile-cta-390-en',
+      _profile(locale: 'en'),
+    );
+    await _shot(
+      tester,
+      const Size(1280, 800),
+      'vandery-plus-profile-cta-1280-en',
+      _profile(locale: 'en'),
+    );
+    expect(find.text('Join VANDERY+'), findsOneWidget);
+    await _shot(
+      tester,
+      const Size(390, 844),
       'vandery-plus-paywall-sheet-390',
       _paywall(width: 390, height: 844 * 0.82, handle: true),
     );
@@ -55,6 +68,19 @@ void main() {
       const Size(1280, 800),
       'vandery-plus-paywall-dialog-1280',
       _paywall(width: 480, height: 640, handle: false),
+    );
+    await _shot(
+      tester,
+      const Size(390, 844),
+      'vandery-plus-paywall-sheet-390-en',
+      _paywall(width: 390, height: 844 * 0.82, handle: true, locale: 'en'),
+    );
+    expect(find.text('Unlock place checks right on the map'), findsOneWidget);
+    await _shot(
+      tester,
+      const Size(1280, 800),
+      'vandery-plus-paywall-dialog-1280-en',
+      _paywall(width: 480, height: 640, handle: false, locale: 'en'),
     );
     await _shot(
       tester,
@@ -119,7 +145,17 @@ void main() {
   });
 }
 
-Widget _profile({bool member = false}) {
+ThemeData _shotTheme() {
+  final theme = AppTheme.light();
+  return theme.copyWith(
+    textTheme: theme.textTheme.apply(
+      fontFamily: 'Roboto',
+      fontFamilyFallback: const ['Roboto'],
+    ),
+  );
+}
+
+Widget _profile({bool member = false, String locale = 'cs'}) {
   final session = VanderyPlusSession(
     repository: MemoryMembershipRepository(
       initial: member
@@ -132,7 +168,10 @@ Widget _profile({bool member = false}) {
   );
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
+      ChangeNotifierProvider(
+        key: ValueKey('locale-$locale'),
+        create: (_) => LocaleController(initial: locale),
+      ),
       Provider.value(
         value: AppServices(
           config: const AppConfig(
@@ -141,7 +180,7 @@ Widget _profile({bool member = false}) {
             stripePublishableKey: 'pk',
           ),
           auth: MemoryAuth(
-            user: const Profile(id: 'user-1', locale: 'cs', displayName: 'Tereza'),
+            user: Profile(id: 'user-1', locale: locale, displayName: 'Tereza'),
           ),
           catalog: MemoryCatalog(),
           progress: MemoryProgress(),
@@ -153,7 +192,8 @@ Widget _profile({bool member = false}) {
       ),
     ],
     child: MaterialApp(
-      theme: AppTheme.light(),
+      debugShowCheckedModeBanner: false,
+      theme: _shotTheme(),
       home: Scaffold(body: ProfileScreen(places: MemoryPlaceCatalog(const []))),
     ),
   );
@@ -164,14 +204,16 @@ Widget _paywall({
   required double height,
   required bool handle,
   int initialSlide = 0,
+  String locale = 'cs',
 }) {
   final session = VanderyPlusSession(
     repository: MemoryMembershipRepository(),
     priceLabel: '—',
   );
-  final strings = AppStrings('cs');
+  final strings = AppStrings(locale);
   return MaterialApp(
-    theme: AppTheme.light(),
+    debugShowCheckedModeBanner: false,
+    theme: _shotTheme(),
     home: Scaffold(
       backgroundColor: const Color(0x99000000),
       body: Center(
@@ -201,7 +243,8 @@ Widget _paywall({
 Widget _lockSequence() {
   final strings = AppStrings('cs');
   return MaterialApp(
-    theme: AppTheme.light(),
+    debugShowCheckedModeBanner: false,
+    theme: _shotTheme(),
     home: Scaffold(
       backgroundColor: BrandColors.cream,
       body: Padding(
@@ -274,7 +317,8 @@ Widget _sequenceFrame(String label, Widget child) {
 
 Widget _lock() {
   return MaterialApp(
-    theme: AppTheme.light(),
+    debugShowCheckedModeBanner: false,
+    theme: _shotTheme(),
     home: Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -293,14 +337,23 @@ Widget _lock() {
 Future<void> _loadFonts() async {
   const fontDir = '/tmp/flutter-sdk/flutter/bin/cache/artifacts/material_fonts';
   final roboto = FontLoader('Roboto');
-  for (final name in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']) {
+  for (final name in [
+    'Roboto-Regular.ttf',
+    'Roboto-Medium.ttf',
+    'Roboto-Bold.ttf',
+  ]) {
     final bytes = await File('$fontDir/$name').readAsBytes();
-    roboto.addFont(Future.value(ByteData.sublistView(Uint8List.fromList(bytes))));
+    roboto.addFont(
+      Future.value(ByteData.sublistView(Uint8List.fromList(bytes))),
+    );
   }
   await roboto.load();
   final icons = FontLoader('MaterialIcons');
-  final iconBytes = await File('$fontDir/MaterialIcons-Regular.otf').readAsBytes();
-  icons.addFont(Future.value(ByteData.sublistView(Uint8List.fromList(iconBytes))));
+  final iconBytes = await File('$fontDir/MaterialIcons-Regular.otf')
+      .readAsBytes();
+  icons.addFont(
+    Future.value(ByteData.sublistView(Uint8List.fromList(iconBytes))),
+  );
   await icons.load();
   final onest = FontLoader('Onest');
   onest.addFont(rootBundle.load('assets/fonts/Onest[wght].ttf'));
@@ -316,7 +369,9 @@ Future<void> _shot(
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
-  await tester.pumpWidget(RepaintBoundary(key: const Key('shot'), child: child));
+  await tester.pumpWidget(
+    RepaintBoundary(key: const Key('shot'), child: child),
+  );
   await tester.pump();
   await tester.pump(advance);
   final boundary = tester.renderObject<RenderRepaintBoundary>(
