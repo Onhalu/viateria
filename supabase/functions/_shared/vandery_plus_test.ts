@@ -14,9 +14,13 @@ import {
   isMembershipActive,
   isMembershipRefundInvoice,
   amountsMatchNetOrGross,
+  invoiceAbsoluteTotalCents,
+  invoiceParentId,
   membershipAmountAlert,
   membershipInvoiceOutcome,
   membershipProductMatches,
+  membershipRefundProductMatches,
+  planMembershipRefund,
   vanderyPlusProductConfigFromEnv,
   parseVanderyPlusNotes,
   planVanderyPlusForm,
@@ -250,21 +254,70 @@ Deno.test("ED-07 cancel twice stays active until expires_at", async () => {
   assert(!isMembershipActive(saved, "2026-12-07T00:00:00.000Z"), "then expired");
 });
 
-Deno.test("ED-08 refund twice revokes immediately", async () => {
+Deno.test("ED-08 full refund of the current invoice revokes and replay is idempotent", async () => {
   const store = new MemoryStore([
     row({
       id: "mem-1",
       userId: "user-a",
       status: "active",
       expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-period",
+      amountCents: 59900,
     }),
   ]);
-  const refund = event({ kind: "refund", invoiceId: "inv-refund" });
-  await deliverVanderyPlus(store, refund);
-  await deliverVanderyPlus(store, refund);
+  const refund = event({
+    kind: "refund",
+    invoiceId: "cn-full",
+    parentInvoiceId: "inv-period",
+    paidInvoiceIds: ["inv-period"],
+    refundCents: 59900,
+  });
+  const first = await deliverVanderyPlus(store, refund);
+  const second = await deliverVanderyPlus(store, refund);
   const saved = store.rows.get("mem-1")!;
+  assert(first.body.alert === undefined, JSON.stringify(first.body));
   assert(saved.status === "revoked", saved.status);
+  assert(second.body.idempotent === true, JSON.stringify(second.body));
   assert(!isMembershipActive(saved, "2026-11-06T00:00:00.000Z"), "no access");
+});
+
+Deno.test("refund without a parent or with a foreign parent does not revoke", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-period",
+      amountCents: 59900,
+    }),
+  ]);
+  const missing = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-none",
+    refundCents: 59900,
+  }));
+  assert(missing.body.alert === "vandery_plus_refund_unmatched", JSON.stringify(missing.body));
+  assert(store.rows.get("mem-1")!.status === "active", "no parent");
+  const foreign = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-foreign",
+    parentInvoiceId: "inv-other",
+    paidInvoiceIds: ["inv-period"],
+    refundCents: 59900,
+  }));
+  assert(foreign.body.alert === "vandery_plus_refund_unmatched", JSON.stringify(foreign.body));
+  assert(store.rows.get("mem-1")!.status === "active", "foreign parent");
+  const partial = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-part",
+    parentInvoiceId: "inv-period",
+    paidInvoiceIds: ["inv-period"],
+    refundCents: 10000,
+  }));
+  assert(partial.body.alert === "vandery_plus_refund_partial", JSON.stringify(partial.body));
+  assert(store.rows.get("mem-1")!.status === "active", "partial");
+  assert(partial.wrote === false, "partial does not write");
 });
 
 Deno.test("ED-09 payment_failed does not activate or extend", async () => {
@@ -345,8 +398,47 @@ Deno.test("negative credit note is a refund and is not skipped", () => {
     new URL("../fapi-webhook/index.ts", import.meta.url),
   );
   const refund = source.indexOf("isMembershipRefundInvoice(invoice)");
+  const product = source.indexOf("membershipRefundProductMatches(invoice, product)");
   const skip = source.indexOf("membershipInvoiceOutcome(invoice, product)");
-  assert(refund >= 0 && skip > refund, "refund is handled before the amount gate");
+  assert(refund >= 0 && product > refund, "refund still identifies a credit note");
+  assert(product >= 0 && skip > product, "refund does not skip the product id check");
+  const config = vanderyPlusProductConfigFromEnv((key) => {
+    const values: Record<string, string> = {
+      FAPI_VANDERY_PLUS_AMOUNT_CENTS: "59900",
+      FAPI_VANDERY_PLUS_ITEM_ID: "77",
+      FAPI_VANDERY_PLUS_FORM_ID: "55",
+      FAPI_VANDERY_PLUS_PRODUCT_ID: "vandery-plus",
+    };
+    return values[key];
+  });
+  const cheap = {
+    ...credit,
+    total: -49,
+    form: 100,
+    items: [{ id: 9, name: "Cheap challenge", code: "challenge-diploma" }],
+  };
+  assert(!membershipRefundProductMatches(cheap, config), "cheap credit note is not VANDERY+");
+  const real = {
+    ...credit,
+    total: -599,
+    form: 55,
+    parent: 4242,
+    items: [{ id: 77, name: "VANDERY+", code: "vandery-plus" }],
+  };
+  assert(membershipRefundProductMatches(real, config), "matching credit note passes the product check");
+  assert(invoiceParentId(real) === "4242", "parent id");
+  assert(invoiceParentId({ parent: 0 }) === null, "zero parent");
+  assert(invoiceAbsoluteTotalCents(real) === 59900, "absolute cents");
+  assert(
+    planMembershipRefund({
+      parentInvoiceId: "4242",
+      paidInvoiceIds: ["4242"],
+      currentInvoiceId: "4242",
+      refundCents: 59900,
+      originalCents: 59900,
+    }).apply === true,
+    "full current refund applies",
+  );
 });
 
 Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () => {
@@ -631,7 +723,13 @@ Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live 
   await deliverVanderyPlus(store, event({ kind: "cancel", invoiceId: "e2e-cancel" }));
   assert(store.rows.get("mem-1")!.cancelAtPeriodEnd === true, "E2E-04");
   assert(store.rows.get("mem-1")!.status === "active", "E2E-04 still active");
-  await deliverVanderyPlus(store, event({ kind: "refund", invoiceId: "e2e-refund" }));
+  await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "e2e-refund",
+    parentInvoiceId: "e2e-renew",
+    paidInvoiceIds: ["e2e-renew"],
+    refundCents: 59900,
+  }));
   assert(store.rows.get("mem-1")!.status === "revoked", "E2E-05");
   const fresh = new MemoryStore([
     row({ id: "mem-2", userId: "user-a", status: "pending" }),

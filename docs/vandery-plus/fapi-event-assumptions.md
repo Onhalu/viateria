@@ -6,7 +6,7 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 
 | Invoice | Kind | Effect |
 | --- | --- | --- |
-| `type` is `credit_note` or `dobropis`, or `total` is negative | `refund` | `status = revoked` immediately. A negative total is not an amount skip |
+| `type` is `credit_note` or `dobropis`, or `total` is negative | `refund` | Default pending Ondřej. Product ids are still required. A full refund of the current-period invoice revokes. A partial refund or a refund of an older invoice only logs and leaves the row alone |
 | `cancelled` is true | `cancel` | `cancel_at_period_end = true`. Access lasts until `expires_at` |
 | not paid, checkout still `pending` or `active` | `payment_failed` | No status change. A `pending` row stays `pending` so a later payment can activate. An `active` row is not extended and is not revoked |
 | paid, and `parent` is set, or the row is already `active` or `expired` | `renew` | same row, one month from `greatest(expires_at, now())` |
@@ -14,7 +14,19 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 
 `parent` is the previous invoice id FAPI sets on a later periodic charge. A retry of the same invoice id is idempotent and does not add a month, even if this table would call it `renew`.
 
-Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`.
+Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`. A credit note is not exempt from that product check. Its negative total is the refund amount, so it is not compared to the catalog price and it is not an amount-mismatch skip.
+
+## Refunds
+
+Default pending Ondřej.
+
+`invoice.parent` must point at an invoice that already has a `paid_first` or `renew` row for the same user in `vandery_plus_webhook_events`, and that invoice must be the membership's current `fapi_invoice_id` (the period being refunded).
+
+- A full refund of that invoice (exact cents, within 100 cents, or a 21% net/gross pair of the charged `amount_cents`) sets `status = revoked`.
+- No parent, a parent that is not one of those paid events, or a parent that is an older invoice logs `{ "alert": "vandery_plus_refund_unmatched" }` and does not change the membership.
+- A parent that is the current invoice, but an amount that is not a full refund, logs `{ "alert": "vandery_plus_refund_partial" }` and does not change the membership.
+
+Replaying the same credit-note id is idempotent and does not apply the refund twice.
 
 ## Amount: net, gross, and coupons
 

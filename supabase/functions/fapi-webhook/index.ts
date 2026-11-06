@@ -25,9 +25,12 @@ import {
   fapiProductRoute,
   classifyFapiMembershipEvent,
   invoiceCustomField,
+  invoiceAbsoluteTotalCents,
+  invoiceParentId,
   isMembershipRefundInvoice,
   membershipAmountAlert,
   membershipInvoiceOutcome,
+  membershipRefundProductMatches,
   parseSandboxEvent,
   parseVanderyPlusNotes,
   plusRowFromDb,
@@ -124,30 +127,42 @@ Deno.serve(async (req) => {
     // Notes are user-controlled. A cheap challenge form that copies
     // viateria-plus notes must not activate membership.
     const product = vanderyPlusProductConfigFromEnv((key) => Deno.env.get(key));
-    // A credit note can carry a negative total. That must not be an amount skip.
+    // A credit note still has to match the VANDERY+ product. The negative
+    // total is the refund amount, not a reason to skip the id check.
     if (isMembershipRefundInvoice(invoice)) {
-      const admin = serviceClient();
-      const result = await deliverMembershipInvoice(admin, invoice, invoiceNotes);
-      return json(result.body, result.status);
-    }
-    const outcome = membershipInvoiceOutcome(invoice, product);
-    if (outcome.kind === "amount_mismatch") {
-      const alert = membershipAmountAlert({
-        invoiceId: fapiInvoiceId(invoice),
-        expectedCents: outcome.expectedCents,
-        actualCents: outcome.actualCents,
-      });
-      console.error(JSON.stringify(alert));
-      return json({ status: "AMOUNT_MISMATCH", ...alert }, 409);
-    }
-    if (outcome.kind !== "ok") {
-      return json({
-        status: "SKIPPED",
-        message: "not the VANDERY+ product",
-      });
+      if (!membershipRefundProductMatches(invoice, product)) {
+        return json({
+          status: "SKIPPED",
+          message: "not the VANDERY+ product",
+        });
+      }
+    } else {
+      const outcome = membershipInvoiceOutcome(invoice, product);
+      if (outcome.kind === "amount_mismatch") {
+        const alert = membershipAmountAlert({
+          invoiceId: fapiInvoiceId(invoice),
+          expectedCents: outcome.expectedCents,
+          actualCents: outcome.actualCents,
+        });
+        console.error(JSON.stringify(alert));
+        return json({ status: "AMOUNT_MISMATCH", ...alert }, 409);
+      }
+      if (outcome.kind !== "ok") {
+        return json({
+          status: "SKIPPED",
+          message: "not the VANDERY+ product",
+        });
+      }
     }
     const admin = serviceClient();
     const result = await deliverMembershipInvoice(admin, invoice, invoiceNotes);
+    if (typeof result.body.alert === "string") {
+      console.error(JSON.stringify({
+        alert: result.body.alert,
+        invoiceId: fapiInvoiceId(invoice),
+        parent: invoice.parent ?? null,
+      }));
+    }
     return json(result.body, result.status);
   }
 
@@ -451,13 +466,18 @@ function supabasePlusStore(admin: SupabaseClient): PlusStore {
         status?: string;
         reason?: string;
         idempotent?: boolean;
+        alert?: string;
       };
       if (payload.status === "rejected") {
         throw new Error(payload.reason ?? "rejected");
       }
       const row = await this.load(input.membershipId);
       if (!row) throw new Error("membership missing after commit");
-      return { idempotent: payload.idempotent === true, row };
+      return {
+        idempotent: payload.idempotent === true,
+        row,
+        ...(typeof payload.alert === "string" ? { alert: payload.alert } : {}),
+      };
     },
   };
 }
@@ -505,6 +525,21 @@ async function deliverMembershipInvoice(
         row: loaded,
       };
     }
+    let paidInvoiceIds: string[] = [];
+    if (kind === "refund") {
+      const { data, error } = await admin
+        .from("vandery_plus_webhook_events")
+        .select("fapi_invoice_id")
+        .eq("user_id", loaded.userId)
+        .in("event_kind", ["paid_first", "renew"]);
+      if (error) throw new Error(error.message);
+      paidInvoiceIds = (data ?? [])
+        .map((row) => {
+          const id = (row as { fapi_invoice_id?: unknown }).fapi_invoice_id;
+          return typeof id === "string" ? id : "";
+        })
+        .filter((id) => id.length > 0);
+    }
     return await deliverVanderyPlus(store, {
       kind,
       invoiceId,
@@ -517,6 +552,9 @@ async function deliverMembershipInvoice(
       amountCents: invoiceTotalCents(invoice),
       currency: invoiceCurrencyCode(invoice),
       now: new Date().toISOString(),
+      parentInvoiceId: kind === "refund" ? invoiceParentId(invoice) : null,
+      paidInvoiceIds,
+      refundCents: kind === "refund" ? invoiceAbsoluteTotalCents(invoice) : null,
     });
   } catch (error) {
     console.error("fapi-webhook membership commit failed", error);

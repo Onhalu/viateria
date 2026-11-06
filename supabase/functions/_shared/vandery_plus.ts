@@ -54,6 +54,12 @@ export type PlusEvent = {
   amountCents?: number | null;
   currency?: string | null;
   now: string;
+  /** Credit-note `invoice.parent`. Required before a refund can revoke. */
+  parentInvoiceId?: string | null;
+  /** Invoice ids that already have a paid_first or renew event for this user. */
+  paidInvoiceIds?: readonly string[];
+  /** Absolute refund amount in cents. A full refund matches the charged amount. */
+  refundCents?: number | null;
 };
 
 export type PlusPatch = Record<string, unknown>;
@@ -184,7 +190,12 @@ export function nextMembershipPatch(
     case "cancel":
       return { cancel_at_period_end: true };
     case "refund":
-      return { status: "revoked", cancel_at_period_end: false };
+      return {
+        status: "revoked",
+        cancel_at_period_end: false,
+        refund_parent: event.parentInvoiceId ?? null,
+        refund_cents: event.refundCents ?? null,
+      };
     case "payment_failed":
       // An unpaid notice must not burn the pending checkout. A later paid
       // event for the same invoice still has to activate.
@@ -201,7 +212,7 @@ export type PlusStore = {
     kind: PlusKind;
     invoiceId: string;
     patch: PlusPatch;
-  }): Promise<{ idempotent: boolean; row: PlusRow }>;
+  }): Promise<{ idempotent: boolean; row: PlusRow; alert?: string }>;
 };
 
 export type DeliveryResult = {
@@ -234,14 +245,35 @@ export async function deliverVanderyPlus(
     };
   }
   const patch = nextMembershipPatch(row, event);
+  let commitPatch = patch;
+  let alert: string | undefined;
+  if (event.kind === "refund") {
+    const decision = planMembershipRefund({
+      parentInvoiceId: event.parentInvoiceId ?? null,
+      paidInvoiceIds: event.paidInvoiceIds ?? [],
+      currentInvoiceId: row.fapiInvoiceId,
+      refundCents: event.refundCents ?? null,
+      originalCents: row.amountCents,
+    });
+    if (!decision.apply) {
+      alert = decision.alert;
+      // Keep the parent on the patch so SQL can record the same alert.
+      // Do not send status: a partial or unmatched refund must not revoke.
+      commitPatch = {
+        refund_parent: event.parentInvoiceId ?? null,
+        refund_cents: event.refundCents ?? null,
+      };
+    }
+  }
   const committed = await store.commit({
     membershipId: row.id,
     userId: row.userId,
     key: eventKey(event.kind, event.invoiceId),
     kind: event.kind,
     invoiceId: event.invoiceId,
-    patch,
+    patch: commitPatch,
   });
+  const reportedAlert = committed.alert ?? alert;
   return {
     status: 200,
     body: {
@@ -250,8 +282,12 @@ export async function deliverVanderyPlus(
       membership_status: committed.row.status,
       expires_at: committed.row.expiresAt,
       cancel_at_period_end: committed.row.cancelAtPeriodEnd,
+      ...(reportedAlert ? { alert: reportedAlert } : {}),
     },
-    wrote: !committed.idempotent && Object.keys(patch).length > 0,
+    wrote: !committed.idempotent && !reportedAlert &&
+      Object.keys(commitPatch).some((key) =>
+        key !== "refund_parent" && key !== "refund_cents"
+      ),
     row: committed.row,
   };
 }
@@ -602,6 +638,59 @@ export function membershipInvoiceOutcome(
   return { kind: "ok" };
 }
 
+export type RefundAlert =
+  | "vandery_plus_refund_unmatched"
+  | "vandery_plus_refund_partial";
+
+/**
+ * A refund revokes only when `parent` is the current-period invoice and that
+ * invoice already has a paid_first or renew event, and the amount is a full
+ * refund (exact, 1 CZK, or 21% net/gross). Otherwise the membership stays.
+ * Default pending Ondřej. See docs/vandery-plus/fapi-event-assumptions.md.
+ */
+export function planMembershipRefund(input: {
+  parentInvoiceId: string | null;
+  paidInvoiceIds: readonly string[];
+  currentInvoiceId: string | null;
+  refundCents: number | null;
+  originalCents: number | null;
+}): { apply: true } | { apply: false; alert: RefundAlert } {
+  const parent = input.parentInvoiceId?.trim() || null;
+  const current = input.currentInvoiceId?.trim() || null;
+  const parentIsPaid = parent != null &&
+    input.paidInvoiceIds.some((id) => id === parent);
+  if (!parent || parent === "0" || !parentIsPaid || parent !== current) {
+    return { apply: false, alert: "vandery_plus_refund_unmatched" };
+  }
+  if (
+    input.refundCents == null ||
+    input.originalCents == null ||
+    !amountsMatchNetOrGross(Math.abs(input.refundCents), input.originalCents)
+  ) {
+    return { apply: false, alert: "vandery_plus_refund_partial" };
+  }
+  return { apply: true };
+}
+
+/** Parent invoice id from a FAPI credit note. `0` and blank are no parent. */
+export function invoiceParentId(invoice: FapiInvoice): string | null {
+  if (invoice.parent == null) return null;
+  const text = String(invoice.parent).trim();
+  if (!text || text === "0") return null;
+  return text;
+}
+
+/** Absolute `invoice.total` in cents, including a negative credit note. */
+export function invoiceAbsoluteTotalCents(invoice: FapiInvoice): number | null {
+  const major = typeof invoice.total === "number"
+    ? invoice.total
+    : typeof invoice.total === "string" && invoice.total.trim()
+    ? Number(invoice.total)
+    : null;
+  if (major == null || !Number.isFinite(major)) return null;
+  return Math.round(Math.abs(major) * 100);
+}
+
 export function membershipAmountAlert(input: {
   invoiceId: string | null;
   expectedCents: number | null;
@@ -626,6 +715,36 @@ export function membershipProductMatches(
   config: VanderyPlusProductConfig,
 ): boolean {
   return membershipInvoiceOutcome(invoice, config).kind === "ok";
+}
+
+/**
+ * Product ids for a credit note. The negative total is the refund amount,
+ * not a reason to skip the item, form, and product checks.
+ */
+export function membershipRefundProductMatches(
+  invoice: FapiInvoice,
+  config: VanderyPlusProductConfig,
+): boolean {
+  const configured = config.itemIds.length + config.formIds.length +
+    config.productIds.length;
+  if (config.amountCents == null || configured === 0) return false;
+  if (
+    config.itemIds.length > 0 &&
+    !invoiceItemIds(invoice).some((id) => config.itemIds.includes(id))
+  ) {
+    return false;
+  }
+  if (config.formIds.length > 0) {
+    const formId = invoiceFormId(invoice);
+    if (!formId || !config.formIds.includes(formId)) return false;
+  }
+  if (
+    config.productIds.length > 0 &&
+    !invoiceProductIds(invoice).some((id) => config.productIds.includes(id))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function invoiceCustomField(
