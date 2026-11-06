@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/locale_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/motion_tokens.dart';
 import '../layout/breakpoints.dart';
+import '../motion/motion_reduce.dart';
 import 'bottom_bar_extension.dart';
 import 'shell_bottom_surface.dart';
 
@@ -143,24 +145,15 @@ class _ShellBottomSlot extends StatelessWidget {
           nav: SizedBox(
             key: const Key('app-bottom-nav'),
             height: AppShell.barHeight,
-            child: Row(
-              children: [
-                for (var index = 0; index < destinations.length; index++)
-                  Expanded(
-                    child: _SageNavDestination(
-                      icon: destinations[index].icon,
-                      selectedIcon: destinations[index].selectedIcon,
-                      label: destinations[index].label,
-                      selected: navigationShell.currentIndex == index,
-                      onTap: () {
-                        navigationShell.goBranch(
-                          index,
-                          initialLocation: index == navigationShell.currentIndex,
-                        );
-                      },
-                    ),
-                  ),
-              ],
+            child: _NavPillBar(
+              destinations: destinations,
+              selectedIndex: navigationShell.currentIndex,
+              onSelected: (index) {
+                navigationShell.goBranch(
+                  index,
+                  initialLocation: index == navigationShell.currentIndex,
+                );
+              },
             ),
           ),
         );
@@ -221,6 +214,83 @@ class _NavRail extends StatelessWidget {
   }
 }
 
+/// Icon band, gap, and label band. The sliding pill shares [iconTop] so it
+/// stays behind the glyph while it travels.
+const _navIconBand = 32.0;
+const _navLabelGap = 4.0;
+const _navLabelBand = 18.0;
+const _navIconTop =
+    (AppShell.barHeight - _navIconBand - _navLabelGap - _navLabelBand) / 2;
+
+class _NavPillBar extends StatelessWidget {
+  const _NavPillBar({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<({IconData icon, IconData selectedIcon, String label})>
+  destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = motionReduced(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final count = destinations.length;
+        final slot = count == 0 ? 0.0 : constraints.maxWidth / count;
+        final left =
+            selectedIndex * slot + (slot - AppShell.indicatorSize.width) / 2;
+        return Stack(
+          children: [
+            AnimatedPositioned(
+              key: const Key('nav-pill-motion'),
+              duration: reduced ? Duration.zero : MotionTokens.tab,
+              curve: MotionTokens.tabCurve,
+              left: left,
+              top: _navIconTop,
+              width: AppShell.indicatorSize.width,
+              height: AppShell.indicatorSize.height,
+              child: const _NavIndicator(),
+            ),
+            Row(
+              children: [
+                for (var index = 0; index < count; index++)
+                  Expanded(
+                    child: _SageNavDestination(
+                      icon: destinations[index].icon,
+                      selectedIcon: destinations[index].selectedIcon,
+                      label: destinations[index].label,
+                      selected: selectedIndex == index,
+                      onTap: () => onSelected(index),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NavIndicator extends StatelessWidget {
+  const _NavIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('sage-nav-indicator'),
+      decoration: BoxDecoration(
+        color: AppShell.selectedPill,
+        borderRadius: BorderRadius.circular(AppShell.indicatorRadius),
+      ),
+    );
+  }
+}
+
 class _SageNavDestination extends StatefulWidget {
   const _SageNavDestination({
     required this.icon,
@@ -269,35 +339,30 @@ class _SageNavDestinationState extends State<_SageNavDestination> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                key: widget.selected ? const Key('sage-nav-indicator') : null,
-                width: AppShell.indicatorSize.width,
-                height: AppShell.indicatorSize.height,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: widget.selected
-                      ? AppShell.selectedPill
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppShell.indicatorRadius),
-                ),
+              SizedBox(
+                height: _navIconBand,
                 child: Icon(
                   widget.selected ? widget.selectedIcon : widget.icon,
                   color: color,
                   size: 22,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                widget.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: color,
-                  fontSize: AppTheme.labelSize,
-                  fontWeight: widget.selected
-                      ? FontWeight.w600
-                      : FontWeight.w500,
+              const SizedBox(height: _navLabelGap),
+              SizedBox(
+                height: _navLabelBand,
+                child: Text(
+                  widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: AppTheme.labelSize,
+                    height: 1,
+                    fontWeight: widget.selected
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                  ),
                 ),
               ),
             ],

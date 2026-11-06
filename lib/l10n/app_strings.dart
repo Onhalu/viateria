@@ -283,6 +283,8 @@ class AppStrings {
     'deadlinePassed',
     'featuredPrevious',
     'featuredNext',
+    'savePlace',
+    'placeSaved',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -555,6 +557,8 @@ class AppStrings {
   String get deadlinePassed => t('deadlinePassed');
   String get featuredPrevious => t('featuredPrevious');
   String get featuredNext => t('featuredNext');
+  String get savePlace => t('savePlace');
+  String get placeSaved => t('placeSaved');
 
   /// "Splň do {date}" / "Complete by {date}" / "Abschließen bis {date}".
   String rewardDeadlineLabel(String formattedDate) {
@@ -967,6 +971,8 @@ class AppStrings {
       'deadlinePassed': 'Deadline passed',
       'featuredPrevious': 'Previous',
       'featuredNext': 'Next',
+      'savePlace': 'Save place',
+      'placeSaved': 'Place saved',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -1252,6 +1258,8 @@ class AppStrings {
       'deadlinePassed': 'Termín vypršel',
       'featuredPrevious': 'Předchozí',
       'featuredNext': 'Další',
+      'savePlace': 'Uložit místo',
+      'placeSaved': 'Místo je uložené',
     },
     'de': {
       'appName': 'VANDERY',
@@ -1542,6 +1550,8 @@ class AppStrings {
       'deadlinePassed': 'Frist abgelaufen',
       'featuredPrevious': 'Zurück',
       'featuredNext': 'Weiter',
+      'savePlace': 'Ort speichern',
+      'placeSaved': 'Ort gespeichert',
     },
   };
 }

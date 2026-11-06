@@ -13,6 +13,7 @@ import '../../theme/brand_colors.dart';
 import '../diploma_share.dart';
 import '../fapi_checkout_window.dart';
 import '../layout/breakpoints.dart';
+import '../motion/motion_shake.dart';
 import '../widgets/app_network_image.dart';
 import '../widgets/error_state.dart';
 
@@ -247,18 +248,41 @@ class _DiplomaViewState extends State<DiplomaView> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(
-                    key: const Key('diploma-name-field'),
-                    controller: controller,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
+                  MotionShake(
+                    active: invalid,
+                    child: TextField(
+                      key: const Key('diploma-name-field'),
+                      controller: controller,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: invalid
+                                ? BrandColors.error
+                                : BrandColors.beige,
+                            width: invalid ? 1.5 : 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: invalid
+                                ? BrandColors.error
+                                : BrandColors.forest,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   if (invalid) ...[
                     const SizedBox(height: 8),
                     Text(
                       strings.diplomaNameInvalid,
                       key: const Key('diploma-name-invalid'),
-                      style: const TextStyle(color: BrandColors.forest),
+                      style: const TextStyle(color: BrandColors.error),
                     ),
                   ],
                 ],
