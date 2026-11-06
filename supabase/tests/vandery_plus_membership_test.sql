@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(48);
+select plan(49);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -292,6 +292,13 @@ select throws_ok(
   'P0001',
   'invalid source',
   'client RPC rejects source=verify'
+);
+
+select throws_ok(
+  $$select public.can_record_place_visit('map')$$,
+  '42501',
+  'permission denied',
+  'P1 clients cannot execute can_record_place_visit'
 );
 
 select throws_ok(

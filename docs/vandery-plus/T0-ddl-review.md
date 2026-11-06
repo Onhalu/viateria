@@ -27,6 +27,13 @@ The migration `20261106113000_vandery_plus_membership.sql` matches the approved 
 - **No view** over the membership table, so the security-invoker view rule does not apply.
 - **Account delete (DB-16, §14.3 OQ3).** `BEFORE DELETE` on `profiles` anonymizes the membership row instead of cascading it away. `user_id` becomes null (tombstone), `anonymized_at` is set, `fapi_subscription_id` is cleared. Amount, currency, invoice id, and period timestamps stay as the accounting trace. The partial unique index ignores anonymized rows, so tombstones do not collide.
 
+## DBA P1 / P2
+
+`20261106120200_vandery_plus_dba_p1_p2.sql`:
+
+- **P1.** `can_record_place_visit` is not executable by `authenticated`. The map and prefs RPCs are security definer and call it as the owner. Trigger functions `touch_vandery_plus_membership` and `anonymize_vandery_plus_before_profile_delete` are not executable by `anon` or `authenticated`.
+- **P2.** `vandery_plus_memberships_select_own` uses `(select auth.uid()) = user_id` so the uid is planned once per statement.
+
 ## Map gate (A2)
 
 `record_place_visit` and `record_place_visits_batch` raise `membership_required` (`P0001`) when `source = 'map'` and `has_active_vandery_plus()` is false.
