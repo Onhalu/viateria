@@ -354,6 +354,38 @@ export async function startVanderyPlusCheckout(
   return { status: 200, body: { url } };
 }
 
+/**
+ * Real FAPI invoice shapes. See docs/vandery-plus/fapi-event-assumptions.md.
+ * The invented `vandery_plus_event` custom field is ignored.
+ */
+export function classifyFapiMembershipEvent(
+  invoice: FapiInvoice,
+  status: PlusStatus,
+): PlusKind | null {
+  const type = String(invoice.type ?? "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("-", "_");
+  if (type === "credit_note" || type === "dobropis") return "refund";
+  if (
+    invoice.cancelled === true || invoice.cancelled === 1 ||
+    invoice.cancelled === "1" || invoice.cancelled === "true"
+  ) {
+    return "cancel";
+  }
+  const paid = invoice.paid === true || invoice.paid === 1 ||
+    invoice.paid === "1" || invoice.paid === "true";
+  if (!paid) {
+    if (status === "pending" || status === "active") return "payment_failed";
+    return null;
+  }
+  const parent = invoice.parent;
+  const hasParent = parent != null && String(parent).trim() !== "" &&
+    String(parent) !== "0";
+  if (hasParent || status === "active" || status === "expired") return "renew";
+  return "paid_first";
+}
+
 export function inferKind(input: {
   explicit: string | null;
   invoicePaid: boolean;

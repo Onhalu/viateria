@@ -23,7 +23,7 @@ import {
 import {
   deliverVanderyPlus,
   fapiProductRoute,
-  inferKind,
+  classifyFapiMembershipEvent,
   invoiceCustomField,
   membershipProductMatches,
   parseSandboxEvent,
@@ -464,11 +464,7 @@ async function deliverMembershipInvoice(
         row: null,
       };
     }
-    const kind = inferKind({
-      explicit: invoiceCustomField(invoice.custom_fields, "vandery_plus_event"),
-      invoicePaid: Boolean(invoice.paid),
-      status: loaded.status,
-    });
+    const kind = classifyFapiMembershipEvent(invoice, loaded.status);
     if (!kind) {
       return {
         status: 200,

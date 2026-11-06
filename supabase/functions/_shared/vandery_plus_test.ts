@@ -5,6 +5,7 @@
 import {
   addMonthsIso,
   applyPatch,
+  classifyFapiMembershipEvent,
   deliverVanderyPlus,
   eventKey,
   fapiProductRoute,
@@ -390,6 +391,49 @@ Deno.test("ED-12 client body user is not the write target", async () => {
   assert(store.commits[0] === "user-checkout", store.commits[0]);
   assert(store.rows.get("mem-1")!.userId === "user-checkout", "same user");
   assert(store.rows.get("mem-1")!.status === "active", "activated checkout user");
+});
+
+Deno.test("FAPI invoice shapes map without vandery_plus_event", () => {
+  const pending = "pending" as const;
+  const active = "active" as const;
+  assert(
+    classifyFapiMembershipEvent({ paid: true, type: "invoice" }, pending) ===
+      "paid_first",
+    "first paid invoice",
+  );
+  assert(
+    classifyFapiMembershipEvent(
+      { paid: true, type: "invoice", parent: 900 },
+      active,
+    ) === "renew",
+    "periodic child",
+  );
+  assert(
+    classifyFapiMembershipEvent({ paid: false, cancelled: true }, active) ===
+      "cancel",
+    "cancelled series",
+  );
+  assert(
+    classifyFapiMembershipEvent({ paid: false, type: "credit_note" }, active) ===
+      "refund",
+    "credit note",
+  );
+  assert(
+    classifyFapiMembershipEvent(
+      {
+        paid: true,
+        type: "invoice",
+        custom_fields: [{ name: "vandery_plus_event", value: "refund" }],
+      },
+      pending,
+    ) === "paid_first",
+    "custom field is ignored",
+  );
+  assert(
+    classifyFapiMembershipEvent({ paid: false, type: "proforma" }, pending) ===
+      "payment_failed",
+    "unpaid",
+  );
 });
 
 Deno.test("ED-14 retry of the first invoice does not add a month", async () => {
