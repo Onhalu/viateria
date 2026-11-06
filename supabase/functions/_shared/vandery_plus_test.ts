@@ -436,6 +436,30 @@ Deno.test("FAPI invoice shapes map without vandery_plus_event", () => {
   );
 });
 
+Deno.test("renew after expiry starts from now", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "expired",
+      expiresAt: "2026-10-01T00:00:00.000Z",
+    }),
+  ]);
+  await deliverVanderyPlus(
+    store,
+    event({
+      kind: "renew",
+      invoiceId: "inv-late",
+      now: "2026-11-06T00:00:00.000Z",
+    }),
+  );
+  assert(
+    store.rows.get("mem-1")!.expiresAt === "2026-12-06T00:00:00.000Z",
+    store.rows.get("mem-1")!.expiresAt,
+  );
+  assert(store.rows.get("mem-1")!.status === "active", "active again");
+});
+
 Deno.test("ED-14 retry of the first invoice does not add a month", async () => {
   assert(eventKey("inv-1") === "inv-1", "invoice id only");
   const store = new MemoryStore([

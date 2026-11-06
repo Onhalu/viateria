@@ -156,16 +156,22 @@ export function nextMembershipPatch(
         amount_cents: amount,
         currency,
       };
-    case "renew":
+    case "renew": {
+      const expiresMs = Date.parse(row.expiresAt);
+      const nowMs = Date.parse(event.now);
+      const base = Number.isFinite(expiresMs) && expiresMs > nowMs
+        ? row.expiresAt
+        : event.now;
       return {
         status: "active",
-        expires_at: addMonthsIso(row.expiresAt, 1),
+        expires_at: addMonthsIso(base, 1),
         cancel_at_period_end: false,
         fapi_subscription_id: subscription,
         fapi_invoice_id: event.invoiceId,
         amount_cents: amount,
         currency,
       };
+    }
     case "cancel":
       return { cancel_at_period_end: true };
     case "refund":
