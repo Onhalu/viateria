@@ -129,7 +129,7 @@ void main() {
     await tester.runAsync(_loadFonts);
     const slides = <int, String>{
       1: 'Odměny za ověřená místa',
-      2: 'Víc bodů v žebříčku',
+      2: 'Bod do žebříčku',
       3: 'Podpoříš projekt napřímo',
     };
     final captured = <int, List<int>>{};
