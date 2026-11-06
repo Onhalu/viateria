@@ -107,6 +107,19 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('web 1280 keeps the join CTA above the fold', (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_wrap(_services()));
+    await tester.pumpAndSettle();
+    final cta = tester.getTopLeft(find.byKey(const Key('vandery-plus-cta')));
+    final board = tester.getTopLeft(find.byKey(const Key('profile-leaderboard')));
+    expect(cta.dy, lessThan(800));
+    expect(cta.dy, greaterThan(board.dy));
+  });
+
   testWidgets('shows 0 / N per category and empty completed list', (
     tester,
   ) async {

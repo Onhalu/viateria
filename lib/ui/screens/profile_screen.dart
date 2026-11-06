@@ -245,9 +245,21 @@ class _ProfileStatsBody extends StatelessWidget {
     final titleStyle = Theme.of(context).textTheme.titleSmall
         ?.copyWith(fontWeight: FontWeight.w700, color: BrandColors.forest);
     final rows = [counts.take(2).toList(), counts.skip(2).take(2).toList()];
+    // 1280 web: leaderboard and the CTA sit above the fold. The CTA stays
+    // directly under the leaderboard card.
+    final wide = MediaQuery.sizeOf(context).width >= 1200;
+    final membership = <Widget>[
+      _LeaderboardCard(strings: strings, score: score),
+      VanderyPlusProfileSlot(
+        strings: strings,
+        active: membershipActive,
+        onJoin: onJoinVanderyPlus,
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (wide) ...membership,
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: KeyedSubtree(
@@ -333,13 +345,10 @@ class _ProfileStatsBody extends StatelessWidget {
                   ],
                 ),
         ),
-        const SizedBox(height: 12),
-        _LeaderboardCard(strings: strings, score: score),
-        VanderyPlusProfileSlot(
-          strings: strings,
-          active: membershipActive,
-          onJoin: onJoinVanderyPlus,
-        ),
+        if (!wide) ...[
+          const SizedBox(height: 12),
+          ...membership,
+        ],
       ],
     );
   }
