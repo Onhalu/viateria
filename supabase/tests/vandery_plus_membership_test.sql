@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(82);
+select plan(83);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1128,6 +1128,24 @@ select is(
   ),
   'active',
   'about 82% of the gross amount does not revoke'
+);
+
+select throws_ok(
+  $$select public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-bad',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y3',
+        'refund_cents', 'nope'
+      )
+    )$$,
+  '22023',
+  'refund_cents must be an integer',
+  'non-numeric refund_cents is invalid_parameter_value'
 );
 
 select is(

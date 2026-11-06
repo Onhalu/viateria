@@ -30,6 +30,7 @@ import {
   isMembershipRefundInvoice,
   membershipAmountAlert,
   membershipInvoiceOutcome,
+  membershipCommitFailure,
   membershipRefundProductMatches,
   parseSandboxEvent,
   parseVanderyPlusNotes,
@@ -558,13 +559,11 @@ async function deliverMembershipInvoice(
       refundCents: kind === "refund" ? invoiceAbsoluteTotalCents(invoice) : null,
     });
   } catch (error) {
-    console.error("fapi-webhook membership commit failed", error);
-    return {
-      status: 500,
-      body: { status: "FAILED", message: "membership commit failed" },
-      wrote: false,
-      row: null,
-    };
+    const failure = membershipCommitFailure(error);
+    if (failure.status === 500) {
+      console.error("fapi-webhook membership commit failed", error);
+    }
+    return { ...failure, wrote: false, row: null };
   }
 }
 

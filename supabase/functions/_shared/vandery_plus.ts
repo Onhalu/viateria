@@ -197,7 +197,7 @@ export function nextMembershipPatch(
         status: "revoked",
         cancel_at_period_end: false,
         refund_parent: event.parentInvoiceId ?? null,
-        refund_cents: event.refundCents ?? null,
+        refund_cents: parseRefundCents(event.refundCents ?? null),
       };
     case "payment_failed":
       // An unpaid notice must not burn the pending checkout. A later paid
@@ -264,7 +264,7 @@ export async function deliverVanderyPlus(
       // Do not send status: a partial or unmatched refund must not revoke.
       commitPatch = {
         refund_parent: event.parentInvoiceId ?? null,
-        refund_cents: event.refundCents ?? null,
+        refund_cents: parseRefundCents(event.refundCents ?? null),
       };
     }
   }
@@ -584,6 +584,40 @@ function withinCents(left: number, right: number): boolean {
  */
 export function amountsMatchGross(actual: number, expected: number): boolean {
   return withinCents(actual, expected);
+}
+
+/**
+ * Integer cents, or null when the caller omitted the amount.
+ * Anything else is a client error, not a 500 from a cast.
+ */
+export function parseRefundCents(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const text = typeof value === "number"
+    ? String(value)
+    : typeof value === "string"
+    ? value.trim()
+    : "";
+  if (!/^-?\d+$/.test(text)) {
+    throw new Error("refund_cents must be an integer");
+  }
+  return Math.abs(Number(text));
+}
+
+export function membershipCommitFailure(error: unknown): {
+  status: number;
+  body: { status: "FAILED"; message: string };
+} {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("refund_cents must be an integer")) {
+    return {
+      status: 400,
+      body: { status: "FAILED", message: "refund_cents must be an integer" },
+    };
+  }
+  return {
+    status: 500,
+    body: { status: "FAILED", message: "membership commit failed" },
+  };
 }
 
 /** Full refund is the charged gross amount, within 1 CZK. */

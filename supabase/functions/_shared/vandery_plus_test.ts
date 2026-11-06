@@ -17,6 +17,8 @@ import {
   invoiceAbsoluteTotalCents,
   invoiceParentId,
   membershipAmountAlert,
+  membershipCommitFailure,
+  parseRefundCents,
   membershipInvoiceOutcome,
   membershipProductMatches,
   membershipRefundProductMatches,
@@ -385,6 +387,23 @@ Deno.test("ED-11 challenge notes stay on purchases", () => {
   const route = source.indexOf("fapiProductRoute(invoiceNotes)");
   const purchaseWrite = source.indexOf('from("purchases")');
   assert(route >= 0 && purchaseWrite > route, "membership branch returns before purchases");
+});
+
+Deno.test("non-numeric refund_cents is a clean error", () => {
+  let message = "";
+  try {
+    parseRefundCents("nope");
+  } catch (error) {
+    message = error instanceof Error ? error.message : String(error);
+  }
+  assert(message === "refund_cents must be an integer", message);
+  assert(parseRefundCents(null) === null, "omitted cents");
+  assert(parseRefundCents("59900") === 59900, "numeric text");
+  const bad = membershipCommitFailure(new Error("refund_cents must be an integer"));
+  assert(bad.status === 400, String(bad.status));
+  assert(bad.body.message === "refund_cents must be an integer", bad.body.message);
+  const other = membershipCommitFailure(new Error("connection reset"));
+  assert(other.status === 500, "unrelated failures stay 500");
 });
 
 Deno.test("negative credit note is a refund and is not skipped", () => {
