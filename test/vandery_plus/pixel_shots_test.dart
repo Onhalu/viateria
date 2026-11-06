@@ -146,6 +146,56 @@ void main() {
     expect(captured[2], isNot(equals(captured[3])));
     expect(captured[1], isNot(equals(captured[3])));
   });
+
+  testWidgets('paywall sheet, dialog, and slides in cs en de', (tester) async {
+    await tester.runAsync(_loadFonts);
+    const titles = <String, List<String>>{
+      'cs': [
+        'Odemkni ověřování míst přímo z mapy.',
+        'Odměny za ověřená místa',
+        'Bod do žebříčku',
+        'Podpoříš projekt napřímo',
+      ],
+      'en': [
+        'Unlock place checks right on the map',
+        'Rewards for verified places',
+        'A point on the leaderboard',
+        'Support the project directly',
+      ],
+      'de': [
+        'Orte direkt auf der Karte freischalten',
+        'Belohnungen für bestätigte Orte',
+        'Ein Punkt in der Rangliste',
+        'Das Projekt direkt unterstützen',
+      ],
+    };
+    for (final locale in titles.keys) {
+      final suffix = locale == 'cs' ? '' : '-$locale';
+      await _shot(
+        tester,
+        const Size(390, 844),
+        'vandery-plus-paywall-sheet-390$suffix',
+        _paywall(width: 390, height: 844 * 0.82, handle: true, locale: locale),
+      );
+      expect(find.byKey(const Key('vandery-plus-pay')), findsOneWidget);
+      await _shot(
+        tester,
+        const Size(1280, 800),
+        'vandery-plus-paywall-dialog-1280$suffix',
+        _paywall(width: 480, height: 640, handle: false, locale: locale),
+      );
+      expect(find.byKey(const Key('vandery-plus-pay')), findsOneWidget);
+      for (var page = 0; page < 4; page++) {
+        await _shotSlide(
+          tester,
+          page: page,
+          name: 'vandery-plus-slide-${page + 1}-390$suffix',
+          title: titles[locale]![page],
+          locale: locale,
+        );
+      }
+    }
+  });
 }
 
 ThemeData _shotTheme() {
@@ -403,13 +453,19 @@ Future<List<int>> _shotSlide(
   required int page,
   required String name,
   required String title,
+  String locale = 'cs',
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(390, 844);
   await tester.pumpWidget(
     RepaintBoundary(
       key: const Key('shot'),
-      child: _paywall(width: 390, height: 844 * 0.82, handle: true),
+      child: _paywall(
+        width: 390,
+        height: 844 * 0.82,
+        handle: true,
+        locale: locale,
+      ),
     ),
   );
   await tester.pumpAndSettle();
