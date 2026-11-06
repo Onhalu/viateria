@@ -23,6 +23,7 @@ import {
   membershipProductMatches,
   membershipRefundProductMatches,
   planMembershipRefund,
+  vanderyPlusConfigAlert,
   vanderyPlusProductConfigFromEnv,
   parseVanderyPlusNotes,
   planVanderyPlusForm,
@@ -439,6 +440,46 @@ Deno.test("non-numeric refund_cents is a clean error", () => {
   assert(bad.body.message === "refund_cents must be an integer", bad.body.message);
   const other = membershipCommitFailure(new Error("connection reset"));
   assert(other.status === 500, "unrelated failures stay 500");
+});
+
+Deno.test("item id without product id fails the refund config loudly", () => {
+  const config = vanderyPlusProductConfigFromEnv((key) => {
+    const values: Record<string, string> = {
+      FAPI_VANDERY_PLUS_AMOUNT_CENTS: "59900",
+      FAPI_VANDERY_PLUS_ITEM_ID: "77",
+      FAPI_VANDERY_PLUS_FORM_ID: "55",
+    };
+    return values[key];
+  });
+  const message = vanderyPlusConfigAlert(config);
+  assert(
+    message ===
+      "FAPI_VANDERY_PLUS_ITEM_ID is set without FAPI_VANDERY_PLUS_PRODUCT_ID; every refund is SKIPPED",
+    message ?? "missing alert",
+  );
+  const invoice = {
+    paid: false,
+    total: -599,
+    type: "credit_note",
+    form: 55,
+    items: [{ id: 77, name: "VANDERY+", code: "vandery-plus" }],
+  };
+  assert(!membershipRefundProductMatches(invoice, config), "refund is skipped");
+  const ready = vanderyPlusProductConfigFromEnv((key) => {
+    const values: Record<string, string> = {
+      FAPI_VANDERY_PLUS_AMOUNT_CENTS: "59900",
+      FAPI_VANDERY_PLUS_ITEM_ID: "77",
+      FAPI_VANDERY_PLUS_PRODUCT_ID: "vandery-plus",
+    };
+    return values[key];
+  });
+  assert(vanderyPlusConfigAlert(ready) === null, "product id present");
+  const source = Deno.readTextFileSync(
+    new URL("../fapi-webhook/index.ts", import.meta.url),
+  );
+  const alert = source.indexOf("vanderyPlusConfigAlert(product)");
+  const log = source.indexOf('alert: "vandery_plus_config"');
+  assert(alert >= 0 && log > alert, "webhook logs the config error");
 });
 
 Deno.test("negative credit note is a refund and is not skipped", () => {

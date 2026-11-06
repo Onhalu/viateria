@@ -32,6 +32,7 @@ import {
   membershipInvoiceOutcome,
   membershipCommitFailure,
   membershipRefundProductMatches,
+  vanderyPlusConfigAlert,
   parseSandboxEvent,
   parseVanderyPlusNotes,
   plusRowFromDb,
@@ -128,6 +129,13 @@ Deno.serve(async (req) => {
     // Notes are user-controlled. A cheap challenge form that copies
     // viateria-plus notes must not activate membership.
     const product = vanderyPlusProductConfigFromEnv((key) => Deno.env.get(key));
+    const configAlert = vanderyPlusConfigAlert(product);
+    if (configAlert) {
+      console.error(JSON.stringify({
+        alert: "vandery_plus_config",
+        message: configAlert,
+      }));
+    }
     // A credit note still has to match the VANDERY+ product id. The negative
     // total is the refund amount, not a reason to skip that check. The parent
     // invoice is checked when the event is committed.

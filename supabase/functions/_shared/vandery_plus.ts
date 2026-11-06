@@ -545,6 +545,19 @@ export function vanderyPlusProductConfigFromEnv(
   };
 }
 
+/**
+ * Item id without product id makes every refund SKIPPED. Callers must log
+ * the message and refuse to treat that config as ready.
+ */
+export function vanderyPlusConfigAlert(
+  config: VanderyPlusProductConfig,
+): string | null {
+  if (config.itemIds.length > 0 && config.productIds.length === 0) {
+    return "FAPI_VANDERY_PLUS_ITEM_ID is set without FAPI_VANDERY_PLUS_PRODUCT_ID; every refund is SKIPPED";
+  }
+  return null;
+}
+
 function idList(value: unknown): string[] {
   if (typeof value === "number" && Number.isFinite(value)) return [String(value)];
   if (typeof value === "string" && value.trim()) return [value.trim()];
