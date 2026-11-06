@@ -135,9 +135,11 @@ void main() {
     final repo = MemoryMembershipRepository();
     final session = _session(repo);
     var verifies = 0;
+    await session.refresh();
     await tester.pumpWidget(
       _gate(session: session, onLockedTap: () {}, onVerify: () => verifies++),
     );
+    expect(find.byKey(const Key('map-place-lock')), findsOneWidget);
     repo.current = membershipFromRow({
       'status': 'active',
       'expires_at': '2026-12-06T00:00:00.000Z',
@@ -156,6 +158,25 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 450));
     expect(verifies, 1);
+  });
+
+  testWidgets('login that is already active does not play the padlock', (tester) async {
+    final repo = MemoryMembershipRepository(
+      initial: membershipFromRow({
+        'status': 'active',
+        'expires_at': '2026-12-06T00:00:00.000Z',
+      }),
+    );
+    final session = _session(repo);
+    await tester.pumpWidget(
+      _gate(session: session, onLockedTap: () {}, onVerify: () {}),
+    );
+    expect(find.byKey(const Key('map-place-unlock')), findsNothing);
+    await session.refresh();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('map-place-unlock')), findsNothing);
+    expect(find.byKey(const Key('map-poi-verify')), findsOneWidget);
   });
 
   testWidgets('challenge sheet is not wrapped by the map lock', (tester) async {

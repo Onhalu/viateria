@@ -21,6 +21,10 @@ class VanderyPlusSession extends ChangeNotifier {
   VanderyPlusMembership membership = VanderyPlusMembership.none;
   VanderyPlusPhase phase = VanderyPlusPhase.idle;
   VanderyPlusMessage message = VanderyPlusMessage.none;
+
+  /// False until the first [refresh] finishes. The map lock must not treat
+  /// that unknown row as a locked→active transition.
+  var resolved = false;
   var _busy = false;
 
   DateTime get now => _clock();
@@ -55,6 +59,7 @@ class VanderyPlusSession extends ChangeNotifier {
         message = VanderyPlusMessage.stillInactive;
       }
     }
+    resolved = true;
     notifyListeners();
   }
 

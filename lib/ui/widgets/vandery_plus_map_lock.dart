@@ -31,18 +31,16 @@ class MapPlaceVerifyGate extends StatefulWidget {
 }
 
 class _MapPlaceVerifyGateState extends State<MapPlaceVerifyGate> {
-  var _sawLocked = false;
+  var _baseline = false;
+  var _sawInactive = false;
   var _animating = false;
   var _unlocked = false;
 
   @override
   void initState() {
     super.initState();
-    _sawLocked = !widget.session.isActive;
     widget.session.addListener(_onSession);
-    if (widget.session.isActive && !_sawLocked) {
-      _unlocked = true;
-    }
+    _sync(notify: false);
   }
 
   @override
@@ -53,29 +51,59 @@ class _MapPlaceVerifyGateState extends State<MapPlaceVerifyGate> {
 
   void _onSession() {
     if (!mounted) return;
+    _sync(notify: true);
+  }
+
+  /// The first resolved snapshot is the baseline. Login that is already
+  /// active opens the verify chip with no padlock animation. A later change
+  /// from inactive to active is the only play.
+  void _sync({required bool notify}) {
+    void apply(VoidCallback change) {
+      if (notify) {
+        setState(change);
+      } else {
+        change();
+      }
+    }
+
+    if (!widget.session.resolved) {
+      if (notify) setState(() {});
+      return;
+    }
     final active = widget.session.isActive;
+    if (!_baseline) {
+      apply(() {
+        _baseline = true;
+        if (active) {
+          _unlocked = true;
+        } else {
+          _sawInactive = true;
+        }
+      });
+      return;
+    }
     if (!active) {
-      setState(() {
-        _sawLocked = true;
+      apply(() {
+        _sawInactive = true;
         _animating = false;
         _unlocked = false;
       });
       return;
     }
-    if (!_sawLocked || _unlocked || _animating) {
-      setState(() {});
+    if (!_sawInactive || _unlocked || _animating) {
+      if (notify) setState(() {});
       return;
     }
     if (!playsUnlockAnimation(UnlockTrigger.serverMembershipActive)) return;
     if (widget.session.phase == VanderyPlusPhase.verifying) {
-      setState(() {});
+      if (notify) setState(() {});
       return;
     }
     if (!unlockReplayMemory.claim(membershipUnlockEntity)) {
-      setState(() => _unlocked = true);
+      apply(() => _unlocked = true);
       return;
     }
-    setState(() => _animating = true);
+    apply(() => _animating = true);
   }
 
   @override
