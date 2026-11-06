@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(15);
 
 select ok(
   to_regclass('public.vandery_plus_memberships') is not null,
@@ -37,6 +37,30 @@ select throws_ok(
   '42501',
   'viateria.allow_destructive_rollback must be on before dropping memberships and webhook tombstones',
   'rollback refuses tombstone drops when the guard is off'
+);
+
+-- Guard off: the file must fail before any DROP, including outside a
+-- single transaction. Roll back to the savepoint so the chain is intact.
+savepoint vandery_guard_off;
+select set_config('viateria.allow_destructive_rollback', 'off', true);
+\set ON_ERROR_STOP off
+\ir fixtures/20261106113000_vandery_plus_membership.rollback
+\set ON_ERROR_STOP on
+rollback to savepoint vandery_guard_off;
+
+select ok(
+  to_regclass('public.vandery_plus_memberships') is not null,
+  'guard off drops nothing: memberships still exist'
+);
+
+select ok(
+  to_regclass('public.vandery_plus_webhook_events') is not null,
+  'guard off drops nothing: webhook events still exist'
+);
+
+select ok(
+  to_regprocedure('private.commit_vandery_plus_event(uuid,uuid,text,text,text,jsonb)') is not null,
+  'guard off drops nothing: private commit still exists'
 );
 
 select set_config('viateria.allow_destructive_rollback', 'on', true);

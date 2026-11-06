@@ -13,6 +13,19 @@
 -- vandery_plus_memberships and vandery_plus_webhook_events.
 -- Does not change ON DELETE behaviour of purchases or challenge_diplomas.
 -- Does not drop the diploma catalog.
+--
+-- The guard is first. Without a single transaction, a later failure must
+-- not already have dropped private.* or the membership tables.
+
+do $guard$
+begin
+  if coalesce(current_setting('viateria.allow_destructive_rollback', true), '')
+     is distinct from 'on' then
+    raise exception 'viateria.allow_destructive_rollback must be on before dropping memberships and webhook tombstones'
+      using errcode = '42501';
+  end if;
+end
+$guard$;
 
 drop trigger if exists vandery_plus_anonymize_on_profile_delete on public.profiles;
 drop trigger if exists vandery_plus_memberships_touch on public.vandery_plus_memberships;
@@ -106,16 +119,6 @@ create policy place_visits_insert_own
   for insert
   to authenticated
   with check (user_id = auth.uid());
-
-do $guard$
-begin
-  if coalesce(current_setting('viateria.allow_destructive_rollback', true), '')
-     is distinct from 'on' then
-    raise exception 'viateria.allow_destructive_rollback must be on before dropping memberships and webhook tombstones'
-      using errcode = '42501';
-  end if;
-end
-$guard$;
 
 drop table if exists public.vandery_plus_webhook_events;
 drop table if exists public.vandery_plus_memberships;
