@@ -486,13 +486,24 @@ Deno.test("ED-13 cheap challenge form with VANDERY+ notes does not match", () =>
   const couponOutcome = membershipInvoiceOutcome(coupon, config);
   assert(couponOutcome.kind === "amount_mismatch", JSON.stringify(couponOutcome));
   const net = Math.round(59900 / 1.21);
-  assert(amountsMatchNetOrGross(net, 59900), "net of the gross price is accepted");
+  assert(!amountsMatchNetOrGross(net, 59900), "net of the gross price is not accepted");
+  assert(amountsMatchNetOrGross(59850, 59900), "within 1 CZK of the gross price");
+  assert(
+    membershipInvoiceOutcome({ ...real, total: 598.5 }, config).kind === "ok",
+    "gross total 50 cents low still matches",
+  );
+  assert(
+    membershipInvoiceOutcome({ ...real, total: net / 100 }, config).kind ===
+      "amount_mismatch",
+    "net total is an amount mismatch",
+  );
   const logged = membershipAmountAlert({
     invoiceId: "inv-coupon",
     expectedCents: 59900,
     actualCents: 19900,
   });
   assert(logged.alert === "vandery_plus_amount_mismatch", "structured alert");
+  assert(logged.tolerance === "gross_1_czk", "tolerance is gross ±1 CZK");
 });
 
 Deno.test("ED-12 client body user is not the write target", async () => {

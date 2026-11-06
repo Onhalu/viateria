@@ -571,18 +571,26 @@ export function invoiceFormId(invoice: FapiInvoice): string | null {
   return ids[0] ?? null;
 }
 
-/** Czech standard VAT. Assumption: configured price is gross, invoice.total may be net. */
+/** Czech standard VAT. Used only when judging whether a refund is full. */
 export const VANDERY_PLUS_VAT_RATE = 0.21;
 
-/** 1 CZK. Covers rounding between net and gross. */
+/** 1 CZK around the configured gross price. */
 export const VANDERY_PLUS_AMOUNT_TOLERANCE_CENTS = 100;
 
 function withinCents(left: number, right: number): boolean {
   return Math.abs(left - right) <= VANDERY_PLUS_AMOUNT_TOLERANCE_CENTS;
 }
 
-/** True for an exact price, a 1 CZK rounding gap, or a 21% net/gross pair. */
+/**
+ * Catalog price check. `FAPI_VANDERY_PLUS_AMOUNT_CENTS` is gross.
+ * A match is that gross total, within 1 CZK. A net total is not a match.
+ */
 export function amountsMatchNetOrGross(actual: number, expected: number): boolean {
+  return withinCents(actual, expected);
+}
+
+/** Full refund of the charged amount: exact, 1 CZK, or a 21% net/gross pair. */
+function refundAmountIsFull(actual: number, expected: number): boolean {
   if (withinCents(actual, expected)) return true;
   const gross = (net: number) => Math.round(net * (1 + VANDERY_PLUS_VAT_RATE));
   const net = (grossAmount: number) =>
@@ -604,8 +612,8 @@ export type MembershipInvoiceOutcome =
 
 /**
  * Notes are not proof of a VANDERY+ purchase. Ids must match.
- * Amount may differ by VAT net/gross or 1 CZK. A larger gap is amount_mismatch,
- * not a silent skip.
+ * The amount must be the configured gross total, within 1 CZK.
+ * A larger gap is amount_mismatch, not a silent skip.
  */
 export function membershipInvoiceOutcome(
   invoice: FapiInvoice,
@@ -668,7 +676,7 @@ export function planMembershipRefund(input: {
   if (
     input.refundCents == null ||
     input.originalCents == null ||
-    !amountsMatchNetOrGross(Math.abs(input.refundCents), input.originalCents)
+    !refundAmountIsFull(Math.abs(input.refundCents), input.originalCents)
   ) {
     return { apply: false, alert: "vandery_plus_refund_partial" };
   }
@@ -704,13 +712,14 @@ export function membershipAmountAlert(input: {
     invoiceId: input.invoiceId,
     expectedCents: input.expectedCents,
     actualCents: input.actualCents,
-    tolerance: "vat_21_or_1_czk",
+    tolerance: "gross_1_czk",
   };
 }
 
 /**
  * Notes are not proof of a VANDERY+ purchase. Amount and every configured
- * product id (item, form, product code) must match, with the net/gross tolerance.
+ * product id (item, form, product code) must match. Amount is the gross
+ * total within 1 CZK.
  * Missing config fails closed.
  */
 export function membershipProductMatches(

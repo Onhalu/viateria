@@ -28,11 +28,9 @@ Default pending Ondřej.
 
 Replaying the same credit-note id is idempotent and does not apply the refund twice.
 
-## Amount: net, gross, and coupons
-
-Assumption, until FAPI confirms which field is the charged total:
+## Amount: gross total
 
 - `FAPI_VANDERY_PLUS_AMOUNT_CENTS` is the **gross** price in cents (what the customer pays, VAT included).
-- `invoice.total` is major units. It may be that gross total, or the **net** base when the form stores VAT separately. Czech standard VAT used for the check is **21%**.
-- A match is exact, within **100 cents** (1 CZK) of rounding, or a 21% net/gross pair of those two numbers.
-- A coupon or any larger gap is **not** `SKIPPED`. The webhook logs one JSON line `{ "alert": "vandery_plus_amount_mismatch", ... }` and responds `409` with `status: "AMOUNT_MISMATCH"`. Membership is not activated.
+- `invoice.total` is major units of that same gross total.
+- A match is exact or within **100 cents** (1 CZK). There is no separate net/gross band.
+- A net total, a coupon, or any larger gap is **not** `SKIPPED`. The webhook logs one JSON line `{ "alert": "vandery_plus_amount_mismatch", "tolerance": "gross_1_czk", ... }` and responds `409` with `status: "AMOUNT_MISMATCH"`. Membership is not activated.
