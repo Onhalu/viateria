@@ -738,6 +738,11 @@ select lives_ok(
   'first renew commit applies'
 );
 
+create temporary table vandery_replay_expiry on commit drop as
+select expires_at as before_expires
+from public.vandery_plus_memberships
+where id = '10000000-0000-4000-8000-000000000002';
+
 select is(
   (
     public.commit_vandery_plus_event(
@@ -756,13 +761,13 @@ select is(
   'second renew commit is idempotent'
 );
 
-select ok(
+select is(
   (
-    select expires_at > now() + interval '48 days'
-       and expires_at < now() + interval '53 days'
+    select expires_at
     from public.vandery_plus_memberships
     where id = '10000000-0000-4000-8000-000000000002'
   ),
+  (select before_expires from vandery_replay_expiry),
   'idempotent replay does not move expires_at again'
 );
 
