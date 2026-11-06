@@ -14,8 +14,10 @@
 -- Does not change ON DELETE behaviour of purchases or challenge_diplomas.
 -- Does not drop the diploma catalog.
 --
--- The guard is first. Without a single transaction, a later failure must
--- not already have dropped private.* or the membership tables.
+-- The transaction starts first. A guard error aborts it, and the final
+-- commit rolls that aborted transaction back even when psql continues.
+
+begin;
 
 do $guard$
 begin
@@ -122,3 +124,10 @@ create policy place_visits_insert_own
 
 drop table if exists public.vandery_plus_webhook_events;
 drop table if exists public.vandery_plus_memberships;
+
+-- Plain psql -f commits. The pgTAP include sets vandery_rollback_test so
+-- this transaction stays open and the test can roll it back.
+\if :{?vandery_rollback_test}
+\else
+commit;
+\endif

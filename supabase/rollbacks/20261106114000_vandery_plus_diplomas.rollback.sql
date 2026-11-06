@@ -13,6 +13,21 @@
 -- vandery_plus_memberships and vandery_plus_webhook_events.
 -- Apply this file after 20261106120300 has been rolled back (that file
 -- tightens diploma grants).
+--
+-- One transaction, so a guard error aborts the drops even when psql
+-- continues after the error.
+
+begin;
+
+do $guard$
+begin
+  if coalesce(current_setting('viateria.allow_destructive_rollback', true), '')
+     is distinct from 'on' then
+    raise exception 'viateria.allow_destructive_rollback must be on before dropping vandery_plus_user_diplomas'
+      using errcode = '42501';
+  end if;
+end
+$guard$;
 
 drop policy if exists vandery_plus_user_diplomas_select_own
   on public.vandery_plus_user_diplomas;
@@ -21,3 +36,8 @@ drop policy if exists vandery_plus_diplomas_select_authenticated
 
 drop table if exists public.vandery_plus_user_diplomas;
 drop table if exists public.vandery_plus_diplomas;
+
+\if :{?vandery_rollback_test}
+\else
+commit;
+\endif

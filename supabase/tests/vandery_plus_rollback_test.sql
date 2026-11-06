@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(16);
 
 select ok(
   to_regclass('public.vandery_plus_memberships') is not null,
@@ -39,14 +39,10 @@ select throws_ok(
   'rollback refuses tombstone drops when the guard is off'
 );
 
--- Guard off: the file must fail before any DROP, including outside a
--- single transaction. Roll back to the savepoint so the chain is intact.
-savepoint vandery_guard_off;
-select set_config('viateria.allow_destructive_rollback', 'off', true);
-\set ON_ERROR_STOP off
-\ir fixtures/20261106113000_vandery_plus_membership.rollback
-\set ON_ERROR_STOP on
-rollback to savepoint vandery_guard_off;
+-- Plain psql -f: no GUC, no --single-transaction, no ON_ERROR_STOP.
+-- A separate session, so the file's begin/commit cannot see this transaction.
+\! psql -f fixtures/20261106113000_vandery_plus_membership.rollback
+\! psql -f fixtures/20261106114000_vandery_plus_diplomas.rollback.sql
 
 select ok(
   to_regclass('public.vandery_plus_memberships') is not null,
@@ -63,6 +59,12 @@ select ok(
   'guard off drops nothing: private commit still exists'
 );
 
+select ok(
+  to_regclass('public.vandery_plus_user_diplomas') is not null,
+  'guard off drops nothing: user diplomas still exist'
+);
+
+\set vandery_rollback_test 1
 select set_config('viateria.allow_destructive_rollback', 'on', true);
 
 -- supabase test db mounts only supabase/tests. The same bytes are
