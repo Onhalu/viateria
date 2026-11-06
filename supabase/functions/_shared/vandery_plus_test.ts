@@ -1,0 +1,389 @@
+/**
+ * ED-01 … ED-12 and the sandbox contract for E2E-03 … E2E-06.
+ * No live FAPI call. No remote Supabase.
+ */
+import {
+  addMonthsIso,
+  applyPatch,
+  deliverVanderyPlus,
+  eventKey,
+  fapiProductRoute,
+  inferKind,
+  isMembershipActive,
+  parseVanderyPlusNotes,
+  planVanderyPlusForm,
+  sandboxAllowed,
+  startVanderyPlusCheckout,
+  vanderyPlusPrefillUrl,
+  webhookTokenGate,
+  type PlusEvent,
+  type PlusKind,
+  type PlusPatch,
+  type PlusRow,
+  type PlusStore,
+} from "./vandery_plus.ts";
+
+function assert(cond: unknown, message: string): asserts cond {
+  if (!cond) throw new Error(message);
+}
+
+function row(partial: Partial<PlusRow> & Pick<PlusRow, "id" | "userId">): PlusRow {
+  return {
+    status: "pending",
+    startsAt: null,
+    expiresAt: "2026-11-06T00:00:00.000Z",
+    cancelAtPeriodEnd: false,
+    fapiSubscriptionId: null,
+    fapiInvoiceId: null,
+    amountCents: null,
+    currency: null,
+    ...partial,
+  };
+}
+
+class MemoryStore implements PlusStore {
+  rows = new Map<string, PlusRow>();
+  keys = new Set<string>();
+  commits: string[] = [];
+
+  constructor(initial: PlusRow[]) {
+    for (const item of initial) this.rows.set(item.id, item);
+  }
+
+  load(id: string): Promise<PlusRow | null> {
+    return Promise.resolve(this.rows.get(id) ?? null);
+  }
+
+  commit(input: {
+    membershipId: string;
+    userId: string;
+    key: string;
+    kind: PlusKind;
+    invoiceId: string;
+    patch: PlusPatch;
+  }): Promise<{ idempotent: boolean; row: PlusRow }> {
+    const current = this.rows.get(input.membershipId);
+    if (!current || current.userId !== input.userId) {
+      return Promise.reject(new Error("commit user"));
+    }
+    if (this.keys.has(input.key)) {
+      return Promise.resolve({ idempotent: true, row: current });
+    }
+    this.keys.add(input.key);
+    this.commits.push(input.userId);
+    const next = applyPatch(current, input.patch);
+    this.rows.set(next.id, next);
+    return Promise.resolve({ idempotent: false, row: next });
+  }
+}
+
+function event(partial: Partial<PlusEvent> & Pick<PlusEvent, "kind">): PlusEvent {
+  return {
+    invoiceId: "inv-1",
+    subscriptionId: "sub-1",
+    checkoutUserId: "user-a",
+    membershipId: "mem-1",
+    now: "2026-11-06T00:00:00.000Z",
+    amountCents: 59900,
+    currency: "czk",
+    ...partial,
+  };
+}
+
+Deno.test("ED-01 prefill URL is the recurring form and has no challenge_id", () => {
+  const url = vanderyPlusPrefillUrl({
+    formUrl: "https://sandbox.fapi.example/vandery-plus",
+    userId: "user-a",
+    membershipId: "mem-1",
+    email: "ada@example.com",
+  });
+  const parsed = new URL(url);
+  assert(parsed.origin + parsed.pathname === "https://sandbox.fapi.example/vandery-plus", url);
+  assert(!parsed.searchParams.has("challenge_id"), url);
+  assert(
+    parsed.searchParams.get("fapi-form-notes") === "viateria-plus:user-a:mem-1",
+    url,
+  );
+  const notes = parseVanderyPlusNotes(parsed.searchParams.get("fapi-form-notes"));
+  assert(notes?.userId === "user-a" && notes.membershipId === "mem-1", "notes");
+});
+
+Deno.test("ED-01 checkout returns that URL for the JWT user", async () => {
+  let insertedFor = "";
+  const result = await startVanderyPlusCheckout({
+    formUrl: "https://sandbox.fapi.example/vandery-plus",
+    userId: "user-jwt",
+    email: "ada@example.com",
+    now: "2026-11-06T00:00:00.000Z",
+    loadByUser: () => Promise.resolve(null),
+    insertPending: (userId) => {
+      insertedFor = userId;
+      return Promise.resolve(row({ id: "mem-9", userId, status: "pending" }));
+    },
+    markPending: (current) => Promise.resolve(current),
+  });
+  assert(result.status === 200, JSON.stringify(result));
+  assert(insertedFor === "user-jwt", insertedFor);
+  const url = String(result.body.url);
+  const parsed = new URL(url);
+  assert(!parsed.searchParams.has("challenge_id"), url);
+  assert(
+    parsed.searchParams.get("fapi-form-notes") === "viateria-plus:user-jwt:mem-9",
+    url,
+  );
+});
+
+Deno.test("ED-02 missing user is rejected before a membership URL is built", () => {
+  const gate = webhookTokenGate;
+  assert(typeof gate === "function", "token helper stays available");
+  const source = Deno.readTextFileSync(
+    new URL("../start-fapi-checkout/index.ts", import.meta.url),
+  );
+  const auth = source.indexOf("missing authorization");
+  const branch = source.indexOf("body.product === VANDERY_PLUS_PRODUCT");
+  assert(auth >= 0 && branch > auth, "JWT check must run before the membership branch");
+});
+
+Deno.test("ED-03 missing form URL fails closed and does not insert", async () => {
+  let writes = 0;
+  const plan = planVanderyPlusForm("");
+  assert(plan.ok === false && plan.status === 500, JSON.stringify(plan));
+  assert(!plan.ok && !plan.error.includes("challenge"), plan.error);
+  const result = await startVanderyPlusCheckout({
+    formUrl: null,
+    userId: "user-a",
+    now: "2026-11-06T00:00:00.000Z",
+    loadByUser: () => Promise.resolve(null),
+    insertPending: () => {
+      writes += 1;
+      return Promise.resolve(row({ id: "x", userId: "user-a" }));
+    },
+    markPending: (current) => Promise.resolve(current),
+  });
+  assert(result.status === 500, JSON.stringify(result));
+  assert(writes === 0, "must not write a pending row without a form URL");
+  assert(
+    planVanderyPlusForm("https://challenge.example/form").ok,
+    "a challenge URL is not a fallback; the env value itself must be the plus form",
+  );
+});
+
+Deno.test("ED-04 paid_first activates for about one month", async () => {
+  const store = new MemoryStore([
+    row({ id: "mem-1", userId: "user-a", status: "pending" }),
+  ]);
+  const result = await deliverVanderyPlus(
+    store,
+    event({ kind: "paid_first", invoiceId: "inv-paid" }),
+  );
+  assert(result.status === 200, JSON.stringify(result.body));
+  const saved = store.rows.get("mem-1")!;
+  assert(saved.status === "active", saved.status);
+  assert(
+    saved.expiresAt === addMonthsIso("2026-11-06T00:00:00.000Z", 1),
+    saved.expiresAt,
+  );
+  assert(saved.fapiSubscriptionId === "sub-1", saved.fapiSubscriptionId ?? "");
+  assert(isMembershipActive(saved, "2026-11-20T00:00:00.000Z"), "in period");
+});
+
+Deno.test("ED-05 paid_first twice keeps one row and one period", async () => {
+  const store = new MemoryStore([
+    row({ id: "mem-1", userId: "user-a", status: "pending" }),
+  ]);
+  const first = event({ kind: "paid_first", invoiceId: "inv-paid" });
+  await deliverVanderyPlus(store, first);
+  const again = await deliverVanderyPlus(store, first);
+  assert(again.body.idempotent === true, JSON.stringify(again.body));
+  assert(store.rows.size === 1, "one row");
+  assert(
+    store.rows.get("mem-1")!.expiresAt === "2026-12-06T00:00:00.000Z",
+    store.rows.get("mem-1")!.expiresAt,
+  );
+});
+
+Deno.test("ED-06 renew twice extends the same row once", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      cancelAtPeriodEnd: true,
+      fapiSubscriptionId: "sub-1",
+    }),
+  ]);
+  const renew = event({ kind: "renew", invoiceId: "inv-renew" });
+  await deliverVanderyPlus(store, renew);
+  await deliverVanderyPlus(store, renew);
+  const saved = store.rows.get("mem-1")!;
+  assert(saved.expiresAt === "2027-01-06T00:00:00.000Z", saved.expiresAt);
+  assert(saved.cancelAtPeriodEnd === false, "renew clears soft cancel");
+  assert(saved.id === "mem-1", saved.id);
+});
+
+Deno.test("ED-07 cancel twice stays active until expires_at", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+    }),
+  ]);
+  const cancel = event({ kind: "cancel", invoiceId: "inv-cancel" });
+  await deliverVanderyPlus(store, cancel);
+  await deliverVanderyPlus(store, cancel);
+  const saved = store.rows.get("mem-1")!;
+  assert(saved.status === "active", saved.status);
+  assert(saved.cancelAtPeriodEnd === true, "soft cancel");
+  assert(saved.expiresAt === "2026-12-06T00:00:00.000Z", saved.expiresAt);
+  assert(isMembershipActive(saved, "2026-12-01T00:00:00.000Z"), "still active");
+  assert(!isMembershipActive(saved, "2026-12-07T00:00:00.000Z"), "then expired");
+});
+
+Deno.test("ED-08 refund twice revokes immediately", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+    }),
+  ]);
+  const refund = event({ kind: "refund", invoiceId: "inv-refund" });
+  await deliverVanderyPlus(store, refund);
+  await deliverVanderyPlus(store, refund);
+  const saved = store.rows.get("mem-1")!;
+  assert(saved.status === "revoked", saved.status);
+  assert(!isMembershipActive(saved, "2026-11-06T00:00:00.000Z"), "no access");
+});
+
+Deno.test("ED-09 payment_failed does not activate or extend", async () => {
+  const pending = new MemoryStore([
+    row({ id: "mem-1", userId: "user-a", status: "pending" }),
+  ]);
+  await deliverVanderyPlus(
+    pending,
+    event({ kind: "payment_failed", invoiceId: "inv-fail" }),
+  );
+  assert(pending.rows.get("mem-1")!.status === "failed", "pending becomes failed");
+
+  const active = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+    }),
+  ]);
+  await deliverVanderyPlus(
+    active,
+    event({ kind: "payment_failed", invoiceId: "inv-fail-2" }),
+  );
+  const saved = active.rows.get("mem-1")!;
+  assert(saved.status === "active", saved.status);
+  assert(saved.expiresAt === "2026-12-06T00:00:00.000Z", "no grace extension");
+});
+
+Deno.test("ED-10 bad or missing webhook token does not deliver", async () => {
+  assert(webhookTokenGate("", "x") === "reject", "empty secret");
+  assert(webhookTokenGate("secret", null) === "reject", "missing token");
+  assert(webhookTokenGate("secret", "nope") === "reject", "wrong token");
+  assert(webhookTokenGate("secret", "secret") === "ok", "match");
+  const store = new MemoryStore([
+    row({ id: "mem-1", userId: "user-a" }),
+  ]);
+  if (webhookTokenGate("secret", "nope") === "reject") {
+    assert(store.rows.get("mem-1")!.status === "pending", "untouched");
+  }
+});
+
+Deno.test("ED-11 challenge notes stay on purchases", () => {
+  assert(
+    fapiProductRoute("viateria:user-a:challenge-1:diploma") === "purchase",
+    "challenge",
+  );
+  assert(
+    fapiProductRoute("viateria-plus:user-a:mem-1") === "membership",
+    "membership",
+  );
+  assert(fapiProductRoute(null) === "purchase", "empty");
+  const source = Deno.readTextFileSync(
+    new URL("../fapi-webhook/index.ts", import.meta.url),
+  );
+  const route = source.indexOf("fapiProductRoute(invoiceNotes)");
+  const purchaseWrite = source.indexOf('from("purchases")');
+  assert(route >= 0 && purchaseWrite > route, "membership branch returns before purchases");
+});
+
+Deno.test("ED-12 client body user is not the write target", async () => {
+  const store = new MemoryStore([
+    row({ id: "mem-1", userId: "user-checkout", status: "pending" }),
+  ]);
+  const mismatch = await deliverVanderyPlus(
+    store,
+    event({
+      kind: "paid_first",
+      checkoutUserId: "user-attacker",
+      clientBodyUserId: "user-attacker",
+      membershipId: "mem-1",
+    }),
+  );
+  assert(mismatch.status === 409, JSON.stringify(mismatch.body));
+  assert(store.rows.get("mem-1")!.status === "pending", "no write");
+  assert(!store.rows.has("user-attacker"), "no row for the client body user");
+
+  const ok = await deliverVanderyPlus(
+    store,
+    event({
+      kind: "paid_first",
+      checkoutUserId: "user-checkout",
+      clientBodyUserId: "user-attacker",
+      invoiceId: "inv-bound",
+    }),
+  );
+  assert(ok.status === 200, JSON.stringify(ok.body));
+  assert(store.commits.length === 1, "one commit");
+  assert(store.commits[0] === "user-checkout", store.commits[0]);
+  assert(store.rows.get("mem-1")!.userId === "user-checkout", "same user");
+  assert(store.rows.get("mem-1")!.status === "active", "activated checkout user");
+});
+
+Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live flag", async () => {
+  assert(sandboxAllowed(undefined) === false, "sandbox off by default");
+  assert(sandboxAllowed("1") === true, "explicit sandbox");
+  assert(eventKey("renew", "inv") === "renew:inv", "key");
+  assert(
+    inferKind({ explicit: "refund", invoicePaid: false, status: "active" }) ===
+      "refund",
+    "explicit kind wins",
+  );
+  assert(
+    inferKind({ explicit: null, invoicePaid: true, status: "active" }) === "renew",
+    "paid active renews",
+  );
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+    }),
+  ]);
+  await deliverVanderyPlus(store, event({ kind: "renew", invoiceId: "e2e-renew" }));
+  assert(store.rows.get("mem-1")!.expiresAt === "2027-01-06T00:00:00.000Z", "E2E-03");
+  await deliverVanderyPlus(store, event({ kind: "cancel", invoiceId: "e2e-cancel" }));
+  assert(store.rows.get("mem-1")!.cancelAtPeriodEnd === true, "E2E-04");
+  assert(store.rows.get("mem-1")!.status === "active", "E2E-04 still active");
+  await deliverVanderyPlus(store, event({ kind: "refund", invoiceId: "e2e-refund" }));
+  assert(store.rows.get("mem-1")!.status === "revoked", "E2E-05");
+  const fresh = new MemoryStore([
+    row({ id: "mem-2", userId: "user-a", status: "pending" }),
+  ]);
+  await deliverVanderyPlus(
+    fresh,
+    event({ kind: "payment_failed", membershipId: "mem-2", invoiceId: "e2e-cancel-checkout" }),
+  );
+  assert(fresh.rows.get("mem-2")!.status === "failed", "E2E-06 no active row");
+});

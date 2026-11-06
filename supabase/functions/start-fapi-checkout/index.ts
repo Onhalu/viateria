@@ -21,6 +21,11 @@ import {
   type PromoTargetType,
 } from "../_shared/fapi.ts";
 import { fetchOfferForFormUrl } from "../_shared/fapi_offer.ts";
+import {
+  plusRowFromDb,
+  startVanderyPlusCheckout,
+  VANDERY_PLUS_PRODUCT,
+} from "../_shared/vandery_plus.ts";
 
 /**
  * Authenticated start of a FAPI sales-form checkout.
@@ -58,7 +63,43 @@ Deno.serve(async (req) => {
     return json({ error: "unauthorized" }, 401);
   }
 
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    const parsed = await req.json();
+    if (!parsed || typeof parsed !== "object") {
+      return json({ error: "invalid body" }, 400);
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return json({ error: "invalid body" }, 400);
+  }
+
+  // Membership is not a challenge purchase. JWT user only — ignore body.user_id.
+  if (body.product === VANDERY_PLUS_PRODUCT) {
+    const admin = serviceClient();
+    try {
+    const result = await startVanderyPlusCheckout({
+      formUrl: Deno.env.get("FAPI_FORM_URL_VANDERY_PLUS") ?? null,
+      userId: user.id,
+      email: user.email ?? null,
+      now: new Date().toISOString(),
+      loadByUser: (userId) => loadMembership(admin, userId),
+      insertPending: (userId, expiresAt) =>
+        writePending(admin, { userId, expiresAt, existingId: null }),
+      markPending: (current, expiresAt) =>
+        writePending(admin, {
+          userId: current.userId,
+          expiresAt,
+          existingId: current.id,
+        }),
+    });
+    return json(result.body, result.status);
+    } catch (checkoutError) {
+      console.error("vandery plus checkout failed", checkoutError);
+      return json({ error: "membership checkout failed" }, 500);
+    }
+  }
+
   const challengeId = body.challenge_id as string | undefined;
   if (!challengeId) {
     return json({ error: "challenge_id required" }, 400);
@@ -346,6 +387,63 @@ function isTargetType(value: unknown): value is PromoTargetType {
     value === "segment" ||
     value === "locale" ||
     value === "country";
+}
+
+function serviceClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+}
+
+async function loadMembership(
+  admin: SupabaseClient,
+  userId: string,
+) {
+  const { data, error } = await admin
+    .from("vandery_plus_memberships")
+    .select(
+      "id, user_id, status, starts_at, expires_at, cancel_at_period_end, fapi_subscription_id, fapi_invoice_id, amount_cents, currency",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return plusRowFromDb(data as Record<string, unknown>);
+}
+
+async function writePending(
+  admin: SupabaseClient,
+  input: { userId: string; expiresAt: string; existingId: string | null },
+) {
+  const payload = {
+    user_id: input.userId,
+    status: "pending",
+    expires_at: input.expiresAt,
+    cancel_at_period_end: false,
+  };
+  const query = input.existingId
+    ? admin
+      .from("vandery_plus_memberships")
+      .update(payload)
+      .eq("id", input.existingId)
+      .select(
+        "id, user_id, status, starts_at, expires_at, cancel_at_period_end, fapi_subscription_id, fapi_invoice_id, amount_cents, currency",
+      )
+      .single()
+    : admin
+      .from("vandery_plus_memberships")
+      .insert(payload)
+      .select(
+        "id, user_id, status, starts_at, expires_at, cancel_at_period_end, fapi_subscription_id, fapi_invoice_id, amount_cents, currency",
+      )
+      .single();
+  const { data, error } = await query;
+  if (error || !data) {
+    throw new Error(error?.message ?? "membership pending write failed");
+  }
+  const row = plusRowFromDb(data as Record<string, unknown>);
+  if (!row) throw new Error("membership pending row unreadable");
+  return row;
 }
 
 function cors() {

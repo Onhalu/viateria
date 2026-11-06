@@ -18,7 +18,20 @@ import {
   purchaseKeysFromInvoice,
   purchaseUnlockPlan,
   webhookTokenFromRequest,
+  type FapiInvoice,
 } from "../_shared/fapi.ts";
+import {
+  deliverVanderyPlus,
+  fapiProductRoute,
+  inferKind,
+  invoiceCustomField,
+  parseSandboxEvent,
+  parseVanderyPlusNotes,
+  plusRowFromDb,
+  sandboxAllowed,
+  type PlusRow,
+  type PlusStore,
+} from "../_shared/vandery_plus.ts";
 
 /**
  * FAPI paid-invoice notification.
@@ -52,6 +65,22 @@ Deno.serve(async (req) => {
   }
 
   const payload = await req.text();
+
+  // Sandbox contract only. Live FAPI is never called for this body.
+  // Missing FAPI_MEMBERSHIP_SANDBOX=1 fails closed and writes nothing.
+  const sandboxEvent = parseSandboxEvent(payload);
+  if (sandboxEvent) {
+    if (!sandboxAllowed(Deno.env.get("FAPI_MEMBERSHIP_SANDBOX"))) {
+      return json({ status: "FAILED", message: "sandbox disabled" }, 401);
+    }
+    const admin = serviceClient();
+    const result = await deliverVanderyPlus(
+      supabasePlusStore(admin),
+      sandboxEvent,
+    );
+    return json(result.body, result.status);
+  }
+
   const notice = parseNotification(payload, req.headers.get("content-type"));
   if (!notice.invoiceId || !notice.time || !notice.security) {
     return json({ status: "FAILED", message: "id, time, security required" }, 400);
@@ -79,6 +108,13 @@ Deno.serve(async (req) => {
 
   if (!await isInvoiceSecurityValid(invoice, notice.time, notice.security)) {
     return json({ status: "FAILED", message: "Invalid security" }, 400);
+  }
+
+  const invoiceNotes = firstInvoiceNotes(invoice);
+  if (fapiProductRoute(invoiceNotes) === "membership") {
+    const admin = serviceClient();
+    const result = await deliverMembershipInvoice(admin, invoice, invoiceNotes);
+    return json(result.body, result.status);
   }
 
   if (!invoice.paid) {
@@ -338,6 +374,129 @@ async function linkProfileFapiClient(
   }
   console.error("fapi-webhook profile update failed", error.message);
   return json({ status: "FAILED", message: "profile update failed" }, 500);
+}
+
+function serviceClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+}
+
+function firstInvoiceNotes(invoice: FapiInvoice): string | null {
+  for (const value of [invoice.notes, invoice.clients_note, invoice.client_note]) {
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return null;
+}
+
+function supabasePlusStore(admin: SupabaseClient): PlusStore {
+  return {
+    async load(id: string): Promise<PlusRow | null> {
+      const { data, error } = await admin
+        .from("vandery_plus_memberships")
+        .select(
+          "id, user_id, status, starts_at, expires_at, cancel_at_period_end, fapi_subscription_id, fapi_invoice_id, amount_cents, currency",
+        )
+        .eq("id", id)
+        .maybeSingle();
+      if (error || !data) return null;
+      return plusRowFromDb(data as Record<string, unknown>);
+    },
+    async commit(input) {
+      const { data, error } = await admin.rpc("commit_vandery_plus_event", {
+        p_membership_id: input.membershipId,
+        p_user_id: input.userId,
+        p_idempotency_key: input.key,
+        p_kind: input.kind,
+        p_invoice_id: input.invoiceId,
+        p_patch: input.patch,
+      });
+      if (error) throw new Error(error.message);
+      const payload = (data ?? {}) as {
+        status?: string;
+        reason?: string;
+        idempotent?: boolean;
+      };
+      if (payload.status === "rejected") {
+        throw new Error(payload.reason ?? "rejected");
+      }
+      const row = await this.load(input.membershipId);
+      if (!row) throw new Error("membership missing after commit");
+      return { idempotent: payload.idempotent === true, row };
+    },
+  };
+}
+
+async function deliverMembershipInvoice(
+  admin: SupabaseClient,
+  invoice: FapiInvoice,
+  notes: string | null,
+) {
+  const parsed = parseVanderyPlusNotes(notes);
+  if (!parsed) {
+    return {
+      status: 400,
+      body: { status: "FAILED", message: "membership notes invalid" },
+      wrote: false,
+      row: null,
+    };
+  }
+  const store = supabasePlusStore(admin);
+  try {
+    const loaded = await store.load(parsed.membershipId);
+    if (!loaded) {
+      return {
+        status: 409,
+        body: { status: "FAILED", message: "no checkout session" },
+        wrote: false,
+        row: null,
+      };
+    }
+    const kind = inferKind({
+      explicit: invoiceCustomField(invoice.custom_fields, "vandery_plus_event"),
+      invoicePaid: Boolean(invoice.paid),
+      status: loaded.status,
+    });
+    if (!kind) {
+      return {
+        status: 200,
+        body: { status: "SKIPPED", message: "membership event not applicable" },
+        wrote: false,
+        row: loaded,
+      };
+    }
+    const invoiceId = fapiInvoiceId(invoice);
+    if (!invoiceId) {
+      return {
+        status: 500,
+        body: { status: "FAILED", message: "invoice id missing" },
+        wrote: false,
+        row: loaded,
+      };
+    }
+    return await deliverVanderyPlus(store, {
+      kind,
+      invoiceId,
+      subscriptionId: invoiceCustomField(
+        invoice.custom_fields,
+        "fapi_subscription_id",
+      ),
+      checkoutUserId: parsed.userId,
+      membershipId: parsed.membershipId,
+      amountCents: invoiceTotalCents(invoice),
+      currency: invoiceCurrencyCode(invoice),
+      now: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("fapi-webhook membership commit failed", error);
+    return {
+      status: 500,
+      body: { status: "FAILED", message: "membership commit failed" },
+      wrote: false,
+      row: null,
+    };
+  }
 }
 
 function json(body: unknown, status = 200) {

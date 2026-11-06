@@ -5,7 +5,9 @@ import '../domain/photo_verify.dart';
 import '../map/place_catalog.dart';
 import 'diploma_client.dart';
 import 'memory_leaderboard.dart';
+import 'memory_membership.dart';
 import 'repositories.dart';
+import 'vandery_plus_session.dart';
 import 'route_services.dart';
 import 'verified_places.dart';
 
@@ -37,6 +39,7 @@ class AppServices {
     PlaceCatalog? places,
     LeaderboardRepository? leaderboard,
     DiplomaClient? diplomas,
+    VanderyPlusSession? vanderyPlus,
   }) : routing = routing ?? OsrmRoutingClient(),
        geocoder = geocoder ?? NominatimGeocoder(),
        deviceLocation = deviceLocation ?? const GeolocatorDeviceLocation(),
@@ -47,7 +50,9 @@ class AppServices {
        // main.dart passes the Supabase catalog instead.
        places = places ?? const AssetPlaceCatalog(),
        leaderboard = leaderboard ?? MemoryLeaderboardRepository(),
-       diplomas = diplomas ?? MemoryDiplomaClient();
+       diplomas = diplomas ?? MemoryDiplomaClient(),
+       vanderyPlus = vanderyPlus ??
+           VanderyPlusSession(repository: MemoryMembershipRepository());
 
   final AppConfig config;
   final AuthRepository auth;
@@ -71,4 +76,8 @@ class AppServices {
 
   /// Signed diploma PNG. The default memory client never calls the Edge function.
   final DiplomaClient diplomas;
+
+  /// VANDERY+ entitlement. The default memory session is inactive.
+  /// Checkout uses the user JWT. This object cannot mark a membership active.
+  final VanderyPlusSession vanderyPlus;
 }
