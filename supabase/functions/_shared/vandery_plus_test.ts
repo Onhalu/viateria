@@ -393,6 +393,41 @@ Deno.test("ED-11 challenge notes stay on purchases", () => {
   assert(route >= 0 && purchaseWrite > route, "membership branch returns before purchases");
 });
 
+Deno.test("E2E sandbox unapplied refund returns 200 and leaves no trace", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-period",
+      amountCents: 59900,
+    }),
+  ]);
+  const unmatched = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-none",
+    refundCents: 59900,
+  }));
+  assert(unmatched.status === 200, String(unmatched.status));
+  assert(unmatched.wrote === false, "unmatched writes nothing");
+  assert(unmatched.body.status === "OK", JSON.stringify(unmatched.body));
+  assert(unmatched.body.alert === "vandery_plus_refund_unmatched", JSON.stringify(unmatched.body));
+  assert(store.rows.get("mem-1")!.status === "active", "membership unchanged");
+  assert(!store.keys.has("refund:cn-none"), "no refund key");
+  const partial = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-part",
+    parentInvoiceId: "inv-period",
+    paidInvoiceIds: ["inv-period"],
+    refundCents: 10000,
+  }));
+  assert(partial.status === 200, String(partial.status));
+  assert(partial.wrote === false, "partial writes nothing");
+  assert(partial.body.alert === "vandery_plus_refund_partial", JSON.stringify(partial.body));
+  assert(!store.keys.has("refund:cn-part"), "partial does not consume the key");
+});
+
 Deno.test("refund before the parent invoice can be applied later", async () => {
   const store = new MemoryStore([
     row({

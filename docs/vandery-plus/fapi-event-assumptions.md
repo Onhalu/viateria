@@ -26,7 +26,7 @@ Default pending Ondřej.
 - No parent, a parent that is not one of those paid events, or a parent that is an older invoice logs `{ "alert": "vandery_plus_refund_unmatched" }` and does not change the membership.
 - A parent that is the current invoice, but an amount that is not a full refund, logs `{ "alert": "vandery_plus_refund_partial" }` and does not change the membership.
 
-Replaying an applied credit note is idempotent and does not revoke twice. A refund that arrives before its paid invoice does not store `refund:<invoice>`. After that paid invoice is recorded, the same credit note can be processed again.
+Replaying an applied credit note is idempotent and does not revoke twice. A refund that is not applied returns HTTP 200 to FAPI and writes no `vandery_plus_webhook_events` row, so `refund:<invoice>` stays free. FAPI will not retry a 200 on its own. See `docs/vandery-plus/runbook.md`.
 
 ## Amount: gross total
 
