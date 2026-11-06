@@ -127,8 +127,9 @@ Deno.serve(async (req) => {
     // Notes are user-controlled. A cheap challenge form that copies
     // viateria-plus notes must not activate membership.
     const product = vanderyPlusProductConfigFromEnv((key) => Deno.env.get(key));
-    // A credit note still has to match the VANDERY+ product. The negative
-    // total is the refund amount, not a reason to skip the id check.
+    // A credit note still has to match the VANDERY+ product id. The negative
+    // total is the refund amount, not a reason to skip that check. The parent
+    // invoice is checked when the event is committed.
     if (isMembershipRefundInvoice(invoice)) {
       if (!membershipRefundProductMatches(invoice, product)) {
         return json({

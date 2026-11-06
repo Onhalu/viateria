@@ -14,13 +14,13 @@ These mappings follow the public invoice object (https://web.fapi.cz/api-doc/) a
 
 `parent` is the previous invoice id FAPI sets on a later periodic charge. A retry of the same invoice id is idempotent and does not add a month, even if this table would call it `renew`.
 
-Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`. A credit note is not exempt from that product check. Its negative total is the refund amount, so it is not compared to the catalog price and it is not an amount-mismatch skip.
+Notes (`viateria-plus:`) only find the checkout row. The item id, form id, and product code still have to match `FAPI_VANDERY_PLUS_*`. A credit note is not exempt from that check: its product id must be `FAPI_VANDERY_PLUS_PRODUCT_ID`, and `invoice.parent` must still be the current paid invoice. Its negative total is the refund amount, so it is not compared to the catalog price and it is not an amount-mismatch skip.
 
 ## Refunds
 
 Default pending Ondřej.
 
-`invoice.parent` must point at an invoice that already has a `paid_first` or `renew` row for the same user in `vandery_plus_webhook_events`, and that invoice must be the membership's current `fapi_invoice_id` (the period being refunded).
+`invoice.parent` must point at an invoice that already has a `paid_first` or `renew` row for the same user in `vandery_plus_webhook_events`, and that invoice must be the membership's current `fapi_invoice_id` (the period being refunded). The credit note's product id must also be `FAPI_VANDERY_PLUS_PRODUCT_ID`. A wrong or missing product id is `SKIPPED` and does not reach the parent check.
 
 - A full refund of that invoice (exact cents, within 100 cents, or a 21% net/gross pair of the charged `amount_cents`) sets `status = revoked`.
 - No parent, a parent that is not one of those paid events, or a parent that is an older invoice logs `{ "alert": "vandery_plus_refund_unmatched" }` and does not change the membership.

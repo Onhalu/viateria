@@ -732,14 +732,16 @@ export function membershipProductMatches(
 /**
  * Product ids for a credit note. The negative total is the refund amount,
  * not a reason to skip the item, form, and product checks.
+ * The product id is required, together with invoice.parent in the refund gate.
  */
 export function membershipRefundProductMatches(
   invoice: FapiInvoice,
   config: VanderyPlusProductConfig,
 ): boolean {
-  const configured = config.itemIds.length + config.formIds.length +
-    config.productIds.length;
-  if (config.amountCents == null || configured === 0) return false;
+  if (config.amountCents == null || config.productIds.length === 0) return false;
+  if (!invoiceProductIds(invoice).some((id) => config.productIds.includes(id))) {
+    return false;
+  }
   if (
     config.itemIds.length > 0 &&
     !invoiceItemIds(invoice).some((id) => config.itemIds.includes(id))
@@ -749,12 +751,6 @@ export function membershipRefundProductMatches(
   if (config.formIds.length > 0) {
     const formId = invoiceFormId(invoice);
     if (!formId || !config.formIds.includes(formId)) return false;
-  }
-  if (
-    config.productIds.length > 0 &&
-    !invoiceProductIds(invoice).some((id) => config.productIds.includes(id))
-  ) {
-    return false;
   }
   return true;
 }

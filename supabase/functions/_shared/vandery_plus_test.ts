@@ -426,6 +426,26 @@ Deno.test("negative credit note is a refund and is not skipped", () => {
     items: [{ id: 77, name: "VANDERY+", code: "vandery-plus" }],
   };
   assert(membershipRefundProductMatches(real, config), "matching credit note passes the product check");
+  const wrongProduct = {
+    ...real,
+    items: [{ id: 77, name: "VANDERY+", code: "other-product" }],
+  };
+  assert(
+    !membershipRefundProductMatches(wrongProduct, config),
+    "right item and form with the wrong product id is not a refund",
+  );
+  const noProductConfig = vanderyPlusProductConfigFromEnv((key) => {
+    const values: Record<string, string> = {
+      FAPI_VANDERY_PLUS_AMOUNT_CENTS: "59900",
+      FAPI_VANDERY_PLUS_ITEM_ID: "77",
+      FAPI_VANDERY_PLUS_FORM_ID: "55",
+    };
+    return values[key];
+  });
+  assert(
+    !membershipRefundProductMatches(real, noProductConfig),
+    "a refund without a configured product id fails closed",
+  );
   assert(invoiceParentId(real) === "4242", "parent id");
   assert(invoiceParentId({ parent: 0 }) === null, "zero parent");
   assert(invoiceAbsoluteTotalCents(real) === 59900, "absolute cents");
