@@ -433,8 +433,16 @@ Deno.test("non-numeric refund_cents is a clean error", () => {
     message = error instanceof Error ? error.message : String(error);
   }
   assert(message === "refund_cents must be an integer", message);
+  let overflow = "";
+  try {
+    parseRefundCents("2147483648");
+  } catch (error) {
+    overflow = error instanceof Error ? error.message : String(error);
+  }
+  assert(overflow === "refund_cents must be an integer", overflow);
   assert(parseRefundCents(null) === null, "omitted cents");
   assert(parseRefundCents("59900") === 59900, "numeric text");
+  assert(parseRefundCents(2147483647) === 2147483647, "max int4");
   const bad = membershipCommitFailure(new Error("refund_cents must be an integer"));
   assert(bad.status === 400, String(bad.status));
   assert(bad.body.message === "refund_cents must be an integer", bad.body.message);

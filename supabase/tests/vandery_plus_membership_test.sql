@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(88);
+select plan(89);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1146,6 +1146,24 @@ select throws_ok(
   '22023',
   'refund_cents must be an integer',
   'non-numeric refund_cents is invalid_parameter_value'
+);
+
+select throws_ok(
+  $$select public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-huge',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y3',
+        'refund_cents', '2147483648'
+      )
+    )$$,
+  '22023',
+  'refund_cents must be an integer',
+  'refund_cents beyond int4 is invalid_parameter_value'
 );
 
 select is(

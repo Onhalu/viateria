@@ -613,7 +613,11 @@ export function parseRefundCents(value: unknown): number | null {
   if (!/^-?\d+$/.test(text)) {
     throw new Error("refund_cents must be an integer");
   }
-  return Math.abs(Number(text));
+  const cents = Math.abs(Number(text));
+  if (!Number.isSafeInteger(cents) || cents > 2147483647) {
+    throw new Error("refund_cents must be an integer");
+  }
+  return cents;
 }
 
 export function membershipCommitFailure(error: unknown): {
