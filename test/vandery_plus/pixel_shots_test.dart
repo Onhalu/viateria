@@ -94,24 +94,28 @@ void main() {
       _lockSequence(),
       advance: const Duration(milliseconds: 500),
     );
-    await _shot(
-      tester,
-      const Size(390, 844),
-      'vandery-plus-slide-2-390',
-      _paywall(width: 390, height: 844 * 0.82, handle: true, initialSlide: 1),
-    );
-    await _shot(
-      tester,
-      const Size(390, 844),
-      'vandery-plus-slide-3-390',
-      _paywall(width: 390, height: 844 * 0.82, handle: true, initialSlide: 2),
-    );
-    await _shot(
-      tester,
-      const Size(390, 844),
-      'vandery-plus-slide-4-390',
-      _paywall(width: 390, height: 844 * 0.82, handle: true, initialSlide: 3),
-    );
+  });
+
+  testWidgets('carousel slides 2-4 are distinct frames', (tester) async {
+    await tester.runAsync(_loadFonts);
+    const slides = <int, String>{
+      1: 'Odměny za ověřená místa',
+      2: 'Víc bodů v žebříčku',
+      3: 'Podpoříš projekt napřímo',
+    };
+    final captured = <int, List<int>>{};
+    for (final entry in slides.entries) {
+      final bytes = await _shotSlide(
+        tester,
+        page: entry.key,
+        name: 'vandery-plus-slide-${entry.key + 1}-390',
+        title: entry.value,
+      );
+      captured[entry.key] = bytes;
+    }
+    expect(captured[1], isNot(equals(captured[2])));
+    expect(captured[2], isNot(equals(captured[3])));
+    expect(captured[1], isNot(equals(captured[3])));
   });
 }
 
@@ -327,4 +331,50 @@ Future<void> _shot(
   });
   tester.view.resetPhysicalSize();
   tester.view.resetDevicePixelRatio();
+}
+
+/// Builds the paywall, then moves the live [PageController] before capture.
+/// [PageController.initialPage] is not enough: the carousel state survives
+/// the next pump and the viewport stays on the page it already showed.
+Future<List<int>> _shotSlide(
+  WidgetTester tester, {
+  required int page,
+  required String name,
+  required String title,
+}) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(390, 844);
+  await tester.pumpWidget(
+    RepaintBoundary(
+      key: const Key('shot'),
+      child: _paywall(width: 390, height: 844 * 0.82, handle: true),
+    ),
+  );
+  await tester.pumpAndSettle();
+  final controller = tester
+      .widget<PageView>(find.byKey(const Key('vandery-plus-pages')))
+      .controller!;
+  controller.jumpToPage(page);
+  await tester.pumpAndSettle();
+  expect(controller.page, page.toDouble());
+  expect(find.text(title), findsWidgets);
+  expect(find.byKey(Key('vandery-plus-slide-$page')), findsWidgets);
+  final viewport = tester.getRect(find.byKey(const Key('vandery-plus-pages')));
+  final slide = tester.getRect(find.byKey(Key('vandery-plus-slide-$page')));
+  expect(viewport.overlaps(slide), isTrue);
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const Key('shot')),
+  );
+  late List<int> bytes;
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    bytes = data!.buffer.asUint8List().toList();
+    final file = File('/opt/cursor/artifacts/$name.png');
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(bytes, flush: true);
+  });
+  tester.view.resetPhysicalSize();
+  tester.view.resetDevicePixelRatio();
+  return bytes;
 }
