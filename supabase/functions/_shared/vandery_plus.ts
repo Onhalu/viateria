@@ -73,8 +73,9 @@ export function addMonthsIso(iso: string, months: number): string {
   return date.toISOString();
 }
 
-export function eventKey(kind: string, invoiceId: string): string {
-  return `${kind}:${invoiceId}`;
+/** One invoice is one commit. A later kind for the same invoice is a retry. */
+export function eventKey(invoiceId: string): string {
+  return invoiceId;
 }
 
 export function vanderyPlusNotes(userId: string, membershipId: string): string {
@@ -220,7 +221,7 @@ export async function deliverVanderyPlus(
   const committed = await store.commit({
     membershipId: row.id,
     userId: row.userId,
-    key: eventKey(event.kind, event.invoiceId),
+    key: eventKey(event.invoiceId),
     kind: event.kind,
     invoiceId: event.invoiceId,
     patch,

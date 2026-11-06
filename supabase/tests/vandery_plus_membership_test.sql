@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(48);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -727,6 +727,24 @@ select is(
   ),
   '2030-02-01T00:00:00Z'::timestamptz,
   'idempotent replay does not move expires_at again'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000002',
+      '00000000-0000-4000-8000-000000000002',
+      'paid_first:inv-renew-1',
+      'paid_first',
+      'inv-renew-1',
+      jsonb_build_object(
+        'status', 'active',
+        'expires_at', '2032-02-01T00:00:00Z'
+      )
+    ) ->> 'idempotent'
+  ),
+  'true',
+  'same invoice id is idempotent when the kind prefix changes'
 );
 
 -- T8: own diploma rows only, no client insert, catalog starts empty.

@@ -392,10 +392,30 @@ Deno.test("ED-12 client body user is not the write target", async () => {
   assert(store.rows.get("mem-1")!.status === "active", "activated checkout user");
 });
 
+Deno.test("ED-14 retry of the first invoice does not add a month", async () => {
+  assert(eventKey("inv-1") === "inv-1", "invoice id only");
+  const store = new MemoryStore([
+    row({ id: "mem-1", userId: "user-a", status: "pending" }),
+  ]);
+  const first = await deliverVanderyPlus(
+    store,
+    event({ kind: "paid_first", invoiceId: "inv-1" }),
+  );
+  const once = store.rows.get("mem-1")!.expiresAt;
+  assert(first.body.idempotent === false, "first write");
+  const retry = await deliverVanderyPlus(
+    store,
+    event({ kind: "renew", invoiceId: "inv-1" }),
+  );
+  assert(retry.body.idempotent === true, JSON.stringify(retry.body));
+  assert(store.rows.get("mem-1")!.expiresAt === once, "no second month");
+  assert(store.commits.length === 1, "one commit");
+});
+
 Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live flag", async () => {
   assert(sandboxAllowed(undefined) === false, "sandbox off by default");
   assert(sandboxAllowed("1") === true, "explicit sandbox");
-  assert(eventKey("renew", "inv") === "renew:inv", "key");
+  assert(eventKey("inv") === "inv", "key is the invoice id");
   assert(
     inferKind({ explicit: "refund", invoicePaid: false, status: "active" }) ===
       "refund",

@@ -14,7 +14,7 @@ The migration `20261106113000_vandery_plus_membership.sql` matches the approved 
 | One current row per user | Partial unique index on `user_id` where `anonymized_at is null` and `status` is a lifecycle status. Renew, cancel, refund, and a later repurchase update that row (A5 / P7). A second insert violates the index (DB-15). |
 | `expires_at NOT NULL` | Pending checkout stores `now()` so the column is never null. `has_active_vandery_plus` still requires `status = 'active'` and `expires_at > now()`. |
 | `cancel_at_period_end` | Does not turn off access before `expires_at` (DB-02). |
-| Idempotency | `vandery_plus_webhook_events.idempotency_key` is unique (`kind:invoice_id`). `commit_vandery_plus_event` inserts the key in the same transaction as the patch. A replay does not extend `expires_at` again. |
+| Idempotency | `vandery_plus_webhook_events.idempotency_key` is the invoice id only (`20261106120100`). A retry classified as another kind does not extend `expires_at` again. |
 | Hot lookup | Partial index `(user_id, expires_at) WHERE status = 'active' AND anonymized_at IS NULL` matches `has_active_vandery_plus`. |
 | Status domain | Check constraint: `pending`, `active`, `expired`, `revoked`, `failed`. |
 
