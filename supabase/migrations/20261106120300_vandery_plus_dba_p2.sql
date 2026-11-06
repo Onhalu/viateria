@@ -233,6 +233,8 @@ begin
         else starts_at
       end,
       expires_at = case
+        when p_kind = 'renew'
+          then greatest(expires_at, now()) + interval '1 month'
         when p_patch ? 'expires_at' then (p_patch->>'expires_at')::timestamptz
         else expires_at
       end,

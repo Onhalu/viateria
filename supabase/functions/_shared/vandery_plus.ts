@@ -163,6 +163,9 @@ export function nextMembershipPatch(
         currency,
       };
     case "renew": {
+      // The locked SQL function overwrites expires_at with
+      // greatest(expires_at, now()) + interval '1 month'. This value is only
+      // the in-memory preview.
       const expiresMs = Date.parse(row.expiresAt);
       const nowMs = Date.parse(event.now);
       const base = Number.isFinite(expiresMs) && expiresMs > nowMs

@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(56);
+select plan(58);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -863,6 +863,35 @@ select is(
   ),
   '2030-03-01T00:00:00Z'::timestamptz,
   'DB-22 second renew invoice adds another month'
+);
+
+update public.vandery_plus_memberships
+set status = 'active', expires_at = now() - interval '10 days'
+where id = '10000000-0000-4000-8000-000000000011';
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'renew',
+      'inv-y3',
+      jsonb_build_object('expires_at', '2099-01-01T00:00:00Z', 'status', 'active')
+    ) ->> 'idempotent'
+  ),
+  'false',
+  'P2a lapsed renew is applied inside the lock'
+);
+
+select ok(
+  (
+    select expires_at > now() + interval '27 days'
+       and expires_at < now() + interval '32 days'
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'P2a lapsed renew uses greatest(expires_at, now()) plus one month'
 );
 
 -- T8: own diploma rows only, no client insert, catalog starts empty.
