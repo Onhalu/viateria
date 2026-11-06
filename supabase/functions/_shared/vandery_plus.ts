@@ -571,9 +571,6 @@ export function invoiceFormId(invoice: FapiInvoice): string | null {
   return ids[0] ?? null;
 }
 
-/** Czech standard VAT. Used only when judging whether a refund is full. */
-export const VANDERY_PLUS_VAT_RATE = 0.21;
-
 /** 1 CZK around the configured gross price. */
 export const VANDERY_PLUS_AMOUNT_TOLERANCE_CENTS = 100;
 
@@ -589,16 +586,9 @@ export function amountsMatchGross(actual: number, expected: number): boolean {
   return withinCents(actual, expected);
 }
 
-/** Full refund of the charged amount: exact, 1 CZK, or a 21% net/gross pair. */
+/** Full refund is the charged gross amount, within 1 CZK. */
 function refundAmountIsFull(actual: number, expected: number): boolean {
-  if (withinCents(actual, expected)) return true;
-  const gross = (net: number) => Math.round(net * (1 + VANDERY_PLUS_VAT_RATE));
-  const net = (grossAmount: number) =>
-    Math.round(grossAmount / (1 + VANDERY_PLUS_VAT_RATE));
-  return withinCents(actual, gross(expected)) ||
-    withinCents(actual, net(expected)) ||
-    withinCents(expected, gross(actual)) ||
-    withinCents(expected, net(actual));
+  return amountsMatchGross(actual, expected);
 }
 
 export type MembershipInvoiceOutcome =
@@ -655,8 +645,8 @@ export type RefundAlert =
 
 /**
  * A refund revokes only when `parent` is the current-period invoice and that
- * invoice already has a paid_first or renew event, and the amount is a full
- * refund (exact, 1 CZK, or 21% net/gross). Otherwise the membership stays.
+ * invoice already has a paid_first or renew event, and the amount is the
+ * charged gross total within 1 CZK. Otherwise the membership stays.
  * Default pending Ondřej. See docs/vandery-plus/fapi-event-assumptions.md.
  */
 export function planMembershipRefund(input: {

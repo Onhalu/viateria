@@ -22,7 +22,7 @@ Default pending Ondřej.
 
 `invoice.parent` must point at an invoice that already has a `paid_first` or `renew` row for the same user in `vandery_plus_webhook_events`, and that invoice must be the membership's current `fapi_invoice_id` (the period being refunded). The credit note's product id must also be `FAPI_VANDERY_PLUS_PRODUCT_ID`. A wrong or missing product id is `SKIPPED` and does not reach the parent check.
 
-- A full refund of that invoice (exact cents, within 100 cents, or a 21% net/gross pair of the charged `amount_cents`) sets `status = revoked`.
+- A full refund of that invoice (the charged gross `amount_cents`, within 100 cents) sets `status = revoked`. A refund of about 82% of that gross amount, including a net-of-VAT figure, is partial: it logs `{ "alert": "vandery_plus_refund_partial" }` and does not revoke.
 - No parent, a parent that is not one of those paid events, or a parent that is an older invoice logs `{ "alert": "vandery_plus_refund_unmatched" }` and does not change the membership.
 - A parent that is the current invoice, but an amount that is not a full refund, logs `{ "alert": "vandery_plus_refund_partial" }` and does not change the membership.
 

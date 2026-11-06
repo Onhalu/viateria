@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(80);
+select plan(82);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1099,6 +1099,35 @@ select is(
   ),
   'active',
   'partial refund does not change the membership'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-net',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-y3',
+        'refund_cents', 49504
+      )
+    ) ->> 'alert'
+  ),
+  'vandery_plus_refund_partial',
+  'about 82% of the gross amount is a partial refund'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'about 82% of the gross amount does not revoke'
 );
 
 select is(

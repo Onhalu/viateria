@@ -318,6 +318,15 @@ Deno.test("refund without a parent or with a foreign parent does not revoke", as
   assert(partial.body.alert === "vandery_plus_refund_partial", JSON.stringify(partial.body));
   assert(store.rows.get("mem-1")!.status === "active", "partial");
   assert(partial.wrote === false, "partial does not write");
+  const netOfGross = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-net",
+    parentInvoiceId: "inv-period",
+    paidInvoiceIds: ["inv-period"],
+    refundCents: Math.round(59900 / 1.21),
+  }));
+  assert(netOfGross.body.alert === "vandery_plus_refund_partial", JSON.stringify(netOfGross.body));
+  assert(store.rows.get("mem-1")!.status === "active", "about 82% does not revoke");
 });
 
 Deno.test("ED-09 payment_failed does not activate or extend", async () => {
