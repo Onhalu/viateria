@@ -72,7 +72,12 @@ Deno.serve(async (req) => {
   // Missing FAPI_MEMBERSHIP_SANDBOX=1 fails closed and writes nothing.
   const sandboxEvent = parseSandboxEvent(payload);
   if (sandboxEvent) {
-    if (!sandboxAllowed(Deno.env.get("FAPI_MEMBERSHIP_SANDBOX"))) {
+    if (
+      !sandboxAllowed(
+        Deno.env.get("FAPI_MEMBERSHIP_SANDBOX"),
+        Deno.env.get("SUPABASE_URL"),
+      )
+    ) {
       return json({ status: "FAILED", message: "sandbox disabled" }, 401);
     }
     const admin = serviceClient();

@@ -253,8 +253,15 @@ export function webhookTokenGate(
   return isWebhookTokenValid(secret, token) ? "ok" : "reject";
 }
 
-export function sandboxAllowed(flag: string | null | undefined): boolean {
-  return flag === "1";
+export const PROD_SUPABASE_PROJECT_REF = "yzmbxxgesnbsqygzgdky";
+
+export function sandboxAllowed(
+  flag: string | null | undefined,
+  supabaseUrl?: string | null,
+): boolean {
+  if (flag !== "1") return false;
+  if ((supabaseUrl ?? "").includes(PROD_SUPABASE_PROJECT_REF)) return false;
+  return true;
 }
 
 export function isPlusKind(value: unknown): value is PlusKind {

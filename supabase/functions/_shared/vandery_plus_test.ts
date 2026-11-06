@@ -483,6 +483,13 @@ Deno.test("ED-14 retry of the first invoice does not add a month", async () => {
 Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live flag", async () => {
   assert(sandboxAllowed(undefined) === false, "sandbox off by default");
   assert(sandboxAllowed("1") === true, "explicit sandbox");
+  assert(
+    sandboxAllowed(
+      "1",
+      "https://yzmbxxgesnbsqygzgdky.supabase.co",
+    ) === false,
+    "sandbox refused on prod",
+  );
   assert(eventKey("inv") === "inv", "key is the invoice id");
   assert(
     inferKind({ explicit: "refund", invoicePaid: false, status: "active" }) ===
