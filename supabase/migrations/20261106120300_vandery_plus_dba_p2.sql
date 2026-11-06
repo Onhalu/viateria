@@ -146,6 +146,7 @@ declare
   inserted int;
   new_status text;
   v_key text;
+  v_invoice text;
 begin
   if p_kind is null
      or p_kind not in ('paid_first', 'renew', 'cancel', 'refund', 'payment_failed') then
@@ -154,7 +155,11 @@ begin
   if p_invoice_id is null or length(trim(p_invoice_id)) = 0 then
     raise exception 'invoice required';
   end if;
-  v_key := trim(p_invoice_id);
+  v_invoice := trim(p_invoice_id);
+  v_key := case
+    when p_kind in ('paid_first', 'renew') then 'paid:' || v_invoice
+    else p_kind || ':' || v_invoice
+  end;
 
   -- Lock the membership for this commit, including renew, so two invoices
   -- cannot lose an update.
@@ -185,7 +190,7 @@ begin
   if p_kind in ('paid_first', 'renew') and exists (
     select 1
     from public.vandery_plus_webhook_events e
-    where e.fapi_invoice_id = v_key
+    where e.fapi_invoice_id = v_invoice
       and e.event_kind in ('paid_first', 'renew')
   ) then
     return jsonb_build_object(
@@ -201,7 +206,7 @@ begin
     insert into public.vandery_plus_webhook_events (
       idempotency_key, event_kind, user_id, fapi_invoice_id
     )
-    values (v_key, p_kind, p_user_id, v_key)
+    values (v_key, p_kind, p_user_id, v_invoice)
     on conflict (idempotency_key) do nothing;
     get diagnostics inserted = row_count;
   exception

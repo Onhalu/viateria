@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(51);
+select plan(56);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -780,6 +780,89 @@ select throws_ok(
     values ('renew:inv-db20', 'renew', 'inv-db20')$$,
   '23505',
   'DB-20 partial unique index blocks a second paid invoice id'
+);
+
+insert into public.vandery_plus_memberships (
+  id, user_id, status, expires_at
+)
+values (
+  '10000000-0000-4000-8000-000000000011',
+  '00000000-0000-4000-8000-000000000001',
+  'pending',
+  now()
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'payment_failed',
+      'inv-x',
+      '{"status":"failed"}'::jsonb
+    ) ->> 'membership_status'
+  ),
+  'failed',
+  'DB-21 payment_failed leaves the checkout failed'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'paid_first',
+      'inv-x',
+      jsonb_build_object(
+        'status', 'active',
+        'expires_at', '2030-01-01T00:00:00Z'
+      )
+    ) ->> 'membership_status'
+  ),
+  'active',
+  'DB-21 paid_first after payment_failed on the same invoice activates'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'renew',
+      'inv-y1',
+      jsonb_build_object('expires_at', '2030-02-01T00:00:00Z', 'status', 'active')
+    ) ->> 'idempotent'
+  ),
+  'false',
+  'DB-22 first renew invoice is applied'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'renew',
+      'inv-y2',
+      jsonb_build_object('expires_at', '2030-03-01T00:00:00Z', 'status', 'active')
+    ) ->> 'idempotent'
+  ),
+  'false',
+  'DB-22 second renew invoice is applied'
+);
+
+select is(
+  (
+    select expires_at
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  '2030-03-01T00:00:00Z'::timestamptz,
+  'DB-22 second renew invoice adds another month'
 );
 
 -- T8: own diploma rows only, no client insert, catalog starts empty.

@@ -73,9 +73,15 @@ export function addMonthsIso(iso: string, months: number): string {
   return date.toISOString();
 }
 
-/** One invoice is one commit. A later kind for the same invoice is a retry. */
-export function eventKey(invoiceId: string): string {
-  return invoiceId;
+/**
+ * paid_first and renew share one key per invoice so a retry does not add a
+ * month. payment_failed, cancel, and refund keep their own keys, so a later
+ * paid event for that invoice can still activate.
+ */
+export function eventKey(kind: string, invoiceId: string): string {
+  const id = invoiceId.trim();
+  if (kind === "paid_first" || kind === "renew") return `paid:${id}`;
+  return `${kind}:${id}`;
 }
 
 export function vanderyPlusNotes(userId: string, membershipId: string): string {
@@ -227,7 +233,7 @@ export async function deliverVanderyPlus(
   const committed = await store.commit({
     membershipId: row.id,
     userId: row.userId,
-    key: eventKey(event.invoiceId),
+    key: eventKey(event.kind, event.invoiceId),
     kind: event.kind,
     invoiceId: event.invoiceId,
     patch,

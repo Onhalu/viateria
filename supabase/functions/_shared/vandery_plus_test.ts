@@ -460,8 +460,59 @@ Deno.test("renew after expiry starts from now", async () => {
   assert(store.rows.get("mem-1")!.status === "active", "active again");
 });
 
+Deno.test("DB-21 payment_failed then paid_first on the same invoice activates", async () => {
+  const store = new MemoryStore([
+    row({ id: "mem-1", userId: "user-a", status: "pending" }),
+  ]);
+  await deliverVanderyPlus(
+    store,
+    event({ kind: "payment_failed", invoiceId: "inv-x" }),
+  );
+  assert(store.rows.get("mem-1")!.status === "failed", "failed first");
+  const paid = await deliverVanderyPlus(
+    store,
+    event({ kind: "paid_first", invoiceId: "inv-x" }),
+  );
+  assert(paid.body.idempotent === false, JSON.stringify(paid.body));
+  assert(store.rows.get("mem-1")!.status === "active", "later payment activates");
+});
+
+Deno.test("DB-22 two renew invoices each add a month", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+    }),
+  ]);
+  const first = await deliverVanderyPlus(
+    store,
+    event({
+      kind: "renew",
+      invoiceId: "inv-y1",
+      now: "2030-01-01T00:00:00.000Z",
+    }),
+  );
+  const second = await deliverVanderyPlus(
+    store,
+    event({
+      kind: "renew",
+      invoiceId: "inv-y2",
+      now: "2030-02-01T00:00:00.000Z",
+    }),
+  );
+  assert(first.body.idempotent === false, "y1 applied");
+  assert(second.body.idempotent === false, "y2 applied");
+  assert(
+    store.rows.get("mem-1")!.expiresAt === "2030-03-01T00:00:00.000Z",
+    store.rows.get("mem-1")!.expiresAt,
+  );
+});
+
 Deno.test("ED-14 / DB-20 paid_first then renew with the same invoice does not move expires_at", async () => {
-  assert(eventKey("inv-1") === "inv-1", "invoice id only");
+  assert(eventKey("paid_first", "inv-1") === "paid:inv-1", "paid key");
+  assert(eventKey("renew", "inv-1") === "paid:inv-1", "renew shares the paid key");
   const store = new MemoryStore([
     row({ id: "mem-1", userId: "user-a", status: "pending" }),
   ]);
@@ -490,7 +541,9 @@ Deno.test("E2E-03..06 sandbox contract uses the same reducer and refuses a live 
     ) === false,
     "sandbox refused on prod",
   );
-  assert(eventKey("inv") === "inv", "key is the invoice id");
+  assert(eventKey("renew", "inv") === "paid:inv", "renew key");
+  assert(eventKey("payment_failed", "inv") === "payment_failed:inv", "failed key");
+  assert(eventKey("cancel", "inv") === "cancel:inv", "cancel key");
   assert(
     inferKind({ explicit: "refund", invoicePaid: false, status: "active" }) ===
       "refund",
