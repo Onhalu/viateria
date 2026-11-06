@@ -19,3 +19,9 @@ If `FAPI_VANDERY_PLUS_ITEM_ID` is set and `FAPI_VANDERY_PLUS_PRODUCT_ID` is empt
 ```
 
 Set both ids together before enabling the FAPI membership webhook.
+
+## Drift migrations (local and preview only)
+
+`20261006185900_w0c_drift_challenge_covers_bucket.sql` and `20261006190000_w0b_drift_challenge_windows_changelog.sql` recreate prod history that was never committed. They are for a local or preview database whose chain starts from this repo.
+
+Do not apply them to production. Prod already has these objects. `supabase migration repair` on prod is Ask first.
