@@ -1,7 +1,19 @@
 -- Rollback of 20261106120100 only.
--- Apply after 20261106120300 is rolled back, so public.commit_vandery_plus_event
--- is the plpgsql function from 120100 again. Restores the 113000 body, which
--- stores the caller-supplied idempotency key unchanged.
+-- Restores the 113000 body, which stores the caller-supplied idempotency key,
+-- and restores that migration's function comment.
+--
+-- Rollback apply order, newest first:
+--   20261106120300 (drops private.commit, including the 120400 refund gate),
+--   20261106120200,
+--   20261106120100,
+--   20261106120000,
+--   20261106114000,
+--   20261106113000.
+-- 20261106113000 may instead be applied alone to the full forward chain.
+-- That path requires viateria.allow_destructive_rollback=on before it drops
+-- vandery_plus_memberships and vandery_plus_webhook_events.
+-- Apply this file after 20261106120300 is rolled back, so
+-- public.commit_vandery_plus_event is the plpgsql function from 120100 again.
 
 create or replace function public.commit_vandery_plus_event(
   p_membership_id uuid,
@@ -117,6 +129,9 @@ begin
   );
 end;
 $$;
+
+comment on function public.commit_vandery_plus_event(uuid, uuid, text, text, text, jsonb) is
+  'Webhook commit for the checkout user only. Idempotent on kind:invoice. Never writes purchases.';
 
 revoke all on function public.commit_vandery_plus_event(uuid, uuid, text, text, text, jsonb)
   from public, anon, authenticated;

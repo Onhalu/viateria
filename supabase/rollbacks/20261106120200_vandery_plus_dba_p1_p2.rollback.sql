@@ -1,7 +1,19 @@
 -- Rollback of 20261106120200 only.
--- Apply after 20261106120300 is rolled back, so the public trigger functions
--- exist again. Restores the membership select policy from 113000 and the
--- default execute grant those trigger functions had before this file.
+-- Restores the membership select policy from 113000 and the execute grant
+-- the trigger functions had before this file.
+--
+-- Rollback apply order, newest first:
+--   20261106120300 (drops private.commit, including the 120400 refund gate),
+--   20261106120200,
+--   20261106120100,
+--   20261106120000,
+--   20261106114000,
+--   20261106113000.
+-- 20261106113000 may instead be applied alone to the full forward chain.
+-- That path requires viateria.allow_destructive_rollback=on before it drops
+-- vandery_plus_memberships and vandery_plus_webhook_events.
+-- Apply this file after 20261106120300 is rolled back, so the public trigger
+-- functions exist again.
 
 drop policy if exists vandery_plus_memberships_select_own
   on public.vandery_plus_memberships;

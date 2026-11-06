@@ -1,7 +1,18 @@
 -- Rollback of 20261106120300 only.
--- Drops private.* and restores the public security-definer helpers and the
--- diploma grants from 114000 / the place-visit predicate from 120000.
--- Apply before the 120200, 120100, and 113000 rollbacks.
+-- Drops private.* (including the 120400 refund gate) and restores the public
+-- security-definer helpers and the diploma grants from 114000 / the
+-- place-visit predicate from 120000.
+--
+-- Rollback apply order, newest first:
+--   20261106120300 (drops private.commit, including the 120400 refund gate),
+--   20261106120200,
+--   20261106120100,
+--   20261106120000,
+--   20261106114000,
+--   20261106113000.
+-- 20261106113000 may instead be applied alone to the full forward chain.
+-- That path requires viateria.allow_destructive_rollback=on before it drops
+-- vandery_plus_memberships and vandery_plus_webhook_events.
 -- The paid-invoice partial unique index from this migration is dropped here.
 
 drop index if exists public.vandery_plus_webhook_paid_invoice_uidx;
@@ -16,17 +27,19 @@ create unique index vandery_plus_memberships_one_current_uidx
 drop trigger if exists vandery_plus_anonymize_on_profile_delete on public.profiles;
 drop trigger if exists vandery_plus_memberships_touch on public.vandery_plus_memberships;
 
+-- Policy and public SQL wrappers depend on the functions they call.
+-- Drop the policy, then the public wrappers, then private.*.
+drop policy if exists place_visits_insert_own on public.place_visits;
+drop function if exists public.can_record_place_visit(text);
+drop function if exists public.has_active_vandery_plus(uuid);
+drop function if exists public.commit_vandery_plus_event(uuid, uuid, text, text, text, jsonb);
+
 drop function if exists private.anonymize_vandery_plus_before_profile_delete();
 drop function if exists private.anonymize_vandery_plus_membership(uuid);
 drop function if exists private.touch_vandery_plus_membership();
 drop function if exists private.commit_vandery_plus_event(uuid, uuid, text, text, text, jsonb);
 drop function if exists private.can_record_place_visit(text);
 drop function if exists private.has_active_vandery_plus(uuid);
-
-drop policy if exists place_visits_insert_own on public.place_visits;
-drop function if exists public.can_record_place_visit(text);
-drop function if exists public.has_active_vandery_plus(uuid);
-drop function if exists public.commit_vandery_plus_event(uuid, uuid, text, text, text, jsonb);
 
 create or replace function public.has_active_vandery_plus(
   p_uid uuid default auth.uid()
@@ -131,6 +144,9 @@ begin
   if p_kind is null
      or p_kind not in ('paid_first', 'renew', 'cancel', 'refund', 'payment_failed') then
     raise exception 'invalid event';
+  end if;
+  if p_idempotency_key is not null and char_length(p_idempotency_key) > 200 then
+    raise exception 'idempotency key too long' using errcode = '22023';
   end if;
   if p_invoice_id is null or length(trim(p_invoice_id)) = 0 then
     raise exception 'invoice required';
@@ -284,6 +300,16 @@ create trigger vandery_plus_memberships_touch
 create trigger vandery_plus_anonymize_on_profile_delete
   before delete on public.profiles
   for each row execute function public.anonymize_vandery_plus_before_profile_delete();
+
+-- 120200 revoked these. Recreating the functions grants execute to public
+-- again, so put that revoke back. The 120200 rollback grants it once more.
+revoke all on function public.touch_vandery_plus_membership()
+  from public, anon, authenticated;
+revoke all on function public.anonymize_vandery_plus_before_profile_delete()
+  from public, anon, authenticated;
+
+comment on function public.commit_vandery_plus_event(uuid, uuid, text, text, text, jsonb) is
+  'Webhook commit for the checkout user only. Idempotent on invoice id. Never writes purchases.';
 
 drop policy if exists vandery_plus_diplomas_select_authenticated
   on public.vandery_plus_diplomas;
