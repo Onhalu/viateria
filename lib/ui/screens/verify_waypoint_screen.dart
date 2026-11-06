@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
+import '../../data/place_visit_sync.dart';
 import '../../data/route_services.dart';
-import '../../domain/leaderboard_score.dart';
 import '../../domain/photo_verify.dart';
 import '../../domain/stop_verify.dart';
 import '../../domain/story_feed.dart';
@@ -241,8 +241,12 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
         await _completePhoto(services, strings);
         return;
       }
-      final ids = await _persistPlaceIds(services);
-      await _recordMapVisits(services, ids);
+      final ids = await _placeIds(services);
+      await commitLocalMapVisits(
+        store: services.verifiedPlaces,
+        leaderboard: services.leaderboard,
+        ids: ids,
+      );
       if (!mounted) return;
       _celebrateAndLeave(() => context.pop());
     } catch (_) {
@@ -448,7 +452,7 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
     return allowed;
   }
 
-  Future<Set<String>> _persistPlaceIds(AppServices services) async {
+  Future<Set<String>> _placeIds(AppServices services) async {
     String? waypointPlaceId;
     if (widget.isChallengeStop) {
       try {
@@ -468,22 +472,13 @@ class _VerifyWaypointScreenState extends State<VerifyWaypointScreen> {
       shownPlaceId: widget.place?.id,
       waypointPlaceId: waypointPlaceId,
     );
-    await services.verifiedPlaces.addAll(ids);
     return ids;
   }
 
-  /// Map visits score on the server. Failures stay local so the sheet can close.
-  /// Challenge stops are recorded inside `verify_waypoint` with source `verify`.
-  Future<void> _recordMapVisits(AppServices services, Set<String> ids) async {
-    for (final id in ids) {
-      if (!isPlaceUuid(id)) continue;
-      try {
-        await services.leaderboard.recordPlaceVisit(
-          id,
-          source: PlaceVisitSource.map,
-        );
-      } catch (_) {}
-    }
+  Future<Set<String>> _persistPlaceIds(AppServices services) async {
+    final ids = await _placeIds(services);
+    await services.verifiedPlaces.addAll(ids);
+    return ids;
   }
 
   Place? get _shownPlace => widget.place ?? _catalogPlace;

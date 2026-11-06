@@ -12,6 +12,27 @@ import 'verified_places.dart';
 /// Local ids remain the map's visited markers; the score is the server row.
 /// Login copies server rows back into the store (`PlaceVisitHydrate`) and
 /// does not read this flag.
+/// Shows the pin immediately, then keeps it only if the server accepts.
+/// A rejected map visit drops the unconfirmed ids.
+Future<void> commitLocalMapVisits({
+  required VerifiedPlacesStore store,
+  required LeaderboardRepository leaderboard,
+  required Iterable<String> ids,
+}) async {
+  final pending = ids.where((id) => id.isNotEmpty).toSet();
+  store.addOptimisticAll(pending);
+  try {
+    for (final id in pending) {
+      if (!isPlaceUuid(id)) continue;
+      await leaderboard.recordPlaceVisit(id, source: PlaceVisitSource.map);
+    }
+    await store.confirmAll(pending);
+  } catch (_) {
+    store.rollbackAll(pending);
+    rethrow;
+  }
+}
+
 class PlaceVisitSync {
   const PlaceVisitSync();
 
