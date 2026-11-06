@@ -1000,8 +1000,8 @@ select is(
       '{"status":"revoked"}'::jsonb
     ) ->> 'idempotent'
   ),
-  'true',
-  'replaying a refund without a parent is idempotent'
+  'false',
+  'replaying a refund without a parent is not stuck as idempotent'
 );
 
 select is(
