@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(83);
+select plan(88);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -1213,6 +1213,92 @@ select is(
   ),
   'active',
   'TODO Ondřej: renew after refund currently returns the membership to active'
+);
+
+-- A refund that arrives before its paid invoice must not consume refund:<id>.
+update public.vandery_plus_memberships
+set
+  fapi_invoice_id = 'inv-late',
+  amount_cents = 59900,
+  status = 'active'
+where id = '10000000-0000-4000-8000-000000000011';
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-early',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-late',
+        'refund_cents', 59900
+      )
+    ) ->> 'alert'
+  ),
+  'vandery_plus_refund_unmatched',
+  'refund before the parent paid event is unmatched'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.vandery_plus_webhook_events
+    where idempotency_key = 'refund:cn-early'
+  ),
+  0,
+  'unapplied refund does not consume refund:<invoice>'
+);
+
+select is(
+  (
+    select status
+    from public.vandery_plus_memberships
+    where id = '10000000-0000-4000-8000-000000000011'
+  ),
+  'active',
+  'refund before the parent paid event leaves the membership'
+);
+
+insert into public.vandery_plus_webhook_events (
+  idempotency_key, event_kind, user_id, fapi_invoice_id
+)
+values (
+  'paid:inv-late',
+  'paid_first',
+  '00000000-0000-4000-8000-000000000001',
+  'inv-late'
+);
+
+select is(
+  (
+    public.commit_vandery_plus_event(
+      '10000000-0000-4000-8000-000000000011',
+      '00000000-0000-4000-8000-000000000001',
+      'ignored',
+      'refund',
+      'cn-early',
+      jsonb_build_object(
+        'status', 'revoked',
+        'refund_parent', 'inv-late',
+        'refund_cents', 59900
+      )
+    ) ->> 'membership_status'
+  ),
+  'revoked',
+  'the same refund applies after the parent invoice arrives'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.vandery_plus_webhook_events
+    where idempotency_key = 'refund:cn-early'
+  ),
+  1,
+  'an applied refund records refund:<invoice>'
 );
 
 -- T8: own diploma rows only, no client insert, catalog starts empty.

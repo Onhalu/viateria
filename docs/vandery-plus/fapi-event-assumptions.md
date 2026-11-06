@@ -26,7 +26,7 @@ Default pending Ondřej.
 - No parent, a parent that is not one of those paid events, or a parent that is an older invoice logs `{ "alert": "vandery_plus_refund_unmatched" }` and does not change the membership.
 - A parent that is the current invoice, but an amount that is not a full refund, logs `{ "alert": "vandery_plus_refund_partial" }` and does not change the membership.
 
-Replaying the same credit-note id is idempotent and does not apply the refund twice.
+Replaying an applied credit note is idempotent and does not revoke twice. A refund that arrives before its paid invoice does not store `refund:<invoice>`. After that paid invoice is recorded, the same credit note can be processed again.
 
 ## Amount: gross total
 

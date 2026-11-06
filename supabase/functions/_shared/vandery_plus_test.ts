@@ -83,7 +83,10 @@ class MemoryStore implements PlusStore {
     if (this.keys.has(input.key)) {
       return Promise.resolve({ idempotent: true, row: current });
     }
-    this.keys.add(input.key);
+    // An unapplied refund must not consume refund:<invoice>.
+    if (input.kind !== "refund" || input.patch.status === "revoked") {
+      this.keys.add(input.key);
+    }
     this.commits.push(input.userId);
     const next = applyPatch(current, input.patch);
     this.rows.set(next.id, next);
@@ -387,6 +390,38 @@ Deno.test("ED-11 challenge notes stay on purchases", () => {
   const route = source.indexOf("fapiProductRoute(invoiceNotes)");
   const purchaseWrite = source.indexOf('from("purchases")');
   assert(route >= 0 && purchaseWrite > route, "membership branch returns before purchases");
+});
+
+Deno.test("refund before the parent invoice can be applied later", async () => {
+  const store = new MemoryStore([
+    row({
+      id: "mem-1",
+      userId: "user-a",
+      status: "active",
+      expiresAt: "2026-12-06T00:00:00.000Z",
+      fapiInvoiceId: "inv-late",
+      amountCents: 59900,
+    }),
+  ]);
+  const early = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-early",
+    parentInvoiceId: "inv-late",
+    paidInvoiceIds: [],
+    refundCents: 59900,
+  }));
+  assert(early.body.alert === "vandery_plus_refund_unmatched", JSON.stringify(early.body));
+  assert(store.rows.get("mem-1")!.status === "active", "not revoked yet");
+  assert(!store.keys.has("refund:cn-early"), "key not consumed");
+  const later = await deliverVanderyPlus(store, event({
+    kind: "refund",
+    invoiceId: "cn-early",
+    parentInvoiceId: "inv-late",
+    paidInvoiceIds: ["inv-late"],
+    refundCents: 59900,
+  }));
+  assert(store.rows.get("mem-1")!.status === "revoked", JSON.stringify(later.body));
+  assert(store.keys.has("refund:cn-early"), "applied refund records the key");
 });
 
 Deno.test("non-numeric refund_cents is a clean error", () => {
