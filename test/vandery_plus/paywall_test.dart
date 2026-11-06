@@ -103,6 +103,16 @@ void main() {
     await tester.tap(find.text('open-paywall'));
     await tester.pumpAndSettle();
     expect(find.text('Ověřuj místa na mapě'), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('vandery-plus-pages'))).height, 240);
+    final cardPadding = tester.widget<Padding>(
+      find
+          .descendant(
+            of: find.byKey(const Key('vandery-plus-slide-0')),
+            matching: find.byType(Padding),
+          )
+          .first,
+    );
+    expect(cardPadding.padding, const EdgeInsets.all(20));
     expect(find.byKey(const Key('vandery-plus-prev')), findsOneWidget);
     expect(find.byKey(const Key('vandery-plus-next')), findsOneWidget);
     expect(

@@ -295,7 +295,7 @@ class _VanderyPlusPaywallContentState extends State<VanderyPlusPaywallContent> {
               child: _reduce
                   ? _BenefitList(strings: strings)
                   : SizedBox(
-                      height: 200,
+                      height: 240,
                       child: PageView.builder(
                         key: const Key('vandery-plus-pages'),
                         controller: _pages,
@@ -505,7 +505,7 @@ class _BenefitCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

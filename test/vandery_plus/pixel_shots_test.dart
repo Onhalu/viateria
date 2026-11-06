@@ -11,18 +11,20 @@ import 'package:viateria/config/app_config.dart';
 import 'package:viateria/data/app_services.dart';
 import 'package:viateria/data/memory_membership.dart';
 import 'package:viateria/data/vandery_plus_session.dart';
+import 'package:viateria/domain/vandery_plus.dart';
 import 'package:viateria/l10n/app_strings.dart';
 import 'package:viateria/l10n/locale_controller.dart';
 import 'package:viateria/map/place_catalog.dart';
 import 'package:viateria/models/models.dart';
 import 'package:viateria/theme/app_theme.dart';
 import 'package:viateria/ui/screens/profile_screen.dart';
+import 'package:viateria/ui/widgets/padlock_unlock.dart';
 import 'package:viateria/ui/widgets/vandery_plus_map_lock.dart';
 import 'package:viateria/ui/widgets/vandery_plus_paywall.dart';
 
 import '../helpers/fakes.dart';
 
-/// Six review frames: profile CTA, paywall sheet, paywall dialog, map lock.
+/// Review frames: profile CTA, member badge, paywall, map lock sequence, slides 2–4.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -66,11 +68,64 @@ void main() {
       'vandery-plus-map-lock-1280',
       _lock(),
     );
+    await _shot(
+      tester,
+      const Size(390, 844),
+      'vandery-plus-member-390',
+      _profile(member: true),
+    );
+    await _shot(
+      tester,
+      const Size(1280, 800),
+      'vandery-plus-member-1280',
+      _profile(member: true),
+    );
+    await _shot(
+      tester,
+      const Size(390, 240),
+      'vandery-plus-map-sequence-390',
+      _lockSequence(),
+      advance: const Duration(milliseconds: 500),
+    );
+    await _shot(
+      tester,
+      const Size(1280, 240),
+      'vandery-plus-map-sequence-1280',
+      _lockSequence(),
+      advance: const Duration(milliseconds: 500),
+    );
+    await _shot(
+      tester,
+      const Size(390, 844),
+      'vandery-plus-slide-2-390',
+      _paywall(width: 390, height: 844 * 0.82, handle: true, initialSlide: 1),
+    );
+    await _shot(
+      tester,
+      const Size(390, 844),
+      'vandery-plus-slide-3-390',
+      _paywall(width: 390, height: 844 * 0.82, handle: true, initialSlide: 2),
+    );
+    await _shot(
+      tester,
+      const Size(390, 844),
+      'vandery-plus-slide-4-390',
+      _paywall(width: 390, height: 844 * 0.82, handle: true, initialSlide: 3),
+    );
   });
 }
 
-Widget _profile() {
-  final session = VanderyPlusSession(repository: MemoryMembershipRepository());
+Widget _profile({bool member = false}) {
+  final session = VanderyPlusSession(
+    repository: MemoryMembershipRepository(
+      initial: member
+          ? VanderyPlusMembership(
+              status: 'active',
+              expiresAt: DateTime.now().toUtc().add(const Duration(days: 20)),
+            )
+          : null,
+    ),
+  );
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => LocaleController(initial: 'cs')),
@@ -104,6 +159,7 @@ Widget _paywall({
   required double width,
   required double height,
   required bool handle,
+  int initialSlide = 0,
 }) {
   final session = VanderyPlusSession(
     repository: MemoryMembershipRepository(),
@@ -127,6 +183,7 @@ Widget _paywall({
               session: session,
               strings: strings,
               showHandle: handle,
+              initialSlide: initialSlide,
               onClose: () {},
               openUrl: (_) async {},
             ),
@@ -134,6 +191,80 @@ Widget _paywall({
         ),
       ),
     ),
+  );
+}
+
+Widget _lockSequence() {
+  final strings = AppStrings('cs');
+  return MaterialApp(
+    theme: AppTheme.light(),
+    home: Scaffold(
+      backgroundColor: BrandColors.cream,
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _sequenceFrame(
+                'Zamčeno',
+                MapPlaceVerifyGate(
+                  session: VanderyPlusSession(
+                    repository: MemoryMembershipRepository(),
+                  ),
+                  placeId: 'place-1',
+                  strings: strings,
+                  onVerify: () {},
+                  onLockedTap: () {},
+                ),
+              ),
+            ),
+            Expanded(
+              child: _sequenceFrame(
+                'Odemčeno',
+                Center(
+                  child: PadlockUnlock(
+                    play: true,
+                    glyph: 40,
+                    lockedLabel: strings.vanderyPlusLocked,
+                    unlockedLabel: strings.vanderyPlusUnlocked,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: _sequenceFrame(
+                'Ověřit',
+                AppButton(
+                  label: strings.verify,
+                  size: AppButtonSize.m,
+                  onPressed: () {},
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _sequenceFrame(String label, Widget child) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: BrandColors.bark,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 8),
+      child,
+    ],
   );
 }
 
@@ -176,13 +307,14 @@ Future<void> _shot(
   WidgetTester tester,
   Size size,
   String name,
-  Widget child,
-) async {
+  Widget child, {
+  Duration advance = const Duration(milliseconds: 50),
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
   await tester.pumpWidget(RepaintBoundary(key: const Key('shot'), child: child));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 50));
+  await tester.pump(advance);
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(const Key('shot')),
   );
