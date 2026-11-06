@@ -40,6 +40,7 @@ abstract final class BrandTypography {
   }) {
     return TextStyle(
       fontFamily: family,
+      fontFamilyFallback: const ['Roboto'],
       fontSize: fontSize,
       fontWeight: fontWeight,
       fontVariations: [FontVariation('wght', fontWeight.value.toDouble())],

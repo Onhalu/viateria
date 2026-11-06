@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_services.dart';
+import '../../data/vandery_plus_session.dart';
 import '../../domain/profile_stats.dart';
+import '../../domain/vandery_plus.dart';
 import '../../l10n/app_strings.dart';
 import '../../l10n/locale_controller.dart';
 import '../../map/place.dart';
@@ -13,6 +15,8 @@ import '../../models/models.dart';
 import '../../theme/brand_colors.dart';
 import '../layout/breakpoints.dart';
 import '../navigation.dart';
+import '../widgets/vandery_plus_paywall.dart';
+import '../widgets/vandery_plus_profile_slot.dart';
 import 'leaderboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -27,6 +31,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   var _started = false;
+  VanderyPlusSession? _plus;
   List<Place> _places = const [];
   List<Challenge> _completed = const [];
   Map<String, DateTime> _completedAt = const {};
@@ -35,13 +40,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final next = context.read<AppServices>().vanderyPlus;
+    if (!identical(_plus, next)) {
+      _plus?.removeListener(_onPlus);
+      _plus = next;
+      _plus!.addListener(_onPlus);
+    }
     if (_started) return;
     _started = true;
     unawaited(_load());
   }
 
+  @override
+  void dispose() {
+    _plus?.removeListener(_onPlus);
+    super.dispose();
+  }
+
+  void _onPlus() {
+    if (mounted) setState(() {});
+  }
+
   Future<void> _load() async {
     final services = context.read<AppServices>();
+    await services.vanderyPlus.refresh();
     final catalog = widget.places ?? services.places;
     final placesFuture = _orDefault(catalog.fetchAll(), const <Place>[]);
     final completedFuture = _orDefault(
@@ -139,6 +161,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     completed: _completed,
                     completedAt: _completedAt,
                     score: _score,
+                    membership: services.vanderyPlus.membership,
+                    now: services.vanderyPlus.now,
+                    onJoinVanderyPlus: () => showVanderyPlusPaywall(context),
                   );
                 },
               ),
@@ -202,6 +227,9 @@ class _ProfileStatsBody extends StatelessWidget {
     required this.completed,
     required this.completedAt,
     required this.score,
+    required this.membership,
+    required this.now,
+    required this.onJoinVanderyPlus,
   });
 
   final AppStrings strings;
@@ -210,6 +238,9 @@ class _ProfileStatsBody extends StatelessWidget {
   final List<Challenge> completed;
   final Map<String, DateTime> completedAt;
   final LeaderboardEntry? score;
+  final VanderyPlusMembership membership;
+  final DateTime now;
+  final VoidCallback onJoinVanderyPlus;
 
   static const _gridGap = 12.0;
 
@@ -218,9 +249,23 @@ class _ProfileStatsBody extends StatelessWidget {
     final titleStyle = Theme.of(context).textTheme.titleSmall
         ?.copyWith(fontWeight: FontWeight.w700, color: BrandColors.forest);
     final rows = [counts.take(2).toList(), counts.skip(2).take(2).toList()];
+    // 1280 web: leaderboard and the CTA sit above the fold. The CTA stays
+    // directly under the leaderboard card.
+    final wide = MediaQuery.sizeOf(context).width >= 1200;
+    final aboveTheFold = <Widget>[
+      _LeaderboardCard(strings: strings, score: score),
+      VanderyPlusProfileSlot(
+        strings: strings,
+        membership: membership,
+        now: now,
+        locale: locale,
+        onJoin: onJoinVanderyPlus,
+      ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (wide) ...aboveTheFold,
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: KeyedSubtree(
@@ -306,9 +351,10 @@ class _ProfileStatsBody extends StatelessWidget {
                   ],
                 ),
         ),
-        const SizedBox(height: 12),
-        _LeaderboardCard(strings: strings, score: score),
-        const SizedBox(height: 8),
+        if (!wide) ...[
+          const SizedBox(height: 12),
+          ...aboveTheFold,
+        ],
       ],
     );
   }

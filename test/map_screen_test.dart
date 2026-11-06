@@ -612,13 +612,15 @@ void main() {
             .size,
         18,
       );
-      final verify = tester.widget<AppButton>(
-        find.byKey(const Key('map-poi-verify')),
+      // Map-only pin, no membership: the verify chip is the lock, not a buy button.
+      expect(find.byKey(const Key('map-place-lock')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('map-place-lock'))).height,
+        greaterThanOrEqualTo(44),
       );
-      expect(verify.variant, AppButtonVariant.primary);
       final actionRow = find
           .ancestor(
-            of: find.byKey(const Key('map-poi-verify')),
+            of: find.byKey(const Key('map-place-lock')),
             matching: find.byType(Row),
           )
           .first;
@@ -630,7 +632,7 @@ void main() {
         findsOneWidget,
       );
       final verifyRect = tester.getRect(
-        find.byKey(const Key('map-poi-verify')),
+        find.byKey(const Key('map-place-lock')),
       );
       final planRect = tester.getRect(
         find.byKey(const Key('map-poi-add-route')),
@@ -656,7 +658,7 @@ void main() {
           of: find.byKey(const Key('map-poi-sheet')),
           matching: find.byType(AppButton),
         ),
-        findsNWidgets(2),
+        findsNWidgets(1),
       );
 
       await tester.tap(find.byKey(const Key('map-poi-add-route')));

@@ -1,0 +1,25 @@
+# Runs the plain psql -f rollback script and fails on its exit code.
+# pgTAP \! checks can pass without executing the file. This job does not deploy.
+name: VANDERY+ rollback psql
+
+on:
+  pull_request:
+  push:
+    branches:
+      - feat/vandery-plus-membership
+
+permissions:
+  contents: read
+
+jobs:
+  psql-f:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.40.7
+      - name: Start local database
+        run: supabase start -x realtime,storage-api,imgproxy,edge-runtime,logflare,vector,supavisor,gotrue,kong,postgres-meta,postgrest,mailpit,studio
+      - name: Rollback files must not apply without the guard
+        run: sh supabase/tests/vandery_plus_rollback_psql_f.sh

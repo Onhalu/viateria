@@ -283,6 +283,43 @@ class AppStrings {
     'deadlinePassed',
     'featuredPrevious',
     'featuredNext',
+    'vanderyPlusJoinCta',
+    'vanderyPlusBadge',
+    'vanderyPlusActiveLine',
+    'vanderyPlusActiveUntil',
+    'vanderyPlusCanceledUntil',
+    'vanderyPlusCancelNote',
+    'vanderyPlusTitle',
+    'vanderyPlusSubtitle',
+    'vanderyPlusMonthly',
+    'vanderyPlusPayCta',
+    'vanderyPlusLegalGate',
+    'vanderyPlusTerms',
+    'vanderyPlusPrivacy',
+    'vanderyPlusDraftNote',
+    'vanderyPlusBenefit',
+    'vanderyPlusPrev',
+    'vanderyPlusNext',
+    'vanderyPlusClose',
+    'vanderyPlusVerifying',
+    'vanderyPlusActiveToast',
+    'vanderyPlusRetryVerify',
+    'vanderyPlusRetryHint',
+    'vanderyPlusPayFailed',
+    'vanderyPlusCancelled',
+    'vanderyPlusMapLock',
+    'vanderyPlusLocked',
+    'vanderyPlusUnlocked',
+    'vanderyPlusSlide1Title',
+    'vanderyPlusSlide1Body',
+    'vanderyPlusSlide2Title',
+    'vanderyPlusSlide2Body',
+    // Placeholder until Ondřej writes the final slide 3 copy.
+    // Must not promise extra or bonus points. 1 place = 1 point.
+    'vanderyPlusSlide3Title',
+    'vanderyPlusSlide3Body',
+    'vanderyPlusSlide4Title',
+    'vanderyPlusSlide4Body',
   ];
 
   String t(String key) => _table[key] ?? _tables['en']![key] ?? key;
@@ -540,6 +577,48 @@ class AppStrings {
   String get leaderboardRetry => t('leaderboardRetry');
   String get leaderboardNoPoints => t('leaderboardNoPoints');
   String get leaderboardOpen => t('leaderboardOpen');
+  String get vanderyPlusJoinCta => t('vanderyPlusJoinCta');
+  String get vanderyPlusBadge => t('vanderyPlusBadge');
+  String get vanderyPlusActiveLine => t('vanderyPlusActiveLine');
+  String vanderyPlusActiveUntil(String date) =>
+      t('vanderyPlusActiveUntil').replaceAll('{date}', date);
+  String vanderyPlusCanceledUntil(String date) =>
+      t('vanderyPlusCanceledUntil').replaceAll('{date}', date);
+
+  /// Legal PASS draft, VOP publish Ask first. Not a lawyer sign-off.
+  String get vanderyPlusCancelNote => t('vanderyPlusCancelNote');
+  String get vanderyPlusTitle => t('vanderyPlusTitle');
+  String get vanderyPlusSubtitle => t('vanderyPlusSubtitle');
+  String get vanderyPlusMonthly => t('vanderyPlusMonthly');
+  String vanderyPlusPayCta(String price) =>
+      t('vanderyPlusPayCta').replaceAll('{price}', price);
+  String get vanderyPlusLegalGate => t('vanderyPlusLegalGate');
+  String get vanderyPlusTerms => t('vanderyPlusTerms');
+  String get vanderyPlusPrivacy => t('vanderyPlusPrivacy');
+  String get vanderyPlusDraftNote => t('vanderyPlusDraftNote');
+  String vanderyPlusBenefit(int index, int total) => t('vanderyPlusBenefit')
+      .replaceAll('{k}', '$index')
+      .replaceAll('{n}', '$total');
+  String get vanderyPlusPrev => t('vanderyPlusPrev');
+  String get vanderyPlusNext => t('vanderyPlusNext');
+  String get vanderyPlusClose => t('vanderyPlusClose');
+  String get vanderyPlusVerifying => t('vanderyPlusVerifying');
+  String get vanderyPlusActiveToast => t('vanderyPlusActiveToast');
+  String get vanderyPlusRetryVerify => t('vanderyPlusRetryVerify');
+  String get vanderyPlusRetryHint => t('vanderyPlusRetryHint');
+  String get vanderyPlusPayFailed => t('vanderyPlusPayFailed');
+  String get vanderyPlusCancelled => t('vanderyPlusCancelled');
+  String get vanderyPlusMapLock => t('vanderyPlusMapLock');
+  String get vanderyPlusLocked => t('vanderyPlusLocked');
+  String get vanderyPlusUnlocked => t('vanderyPlusUnlocked');
+  String get vanderyPlusSlide1Title => t('vanderyPlusSlide1Title');
+  String get vanderyPlusSlide1Body => t('vanderyPlusSlide1Body');
+  String get vanderyPlusSlide2Title => t('vanderyPlusSlide2Title');
+  String get vanderyPlusSlide2Body => t('vanderyPlusSlide2Body');
+  String get vanderyPlusSlide3Title => t('vanderyPlusSlide3Title');
+  String get vanderyPlusSlide3Body => t('vanderyPlusSlide3Body');
+  String get vanderyPlusSlide4Title => t('vanderyPlusSlide4Title');
+  String get vanderyPlusSlide4Body => t('vanderyPlusSlide4Body');
   String get pointsOne => t('pointsOne');
   String get pointsFew => t('pointsFew');
   String get pointsMany => t('pointsMany');
@@ -967,6 +1046,42 @@ class AppStrings {
       'deadlinePassed': 'Deadline passed',
       'featuredPrevious': 'Previous',
       'featuredNext': 'Next',
+      'vanderyPlusJoinCta': 'Join VANDERY+',
+      'vanderyPlusBadge': 'VANDERY+',
+      'vanderyPlusActiveLine': 'Membership active.',
+      'vanderyPlusActiveUntil': 'Active until {date}',
+      'vanderyPlusCanceledUntil': "Active until {date} · cancelled, won't renew",
+      'vanderyPlusCancelNote':
+          'Cancel anytime. Membership stays active until the end of the paid period.',
+      'vanderyPlusTitle': 'VANDERY+',
+      'vanderyPlusSubtitle': 'Membership for verifying places and rewards.',
+      'vanderyPlusMonthly': 'Monthly membership',
+      'vanderyPlusPayCta': 'Pay for membership · {price}',
+      'vanderyPlusLegalGate': 'Payment runs through a secure checkout.',
+      'vanderyPlusTerms': 'Terms and conditions',
+      'vanderyPlusPrivacy': 'Privacy policy',
+      'vanderyPlusDraftNote': 'Draft terms. Production payments are not enabled.',
+      'vanderyPlusBenefit': 'Benefit {k} of {n}',
+      'vanderyPlusPrev': 'Previous benefit',
+      'vanderyPlusNext': 'Next benefit',
+      'vanderyPlusClose': 'Close',
+      'vanderyPlusVerifying': 'Checking membership…',
+      'vanderyPlusActiveToast': 'VANDERY+ is active',
+      'vanderyPlusRetryVerify': 'Try checking again',
+      'vanderyPlusRetryHint': 'Membership is not active yet.',
+      'vanderyPlusPayFailed': 'Payment didn’t go through. Try again.',
+      'vanderyPlusCancelled': 'Payment was cancelled.',
+      'vanderyPlusMapLock': 'Place verification — requires VANDERY+',
+      'vanderyPlusLocked': 'Locked',
+      'vanderyPlusUnlocked': 'Unlocked',
+      'vanderyPlusSlide1Title': 'Unlock place checks right on the map',
+      'vanderyPlusSlide1Body': 'Check places from the map itself. Challenge stops still verify without membership.',
+      'vanderyPlusSlide2Title': 'Rewards for verified places',
+      'vanderyPlusSlide2Body': 'Earn rewards as you verify. Some you see now — others unlock along the way.',
+      'vanderyPlusSlide3Title': 'A point on the leaderboard',
+      'vanderyPlusSlide3Body': 'Each verified place is one leaderboard point.',
+      'vanderyPlusSlide4Title': 'Support the project directly',
+      'vanderyPlusSlide4Body': 'Membership funds VANDERY — new challenges, the map, and rewards.',
     },
     'cs': {
       'appName': 'VANDERY',
@@ -1252,6 +1367,42 @@ class AppStrings {
       'deadlinePassed': 'Termín vypršel',
       'featuredPrevious': 'Předchozí',
       'featuredNext': 'Další',
+      'vanderyPlusJoinCta': 'Přidej se VANDERY+',
+      'vanderyPlusBadge': 'VANDERY+',
+      'vanderyPlusActiveLine': 'Členství aktivní.',
+      'vanderyPlusActiveUntil': 'Aktivní do {date}',
+      'vanderyPlusCanceledUntil': 'Aktivní do {date} · zrušeno, neobnoví se',
+      'vanderyPlusCancelNote':
+          'Zrušit můžeš kdykoli. Členství pak platí do konce zaplaceného období.',
+      'vanderyPlusTitle': 'VANDERY+',
+      'vanderyPlusSubtitle': 'Členství pro ověřování míst a odměny.',
+      'vanderyPlusMonthly': 'Měsíční členství',
+      'vanderyPlusPayCta': 'Zaplatit členství · {price}',
+      'vanderyPlusLegalGate': 'Platba proběhne přes zabezpečenou bránu.',
+      'vanderyPlusTerms': 'Obchodní podmínky',
+      'vanderyPlusPrivacy': 'Ochrana osobních údajů',
+      'vanderyPlusDraftNote': 'Pracovní znění podmínek. Produkční platby nejsou zapnuté.',
+      'vanderyPlusBenefit': 'Výhoda {k} z {n}',
+      'vanderyPlusPrev': 'Předchozí výhoda',
+      'vanderyPlusNext': 'Další výhoda',
+      'vanderyPlusClose': 'Zavřít',
+      'vanderyPlusVerifying': 'Ověřuji členství…',
+      'vanderyPlusActiveToast': 'VANDERY+ aktivní',
+      'vanderyPlusRetryVerify': 'Zkusit znovu ověřit',
+      'vanderyPlusRetryHint': 'Členství ještě není aktivní.',
+      'vanderyPlusPayFailed': 'Platba se nepodařila. Zkus to znovu.',
+      'vanderyPlusCancelled': 'Platba byla zrušena.',
+      'vanderyPlusMapLock': 'Ověření bodu — vyžaduje VANDERY+',
+      'vanderyPlusLocked': 'Zamčeno',
+      'vanderyPlusUnlocked': 'Odemčeno',
+      'vanderyPlusSlide1Title': 'Odemkni ověřování míst přímo z mapy.',
+      'vanderyPlusSlide1Body': 'Místa ověříš přímo z mapy. Zastávky výzvy ověřuješ dál i bez členství.',
+      'vanderyPlusSlide2Title': 'Odměny za ověřená místa',
+      'vanderyPlusSlide2Body': 'Za ověření získáš odměny. Některé uvidíš hned — další odhalíš až cestou.',
+      'vanderyPlusSlide3Title': 'Bod do žebříčku',
+      'vanderyPlusSlide3Body': 'Každé ověřené místo = bod do žebříčku.',
+      'vanderyPlusSlide4Title': 'Podpoříš projekt napřímo',
+      'vanderyPlusSlide4Body': 'Členství jde do rozvoje VANDERY — nových výzev, mapy a odměn.',
     },
     'de': {
       'appName': 'VANDERY',
@@ -1542,6 +1693,43 @@ class AppStrings {
       'deadlinePassed': 'Frist abgelaufen',
       'featuredPrevious': 'Zurück',
       'featuredNext': 'Weiter',
+      'vanderyPlusJoinCta': 'VANDERY+ beitreten',
+      'vanderyPlusBadge': 'VANDERY+',
+      'vanderyPlusActiveLine': 'Mitgliedschaft aktiv.',
+      'vanderyPlusActiveUntil': 'Aktiv bis {date}',
+      'vanderyPlusCanceledUntil':
+          'Aktiv bis {date} · gekündigt, keine Verlängerung',
+      'vanderyPlusCancelNote':
+          'Jederzeit kündbar. Die Mitgliedschaft bleibt bis zum Ende des bezahlten Zeitraums aktiv.',
+      'vanderyPlusTitle': 'VANDERY+',
+      'vanderyPlusSubtitle': 'Mitgliedschaft zum Bestätigen von Orten und für Belohnungen.',
+      'vanderyPlusMonthly': 'Monatliche Mitgliedschaft',
+      'vanderyPlusPayCta': 'Mitgliedschaft bezahlen · {price}',
+      'vanderyPlusLegalGate': 'Die Zahlung läuft über einen sicheren Checkout.',
+      'vanderyPlusTerms': 'Geschäftsbedingungen',
+      'vanderyPlusPrivacy': 'Datenschutz',
+      'vanderyPlusDraftNote': 'Entwurfsbedingungen. Produktionszahlungen sind nicht aktiv.',
+      'vanderyPlusBenefit': 'Vorteil {k} von {n}',
+      'vanderyPlusPrev': 'Vorheriger Vorteil',
+      'vanderyPlusNext': 'Nächster Vorteil',
+      'vanderyPlusClose': 'Schließen',
+      'vanderyPlusVerifying': 'Mitgliedschaft wird geprüft…',
+      'vanderyPlusActiveToast': 'VANDERY+ ist aktiv',
+      'vanderyPlusRetryVerify': 'Erneut prüfen',
+      'vanderyPlusRetryHint': 'Die Mitgliedschaft ist noch nicht aktiv.',
+      'vanderyPlusPayFailed': 'Zahlung fehlgeschlagen. Bitte erneut versuchen.',
+      'vanderyPlusCancelled': 'Die Zahlung wurde abgebrochen.',
+      'vanderyPlusMapLock': 'Ort bestätigen — VANDERY+ erforderlich',
+      'vanderyPlusLocked': 'Gesperrt',
+      'vanderyPlusUnlocked': 'Freigeschaltet',
+      'vanderyPlusSlide1Title': 'Orte direkt auf der Karte freischalten',
+      'vanderyPlusSlide1Body': 'Orte prüfst du direkt auf der Karte. Punkte einer Herausforderung prüfst du weiter auch ohne Mitgliedschaft.',
+      'vanderyPlusSlide2Title': 'Belohnungen für bestätigte Orte',
+      'vanderyPlusSlide2Body': 'Fürs Bestätigen gibt’s Belohnungen. Manche siehst du sofort — andere erst unterwegs.',
+      'vanderyPlusSlide3Title': 'Ein Punkt in der Rangliste',
+      'vanderyPlusSlide3Body': 'Jeder bestätigte Ort ist ein Punkt in der Rangliste.',
+      'vanderyPlusSlide4Title': 'Das Projekt direkt unterstützen',
+      'vanderyPlusSlide4Body': 'Die Mitgliedschaft fließt in VANDERY — neue Herausforderungen, Karte und Belohnungen.',
     },
   };
 }

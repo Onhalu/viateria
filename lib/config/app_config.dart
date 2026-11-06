@@ -9,6 +9,7 @@ class AppConfig {
     required this.supabaseAnonKey,
     required this.stripePublishableKey,
     this.useAssetPlaceCatalog = false,
+    this.vanderyPlusPriceLabel = '',
   });
 
   factory AppConfig.fromEnvironment() {
@@ -24,12 +25,17 @@ class AppConfig {
       supabaseAnonKey: String.fromEnvironment('SUPABASE_ANON_KEY'),
       stripePublishableKey: String.fromEnvironment('STRIPE_PUBLISHABLE_KEY'),
       useAssetPlaceCatalog: useAssetPlaceCatalog,
+      vanderyPlusPriceLabel: String.fromEnvironment('VANDERY_PLUS_PRICE_LABEL'),
     );
   }
 
   final String supabaseUrl;
   final String supabaseAnonKey;
   final String stripePublishableKey;
+
+  /// Display price for the paywall CTA. Empty until P3 (FAPI price) is set.
+  /// Never invent a live price here.
+  final String vanderyPlusPriceLabel;
 
   /// Explicit opt-in to the bundled `assets/map/pois.geojson` catalog.
   /// Production leaves this false and reads `public.places`.

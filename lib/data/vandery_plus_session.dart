@@ -1,0 +1,138 @@
+import 'package:flutter/foundation.dart';
+
+import '../domain/vandery_plus.dart';
+import 'membership_repository.dart';
+
+/// Paywall and map gate share this. Webhook remains the source of truth:
+/// [pay] never sets the membership active.
+class VanderyPlusSession extends ChangeNotifier {
+  VanderyPlusSession({
+    required this.repository,
+    this.priceLabel = '',
+    DateTime Function()? clock,
+    this.openUrl,
+    this.linkClock,
+  }) : _clock = clock ?? DateTime.now;
+
+  final MembershipRepository repository;
+  final String priceLabel;
+  final DateTime Function() _clock;
+  final Future<void> Function(Uri url)? openUrl;
+
+  /// Wall clock for the return-link debounce. Tests pass a fixed clock.
+  final DateTime Function()? linkClock;
+  DateTime? _linkRefreshAt;
+
+  VanderyPlusMembership membership = VanderyPlusMembership.none;
+  VanderyPlusPhase phase = VanderyPlusPhase.idle;
+  VanderyPlusMessage message = VanderyPlusMessage.none;
+
+  /// False until the first [refresh] finishes. The map lock must not treat
+  /// that unknown row as a locked→active transition.
+  var resolved = false;
+  var _busy = false;
+
+  DateTime get now => _clock();
+
+  bool get isActive => membership.isActiveAt(now);
+
+  String get displayPrice => vanderyPlusDisplayPrice(priceLabel);
+
+  bool get lockDismiss =>
+      phase == VanderyPlusPhase.submitting ||
+      phase == VanderyPlusPhase.verifying;
+
+  Future<void> refresh() async {
+    final wasVerifying = phase == VanderyPlusPhase.verifying;
+    try {
+      membership = await repository.fetchMine();
+      if (wasVerifying) {
+        if (isActive) {
+          phase = VanderyPlusPhase.active;
+          message = VanderyPlusMessage.active;
+        } else {
+          phase = VanderyPlusPhase.error;
+          message = VanderyPlusMessage.stillInactive;
+        }
+      } else if (isActive) {
+        phase = VanderyPlusPhase.active;
+      }
+    } catch (_) {
+      membership = VanderyPlusMembership.none;
+      if (wasVerifying) {
+        phase = VanderyPlusPhase.error;
+        message = VanderyPlusMessage.stillInactive;
+      }
+    }
+    resolved = true;
+    notifyListeners();
+  }
+
+  /// Opens FAPI. A second call while busy or verifying is ignored.
+  Future<void> pay() async {
+    if (_busy ||
+        phase == VanderyPlusPhase.submitting ||
+        phase == VanderyPlusPhase.verifying) {
+      return;
+    }
+    _busy = true;
+    phase = VanderyPlusPhase.submitting;
+    message = VanderyPlusMessage.none;
+    notifyListeners();
+    try {
+      final url = await repository.startCheckout();
+      final opener = openUrl;
+      if (opener != null) await opener(url);
+    } catch (_) {
+      phase = VanderyPlusPhase.error;
+      message = VanderyPlusMessage.payFailed;
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
+  /// Deep link or web return URL. `none` does nothing.
+  /// URL never unlocks. Active state comes only from [refresh].
+  Future<void> consumeReturnUri(Uri uri) {
+    return onReturn(parseVanderyPlusReturn(uri));
+  }
+
+  /// The app came back from the FAPI form without a new URL.
+  /// Only a checkout that is still [VanderyPlusPhase.submitting] is polled.
+  Future<void> onAppResumed() {
+    if (phase != VanderyPlusPhase.submitting) return Future.value();
+    return onReturn(VanderyPlusReturnKind.success);
+  }
+
+  /// Explicit retry. Not debounced: the buyer asked for another poll.
+  Future<void> verifyAgain() async {
+    phase = VanderyPlusPhase.verifying;
+    message = VanderyPlusMessage.none;
+    notifyListeners();
+    await refresh();
+  }
+
+  /// URL never unlocks. A return link only asks the server.
+  /// At most one of those polls runs per 2 seconds.
+  Future<void> onReturn(VanderyPlusReturnKind kind) async {
+    if (kind == VanderyPlusReturnKind.none) return;
+    final linkNow = (linkClock ?? DateTime.now)();
+    final recent = _linkRefreshAt != null &&
+        linkNow.difference(_linkRefreshAt!) < const Duration(seconds: 2);
+    if (!recent) {
+      _linkRefreshAt = linkNow;
+      if (kind == VanderyPlusReturnKind.success) {
+        phase = VanderyPlusPhase.verifying;
+        message = VanderyPlusMessage.none;
+        notifyListeners();
+      }
+      await refresh();
+    }
+    if (kind == VanderyPlusReturnKind.cancel && !isActive) {
+      phase = VanderyPlusPhase.error;
+      message = VanderyPlusMessage.cancelled;
+      notifyListeners();
+    }
+  }
+}

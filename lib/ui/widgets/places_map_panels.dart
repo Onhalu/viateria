@@ -176,6 +176,7 @@ class PlaceDetailSheet extends StatefulWidget {
     required this.onVerify,
     this.onAddToRoute,
     this.compact = false,
+    this.verifyAction,
   });
 
   final Place place;
@@ -185,6 +186,9 @@ class PlaceDetailSheet extends StatefulWidget {
   final VoidCallback onVerify;
   final VoidCallback? onAddToRoute;
   final bool compact;
+
+  /// Map-only membership gate. Challenge stops leave this null (A2).
+  final Widget? verifyAction;
 
   @override
   State<PlaceDetailSheet> createState() => _PlaceDetailSheetState();
@@ -310,13 +314,14 @@ class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
                     Row(
                       children: [
                         Expanded(
-                          child: AppButton(
-                            key: const Key('map-poi-verify'),
-                            label: strings.verify,
-                            variant: AppButtonVariant.primary,
-                            size: AppButtonSize.m,
-                            onPressed: widget.onVerify,
-                          ),
+                          child: widget.verifyAction ??
+                              AppButton(
+                                key: const Key('map-poi-verify'),
+                                label: strings.verify,
+                                variant: AppButtonVariant.primary,
+                                size: AppButtonSize.m,
+                                onPressed: widget.onVerify,
+                              ),
                         ),
                         if (widget.onAddToRoute != null) ...[
                           const SizedBox(width: 12),

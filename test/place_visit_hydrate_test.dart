@@ -240,6 +240,30 @@ void main() {
     expect(calls, 2);
     expect(ids, [serverId]);
   });
+
+  test('a rejected map visit rolls the local pin back', () async {
+    final store = VerifiedPlacesStore();
+    final board = MemoryLeaderboardRepository(error: StateError('membership_required'));
+    await expectLater(
+      commitLocalMapVisits(
+        store: store,
+        leaderboard: board,
+        ids: [localId],
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(store.contains(localId), isFalse);
+
+    final ok = MemoryLeaderboardRepository();
+    await commitLocalMapVisits(
+      store: store,
+      leaderboard: ok,
+      ids: [localId],
+    );
+    expect(store.contains(localId), isTrue);
+    expect(ok.visits.single.placeId, localId);
+    expect(ok.visits.single.source, PlaceVisitSource.map);
+  });
 }
 
 class _ReadFails extends MemoryLeaderboardRepository {

@@ -25,6 +25,8 @@ import 'cooperative_map_gestures.dart';
 import 'map_chrome.dart';
 import 'places_map_host.dart';
 import 'places_map_panels.dart';
+import 'vandery_plus_map_lock.dart';
+import 'vandery_plus_paywall.dart';
 
 /// Shared MapLibre places surface used by the Mapa tab and challenge maps.
 class PlacesMapSurface extends StatefulWidget {
@@ -521,6 +523,23 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                         userLocation: _controller.userLocation,
                         compact: widget.compact,
                         onClose: () => _controller.select(null),
+                        verifyAction: _waypointFor(selected) == null
+                            ? MapPlaceVerifyGate(
+                                key: ValueKey('map-gate-${selected.id}'),
+                                session: context
+                                    .read<AppServices>()
+                                    .vanderyPlus,
+                                placeId: selected.id,
+                                strings: strings,
+                                onVerify: () => unawaited(_onVerify(selected)),
+                                onLockedTap: () => unawaited(
+                                  showVanderyPlusPaywall(
+                                    context,
+                                    initialSlide: 0,
+                                  ),
+                                ),
+                              )
+                            : null,
                         onVerify: () {
                           unawaited(_onVerify(selected));
                         },

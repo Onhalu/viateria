@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,12 +14,33 @@ import 'data/last_opened_challenge.dart';
 import 'data/live_camera_capture.dart';
 import 'data/place_visit_hydrate.dart';
 import 'data/supabase_leaderboard.dart';
+import 'data/supabase_membership.dart';
+import 'data/vandery_plus_session.dart';
+import 'domain/vandery_plus.dart';
 import 'data/supabase_place_catalog.dart';
 import 'data/supabase_repositories.dart';
 import 'data/unconfigured.dart';
 import 'data/verified_places.dart';
 import 'l10n/locale_controller.dart';
 import 'theme/brand_typography.dart';
+
+/// Mobile return from the FAPI form. Failures stay on the submitting poll.
+Future<void> listenForVanderyPlusLinks(VanderyPlusSession session) async {
+  try {
+    final links = AppLinks();
+    final initial = await links.getInitialLink();
+    if (initial != null && isVanderyPlusAppLink(initial)) {
+      await session.consumeReturnUri(initial);
+    }
+    links.uriLinkStream.listen(
+      (uri) {
+        if (!isVanderyPlusAppLink(uri)) return;
+        unawaited(session.consumeReturnUri(uri));
+      },
+      onError: (_) {},
+    );
+  } catch (_) {}
+}
 
 Future<void> syncLocaleFromProfile(
   LocaleController controller,
@@ -68,6 +91,11 @@ Future<void> main() async {
     await verifiedPlaces.bindUser(userId);
     await lastOpened.bindUser(userId);
     final leaderboard = SupabaseLeaderboardRepository(client);
+    final vanderyPlus = VanderyPlusSession(
+      repository: SupabaseMembershipRepository(client),
+      priceLabel: config.vanderyPlusPriceLabel,
+      openUrl: launchExternalUrl,
+    );
     services = AppServices(
       config: config,
       auth: SupabaseAuthRepository(client),
@@ -80,13 +108,18 @@ Future<void> main() async {
       places: resolvePlaceCatalog(config: config, client: client),
       leaderboard: leaderboard,
       diplomas: SupabaseDiplomaClient(client),
+      vanderyPlus: vanderyPlus,
     );
+    if (!kIsWeb) {
+      unawaited(listenForVanderyPlusLinks(vanderyPlus));
+    }
     if (userId != null && userId.isNotEmpty) {
       await refreshVerifiedPlacesOnLogin(
         userId: userId,
         store: verifiedPlaces,
         leaderboard: leaderboard,
       );
+      await vanderyPlus.refresh();
     }
     await syncLocaleFromProfile(localeController, client);
     services.auth.authState().listen((profile) {
@@ -101,6 +134,7 @@ Future<void> main() async {
           store: verifiedPlaces,
           leaderboard: leaderboard,
         );
+        await vanderyPlus.refresh();
       }());
     });
   } else {
