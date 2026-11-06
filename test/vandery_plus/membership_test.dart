@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:viateria/data/memory_membership.dart';
+import 'package:viateria/data/vandery_plus_diploma_catalog.dart';
 import 'package:viateria/data/vandery_plus_session.dart';
 import 'package:viateria/domain/unlock_trigger.dart';
 import 'package:viateria/domain/vandery_plus.dart';
@@ -70,6 +71,16 @@ void main() {
       ),
       VanderyPlusReturnKind.cancel,
     );
+  });
+
+  test('diploma catalog selects granted columns and not star', () {
+    final source = File(
+      'lib/data/vandery_plus_diploma_catalog.dart',
+    ).readAsStringSync();
+    expect(source.contains(vanderyPlusDiplomaColumns), isTrue);
+    expect(source.contains("select('*')"), isFalse);
+    expect(source.contains('.select()'), isFalse);
+    expect(source.contains('unlock_rule'), isFalse);
   });
 
   test('client repository has no service role and no membership update', () {

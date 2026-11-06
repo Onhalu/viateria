@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(58);
+select plan(61);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -901,6 +901,42 @@ select is(
   'T8 catalog has no placeholder production titles'
 );
 
+insert into public.vandery_plus_diplomas (
+  id, slug, title_i18n, is_hidden, unlock_rule
+)
+values (
+  '50000000-0000-4000-8000-000000000099',
+  'hidden-owner',
+  '{}'::jsonb,
+  true,
+  '{"secret":true}'::jsonb
+);
+
+insert into public.vandery_plus_user_diplomas (user_id, diploma_id)
+values (
+  '00000000-0000-4000-8000-000000000002',
+  '50000000-0000-4000-8000-000000000099'
+);
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select is(
+  (
+    select count(*)::int
+    from public.vandery_plus_diplomas
+    where id = '50000000-0000-4000-8000-000000000099'
+  ),
+  0,
+  'hidden diploma stays invisible without an unlock'
+);
+
+reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
 select set_config(
   'request.jwt.claims',
@@ -917,6 +953,24 @@ select throws_ok(
     )$$,
   '42501',
   'T8 authenticated cannot insert a diploma unlock'
+);
+
+select is(
+  (
+    select count(*)::int
+    from public.vandery_plus_diplomas
+    where id = '50000000-0000-4000-8000-000000000099'
+  ),
+  1,
+  'owner sees an unlocked hidden diploma'
+);
+
+select throws_ok(
+  $$select unlock_rule
+    from public.vandery_plus_diplomas
+    where id = '50000000-0000-4000-8000-000000000099'$$,
+  '42501',
+  'unlock_rule is not granted to authenticated'
 );
 
 select * from finish();

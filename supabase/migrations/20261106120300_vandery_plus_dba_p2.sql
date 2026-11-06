@@ -388,7 +388,15 @@ create policy vandery_plus_diplomas_select_authenticated
   on public.vandery_plus_diplomas
   for select
   to authenticated
-  using (is_hidden = false);
+  using (
+    is_hidden = false
+    or exists (
+      select 1
+      from public.vandery_plus_user_diplomas u
+      where u.diploma_id = vandery_plus_diplomas.id
+        and u.user_id = (select auth.uid())
+    )
+  );
 
 revoke all on table public.vandery_plus_diplomas from authenticated;
 grant select (
