@@ -1,43 +1,36 @@
--- Drift mirror of prod history that was never committed.
--- Mirrors prod migrations 20260918165359 challenge_covers_bucket
--- and 20260918170026 challenge_covers_lock_writes.
--- Optional prod parity for the challenge-covers bucket. Idempotent.
--- MUST NEVER be applied to prod (yzmbxxgesnbsqygzgdky).
--- repair/apply is Ask first.
+-- Drift fix A2 (optional, before W1). Not required for the chain to apply;
+-- gives local/staging parity with prod for the challenge cover bucket.
+-- Prod got it from 20260918165359 challenge_covers_bucket +
+-- 20260918170026 challenge_covers_lock_writes (prod history only, not in repo).
+-- Net effect of those two: bucket + public read policy (temporary anon write
+-- policies were created and dropped again). No-op on prod (verified 2026-11-06).
 
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'challenge-covers',
-  'challenge-covers',
-  true,
-  5242880,
-  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-)
-on conflict (id) do update set
-  public = excluded.public,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
+do $$
+begin
+  if to_regclass('storage.buckets') is null then
+    raise notice 'storage schema missing, skipping challenge-covers bucket';
+    return;
+  end if;
 
--- public read
-drop policy if exists "challenge_covers_public_read" on storage.objects;
-create policy "challenge_covers_public_read"
-  on storage.objects for select
-  to public
-  using (bucket_id = 'challenge-covers');
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values (
+    'challenge-covers',
+    'challenge-covers',
+    true,
+    5242880,
+    array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  )
+  on conflict (id) do nothing;
 
--- temporary anon write for bootstrap upload (removed after upload)
-drop policy if exists "challenge_covers_anon_insert_tmp" on storage.objects;
-create policy "challenge_covers_anon_insert_tmp"
-  on storage.objects for insert
-  to anon, authenticated
-  with check (bucket_id = 'challenge-covers');
-
-drop policy if exists "challenge_covers_anon_update_tmp" on storage.objects;
-create policy "challenge_covers_anon_update_tmp"
-  on storage.objects for update
-  to anon, authenticated
-  using (bucket_id = 'challenge-covers')
-  with check (bucket_id = 'challenge-covers');
-
-drop policy if exists "challenge_covers_anon_insert_tmp" on storage.objects;
-drop policy if exists "challenge_covers_anon_update_tmp" on storage.objects;
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+      and policyname = 'challenge_covers_public_read'
+  ) then
+    create policy "challenge_covers_public_read"
+      on storage.objects for select
+      to public
+      using (bucket_id = 'challenge-covers');
+  end if;
+end;
+$$;
