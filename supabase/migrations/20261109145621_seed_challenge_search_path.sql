@@ -5,6 +5,8 @@
 -- The body matches the function installed on prod, except search_path and
 -- pg_catalog qualification of now(), coalesce(), and jsonb_array_elements().
 -- Tables were already public-qualified. place_id handling is unchanged.
+-- EXECUTE is revoked from PUBLIC, anon, and authenticated on both paths.
+-- postgres and service_role keep EXECUTE so the SQL editor can still seed.
 --
 -- A database built only from this repo does not have challenges.notes,
 -- challenges.period_state, challenges.starts_at, or public.challenge_changes
@@ -130,6 +132,11 @@ BEGIN
       END;
       $body$
     $fn$;
+
+    REVOKE EXECUTE ON FUNCTION public._seed_challenge(
+      text, text, text, text, text, integer, integer, integer, text, text,
+      timestamp with time zone, jsonb
+    ) FROM PUBLIC, anon, authenticated;
   ELSE
     EXECUTE $fn$
       CREATE OR REPLACE FUNCTION public._seed_challenge(
@@ -172,6 +179,10 @@ $migration$;
 --   text, text, text, text, text, integer, integer, integer, text, text,
 --   timestamp with time zone, jsonb
 -- ) RESET search_path;
+-- GRANT EXECUTE ON FUNCTION public._seed_challenge(
+--   text, text, text, text, text, integer, integer, integer, text, text,
+--   timestamp with time zone, jsonb
+-- ) TO PUBLIC, anon, authenticated;
 -- -- Qualified names stay valid after RESET. Drop the function only if this
 -- -- migration created it on a database that did not already have the helper:
 -- -- DROP FUNCTION IF EXISTS public._seed_challenge(

@@ -178,7 +178,7 @@ OAuth uses PKCE (`FlutterAuthClientOptions.authFlowType`, the supabase_flutter 2
 
 Google Cloud and Apple Developer do **not** get the app deep link. They get Supabase's provider callback: `https://yzmbxxgesnbsqygzgdky.supabase.co/auth/v1/callback`.
 
-**Password length.** Sign-up and the new-password screen require at least 10 characters (cs / en / de). Sign-in does not re-check length, so an older password still works until it is changed. The server Auth setting is the same minimum.
+**Password length.** Supabase Dashboard → Authentication already requires 10 characters (set 2026-11-09 by Ondřej). Sign-up and the new-password screen mirror that minimum, with the error in cs / en / de. Sign-in intentionally does not check length, so a password saved under the old 6–9 character rule still logs in.
 
 **Forgot password.** Sign-in emails a reset link with `resetPasswordForEmail`. `redirectTo` is the same value as OAuth and magic link (the table above). Those URLs already belong in Supabase Auth → Additional Redirect URLs; recovery does not add another one. Opening the link starts a recovery session and the app stays on the new-password screen until `updateUser` saves the password.
 

@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(12);
+SELECT plan(15);
 
 SELECT ok(
   NOT has_function_privilege('anon', 'public.handle_new_user()', 'EXECUTE'),
@@ -84,6 +84,33 @@ SELECT ok(
       )
   ),
   '_seed_challenge search_path is empty'
+);
+
+SELECT ok(
+  NOT has_function_privilege(
+    'anon',
+    'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
+    'EXECUTE'
+  ),
+  'anon cannot EXECUTE _seed_challenge'
+);
+
+SELECT ok(
+  NOT has_function_privilege(
+    'authenticated',
+    'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
+    'EXECUTE'
+  ),
+  'authenticated cannot EXECUTE _seed_challenge'
+);
+
+SELECT ok(
+  NOT has_function_privilege(
+    'public',
+    'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
+    'EXECUTE'
+  ),
+  'public cannot EXECUTE _seed_challenge'
 );
 
 SELECT ok(
