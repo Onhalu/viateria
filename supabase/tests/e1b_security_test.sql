@@ -60,53 +60,87 @@ SELECT ok(
   'challenge_waypoint_photos is security_invoker'
 );
 
-SELECT ok(
-  EXISTS (
-    SELECT 1
-    FROM pg_proc AS p
-    JOIN pg_namespace AS n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
-      AND p.proname = '_seed_challenge'
-      AND EXISTS (
-        SELECT 1
-        FROM unnest(coalesce(p.proconfig, ARRAY[]::text[])) AS cfg
-        WHERE cfg IN ('search_path=', 'search_path=""')
-      )
-  ),
-  '_seed_challenge search_path is empty'
-);
+-- _seed_challenge is a prod helper. A database built only from repo
+-- migrations does not have it, and the lock migration skips. Tests 7–11
+-- skip in that case so the rest of the file still runs.
+SELECT CASE
+  WHEN to_regprocedure('public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)') IS NULL
+  THEN skip(
+    '_seed_challenge is not created by repo migrations; search_path lock applies only where the helper already exists',
+    1
+  )
+  ELSE ok(
+    EXISTS (
+      SELECT 1
+      FROM pg_proc AS p
+      JOIN pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname = '_seed_challenge'
+        AND EXISTS (
+          SELECT 1
+          FROM unnest(coalesce(p.proconfig, ARRAY[]::text[])) AS cfg
+          WHERE cfg IN ('search_path=', 'search_path=""')
+        )
+    ),
+    '_seed_challenge search_path is empty'
+  )
+END;
 
-SELECT ok(
-  NOT has_function_privilege(
-    'anon',
-    'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
-    'EXECUTE'
-  ),
-  'anon cannot EXECUTE _seed_challenge'
-);
+SELECT CASE
+  WHEN to_regprocedure('public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)') IS NULL
+  THEN skip(
+    '_seed_challenge is not created by repo migrations; anon EXECUTE is not granted because the helper is absent',
+    1
+  )
+  ELSE ok(
+    NOT has_function_privilege(
+      'anon',
+      'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
+      'EXECUTE'
+    ),
+    'anon cannot EXECUTE _seed_challenge'
+  )
+END;
 
-SELECT ok(
-  NOT has_function_privilege(
-    'authenticated',
-    'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
-    'EXECUTE'
-  ),
-  'authenticated cannot EXECUTE _seed_challenge'
-);
+SELECT CASE
+  WHEN to_regprocedure('public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)') IS NULL
+  THEN skip(
+    '_seed_challenge is not created by repo migrations; authenticated EXECUTE is not granted because the helper is absent',
+    1
+  )
+  ELSE ok(
+    NOT has_function_privilege(
+      'authenticated',
+      'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
+      'EXECUTE'
+    ),
+    'authenticated cannot EXECUTE _seed_challenge'
+  )
+END;
 
-SELECT ok(
-  NOT has_function_privilege(
-    'public',
-    'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
-    'EXECUTE'
-  ),
-  'public cannot EXECUTE _seed_challenge'
-);
+SELECT CASE
+  WHEN to_regprocedure('public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)') IS NULL
+  THEN skip(
+    '_seed_challenge is not created by repo migrations; PUBLIC EXECUTE is not granted because the helper is absent',
+    1
+  )
+  ELSE ok(
+    NOT has_function_privilege(
+      'public',
+      'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)',
+      'EXECUTE'
+    ),
+    'public cannot EXECUTE _seed_challenge'
+  )
+END;
 
 CREATE TEMP TABLE seed_call (sqlstate text, message text);
 
 DO $$
 BEGIN
+  IF to_regprocedure('public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)') IS NULL THEN
+    RETURN;
+  END IF;
   BEGIN
     PERFORM public._seed_challenge(
       'e1b-seed-call',
@@ -128,10 +162,17 @@ BEGIN
   END;
 END $$;
 
-SELECT ok(
-  (SELECT sqlstate FROM seed_call) NOT IN ('42883', '42501'),
-  'postgres can call _seed_challenge and the body resolves (not undefined-function)'
-);
+SELECT CASE
+  WHEN to_regprocedure('public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)') IS NULL
+  THEN skip(
+    '_seed_challenge is not created by repo migrations; postgres call is skipped because the helper is absent',
+    1
+  )
+  ELSE ok(
+    (SELECT sqlstate FROM seed_call) NOT IN ('42883', '42501'),
+    'postgres can call _seed_challenge and the body resolves (not undefined-function)'
+  )
+END;
 
 -- Gallery still readable for a signed-in caller after security_invoker.
 -- Insert only auth.users columns this database actually has. GoTrue's
