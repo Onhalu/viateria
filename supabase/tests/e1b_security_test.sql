@@ -61,16 +61,6 @@ SELECT ok(
 );
 
 SELECT ok(
-  NOT has_column_privilege(
-    'authenticated',
-    'public.waypoint_progress',
-    'user_id',
-    'SELECT'
-  ),
-  'authenticated cannot select waypoint_progress.user_id'
-);
-
-SELECT ok(
   EXISTS (
     SELECT 1
     FROM pg_proc AS p
@@ -113,18 +103,34 @@ SELECT ok(
   'public cannot EXECUTE _seed_challenge'
 );
 
+CREATE TEMP TABLE seed_call (sqlstate text, message text);
+
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public._seed_challenge(
+      'e1b-seed-call',
+      'Seed call',
+      'notes',
+      'region',
+      'free',
+      0,
+      0,
+      0,
+      'draft',
+      'active',
+      now(),
+      '[]'::jsonb
+    );
+    INSERT INTO seed_call VALUES ('00000', 'ok');
+  EXCEPTION WHEN OTHERS THEN
+    INSERT INTO seed_call VALUES (SQLSTATE, SQLERRM);
+  END;
+END $$;
+
 SELECT ok(
-  position(
-    'pg_catalog.' IN pg_get_functiondef(
-      'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)'::regprocedure
-    )
-  ) > 0
-  OR position(
-    'no prod seed columns' IN pg_get_functiondef(
-      'public._seed_challenge(text,text,text,text,text,integer,integer,integer,text,text,timestamp with time zone,jsonb)'::regprocedure
-    )
-  ) > 0,
-  '_seed_challenge qualifies pg_catalog references, or refuses without prod columns'
+  (SELECT sqlstate FROM seed_call) NOT IN ('42883', '42501'),
+  'postgres can call _seed_challenge and the body resolves (not undefined-function)'
 );
 
 -- Gallery still readable for a signed-in caller after security_invoker.
@@ -252,6 +258,31 @@ VALUES (
   'e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/gps/e1b/sentinel'
 );
+
+SELECT set_config(
+  'request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated"}',
+  true
+);
+SELECT set_config(
+  'request.jwt.claim.sub',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  true
+);
+SELECT set_config('request.jwt.claim.role', 'authenticated', true);
+SET ROLE authenticated;
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.waypoint_progress
+    WHERE user_id = auth.uid()
+  ),
+  2,
+  'owner can select own waypoint_progress filtered by user_id'
+);
+
+RESET ROLE;
 
 SELECT set_config(
   'request.jwt.claims',

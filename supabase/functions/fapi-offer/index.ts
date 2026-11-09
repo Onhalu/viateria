@@ -15,6 +15,7 @@ import {
   fetchOfferForFormUrl,
   type OfferVariant,
 } from "../_shared/fapi_offer.ts";
+import { corsHeaders, preflightResponse } from "../_shared/cors.ts";
 
 /**
  * Authenticated price + terms for both reward variants.
@@ -34,11 +35,11 @@ import {
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: cors() });
+    return preflightResponse(req);
   }
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return json({ error: "missing authorization" }, 401);
+  if (!authHeader) return json(req, { error: "missing authorization" }, 401);
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -49,11 +50,11 @@ Deno.serve(async (req) => {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
-  if (userError || !user) return json({ error: "unauthorized" }, 401);
+  if (userError || !user) return json(req, { error: "unauthorized" }, 401);
 
   const body = await req.json().catch(() => ({}));
   const challengeId = (body as { challenge_id?: string }).challenge_id;
-  if (!challengeId) return json({ error: "challenge_id required" }, 400);
+  if (!challengeId) return json(req, { error: "challenge_id required" }, 400);
   const locale = profileLocaleOrBody(
     (body as { locale?: string }).locale,
   );
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     { p_challenge_id: challengeId },
   );
   if (!callerCanReadChallenge(readable, readableError)) {
-    return json({ error: "challenge not available" }, 404);
+    return json(req, { error: "challenge not available" }, 404);
   }
 
   const admin = createClient(
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     .eq("status", "published")
     .maybeSingle();
   if (error || !challenge) {
-    return json({ error: "challenge not available" }, 404);
+    return json(req, { error: "challenge not available" }, 404);
   }
 
   const diplomaUrl = await activeSaleFormUrl(
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
     offerForUrl(diplomaUrl),
     offerForUrl(medalUrl),
   ]);
-  return json({ diploma, medal });
+  return json(req, { diploma, medal });
 });
 
 function profileLocaleOrBody(raw: unknown): string {
@@ -141,17 +142,8 @@ async function activeSaleFormUrl(
   );
 }
 
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-  };
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors(), "Content-Type": "application/json" },
-  });
+function json(req: Request, body: unknown, status = 200) {
+  const headers = corsHeaders(req);
+  headers.set("Content-Type", "application/json");
+  return new Response(JSON.stringify(body), { status, headers });
 }

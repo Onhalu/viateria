@@ -6,10 +6,11 @@
 -- policy exposes only the rows the gallery already showed: a real photo
 -- path on a challenge private.challenge_readable says the caller may see.
 -- GPS sentinel paths stay on the own-row policy. The view still omits
--- user_id, and that column is revoked from anon and authenticated so the
--- new policy does not add it to the Data API. The photo path already
--- contains the owner folder the app signs.
+-- user_id. photo_path already starts with the owner id, so the column
+-- stays selectable: fetchProgress filters .eq('user_id', ...) and a
+-- column revoke makes that query permission-denied.
 --
+-- Rollback: supabase/rollbacks/20261109145620_challenge_waypoint_photos_security_invoker.rollback.sql
 -- NOT APPLIED on prod by this change. Apply only after Ondřej's explicit OK.
 
 DO $$
@@ -41,6 +42,10 @@ CREATE POLICY "shared verification photos readable"
     )
   );
 
+COMMENT ON POLICY "shared verification photos readable"
+  ON public.waypoint_progress IS
+  'Non-GPS photo rows of a readable challenge are visible on waypoint_progress itself, not only through challenge_waypoint_photos. photo_path already starts with the owner id. A client that wants one person''s progress must filter user_id; without that filter other hikers'' photo rows are included.';
+
 CREATE OR REPLACE VIEW public.challenge_waypoint_photos
 WITH (security_invoker = true, security_barrier = true) AS
 SELECT
@@ -69,50 +74,3 @@ COMMENT ON VIEW public.challenge_waypoint_photos IS
 REVOKE ALL ON TABLE public.challenge_waypoint_photos FROM PUBLIC;
 REVOKE ALL ON TABLE public.challenge_waypoint_photos FROM anon;
 GRANT SELECT ON TABLE public.challenge_waypoint_photos TO authenticated;
-
--- Table-level SELECT would still expose user_id on the new shared rows.
--- Re-grant every column except user_id. service_role and the owner are
--- untouched, so security-definer verify and storage checks still see it.
-DO $$
-DECLARE
-  cols text;
-BEGIN
-  SELECT string_agg(quote_ident(column_name), ', ' ORDER BY ordinal_position)
-    INTO cols
-  FROM information_schema.columns
-  WHERE table_schema = 'public'
-    AND table_name = 'waypoint_progress'
-    AND column_name <> 'user_id';
-  IF cols IS NULL THEN
-    RAISE EXCEPTION 'waypoint_progress has no columns besides user_id';
-  END IF;
-  EXECUTE 'REVOKE SELECT ON TABLE public.waypoint_progress FROM anon, authenticated';
-  EXECUTE format(
-    'GRANT SELECT (%s) ON TABLE public.waypoint_progress TO authenticated',
-    cols
-  );
-END $$;
-
--- =============================================================================
--- ROLLBACK (manual; do not run as part of this migration)
--- =============================================================================
--- DROP POLICY IF EXISTS "shared verification photos readable" ON public.waypoint_progress;
--- GRANT SELECT ON TABLE public.waypoint_progress TO anon, authenticated;
--- CREATE OR REPLACE VIEW public.challenge_waypoint_photos
--- WITH (security_invoker = false, security_barrier = true) AS
--- SELECT w.challenge_id, p.waypoint_id, p.photo_path, p.completed_at
--- FROM public.waypoint_progress p
--- JOIN public.waypoints w ON w.id = p.waypoint_id
--- JOIN public.challenges c ON c.id = w.challenge_id
--- WHERE c.status = 'published'
---   AND (c.is_promo = false OR private.user_has_promo_challenge(c.id))
---   AND p.photo_path IS NOT NULL
---   AND length(btrim(p.photo_path)) > 0
---   AND p.photo_path NOT LIKE '%/gps/%';
--- ALTER VIEW public.challenge_waypoint_photos
---   SET (security_invoker = false, security_barrier = true);
--- COMMENT ON VIEW public.challenge_waypoint_photos IS
---   'Verification photos for published challenge waypoints, all users. Omits user_id and GPS sentinel paths. security_invoker is off so own-row waypoint_progress RLS does not hide other people.';
--- REVOKE ALL ON TABLE public.challenge_waypoint_photos FROM PUBLIC, anon, authenticated;
--- GRANT SELECT ON TABLE public.challenge_waypoint_photos TO authenticated;
--- =============================================================================

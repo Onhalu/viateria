@@ -11,6 +11,7 @@
 -- receives EXECUTE when that role exists, so recreating the trigger still
 -- succeeds.
 --
+-- Rollback: supabase/rollbacks/20261109145619_revoke_handle_new_user_execute.rollback.sql
 -- NOT APPLIED on prod by this change. Apply only after Ondřej's explicit OK.
 
 DO $$
@@ -30,10 +31,3 @@ BEGIN
     GRANT EXECUTE ON FUNCTION public.handle_new_user() TO supabase_auth_admin;
   END IF;
 END $$;
-
--- =============================================================================
--- ROLLBACK (manual; do not run as part of this migration)
--- =============================================================================
--- GRANT EXECUTE ON FUNCTION public.handle_new_user() TO anon, authenticated;
--- GRANT EXECUTE ON FUNCTION public.handle_new_user() TO PUBLIC;
--- =============================================================================

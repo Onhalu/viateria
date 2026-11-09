@@ -115,6 +115,24 @@ void main() {
     },
   );
 
+  testWidgets('sign-in sends a 6–9 character password', (tester) async {
+    final strings = AppStrings('cs');
+    final auth = MemoryAuth();
+    await pumpAuth(tester, auth: auth);
+
+    await tester.enterText(
+      find.byKey(const Key('auth-email')),
+      'ada@example.com',
+    );
+    await tester.enterText(find.byKey(const Key('auth-password')), 'secret12');
+    await tester.ensureVisible(find.byKey(const Key('auth-sign-in')));
+    await tester.tap(find.byKey(const Key('auth-sign-in')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(strings.passwordTooShort), findsNothing);
+    expect(auth.currentUser?.email, 'ada@example.com');
+  });
+
   testWidgets('sign-up and password reset require 10 characters', (
     tester,
   ) async {

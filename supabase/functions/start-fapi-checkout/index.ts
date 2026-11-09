@@ -59,8 +59,13 @@ Deno.serve(async (req) => {
     return json(req, { error: "unauthorized" }, 401);
   }
 
-  const body = await req.json();
-  const challengeId = body.challenge_id as string | undefined;
+  let body: { challenge_id?: string; reward_variant?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return json(req, { error: "invalid json" }, 400);
+  }
+  const challengeId = body.challenge_id;
   if (!challengeId) {
     return json(req, { error: "challenge_id required" }, 400);
   }

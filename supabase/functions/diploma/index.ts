@@ -12,6 +12,7 @@ import {
   type IssuedDiplomaRow,
 } from "./access.ts";
 import { RENDERER_VERSION } from "./hash.ts";
+import { corsHeaders, preflightResponse } from "../_shared/cors.ts";
 import { ITALIC_FONT_ASSET, LOGO_ASSET, readBundledAsset, renderDiploma } from "./render.ts";
 
 const UUID_RE =
@@ -19,14 +20,14 @@ const UUID_RE =
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: cors() });
+    return preflightResponse(req);
   }
   if (req.method !== "POST") {
-    return json({ error: "method_not_allowed" }, 405);
+    return json(req, { error: "method_not_allowed" }, 405);
   }
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return json({ error: "missing authorization" }, 401);
+  if (!authHeader) return json(req, { error: "missing authorization" }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -35,16 +36,16 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: userData, error: userError } = await userClient.auth.getUser();
-  if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
+  if (userError || !userData.user) return json(req, { error: "unauthorized" }, 401);
 
   let body: { challenge_id?: string };
   try {
     body = await req.json();
   } catch {
-    return json({ error: "invalid_json" }, 400);
+    return json(req, { error: "invalid_json" }, 400);
   }
   const challengeId = body.challenge_id ?? "";
-  if (!UUID_RE.test(challengeId)) return json({ error: "challenge_id required" }, 400);
+  if (!UUID_RE.test(challengeId)) return json(req, { error: "challenge_id required" }, 400);
 
   const admin = createClient(supabaseUrl, serviceKey);
   const loaded = await admin
@@ -55,7 +56,7 @@ Deno.serve(async (req) => {
     .eq("user_id", userData.user.id)
     .eq("challenge_id", challengeId)
     .maybeSingle();
-  if (loaded.error) return json({ error: "diploma_lookup_failed" }, 500);
+  if (loaded.error) return json(req, { error: "diploma_lookup_failed" }, 500);
 
   const row = (loaded.data as IssuedDiplomaRow | null) ?? null;
   const entitled = row
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     : false;
   const decision = decideDiploma(row, entitled);
   if (!decision.ok || !row) {
-    return json(
+    return json(req, 
       { error: decision.ok ? "not_found" : decision.error },
       decision.ok ? 404 : decision.status,
     );
@@ -73,8 +74,8 @@ Deno.serve(async (req) => {
   const objectPath = diplomaObjectPath(row.user_id, row.challenge_id, hash);
   if (isCacheHit(row, hash, objectPath)) {
     const url = await signedUrl(admin, objectPath);
-    if (!url) return json({ error: "sign_failed" }, 500);
-    return json({ url, cached: true, render_hash: hash }, 200);
+    if (!url) return json(req, { error: "sign_failed" }, 500);
+    return json(req, { url, cached: true, render_hash: hash }, 200);
   }
 
   let png: Uint8Array;
@@ -83,14 +84,14 @@ Deno.serve(async (req) => {
     png = await renderDiploma(row, assets);
   } catch (error) {
     console.error("diploma render failed", error);
-    return json({ error: "render_failed" }, 500);
+    return json(req, { error: "render_failed" }, 500);
   }
 
   const upload = await admin.storage.from("diplomas").upload(objectPath, png, {
     contentType: "image/png",
     upsert: true,
   });
-  if (upload.error) return json({ error: "upload_failed" }, 500);
+  if (upload.error) return json(req, { error: "upload_failed" }, 500);
 
   const recorded = await admin.rpc("record_diploma_render", {
     p_diploma_id: row.id,
@@ -102,9 +103,9 @@ Deno.serve(async (req) => {
     await admin.storage.from("diplomas").remove([objectPath]);
     const message = recorded.error.message ?? "";
     if (message.includes("not_entitled")) {
-      return json({ error: "not_entitled" }, 402);
+      return json(req, { error: "not_entitled" }, 402);
     }
-    return json({ error: "record_failed" }, 500);
+    return json(req, { error: "record_failed" }, 500);
   }
 
   const previous = (recorded.data as { previous_image_path?: string | null } | null)
@@ -114,8 +115,8 @@ Deno.serve(async (req) => {
   }
 
   const url = await signedUrl(admin, objectPath);
-  if (!url) return json({ error: "sign_failed" }, 500);
-  return json({ url, cached: false, render_hash: hash }, 200);
+  if (!url) return json(req, { error: "sign_failed" }, 500);
+  return json(req, { url, cached: false, render_hash: hash }, 200);
 });
 
 async function loadEntitled(
@@ -181,17 +182,8 @@ async function signedUrl(admin: SupabaseClient, objectPath: string): Promise<str
   return signed.data?.signedUrl ?? null;
 }
 
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-  };
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors(), "Content-Type": "application/json" },
-  });
+function json(req: Request, body: unknown, status = 200) {
+  const headers = corsHeaders(req);
+  headers.set("Content-Type", "application/json");
+  return new Response(JSON.stringify(body), { status, headers });
 }
