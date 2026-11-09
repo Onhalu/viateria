@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../domain/fapi_offer.dart';
 import '../domain/photo_verify.dart';
+import '../domain/redemption_code.dart';
 import '../models/models.dart';
 import 'repositories.dart';
 
@@ -133,6 +134,14 @@ class UnconfiguredPurchases implements PurchaseRepository {
   @override
   Future<FapiOffer> fetchOffer(String challengeId, {String? locale}) {
     throw StateError('fapi-offer is not configured');
+  }
+
+  @override
+  Future<RedeemCodeResult> redeemChallengeCode({
+    required String challengeId,
+    required String rawCode,
+  }) async {
+    return const RedeemCodeResult.failure(RedeemCodeError.network);
   }
 }
 
