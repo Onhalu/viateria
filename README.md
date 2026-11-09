@@ -145,13 +145,31 @@ Author content in the dashboard. Only `status = published` is visible. Publish t
 
 Edge functions:
 
-- `fapi-offer` — authenticated; reads the public FAPI form resource for both reward variants and returns price cents plus terms. Not deployed until `supabase functions deploy fapi-offer`. The app never reads `challenge_prices` for the pay buttons.
-- `start-fapi-checkout` — authenticated; calls `challenge_readable` (same promo gate as the catalog) before upserting a pending purchase and returning the FAPI form URL. Free challenges are accepted. Redeploy so a zero-price form can start checkout.
+- `fapi-offer` — authenticated; reads the public FAPI form resource for both reward variants and returns price cents plus terms. Not deployed until `supabase functions deploy fapi-offer`. The app never reads `challenge_prices` for the pay buttons. Browser calls use the shared CORS helper.
+- `start-fapi-checkout` — authenticated; calls `challenge_readable` (same promo gate as the catalog) before upserting a pending purchase and returning the FAPI form URL. Free challenges are accepted. Redeploy so a zero-price form can start checkout. Browser calls use the shared CORS helper (`supabase/functions/_shared/cors.ts`).
 - `fapi-webhook` — requires `FAPI_WEBHOOK_SECURITY`; marks an existing pending `purchases` row `paid` on a verified FAPI paid-invoice notification
 - `send-email` — Auth Send Email hook; requires `SEND_EMAIL_HOOK_SECRET` and a valid webhook signature before it sends
 - `create-checkout-session` / `stripe-webhook` — leftover Stripe path; not used by the Flutter pay CTAs
 
 Set function secrets: `FAPI_API_USERNAME`, `FAPI_API_KEY`, required `FAPI_WEBHOOK_SECURITY`, required `SEND_EMAIL_HOOK_SECRET`, and optional `FAPI_CUSTOM_FIELD_ID_*`. Details: `supabase/functions/fapi-webhook/README.md`. Legacy Stripe secrets stay documented for the unused functions: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+
+Rollbacks live in `supabase/rollbacks/` and are not applied by `supabase db push`. Each file opens its own transaction. Run them with `psql -v ON_ERROR_STOP=1 -f` so a refused guard is a non-zero exit. Without `ON_ERROR_STOP`, psql prints the error and still exits 0.
+
+```bash
+psql -v ON_ERROR_STOP=1 -f supabase/rollbacks/20261109145619_revoke_handle_new_user_execute.rollback.sql
+```
+
+That command is supposed to fail. To apply one file, opt in during the same session:
+
+```bash
+psql -v ON_ERROR_STOP=1 \
+  -c "SELECT set_config('viateria.allow_rollback','on',false)" \
+  -f supabase/rollbacks/20261109145619_revoke_handle_new_user_execute.rollback.sql
+```
+
+`supabase/rollbacks/run.sh` always invokes `psql -v ON_ERROR_STOP=1 -f`. `ALLOW_ROLLBACK=1` sets the guard first.
+
+`start-fapi-checkout`, `fapi-offer`, and `diploma` read `ALLOWED_ORIGINS` (comma-separated browser origins). Production web is `https://viateria.limitlessdreams.cz`. They never send `Access-Control-Allow-Origin: *`. A foreign `Origin` gets no allow-origin header, and every response sends `Vary: Origin`. Preflight is `204`. Localhost origins (`localhost`, `127.0.0.1`, `::1`, any port) are accepted only outside production: a local `SUPABASE_URL` (`127.0.0.1`, `localhost`, or `kong`), or `ENVIRONMENT` / `SUPABASE_ENV` of `local`, `development`, `test`, or `staging`. A hosted project, including hosted staging, is treated as production when that variable is unset, so localhost is refused even if it is listed. Set `ALLOWED_ORIGINS` before deploy, and set `ENVIRONMENT=staging` on a hosted staging project that should accept localhost. This change does not deploy the functions. `redeem-challenge-code` is unchanged. The Flutter client still does not receive `service_role`.
 
 `supabase/migrations/0018_verify_waypoint_challenge_readable.sql` makes `verify_waypoint` use `private.challenge_readable` and adds the public wrapper checkout calls. It is 0018 so it sorts after the story migrations `0016` / `0017`. Apply it yourself before deploying `start-fapi-checkout`. This change does not run it.
 
@@ -175,6 +193,8 @@ OAuth uses PKCE (`FlutterAuthClientOptions.authFlowType`, the supabase_flutter 2
 | Web | Current origin, query and fragment stripped. Production: `https://viateria.limitlessdreams.cz/` |
 
 Google Cloud and Apple Developer do **not** get the app deep link. They get Supabase's provider callback: `https://yzmbxxgesnbsqygzgdky.supabase.co/auth/v1/callback`.
+
+**Password length.** Supabase Dashboard → Authentication already requires 10 characters (set 2026-11-09 by Ondřej). Sign-up and the new-password screen mirror that minimum, with the error in cs / en / de. Sign-in intentionally does not check length, so a password saved under the old 6–9 character rule still logs in.
 
 **Forgot password.** Sign-in emails a reset link with `resetPasswordForEmail`. `redirectTo` is the same value as OAuth and magic link (the table above). Those URLs already belong in Supabase Auth → Additional Redirect URLs; recovery does not add another one. Opening the link starts a recovery session and the app stays on the new-password screen until `updateUser` saves the password.
 

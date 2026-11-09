@@ -138,6 +138,18 @@ void main() {
     expect(AppStrings('cs').verifyOtp, 'Ověřit kód');
     expect(AppStrings('cs').enterAfterConfirm, 'Už mám ověřeno — přihlásit');
     expect(AppStrings('cs').passwordMismatch, 'Hesla se neshodují.');
+    expect(
+      AppStrings('cs').passwordTooShort,
+      'Heslo musí mít alespoň 10 znaků.',
+    );
+    expect(
+      AppStrings('en').passwordTooShort,
+      'Password must be at least 10 characters.',
+    );
+    expect(
+      AppStrings('de').passwordTooShort,
+      'Das Passwort muss mindestens 10 Zeichen haben.',
+    );
   });
 
   test('challenge photo gallery copy is localized', () {

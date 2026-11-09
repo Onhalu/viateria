@@ -62,17 +62,17 @@ void main() {
 
     await tester.enterText(
       find.byKey(const Key('auth-new-password')),
-      'secret12',
+      'secret1234',
     );
     await tester.enterText(
       find.byKey(const Key('auth-confirm-password')),
-      'secret12',
+      'secret1234',
     );
     await tester.tap(find.byKey(const Key('auth-save-password')));
     await tester.pumpAndSettle();
 
     expect(auth.pendingPasswordRecovery, isFalse);
-    expect(auth.updatedPasswords, ['secret12']);
+    expect(auth.updatedPasswords, ['secret1234']);
     expect(find.byKey(const Key('auth-new-password')), findsNothing);
     expect(find.byType(CatalogScreen), findsOneWidget);
   });
