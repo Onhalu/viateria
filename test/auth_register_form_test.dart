@@ -100,7 +100,7 @@ void main() {
       );
       await tester.enterText(
         find.byKey(const Key('auth-password')),
-        'secret12',
+        'secret1234',
       );
       await tester.ensureVisible(find.byKey(const Key('auth-submit-register')));
       await tester.tap(find.byKey(const Key('auth-submit-register')));
@@ -114,6 +114,82 @@ void main() {
       expect(find.text(strings.enterAfterConfirm), findsOneWidget);
     },
   );
+
+  testWidgets('sign-up and password reset require 10 characters', (
+    tester,
+  ) async {
+    for (final locale in const ['cs', 'en', 'de']) {
+      final strings = AppStrings(locale);
+      final auth = MemoryAuth(sessionOnSignUp: false);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await pumpAuth(tester, auth: auth, locale: locale);
+
+      await tester.ensureVisible(find.byKey(const Key('auth-open-register')));
+      await tester.tap(find.byKey(const Key('auth-open-register')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('auth-display-name')),
+        'Ada',
+      );
+      await tester.enterText(
+        find.byKey(const Key('auth-email')),
+        'ada@example.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('auth-password')),
+        'secret123',
+      );
+      await tester.ensureVisible(find.byKey(const Key('auth-submit-register')));
+      await tester.tap(find.byKey(const Key('auth-submit-register')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(strings.passwordTooShort), findsOneWidget);
+      expect(find.text(strings.confirmEmailTitle), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('auth-password')),
+        'secret1234',
+      );
+      await tester.ensureVisible(find.byKey(const Key('auth-submit-register')));
+      await tester.tap(find.byKey(const Key('auth-submit-register')));
+      await tester.pumpAndSettle();
+      expect(find.text(strings.passwordTooShort), findsNothing);
+      expect(find.text(strings.confirmEmailTitle), findsOneWidget);
+    }
+
+    final strings = AppStrings('cs');
+    final auth = MemoryAuth();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpAuth(tester, auth: auth);
+    auth.beginPasswordRecovery();
+    await tester.pump();
+    await tester.pump();
+
+    await tester.enterText(
+      find.byKey(const Key('auth-new-password')),
+      'secret123',
+    );
+    await tester.enterText(
+      find.byKey(const Key('auth-confirm-password')),
+      'secret123',
+    );
+    await tester.tap(find.byKey(const Key('auth-save-password')));
+    await tester.pumpAndSettle();
+    expect(find.text(strings.passwordTooShort), findsOneWidget);
+    expect(auth.updatedPasswords, isEmpty);
+
+    await tester.enterText(
+      find.byKey(const Key('auth-new-password')),
+      'secret1234',
+    );
+    await tester.enterText(
+      find.byKey(const Key('auth-confirm-password')),
+      'secret1234',
+    );
+    await tester.tap(find.byKey(const Key('auth-save-password')));
+    await tester.pumpAndSettle();
+    expect(auth.updatedPasswords, ['secret1234']);
+  });
 
   testWidgets('back to sign-in returns to the default screen', (tester) async {
     final strings = AppStrings('en');
@@ -424,7 +500,7 @@ void main() {
 
     await tester.enterText(
       find.byKey(const Key('auth-new-password')),
-      'secret12',
+      'secret1234',
     );
     await tester.enterText(
       find.byKey(const Key('auth-confirm-password')),
@@ -453,11 +529,11 @@ void main() {
 
     await tester.enterText(
       find.byKey(const Key('auth-confirm-password')),
-      'secret12',
+      'secret1234',
     );
     await tester.tap(find.byKey(const Key('auth-save-password')));
     await tester.pumpAndSettle();
-    expect(auth.updatedPasswords, ['secret12']);
+    expect(auth.updatedPasswords, ['secret1234']);
     expect(auth.pendingPasswordRecovery, isFalse);
     expect(find.text(strings.passwordMismatch), findsNothing);
   });

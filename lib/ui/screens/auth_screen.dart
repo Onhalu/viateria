@@ -23,7 +23,7 @@ enum _AuthStep {
   setPassword,
 }
 
-const _minPasswordLength = 6;
+const _minPasswordLength = 10;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -278,6 +278,10 @@ class _AuthScreenState extends State<AuthScreen> {
     final password = _password.text;
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
       setState(() => _error = strings.errorGeneric);
+      return;
+    }
+    if (password.length < _minPasswordLength) {
+      setState(() => _error = strings.passwordTooShort);
       return;
     }
     await _run(() async {

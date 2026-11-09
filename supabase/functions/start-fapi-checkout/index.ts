@@ -21,6 +21,7 @@ import {
   type PromoTargetType,
 } from "../_shared/fapi.ts";
 import { fetchOfferForFormUrl } from "../_shared/fapi_offer.ts";
+import { corsHeaders, preflightResponse } from "../_shared/cors.ts";
 
 /**
  * Authenticated start of a FAPI sales-form checkout.
@@ -36,12 +37,12 @@ import { fetchOfferForFormUrl } from "../_shared/fapi_offer.ts";
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: cors() });
+    return preflightResponse(req);
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
-    return json({ error: "missing authorization" }, 401);
+    return json(req, { error: "missing authorization" }, 401);
   }
 
   const supabase = createClient(
@@ -55,13 +56,13 @@ Deno.serve(async (req) => {
     error: userError,
   } = await supabase.auth.getUser();
   if (userError || !user) {
-    return json({ error: "unauthorized" }, 401);
+    return json(req, { error: "unauthorized" }, 401);
   }
 
   const body = await req.json();
   const challengeId = body.challenge_id as string | undefined;
   if (!challengeId) {
-    return json({ error: "challenge_id required" }, 400);
+    return json(req, { error: "challenge_id required" }, 400);
   }
   const rewardVariant = parseRewardVariant(body.reward_variant);
 
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
     { p_challenge_id: challengeId },
   );
   if (!callerCanReadChallenge(readable, readableError)) {
-    return json({ error: "challenge not available" }, 404);
+    return json(req, { error: "challenge not available" }, 404);
   }
 
   const admin = createClient(
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
     .single();
 
   if (error || !challenge) {
-    return json({ error: "challenge not available" }, 404);
+    return json(req, { error: "challenge not available" }, 404);
   }
 
   const isMedal = rewardVariant === "medal_and_diploma";
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
     isMedal ? challenge.fapi_form_url_medal : challenge.fapi_form_url_diploma,
   );
   if (!formUrl) {
-    return json({ error: "fapi form url missing" }, 400);
+    return json(req, { error: "fapi form url missing" }, 400);
   }
 
   const { data: existing } = await admin
@@ -117,7 +118,7 @@ Deno.serve(async (req) => {
   if (existing?.status === "paid") {
     // One purchase per challenge. medal_and_diploma already includes the
     // diploma, so a second buy is rejected rather than upgraded.
-    return json({ error: "already_purchased" }, 409);
+    return json(req, { error: "already_purchased" }, 409);
   }
 
   const prices = await activeChallengePrice(admin, challengeId);
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
       "start-fapi-checkout purchase upsert failed",
       purchaseError.message,
     );
-    return json({ error: "purchase upsert failed" }, 500);
+    return json(req, { error: "purchase upsert failed" }, 500);
   }
 
   const url = appendFapiPrefill(
@@ -183,7 +184,7 @@ Deno.serve(async (req) => {
     }),
   );
 
-  return json({ url });
+  return json(req, { url });
 });
 
 async function profileLocale(
@@ -348,17 +349,8 @@ function isTargetType(value: unknown): value is PromoTargetType {
     value === "country";
 }
 
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-  };
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors(), "Content-Type": "application/json" },
-  });
+function json(req: Request, body: unknown, status = 200) {
+  const headers = corsHeaders(req);
+  headers.set("Content-Type", "application/json");
+  return new Response(JSON.stringify(body), { status, headers });
 }
