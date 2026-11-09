@@ -93,6 +93,7 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
   MapLibreMapController? _map;
   var _mapFailed = false;
   var _controlPressed = false;
+  final _savedPlaceIds = <String>{};
   List<Place>? _waypointInput;
   List<Place>? _waypointCache;
   Set<String>? _waypointIds;
@@ -120,6 +121,12 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
     if (!_sameChallengeGeometry(oldWidget.geometry, widget.geometry)) {
       _syncChallengeMembership();
     }
+  }
+
+  void _toggleSavedPlace(String id) {
+    setState(() {
+      if (!_savedPlaceIds.add(id)) _savedPlaceIds.remove(id);
+    });
   }
 
   void _onController() {
@@ -441,6 +448,8 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                               userLocation: _controller.userLocation,
                               compact: widget.compact,
                               emptyLabel: _listEmptyLabel(strings),
+                              savedIds: _savedPlaceIds,
+                              onToggleSave: _toggleSavedPlace,
                               onSelect: _selectFromList,
                             ),
                           ),
@@ -520,6 +529,8 @@ class _PlacesMapSurfaceState extends State<PlacesMapSurface> {
                         strings: strings,
                         userLocation: _controller.userLocation,
                         compact: widget.compact,
+                        saved: _savedPlaceIds.contains(selected.id),
+                        onToggleSave: () => _toggleSavedPlace(selected.id),
                         onClose: () => _controller.select(null),
                         onVerify: () {
                           unawaited(_onVerify(selected));

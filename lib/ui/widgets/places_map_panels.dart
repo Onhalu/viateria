@@ -5,6 +5,7 @@ import '../../map/place.dart';
 import '../../map/place_category.dart';
 import '../../map/place_query.dart';
 import '../../theme/app_theme.dart';
+import '../motion/like_save_button.dart';
 import 'map_chrome.dart';
 import 'place_presentation.dart';
 
@@ -176,6 +177,8 @@ class PlaceDetailSheet extends StatefulWidget {
     required this.onVerify,
     this.onAddToRoute,
     this.compact = false,
+    this.saved = false,
+    this.onToggleSave,
   });
 
   final Place place;
@@ -185,6 +188,10 @@ class PlaceDetailSheet extends StatefulWidget {
   final VoidCallback onVerify;
   final VoidCallback? onAddToRoute;
   final bool compact;
+
+  /// Session save flag. Null [onToggleSave] leaves the heart uncontrolled.
+  final bool saved;
+  final VoidCallback? onToggleSave;
 
   @override
   State<PlaceDetailSheet> createState() => _PlaceDetailSheetState();
@@ -244,6 +251,21 @@ class _PlaceDetailSheetState extends State<PlaceDetailSheet> {
                           color: MapPalette.beige,
                           borderRadius: BorderRadius.circular(99),
                         ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      left: 4,
+                      child: LikeSaveButton(
+                        key: Key('place-save-sheet-${place.id}'),
+                        saved: widget.onToggleSave == null
+                            ? null
+                            : widget.saved,
+                        onChanged: widget.onToggleSave == null
+                            ? null
+                            : (_) => widget.onToggleSave!(),
+                        saveLabel: strings.savePlace,
+                        savedLabel: strings.placeSaved,
                       ),
                     ),
                     Positioned(
@@ -390,6 +412,8 @@ class PlaceListPanel extends StatelessWidget {
     required this.onSelect,
     this.compact = false,
     this.emptyLabel,
+    this.savedIds = const {},
+    this.onToggleSave,
   });
 
   final List<Place> places;
@@ -398,6 +422,8 @@ class PlaceListPanel extends StatelessWidget {
   final ValueChanged<Place> onSelect;
   final bool compact;
   final String? emptyLabel;
+  final Set<String> savedIds;
+  final ValueChanged<String>? onToggleSave;
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +514,23 @@ class PlaceListPanel extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: PlaceRowMetrics.titleNudge,
+                            ),
+                            child: LikeSaveButton(
+                              key: Key('place-save-${place.id}'),
+                              saved: onToggleSave == null
+                                  ? null
+                                  : savedIds.contains(place.id),
+                              onChanged: onToggleSave == null
+                                  ? null
+                                  : (_) => onToggleSave!(place.id),
+                              saveLabel: strings.savePlace,
+                              savedLabel: strings.placeSaved,
+                            ),
+                          ),
                           const Padding(
                             padding: EdgeInsets.only(
                               top: PlaceRowMetrics.titleNudge,

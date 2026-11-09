@@ -32,6 +32,9 @@ class MemoryAuth implements AuthRepository {
   final _recovery = StreamController<bool>.broadcast();
   bool _pendingPasswordRecovery = false;
 
+  /// When set, [signIn] throws this instead of creating a session.
+  Object? signInError;
+
   @override
   Stream<Profile?> authState() => _controller.stream;
 
@@ -43,6 +46,8 @@ class MemoryAuth implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    final failure = signInError;
+    if (failure != null) throw failure;
     _user = Profile(
       id: 'user-1',
       email: email,

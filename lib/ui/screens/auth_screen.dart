@@ -11,6 +11,7 @@ import '../../l10n/locale_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/brand_assets.dart';
 import '../layout/breakpoints.dart';
+import '../motion/motion_shake.dart';
 
 enum _AuthStep {
   signIn,
@@ -432,13 +433,15 @@ class _AuthScreenState extends State<AuthScreen> {
     switch (_step) {
       case _AuthStep.signIn:
         return [
-          TextField(
-            key: const Key('auth-email'),
-            controller: _email,
-            decoration: InputDecoration(labelText: strings.email),
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.email],
+          _shake(
+            TextField(
+              key: const Key('auth-email'),
+              controller: _email,
+              decoration: _inputDecoration(label: strings.email),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.email],
+            ),
           ),
           const SizedBox(height: 12),
           _passwordField(
@@ -457,21 +460,25 @@ class _AuthScreenState extends State<AuthScreen> {
         ];
       case _AuthStep.register:
         return [
-          TextField(
-            key: const Key('auth-display-name'),
-            controller: _name,
-            decoration: InputDecoration(labelText: strings.displayName),
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.name],
+          _shake(
+            TextField(
+              key: const Key('auth-display-name'),
+              controller: _name,
+              decoration: _inputDecoration(label: strings.displayName),
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.name],
+            ),
           ),
           const SizedBox(height: 12),
-          TextField(
-            key: const Key('auth-email'),
-            controller: _email,
-            decoration: InputDecoration(labelText: strings.email),
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.email],
+          _shake(
+            TextField(
+              key: const Key('auth-email'),
+              controller: _email,
+              decoration: _inputDecoration(label: strings.email),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.email],
+            ),
           ),
           const SizedBox(height: 12),
           _passwordField(
@@ -519,14 +526,16 @@ class _AuthScreenState extends State<AuthScreen> {
         ];
       case _AuthStep.forgotPassword:
         return [
-          TextField(
-            key: const Key('auth-email'),
-            controller: _email,
-            decoration: InputDecoration(labelText: strings.email),
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.email],
-            onSubmitted: (_) => _sendPasswordReset(),
+          _shake(
+            TextField(
+              key: const Key('auth-email'),
+              controller: _email,
+              decoration: _inputDecoration(label: strings.email),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.email],
+              onSubmitted: (_) => _sendPasswordReset(),
+            ),
           ),
         ];
       case _AuthStep.forgotPasswordSent:
@@ -596,6 +605,41 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  InputDecoration _inputDecoration({
+    required String label,
+    Widget? suffixIcon,
+    BoxConstraints? suffixIconConstraints,
+  }) {
+    final invalid = _error != null;
+    const errorBorder = OutlineInputBorder(
+      borderRadius: _radius,
+      borderSide: BorderSide(color: BrandColors.error, width: 1.5),
+    );
+    return InputDecoration(
+      labelText: label,
+      suffixIcon: suffixIcon,
+      suffixIconConstraints: suffixIconConstraints,
+      enabledBorder: invalid ? errorBorder : null,
+      focusedBorder: invalid ? errorBorder : null,
+      labelStyle: invalid
+          ? const TextStyle(
+              color: BrandColors.error,
+              fontSize: AppTheme.bodySize,
+            )
+          : null,
+      floatingLabelStyle: invalid
+          ? const TextStyle(
+              color: BrandColors.error,
+              fontSize: AppTheme.labelSize,
+            )
+          : null,
+    );
+  }
+
+  Widget _shake(Widget child) {
+    return MotionShake(active: _error != null, child: child);
+  }
+
   Widget _passwordField({
     required Key fieldKey,
     required Key toggleKey,
@@ -608,27 +652,31 @@ class _AuthScreenState extends State<AuthScreen> {
     Iterable<String>? autofillHints,
     void Function(String)? onSubmitted,
   }) {
-    return TextField(
-      key: fieldKey,
-      controller: controller,
-      obscureText: obscure,
-      textInputAction: textInputAction,
-      autofillHints: autofillHints,
-      onSubmitted: onSubmitted,
-      decoration: InputDecoration(
-        labelText: label,
-        suffixIcon: IconButton(
-          key: toggleKey,
-          tooltip: obscure ? strings.showPassword : strings.hidePassword,
-          style: _eyeStyle,
-          onPressed: onToggle,
-          icon: Icon(
-            obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+    return _shake(
+      TextField(
+        key: fieldKey,
+        controller: controller,
+        obscureText: obscure,
+        textInputAction: textInputAction,
+        autofillHints: autofillHints,
+        onSubmitted: onSubmitted,
+        decoration: _inputDecoration(
+          label: label,
+          suffixIcon: IconButton(
+            key: toggleKey,
+            tooltip: obscure ? strings.showPassword : strings.hidePassword,
+            style: _eyeStyle,
+            onPressed: onToggle,
+            icon: Icon(
+              obscure
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+            ),
           ),
-        ),
-        suffixIconConstraints: const BoxConstraints(
-          minWidth: AppTheme.minTap,
-          minHeight: AppTheme.minTap,
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: AppTheme.minTap,
+            minHeight: AppTheme.minTap,
+          ),
         ),
       ),
     );
