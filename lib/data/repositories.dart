@@ -154,6 +154,9 @@ abstract class PurchaseRepository {
   Future<CheckoutSession> startCheckout(
     String challengeId, {
     RewardVariant? rewardVariant,
+
+    /// Uuid v4 for this cart. Retries of the same variant and price reuse it.
+    String? idempotencyKey,
   });
   Future<Purchase?> refreshPurchase(String challengeId);
 
